@@ -2105,5 +2105,85 @@ document.addEventListener('DOMContentLoaded', async function() {
   else { watch(); }
 })();
 </script>
+<script id="__CLICK_ROUTING_v1__">
+(function(){
+  if(window.__clickRouting) return; window.__clickRouting = true;
+
+  /* ============================================================
+     Routage des clics
+     1. Clic sur un article  -> drawer « ✏️ Modification CodeA »
+     2. Clic sur un n° chantier (PI) -> modal chantier
+        (OA, Quote, Achats, partout)
+     ============================================================ */
+
+  function extractPI(s){ var m=String(s||'').match(/PI\s?\d{2,6}[A-Za-z0-9_-]*/i); return m?m[0].replace(/\s+/g,''):''; }
+
+  /* ---------- 2. Ouvrir le chantier ---------- */
+  function openChantierByRef(ref){
+    ref = extractPI(ref) || String(ref||'').trim();
+    if(!ref || ref==='—') return false;
+    if(typeof window.openChantier === 'function'){ try{ window.openChantier(ref); return true; }catch(e){} }
+    if(typeof window.openChantierDrawer === 'function'){ try{ window.openChantierDrawer(ref); return true; }catch(e){} }
+    return false;
+  }
+  window.__openChantierByRef = openChantierByRef;
+
+  document.addEventListener('click', function(ev){
+    var t = ev.target;
+    if(!t || !t.closest) return;
+
+    /* Ne pas détourner les liens BL / PO / FAC / OA / Colis */
+    if(t.closest('[data-bl],[data-po],[data-fac],[data-col],[data-oa],[data-nav-bl],[data-nav-po],[data-nav-fac],[data-nav-oa]')) return;
+
+    /* Élément représentant explicitement un n° PI / dossier chantier */
+    var piEl = t.closest('[data-pi],[data-dossier],.oq-link,.qt-dossier-link');
+    if(!piEl) return;
+
+    var ref = piEl.getAttribute('data-pi') || piEl.getAttribute('data-dossier') || extractPI(piEl.textContent);
+    if(!ref) return;
+
+    /* Capture : on bat les onclick inline et la délégation des modules */
+    ev.stopPropagation();
+    if(ev.stopImmediatePropagation) ev.stopImmediatePropagation();
+    ev.preventDefault();
+    openChantierByRef(ref);
+  }, true);
+
+  /* ---------- 1. Ouvrir le drawer Modification CodeA depuis un article ---------- */
+  function articleFromRow(tr){
+    var db = window.FCR_DB || [];
+    var codeA='', refpi='';
+    Array.prototype.forEach.call(tr.cells||[], function(td){
+      var tx=(td.textContent||'').trim();
+      if(!codeA && /^[AS]\d{2,6}$/.test(tx)) codeA=tx;
+      if(!refpi && /^PI\d{2,6}/i.test(tx)) refpi=tx;
+    });
+    if(!codeA) return null;
+    var cands = db.filter(function(a){ return a && (a.codeA||'')===codeA; });
+    if(cands.length<=1) return cands[0]||null;
+    if(refpi){ var byPi=cands.find(function(a){ return (a['ref-pi']||'')===refpi; }); if(byPi) return byPi; }
+    return cands[0];
+  }
+
+  document.addEventListener('click', function(ev){
+    var t = ev.target;
+    if(!t || !t.closest) return;
+    var tr = t.closest('#art-tbody tr.clickable');
+    if(!tr) return;
+    /* Laisser la 1ère cellule (photo) ouvrir le modal photo */
+    var td = t.closest('td');
+    if(td && td.cellIndex===0) return;
+    if(typeof window.openProductModal_Pro !== 'function') return;
+    var art = articleFromRow(tr);
+    if(!art) return;
+    ev.stopPropagation();
+    if(ev.stopImmediatePropagation) ev.stopImmediatePropagation();
+    ev.preventDefault();
+    window.openProductModal_Pro(art);
+  }, true);
+
+  console.log('[ClickRouting v1] prêt — article→CodeA, n°PI→chantier.');
+})();
+</script>
 </body>
 </html>
