@@ -1730,6 +1730,75 @@ document.addEventListener('DOMContentLoaded', async function() {
       }
     })();
   };
+
+  /* ─── Intercepteur global : clic sur un numéro de chantier → modal isolé ───
+     Capture-phase sur document : s'exécute AVANT tout autre handler
+     (onclick openChantier/openQuote, délégation data-pi/oqNavigate, FixPI-Dash).
+     Empêche toute navigation vers l'onglet Chantiers JIP. */
+  function fcrExtractRef(el) {
+    if (!el) return '';
+    var ds = el.dataset || {};
+    var ref = ds.pi || ds.navPi || ds.imp || ds.navImp || ds.chantierRef || ds.dossier || '';
+    if (ref) return String(ref).trim();
+    // onclick="openChantier('X')" / openChantierDrawer('X') / openQuote('X')
+    var oc = el.getAttribute && el.getAttribute('onclick');
+    if (oc) {
+      var mm = oc.match(/open(?:Chantier(?:Drawer)?|Quote)\(\s*['"]([^'"]+)['"]/);
+      if (mm && mm[1]) return mm[1].trim();
+      if (/this\.textContent/.test(oc)) {
+        var t = (el.textContent || '').trim();
+        if (t) return t;
+      }
+    }
+    // texte = ref PI
+    var txt = (el.textContent || '').trim();
+    var pim = txt.match(/PI\d{2,5}[\w-]*/i);
+    if (pim) return pim[0];
+    return '';
+  }
+
+  function fcrIsChantierRef(ref) {
+    if (!ref) return false;
+    if (/PI\d/i.test(ref)) return true;
+    try {
+      var jd = window.JIP_DATA || [];
+      for (var i = 0; i < jd.length; i++) {
+        if (String(jd[i].Imputation || jd[i].imputation || '') === ref) return true;
+      }
+    } catch (e) {}
+    return false;
+  }
+
+  document.addEventListener('click', function (e) {
+    var t = e.target;
+    if (!t || t.nodeType !== 1) return;
+    // Ne pas gêner les champs interactifs
+    if (t.closest('select, input, textarea, .fac-st-sel')) return;
+    // À l'intérieur de l'onglet Chantiers JIP : laisser la navigation interne
+    if (t.closest('#view-chantiers, #view-jip, [data-view="chantiers"], #chantier-overlay')) return;
+    // Ne pas ré-intercepter un clic dans notre propre modal
+    if (t.closest('#__fcr-chantier-modal')) return;
+
+    // Élément porteur d'une référence chantier
+    var el = t.closest('[data-pi], [data-nav-pi], [data-chantier-ref], [onclick*="openChantier"], [onclick*="openChantierDrawer"], [onclick*="openQuote"]');
+    if (!el) {
+      // Cellule cliquable dont le texte est un PI
+      var cand = t.closest('td, span, a, div, button');
+      if (cand && /pointer/.test((cand.getAttribute('style') || '')) ) el = cand; else return;
+    }
+
+    var ref = fcrExtractRef(el);
+    if (!fcrIsChantierRef(ref)) return;
+
+    // Normaliser : garder le PI complet (suffixe -N inclus)
+    var pim = String(ref).match(/PI\d{2,5}[\w-]*/i);
+    var refKey = pim ? pim[0] : ref;
+
+    e.preventDefault();
+    e.stopImmediatePropagation();
+    try { window.openChantierFloatingModal(refKey); } catch (err) { try { console.warn('[FCR modal]', err); } catch (_) {} }
+  }, true);
+
 })();
 </script>
 </body>
