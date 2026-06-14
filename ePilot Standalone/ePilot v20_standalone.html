@@ -1512,5 +1512,230 @@ document.addEventListener('DOMContentLoaded', async function() {
   if(!addBtn()){ setTimeout(function(){ if(!addBtn()) setTimeout(addBtn, 2000); }, 500); }
 })();
 </script>
+<script id="__EXPENSE_RENDERER_v1__">
+(function(){
+  var PAGE_SIZE = 50;
+  var _page = 0;
+  var _filtered = [];
+
+  function esc(s){ return String(s||'').replace(/[&<>"']/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];}); }
+  function fmtM(n){ return (Math.round(+n||0)).toLocaleString('fr-FR')+' FCFA'; }
+  function fmtD(d){ if(!d)return'—'; try{ return new Date(d).toLocaleDateString('fr-FR'); }catch(e){ return d; } }
+
+  function etatClass(e){
+    var s = (e||'').toLowerCase();
+    if(s==='payée'||s==='payé') return 'exp-etat exp-etat-paid';
+    if(s==='validée'||s==='validé') return 'exp-etat exp-etat-valid';
+    if(s==='annulée'||s==='annulé') return 'exp-etat exp-etat-cancel';
+    return 'exp-etat exp-etat-pending';
+  }
+
+  function g(id){ return document.getElementById(id); }
+  function gv(id){ var el=g(id); return el?el.value:''; }
+
+  function getFiltered(){
+    var data = window.EXPENSES_DATA || [];
+    var yr = gv('exp-year');
+    var cat = gv('exp-cat');
+    var etat = gv('exp-etat');
+    var unite = gv('exp-unite');
+    var q = (gv('exp-search')||'').toLowerCase().trim();
+    return data.filter(function(e){
+      if(yr && yr!=='all' && String(e.annee||'')!==yr && String((e.date||'').slice(0,4))!==yr) return false;
+      if(cat && cat!=='all' && (e.categorie||'')!==cat) return false;
+      if(etat && etat!=='all' && (e.etat||'')!==etat) return false;
+      if(unite && unite!=='all' && (e.unite||'')!==unite) return false;
+      if(q){
+        var hay = [(e.ref||''),(e.description||''),(e.demandeur||''),(e.fournisseur||''),(e.imputation||''),(e.categorie||'')].join(' ').toLowerCase();
+        if(hay.indexOf(q)<0) return false;
+      }
+      return true;
+    });
+  }
+
+  function populateSelect(id, values, current){
+    var el = g(id); if(!el) return;
+    var prev = el.value || current || 'all';
+    while(el.options.length > 1) el.remove(1);
+    values.forEach(function(v){
+      var o = document.createElement('option');
+      o.value = v; o.textContent = v;
+      if(v === prev) o.selected = true;
+      el.appendChild(o);
+    });
+  }
+
+  function refreshSelects(data){
+    var years = [], cats = [], etats = [], unites = [];
+    var setY={}, setC={}, setE={}, setU={};
+    data.forEach(function(e){
+      var yr = e.annee || (e.date||'').slice(0,4) || '';
+      if(yr && !setY[yr]){ setY[yr]=1; years.push(yr); }
+      if(e.categorie && !setC[e.categorie]){ setC[e.categorie]=1; cats.push(e.categorie); }
+      if(e.etat && !setE[e.etat]){ setE[e.etat]=1; etats.push(e.etat); }
+      if(e.unite && !setU[e.unite]){ setU[e.unite]=1; unites.push(e.unite); }
+    });
+    years.sort().reverse();
+    cats.sort(); etats.sort(); unites.sort();
+    populateSelect('exp-year', years);
+    populateSelect('exp-cat', cats);
+    populateSelect('exp-etat', etats);
+    populateSelect('exp-unite', unites);
+  }
+
+  function renderExpenses(){
+    var tbody = g('exp-tbody'); if(!tbody) return;
+    refreshSelects(window.EXPENSES_DATA||[]);
+    _filtered = getFiltered();
+    var total = _pages();
+    if(_page >= total) _page = Math.max(0, total-1);
+    var slice = _filtered.slice(_page*PAGE_SIZE, (_page+1)*PAGE_SIZE);
+
+    var html = '';
+    slice.forEach(function(e, sliceIdx){
+      var globalIdx = _filtered.indexOf(e);
+      html += '<tr data-idx="'+globalIdx+'">'
+        +'<td><span class="exp-ref">'+esc(e.ref||e.id||'—')+'</span></td>'
+        +'<td>'+esc(fmtD(e.date))+'</td>'
+        +'<td><span class="exp-cat-tag">'+esc(e.categorie||'—')+'</span></td>'
+        +'<td class="exp-desc">'+esc(e.description||'—')+'</td>'
+        +'<td>'+esc(e.demandeur||'—')+'</td>'
+        +'<td>'+esc(e.imputation||'—')+'</td>'
+        +'<td>'+esc(e.unite||'—')+'</td>'
+        +'<td>'+esc(e.fournisseur||'—')+'</td>'
+        +'<td class="exp-amt" style="text-align:right">'+esc(fmtM(e.montant))+'</td>'
+        +'<td><span class="'+etatClass(e.etat)+'">'+esc(e.etat||'—')+'</span></td>'
+        +'<td style="text-align:center;padding:4px 6px">'
+          +'<button class="exp-del-btn" title="Supprimer cette dépense" '
+          +'style="background:none;border:1px solid #fecaca;border-radius:5px;color:#dc2626;cursor:pointer;font-size:13px;padding:2px 7px;line-height:1" '
+          +'data-idx="'+globalIdx+'">🗑</button>'
+        +'</td>'
+        +'</tr>';
+    });
+    tbody.innerHTML = html || '<tr><td colspan="11" style="text-align:center;padding:24px;color:#9ca3af;font-style:italic">Aucune dépense trouvée</td></tr>';
+
+    // Wire delete buttons
+    tbody.querySelectorAll('.exp-del-btn').forEach(function(btn){
+      btn.addEventListener('click', function(ev){
+        ev.stopPropagation();
+        var idx = +btn.getAttribute('data-idx');
+        var e = _filtered[idx];
+        if(!e) return;
+        if(!confirm('Supprimer la dépense '+esc(e.ref||e.id)+(e.description?' — '+e.description:'')+' ?')) return;
+        var pos = (window.EXPENSES_DATA||[]).indexOf(e);
+        if(pos>=0) window.EXPENSES_DATA.splice(pos,1);
+        _filtered.splice(idx,1);
+        renderExpenses();
+      });
+    });
+
+    // Update count + pagination
+    var cnt = g('exp-count'); if(cnt) cnt.textContent = _filtered.length + ' ligne'+ (_filtered.length!==1?'s':'');
+    var pg = g('exp-page'); if(pg) pg.textContent = (total?_page+1:0)+' / '+total;
+    var prev = g('exp-prev'); if(prev) prev.disabled = (_page<=0);
+    var next = g('exp-next'); if(next) next.disabled = (_page>=total-1);
+
+    // KPIs
+    var paid = _filtered.reduce(function(s,e){return s+(/(payée?)/i.test(e.etat||'')?+(e.montant||0):0);},0);
+    var pending = _filtered.reduce(function(s,e){return s+(/en attente/i.test(e.etat||'')?+(e.montant||0):0);},0);
+    var tot = _filtered.reduce(function(s,e){return s+(+e.montant||0);},0);
+    var kT=g('exp-kpi-total');   if(kT) kT.textContent=fmtM(tot);
+    var kC=g('exp-kpi-count');   if(kC) kC.textContent=_filtered.length;
+    var kP=g('exp-kpi-paid');    if(kP) kP.textContent=fmtM(paid);
+    var kW=g('exp-kpi-pending'); if(kW) kW.textContent=fmtM(pending);
+
+    // Update window total for dashboard
+    window._getDepensesYearTotal = function(){
+      var yr = String(new Date().getFullYear());
+      return (window.EXPENSES_DATA||[]).reduce(function(s,e){
+        return s+(((e.annee||String((e.date||'').slice(0,4)))||'')===yr?+(e.montant||0):0);
+      },0);
+    };
+  }
+  window.renderExpenses = renderExpenses;
+
+  function _pages(){ return Math.ceil(_filtered.length/PAGE_SIZE)||1; }
+
+  function initExpenseView(){
+    // Add th for delete column
+    var thead = document.querySelector('#view-expenses .exp-table thead tr');
+    if(thead && !thead.querySelector('.exp-del-th')){
+      var th = document.createElement('th');
+      th.className = 'exp-del-th'; th.style.width='44px'; th.textContent='';
+      thead.appendChild(th);
+    }
+
+    function bindFilter(id){
+      var el = g(id); if(!el || el._expBound) return; el._expBound=true;
+      el.addEventListener('change', function(){ _page=0; renderExpenses(); });
+    }
+    function bindSearch(id){
+      var el = g(id); if(!el || el._expBound) return; el._expBound=true;
+      el.addEventListener('input', function(){ _page=0; renderExpenses(); });
+    }
+    bindFilter('exp-year'); bindFilter('exp-cat'); bindFilter('exp-etat'); bindFilter('exp-unite');
+    bindSearch('exp-search');
+
+    var prev = g('exp-prev'); if(prev && !prev._expBound){ prev._expBound=true; prev.addEventListener('click',function(){ if(_page>0){_page--;renderExpenses();} }); }
+    var next = g('exp-next'); if(next && !next._expBound){ next._expBound=true; next.addEventListener('click',function(){ if(_page<_pages()-1){_page++;renderExpenses();} }); }
+
+    var expExp = g('exp-export');
+    if(expExp && !expExp._expBound){ expExp._expBound=true; expExp.addEventListener('click',function(){
+      var rows = [['Réf','Date','Catégorie','Description','Demandeur','Imputation','Unité','Fournisseur','Montant','État']];
+      _filtered.forEach(function(e){rows.push([e.ref||e.id,e.date||'',e.categorie||'',e.description||'',e.demandeur||'',e.imputation||'',e.unite||'',e.fournisseur||'',e.montant||0,e.etat||'']);});
+      var csv = rows.map(function(r){return r.map(function(c){return '"'+String(c).replace(/"/g,'""')+'"';}).join(',');}).join('\n');
+      var a=document.createElement('a');a.href='data:text/csv;charset=utf-8,﻿'+encodeURIComponent(csv);a.download='depenses.csv';document.body.appendChild(a);a.click();document.body.removeChild(a);
+    }); }
+
+    renderExpenses();
+  }
+
+  // Init when view-expenses becomes visible (tab activation)
+  function watchExpensesTab(){
+    var section = document.getElementById('view-expenses');
+    if(!section) return setTimeout(watchExpensesTab, 500);
+
+    // Observe class changes on the section
+    var obs = new MutationObserver(function(muts){
+      muts.forEach(function(m){
+        if(m.type==='attributes' && m.attributeName==='class'){
+          if(section.classList.contains('active')||!section.classList.contains('hidden')){
+            initExpenseView();
+          }
+        }
+      });
+    });
+    obs.observe(section, {attributes:true, attributeFilter:['class','style']});
+
+    // Also hook into any nav click that activates this view
+    document.addEventListener('click', function(ev){
+      var btn = ev.target.closest('[data-page],[data-tab],[data-view]');
+      if(btn){
+        var page = btn.getAttribute('data-page')||btn.getAttribute('data-tab')||btn.getAttribute('data-view')||'';
+        if(page.toLowerCase().indexOf('expens')>=0||page.toLowerCase().indexOf('dep')>=0){
+          setTimeout(initExpenseView, 150);
+        }
+      }
+      // Also check subnav for "Expenses" label
+      if(ev.target.textContent && ev.target.textContent.trim()==='Expenses'){
+        setTimeout(initExpenseView, 150);
+      }
+    });
+
+    // Try on load too in case already visible
+    setTimeout(function(){
+      if(section.offsetParent!==null || section.style.display!=='none'){
+        initExpenseView();
+      }
+    }, 800);
+  }
+
+  if(document.readyState==='loading'){
+    document.addEventListener('DOMContentLoaded', watchExpensesTab);
+  } else {
+    watchExpensesTab();
+  }
+})();
+</script>
 </body>
 </html>
