@@ -1613,15 +1613,16 @@ document.addEventListener('DOMContentLoaded', async function() {
     }) : null;
     var data = jip || rfq;
 
-    var desc    = data ? (data.description || data.Description || data.Objet || '—') : '—';
-    var client  = data ? (data.__clientName || data.Client || '—') : '—';
-    var status  = data ? (data.status || data.Status || data.statusErp || '—') : '—';
-    var budget  = data ? (data.budgetContractuel || data.MontantHT || null) : null;
-    var site    = data ? (data.site || data.Site || '—') : '—';
-    var dateOuv = data ? (data.dateOuverture || '') : '';
+    var q = rfq || {};
+    var desc    = data ? (data.description || data.Description || q.Objet || q.Designation || '—') : '—';
+    var client  = data ? (data.__clientName || data.Client || q.Client || '—') : '—';
+    var status  = data ? (data.status || data.Status || data.statusErp || q.Etat || '—') : '—';
+    var budget  = data ? (data.budgetContractuel || data.MontantHT || q.MontantHT || null) : null;
+    var site    = data ? (data.site || data.Site || q.Site || '—') : '—';
+    var dateOuv = data ? (data.dateOuverture || q.Date || '') : '';
     var dateDebut = data ? (data.dateDebut || '') : '';
-    var dateFin = data ? (data.dateFin || '') : '';
-    var chef    = data ? (data.acheteurNom || data.chefChantierId || '') : '';
+    var dateFin = data ? (data.dateFin || q.DateLivraison || '') : '';
+    var chef    = data ? (data.acheteurNom || data.chefChantierId || q.Acheteur || '') : '';
     var progress = data ? (data.progress != null ? data.progress : null) : null;
 
     function fmtMoney(v) {
@@ -1764,6 +1765,12 @@ document.addEventListener('DOMContentLoaded', async function() {
       var jd = window.JIP_DATA || [];
       for (var i = 0; i < jd.length; i++) {
         if (String(jd[i].Imputation || jd[i].imputation || '') === ref) return true;
+      }
+    } catch (e) {}
+    try {
+      var qd = window.QUOTE_DATA || [];
+      for (var i = 0; i < qd.length; i++) {
+        if (String(qd[i].Dossier || '') === ref) return true;
       }
     } catch (e) {}
     return false;
