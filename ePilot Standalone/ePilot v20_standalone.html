@@ -1737,5 +1737,278 @@ document.addEventListener('DOMContentLoaded', async function() {
   }
 })();
 </script>
+<script id="__DATA_TOOLS_v1__">
+(function(){
+  if(window.__dataTools) return; window.__dataTools = true;
+
+  /* ============================================================
+     ePilot — Outils de données
+     1. Suppression en cascade d'un chantier (articles, dépenses, devis, docs)
+     2. Purge des chantiers 2023 & 2024 (année lue sur le n° PI)
+     3. Fonction générique de nettoyage window.cleanElement(type,id)
+     4. Tri ascendant/descendant sur chaque entête de tableau
+     ============================================================ */
+
+  function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];}); }
+  function fmt(n){ return (Math.round(+n||0)).toLocaleString('fr-FR'); }
+
+  /* Année d'un chantier d'après son n° d'imputation : PI24xxx -> 2024 */
+  function yearOfImp(imp){
+    var s = String(imp||'');
+    var m = s.match(/PI\s*[-_]?\s*(\d{2})/i);
+    if(!m){ m = s.replace(/[^0-9]/g,'').match(/^(\d{2})/); }
+    if(!m) return null;
+    var yy = parseInt(m[1],10);
+    if(isNaN(yy)) return null;
+    return 2000 + yy;
+  }
+  window.__yearOfImp = yearOfImp;
+
+  function persist(){
+    try{ window.ePilotDataBridge && window.ePilotDataBridge.mirror && window.ePilotDataBridge.mirror(); }catch(e){}
+    /* SOURCING_DATA & _oaDocs sont re-persistés automatiquement par la couche de résilience */
+  }
+  function refresh(){
+    try{ window.HubViews && window.HubViews.refresh && window.HubViews.refresh(); }catch(e){}
+    try{ if(typeof window.renderExpenses==='function') window.renderExpenses(); }catch(e){}
+  }
+
+  /* Toutes les imputations connues de l'application */
+  function allImputations(){
+    var set = {};
+    (window.JIP_DATA||[]).forEach(function(j){ if(j&&j.Imputation) set[j.Imputation]=1; });
+    (window.SOURCING_DATA||[]).forEach(function(r){ if(r&&r.Imputation) set[r.Imputation]=1; });
+    (window.EXPENSES_DATA||[]).forEach(function(e){ if(e&&e.imputation) set[e.imputation]=1; });
+    (window.QUOTE_DATA||[]).forEach(function(q){ if(q&&(q.Dossier||q.Imputation)) set[q.Dossier||q.Imputation]=1; });
+    try{ Object.keys(window._oaDocs||{}).forEach(function(k){ set[k]=1; }); }catch(e){}
+    return Object.keys(set).filter(Boolean);
+  }
+
+  /* Ce que possède un chantier */
+  function chantierStats(imp){
+    var s={articles:0,depenses:0,quotes:0,docs:0,montant:0};
+    (window.SOURCING_DATA||[]).forEach(function(r){ if(r&&r.Imputation===imp){ s.articles++; s.montant+=parseFloat(r.CoutAcqXAF)||0; } });
+    (window.EXPENSES_DATA||[]).forEach(function(e){ if(e&&e.imputation===imp) s.depenses++; });
+    (window.QUOTE_DATA||[]).forEach(function(q){ if(q&&(q.Dossier===imp||q.Imputation===imp)) s.quotes++; });
+    try{ if(window._oaDocs && window._oaDocs[imp]) s.docs=1; }catch(e){}
+    return s;
+  }
+
+  /* ---------- 1 + 3. Suppression en cascade d'un chantier ---------- */
+  function deleteChantierCascade(imp){
+    if(!imp) return 0;
+    var removed = 0;
+    function purge(arr, pred){ if(!arr) return; var b=arr.length; var kept=arr.filter(function(x){return !pred(x);}); removed += b-kept.length; arr.length=0; Array.prototype.push.apply(arr,kept); }
+    purge(window.JIP_DATA,      function(j){ return j && j.Imputation===imp; });
+    purge(window.SOURCING_DATA, function(r){ return r && r.Imputation===imp; });
+    purge(window.EXPENSES_DATA, function(e){ return e && e.imputation===imp; });
+    purge(window.QUOTE_DATA,    function(q){ return q && (q.Dossier===imp || q.Imputation===imp); });
+    try{ if(window._oaDocs && window._oaDocs[imp]){ delete window._oaDocs[imp]; removed++; } }catch(e){}
+    try{ if(window._sourcingIdx && window._sourcingIdx[imp]){ delete window._sourcingIdx[imp]; } }catch(e){}
+    ['epilot_jip_budget_v1','epilot_jip_termine_dates_v1'].forEach(function(k){
+      try{ var o=JSON.parse(localStorage.getItem(k)||'{}'); if(o[imp]!==undefined){ delete o[imp]; localStorage.setItem(k,JSON.stringify(o)); } }catch(e){}
+    });
+    persist();
+    return removed;
+  }
+  window.deleteChantierCascade = deleteChantierCascade;
+
+  /* ---------- 2. Purge des chantiers par année (n° PI) ---------- */
+  function impsForYears(years){
+    var yset={}; years.forEach(function(y){ yset[y]=1; });
+    return allImputations().filter(function(imp){ var y=yearOfImp(imp); return y && yset[y]; });
+  }
+  window.impsForYears = impsForYears;
+
+  function purgeChantierYears(years){
+    var imps = impsForYears(years), total = 0;
+    imps.forEach(function(imp){ total += deleteChantierCascade(imp); });
+    refresh();
+    return { chantiers: imps, removed: total };
+  }
+  window.purgeChantierYears = purgeChantierYears;
+
+  /* ---------- 3. Nettoyage générique d'un élément ---------- */
+  function cleanElement(type, id){
+    var t=(type||'').toLowerCase(), n=0;
+    function purge(arr, pred){ if(!arr) return 0; var b=arr.length; var kept=arr.filter(function(x){return !pred(x);}); arr.length=0; Array.prototype.push.apply(arr,kept); return b-kept.length; }
+    if(t==='chantier'||t==='jip'||t==='project'||t==='dossier'){ n=deleteChantierCascade(id); }
+    else if(t==='depense'||t==='expense'){ n=purge(window.EXPENSES_DATA,function(e){return e&&(e.id===id||e.ref===id);}); }
+    else if(t==='article'||t==='order'||t==='commande'){ n=purge(window.SOURCING_DATA,function(r){return r&&(r.id===id||r.ProductCode===id||r.OA===id||r.PO===id);}); }
+    else if(t==='quote'||t==='devis'){ n=purge(window.QUOTE_DATA,function(q){return q&&(q.Dossier===id||q.Imputation===id);}); }
+    persist(); refresh();
+    return n;
+  }
+  window.cleanElement = cleanElement;
+
+  /* ============================================================
+     PANNEAU « Données »
+     ============================================================ */
+  function styleBtn(bg){ return 'border:0;border-radius:7px;cursor:pointer;font-size:12px;font-weight:600;padding:7px 12px;color:#fff;background:'+bg; }
+
+  function buildPanel(){
+    var ex=document.getElementById('dt-panel'); if(ex){ ex.remove(); return; }
+    var wrap=document.createElement('div');
+    wrap.id='dt-panel';
+    wrap.style.cssText='position:fixed;bottom:74px;left:18px;width:420px;max-height:80vh;background:#fff;border-radius:14px;box-shadow:0 20px 60px rgba(0,0,0,.22);z-index:99999;display:flex;flex-direction:column;overflow:hidden;font-family:-apple-system,Segoe UI,sans-serif;border:1px solid #e5e7eb';
+    wrap.innerHTML =
+      '<div style="padding:14px 18px;background:linear-gradient(135deg,#B5000A,#8b0008);color:#fff;display:flex;justify-content:space-between;align-items:center">'
+        +'<div><div style="font-size:10px;text-transform:uppercase;letter-spacing:.06em;opacity:.8;font-weight:700">ePilot</div>'
+        +'<div style="font-size:16px;font-weight:800;margin-top:2px">🧹 Nettoyage des données</div></div>'
+        +'<button id="dt-x" style="background:rgba(255,255,255,.18);border:0;color:#fff;width:28px;height:28px;border-radius:7px;cursor:pointer;font-size:16px">✕</button>'
+      +'</div>'
+      +'<div style="padding:14px 18px;border-bottom:1px solid #f3f4f6;background:#fafbfc">'
+        +'<div style="font-size:11px;color:#6b7280;text-transform:uppercase;font-weight:700;letter-spacing:.05em;margin-bottom:8px">Purge par année (n° PI)</div>'
+        +'<button id="dt-purge" style="width:100%;'+styleBtn('#dc2626')+'">🗑 Supprimer les chantiers 2023 & 2024 (cascade)</button>'
+        +'<div style="font-size:10.5px;color:#9ca3af;margin-top:6px">Supprime chantiers, articles, dépenses, devis et documents liés.</div>'
+      +'</div>'
+      +'<div style="padding:12px 18px 6px;border-bottom:1px solid #f3f4f6">'
+        +'<input id="dt-search" placeholder="Rechercher un chantier (n° PI)…" style="width:100%;box-sizing:border-box;padding:8px 11px;border:1px solid #e5e7eb;border-radius:8px;font:inherit;font-size:13px">'
+      +'</div>'
+      +'<div id="dt-list" style="flex:1;overflow-y:auto;padding:10px 14px;font-size:12px"></div>'
+      +'<div style="padding:10px 18px;background:#f9fafb;font-size:10.5px;color:#6b7280;border-top:1px solid #f3f4f6">Chaque suppression demande une confirmation.</div>';
+    document.body.appendChild(wrap);
+    document.getElementById('dt-x').addEventListener('click', function(){ wrap.remove(); });
+    document.getElementById('dt-purge').addEventListener('click', function(){
+      var imps = impsForYears([2023,2024]);
+      if(!imps.length){ alert('Aucun chantier 2023 ou 2024 trouvé.'); return; }
+      if(!confirm('Supprimer '+imps.length+' chantier(s) 2023/2024 et TOUTES leurs données liées (articles, dépenses, devis, documents) ?\n\n'+imps.slice(0,30).join(', ')+(imps.length>30?'…':'')+'\n\nCette action est irréversible.')) return;
+      var res = purgeChantierYears([2023,2024]);
+      alert('✓ '+res.chantiers.length+' chantier(s) supprimé(s) — '+res.removed+' enregistrement(s) nettoyé(s).');
+      renderList();
+    });
+    var srch=document.getElementById('dt-search');
+    srch.addEventListener('input', renderList);
+    renderList();
+
+    function renderList(){
+      var box=document.getElementById('dt-list'); if(!box) return;
+      var q=(srch.value||'').toLowerCase().trim();
+      var imps=allImputations().filter(function(i){ return !q || i.toLowerCase().indexOf(q)>=0; });
+      imps.sort();
+      if(!imps.length){ box.innerHTML='<div style="color:#9ca3af;padding:14px 4px;font-style:italic">Aucun chantier.</div>'; return; }
+      box.innerHTML = imps.slice(0,400).map(function(imp){
+        var y=yearOfImp(imp), st=chantierStats(imp);
+        var ytag = y ? '<span style="background:'+((y===2023||y===2024)?'rgba(220,38,38,.12);color:#dc2626':'rgba(37,99,235,.12);color:#2563eb')+';padding:1px 7px;border-radius:99px;font-size:10px;font-weight:700;margin-left:6px">'+y+'</span>' : '';
+        return '<div style="display:flex;align-items:center;gap:8px;padding:8px 6px;border-bottom:1px solid #f3f4f6">'
+          +'<div style="flex:1;min-width:0">'
+            +'<div style="font-weight:700;color:#0f172a;font-family:monospace">'+esc(imp)+ytag+'</div>'
+            +'<div style="font-size:10.5px;color:#9ca3af;margin-top:2px">'+st.articles+' art. · '+st.depenses+' dép. · '+st.quotes+' devis'+(st.docs?' · docs':'')+' · '+fmt(st.montant)+' XAF</div>'
+          +'</div>'
+          +'<button class="dt-del" data-imp="'+esc(imp)+'" title="Supprimer ce chantier et toutes ses données" style="'+styleBtn('#dc2626')+';padding:5px 10px">Supprimer</button>'
+        +'</div>';
+      }).join('');
+      box.querySelectorAll('.dt-del').forEach(function(b){
+        b.addEventListener('click', function(){
+          var imp=b.getAttribute('data-imp');
+          var st=chantierStats(imp);
+          if(!confirm('Supprimer le chantier '+imp+' et toutes ses données ?\n\n'+st.articles+' article(s), '+st.depenses+' dépense(s), '+st.quotes+' devis, '+(st.docs?'documents inclus.':'aucun document.')+'\n\nCette action est irréversible.')) return;
+          var n=deleteChantierCascade(imp); refresh();
+          alert('✓ Chantier '+imp+' supprimé ('+n+' enregistrement(s)).');
+          renderList();
+        });
+      });
+    }
+  }
+
+  function mkFab(){
+    if(document.getElementById('dt-fab')) return;
+    var b=document.createElement('button');
+    b.id='dt-fab'; b.title='Nettoyage des données'; b.innerHTML='🧹';
+    b.style.cssText='position:fixed;bottom:18px;left:18px;width:48px;height:48px;border-radius:50%;background:#1d3557;color:#fff;border:0;cursor:pointer;font-size:22px;box-shadow:0 8px 24px rgba(0,0,0,.18);z-index:99998;display:flex;align-items:center;justify-content:center';
+    b.addEventListener('click', buildPanel);
+    document.body.appendChild(b);
+  }
+
+  /* ============================================================
+     4. TRI sur chaque entête de tableau
+     ============================================================ */
+  function cellValue(td){
+    var t=(td.getAttribute('data-sort') || td.textContent || '').trim();
+    if(t==='' || t==='—' || t==='-') return {empty:true};
+    var dm=t.match(/^(\d{1,2})[\/.\-](\d{1,2})[\/.\-](\d{2,4})$/);
+    if(dm){ var yy=dm[3].length===2?'20'+dm[3]:dm[3]; return {n:new Date(+yy,(+dm[2])-1,+dm[1]).getTime()}; }
+    if(/^\d{4}-\d{2}-\d{2}/.test(t)){ var ti=new Date(t).getTime(); if(!isNaN(ti)) return {n:ti}; }
+    var num=t.replace(/[\s  ]/g,'').replace(/(fcfa|xaf|€|\$|%)/ig,'').replace(/,/g,'.');
+    if(num!=='' && /^-?\d*\.?\d+$/.test(num)) return {n:parseFloat(num)};
+    return {s:t.toLowerCase()};
+  }
+  function compare(a,b,dir){
+    if(a.empty&&b.empty) return 0;
+    if(a.empty) return 1;            /* vides toujours en bas */
+    if(b.empty) return -1;
+    var r;
+    if('n' in a && 'n' in b) r=a.n-b.n;
+    else if('n' in a) r=-1;          /* nombres avant textes */
+    else if('n' in b) r=1;
+    else r=(a.s<b.s?-1:a.s>b.s?1:0);
+    return dir==='desc' ? -r : r;
+  }
+  function sortTable(table, colIdx, dir){
+    var tbody=table.tBodies[0]; if(!tbody) return;
+    var rows=Array.prototype.filter.call(tbody.rows, function(r){
+      return r.cells.length>colIdx && !r.querySelector('[colspan]') && r.cells.length>1;
+    });
+    if(rows.length<2) return;
+    rows.map(function(r){ return {r:r, v:cellValue(r.cells[colIdx])}; })
+      .sort(function(x,y){ return compare(x.v,y.v,dir); })
+      .forEach(function(o){ tbody.appendChild(o.r); });
+  }
+  function injectSortButtons(root){
+    var tables=(root||document).querySelectorAll('table');
+    Array.prototype.forEach.call(tables, function(table){
+      if(!table.tHead || !table.tBodies.length) return;
+      var headRows=table.tHead.rows; if(!headRows.length) return;
+      var hr=headRows[headRows.length-1];
+      Array.prototype.forEach.call(hr.cells, function(th, idx){
+        if(th.querySelector('.dts-sort')) return;
+        if(th.getAttribute('data-nosort')==='1') return;
+        var btn=document.createElement('span');
+        btn.className='dts-sort';
+        btn.textContent='⇅';
+        btn.title='Trier cette colonne';
+        btn.style.cssText='cursor:pointer;margin-left:5px;font-size:10px;opacity:.45;user-select:none;display:inline-block;transition:opacity .12s';
+        btn.addEventListener('mouseenter',function(){btn.style.opacity='1';});
+        btn.addEventListener('mouseleave',function(){ if(!btn._active) btn.style.opacity='.45'; });
+        btn.addEventListener('click', function(ev){
+          ev.stopPropagation(); ev.preventDefault();
+          var dir = (table._dtsCol===idx && table._dtsDir==='asc') ? 'desc' : 'asc';
+          table._dtsCol=idx; table._dtsDir=dir;
+          /* reset other indicators */
+          Array.prototype.forEach.call(hr.cells, function(c){ var s=c.querySelector('.dts-sort'); if(s){ s.textContent='⇅'; s._active=false; s.style.opacity='.45'; } });
+          btn.textContent = dir==='asc' ? '▲' : '▼';
+          btn._active=true; btn.style.opacity='1';
+          sortTable(table, idx, dir);
+        });
+        th.appendChild(btn);
+      });
+    });
+  }
+
+  var _sortTimer=null;
+  function scheduleInject(){ if(_sortTimer) return; _sortTimer=setTimeout(function(){ _sortTimer=null; try{ injectSortButtons(document); }catch(e){} }, 250); }
+
+  function boot(){
+    mkFab();
+    injectSortButtons(document);
+    var mo=new MutationObserver(function(muts){
+      for(var i=0;i<muts.length;i++){
+        var m=muts[i];
+        if(m.addedNodes && m.addedNodes.length){
+          for(var j=0;j<m.addedNodes.length;j++){
+            var n=m.addedNodes[j];
+            if(n.nodeType===1 && (n.tagName==='TABLE' || (n.querySelector && n.querySelector('table')))){ scheduleInject(); return; }
+          }
+        }
+      }
+    });
+    mo.observe(document.body, {childList:true, subtree:true});
+    console.log('[DataTools v1] prêt — deleteChantierCascade / purgeChantierYears / cleanElement + tri colonnes.');
+  }
+
+  if(document.readyState==='complete' || document.readyState==='interactive'){ setTimeout(boot, 1200); }
+  else { window.addEventListener('load', function(){ setTimeout(boot, 1200); }); }
+})();
+</script>
 </body>
 </html>
