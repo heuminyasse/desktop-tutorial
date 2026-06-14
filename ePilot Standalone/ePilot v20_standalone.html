@@ -1777,8 +1777,8 @@ document.addEventListener('DOMContentLoaded', async function() {
     if (!t || t.nodeType !== 1) return;
     // Ne pas gêner les champs interactifs
     if (t.closest('select, input, textarea, .fac-st-sel')) return;
-    // À l'intérieur de l'onglet Chantiers JIP : laisser la navigation interne
-    if (t.closest('#view-chantiers, #view-jip, [data-view="chantiers"], #chantier-overlay')) return;
+    // À l'intérieur de la fiche détail chantier : laisser la navigation interne
+    if (t.closest('#chantier-overlay, .chantier-overlay, #chantier-detail, .chantier-detail')) return;
     // Ne pas ré-intercepter un clic dans notre propre modal
     if (t.closest('#__fcr-chantier-modal')) return;
 
@@ -1801,6 +1801,17 @@ document.addEventListener('DOMContentLoaded', async function() {
     e.stopImmediatePropagation();
     try { window.openChantierFloatingModal(refKey); } catch (err) { try { console.warn('[FCR modal]', err); } catch (_) {} }
   }, true);
+
+
+  // Override global entry points so ALL paths use the floating modal
+  var _fcrOpen = function(ref) {
+    if (ref && typeof window.openChantierFloatingModal === 'function') {
+      window.openChantierFloatingModal(String(ref).trim());
+    }
+  };
+  window.openChantier = _fcrOpen;
+  window.openChantierDrawer = _fcrOpen;
+  window.openQuote = _fcrOpen;
 
 })();
 </script>
