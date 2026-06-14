@@ -2172,9 +2172,11 @@ document.addEventListener('DOMContentLoaded', async function() {
     if(!t || !t.closest) return;
     var tr = t.closest('#art-tbody tr.clickable');
     if(!tr) return;
-    /* Laisser la 1ère cellule (photo) ouvrir le modal photo */
+    /* Intercepter uniquement la cellule qui contient le CodeA ([AS]####) */
     var td = t.closest('td');
-    if(td && td.cellIndex===0) return;
+    if(!td) return;
+    var cellText = (td.textContent||'').trim();
+    if(!/^[AS]\d{2,6}$/.test(cellText)) return; /* pas la cellule CodeA → laisser le module gérer */
     if(typeof window.openProductModal_Pro !== 'function') return;
     var art = articleFromRow(tr);
     if(!art) return;
