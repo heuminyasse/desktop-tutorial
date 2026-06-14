@@ -2010,5 +2010,100 @@ document.addEventListener('DOMContentLoaded', async function() {
   else { window.addEventListener('load', function(){ setTimeout(boot, 1200); }); }
 })();
 </script>
+<script id="__CHANTIER_DELETE_BTN_v1__">
+(function(){
+  if(window.__chtDelBtn) return; window.__chtDelBtn = true;
+
+  function injectBtn(){
+    var header = document.getElementById('chantier-header'); if(!header) return;
+    if(header.querySelector('#ch-del-btn')) return;  /* déjà injecté */
+
+    /* Lire le ref PI depuis la DOM (mis à jour par openChantier) */
+    var refEl = document.getElementById('ch-devis-ref');
+    var imp = (window.currentChantierRef || (refEl && refEl.textContent) || '').trim();
+    if(!imp || imp==='—') return;
+
+    /* Trouver le 1er div enfant de zone droite contenant les boutons */
+    var btnRow = header.querySelector('button.btn-ghost, button[onclick*="backFromChantier"]');
+    var row = btnRow && btnRow.parentElement;
+    if(!row) return;
+
+    var del = document.createElement('button');
+    del.id = 'ch-del-btn';
+    del.className = 'btn btn-sm';
+    del.style.cssText = 'background:#dc2626;color:#fff;border:none;border-color:#dc2626';
+    del.title = 'Supprimer ce chantier et toutes ses données';
+    del.textContent = '🗑 Supprimer';
+    del.addEventListener('click', function(){
+      var ref = (window.currentChantierRef || imp).trim();
+      if(!ref || ref==='—'){ alert('Chantier introuvable.'); return; }
+      if(typeof window.deleteChantierCascade !== 'function'){ alert('Outil de suppression non chargé.'); return; }
+      var st = (window.__chtStats && window.__chtStats(ref)) || {};
+      var msg = 'Supprimer le chantier '+ref+' et TOUTES ses données ?\n';
+      if(st.articles)  msg += '• '+st.articles+' article(s) / commande(s)\n';
+      if(st.depenses)  msg += '• '+st.depenses+' dépense(s)\n';
+      if(st.quotes)    msg += '• '+st.quotes+' devis\n';
+      if(st.docs)      msg += '• documents OA/PO/BL/FAC\n';
+      msg += '\n⚠ Cette action est irréversible.';
+      if(!confirm(msg)) return;
+      var n = window.deleteChantierCascade(ref);
+      try{ if(typeof window.backFromChantier==='function') window.backFromChantier(); }catch(e){}
+      try{ window.HubViews && window.HubViews.refresh && window.HubViews.refresh(); }catch(e){}
+      alert('✓ Chantier '+ref+' supprimé ('+n+' enregistrement(s) nettoyé(s)).');
+    });
+    row.appendChild(del);
+
+    /* Mettre à jour l'imp quand overlay se referme (prochain openChantier) */
+    del._imp = imp;
+  }
+
+  /* Expose helper for stats (lazy — will be set by DataTools) */
+  window.__chtStats = function(imp){
+    var s={articles:0,depenses:0,quotes:0,docs:0};
+    (window.SOURCING_DATA||[]).forEach(function(r){ if(r&&r.Imputation===imp) s.articles++; });
+    (window.EXPENSES_DATA||[]).forEach(function(e){ if(e&&e.imputation===imp) s.depenses++; });
+    (window.QUOTE_DATA||[]).forEach(function(q){ if(q&&(q.Dossier===imp||q.Imputation===imp)) s.quotes++; });
+    try{ if(window._oaDocs&&window._oaDocs[imp]) s.docs=1; }catch(e){}
+    return s;
+  };
+
+  function watch(){
+    /* 1. Watch for #chantier-overlay to be added to DOM */
+    var bodyObs = new MutationObserver(function(muts){
+      muts.forEach(function(m){
+        m.addedNodes && m.addedNodes.forEach && m.addedNodes.forEach(function(n){
+          if(!n.querySelector) return;
+          var ov = n.id==='chantier-overlay'?n:n.querySelector('#chantier-overlay');
+          if(!ov) return;
+          attachOverlayObs(ov);
+          /* also try right now */
+          if(ov.classList.contains('open')) setTimeout(injectBtn, 80);
+        });
+      });
+    });
+    bodyObs.observe(document.body, {childList:true, subtree:true});
+
+    /* in case already in DOM */
+    var ex = document.getElementById('chantier-overlay');
+    if(ex){ attachOverlayObs(ex); if(ex.classList.contains('open')) setTimeout(injectBtn, 80); }
+  }
+
+  function attachOverlayObs(ov){
+    if(ov._chtDelObs) return;
+    ov._chtDelObs = new MutationObserver(function(){
+      if(ov.classList.contains('open')){
+        /* small delay: openChantier fills in ch-devis-ref first */
+        setTimeout(injectBtn, 80);
+      } else {
+        var b=document.getElementById('ch-del-btn'); if(b) b.remove();
+      }
+    });
+    ov._chtDelObs.observe(ov, {attributes:true, attributeFilter:['class']});
+  }
+
+  if(document.readyState==='loading'){ document.addEventListener('DOMContentLoaded', watch); }
+  else { watch(); }
+})();
+</script>
 </body>
 </html>
