@@ -1680,9 +1680,8 @@ document.addEventListener('DOMContentLoaded', async function() {
           '</div>' +
 
           // Footer
-          '<div style="padding:14px 24px;border-top:1px solid #e2e8f0;display:flex;gap:8px;justify-content:flex-end">' +
+          '<div style="padding:14px 24px;border-top:1px solid #e2e8f0;display:flex;justify-content:flex-end">' +
             '<button id="__fcr-ch-cancel" style="padding:8px 18px;border:1px solid #e2e8f0;border-radius:8px;background:#fff;cursor:pointer;font-size:13px;color:#64748b;font-weight:500">Fermer</button>' +
-            '<button id="__fcr-ch-goto" style="padding:8px 18px;border:none;border-radius:8px;background:#0f172a;color:#fff;cursor:pointer;font-size:13px;font-weight:600">Voir dans Chantiers JIP &#8594;</button>' +
           '</div>' +
 
         '</div>' +
@@ -1698,10 +1697,7 @@ document.addEventListener('DOMContentLoaded', async function() {
     overlay.addEventListener('click', function(e) { if (e.target === overlay) close(); });
     overlay.querySelector('#__fcr-ch-close').addEventListener('click', close);
     overlay.querySelector('#__fcr-ch-cancel').addEventListener('click', close);
-    overlay.querySelector('#__fcr-ch-goto').addEventListener('click', function() {
-      close();
-      window.__openChantierInJIP && window.__openChantierInJIP(refKey);
-    });
+
 
     document.addEventListener('keydown', onKey);
     document.body.appendChild(overlay);
