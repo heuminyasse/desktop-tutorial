@@ -1989,5 +1989,146 @@ document.addEventListener('DOMContentLoaded', async function() {
   else { watch(); }
 })();
 </script>
+<script id="__ARTICLES_CLEANER_v1__">
+/* Outil de nettoyage de la base Articles (window.FCR_DB) — recherche/remplacement en masse */
+(function articlesCleaner(){
+  var FIELDS=[['categorie','Catégorie'],['sousCategorie','Sous-catégorie'],['desc','Description'],['reference','Référence'],['fabricant','Fabricant'],['vendeur','Vendeur'],['section','Section'],['type','Type'],['unite','Unité'],['tags','Tags']];
+  function db(){ return window.FCR_DB || []; }
+  function val(a,f){ if(f==='tags'){ return Array.isArray(a.tags)?a.tags.join(', '):(a.tags||''); } return a[f]==null?'':String(a[f]); }
+  function setVal(a,f,v){ if(f==='tags'){ a.tags=v.split(',').map(function(t){return t.trim();}).filter(Boolean); } else { a[f]=v; } }
+  function escRe(s){ return s.replace(/[.*+?^${}()|[\]\\]/g,'\\$&'); }
+  function esc(s){ return String(s==null?'':s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];}); }
+
+  var modal=null, fieldSel, modeSel, caseChk, findInp, replInp, distBox, prevBox;
+
+  function computeChanges(){
+    var f=fieldSel.value, mode=modeSel.value, find=findInp.value, repl=replInp.value, cs=caseChk.checked;
+    if(!find && mode!=='regex') return [];
+    var re=null;
+    if(mode==='regex'){ try{ re=new RegExp(find, cs?'g':'gi'); }catch(e){ return null; } }
+    var out=[];
+    db().forEach(function(a){
+      if(!a) return;
+      var old=val(a,f), nw=old;
+      if(mode==='egal'){
+        var ca=cs?old.trim():old.trim().toLowerCase(), cf=cs?find.trim():find.trim().toLowerCase();
+        if(ca===cf) nw=repl;
+      } else if(mode==='contient'){
+        if(!find) return;
+        if(cs){ if(old.indexOf(find)!==-1) nw=old.split(find).join(repl); }
+        else { nw=old.replace(new RegExp(escRe(find),'gi'), repl); }
+      } else if(mode==='regex'){ nw=old.replace(re, repl); }
+      if(nw!==old) out.push({a:a, old:old, nw:nw});
+    });
+    return out;
+  }
+
+  function refreshDistinct(){
+    var f=fieldSel.value, m={};
+    db().forEach(function(a){ if(!a) return; var v=val(a,f); m[v]=(m[v]||0)+1; });
+    var keys=Object.keys(m).sort(function(x,y){ return m[y]-m[x]; });
+    var html='<div style="font-size:11px;color:#6b7280;margin-bottom:6px">'+keys.length+' valeur(s) distincte(s) — cliquez pour cibler</div>';
+    keys.slice(0,300).forEach(function(k){
+      html+='<div class="ac-dist" data-v="'+esc(k)+'" style="display:flex;justify-content:space-between;gap:8px;padding:4px 8px;border-bottom:1px solid #f1f5f9;cursor:pointer;font-size:12px">'
+        +'<span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:340px">'+(k===''?'<i style="color:#9ca3af">(vide)</i>':esc(k))+'</span>'
+        +'<span style="color:#9ca3af;flex-shrink:0">'+m[k]+'</span></div>';
+    });
+    distBox.innerHTML=html;
+    Array.prototype.forEach.call(distBox.querySelectorAll('.ac-dist'),function(el){
+      el.onclick=function(){ findInp.value=el.getAttribute('data-v'); modeSel.value='egal'; refreshPreview(); };
+      el.onmouseenter=function(){ el.style.background='#f8fafc'; };
+      el.onmouseleave=function(){ el.style.background='#fff'; };
+    });
+  }
+
+  function refreshPreview(){
+    var ch=computeChanges();
+    if(ch===null){ prevBox.innerHTML='<span style="color:#dc2626">Expression régulière invalide.</span>'; return; }
+    if(!ch.length){ prevBox.innerHTML='<span style="color:#6b7280">Aucun article concerné.</span>'; return; }
+    var html='<div style="font-weight:700;color:#B5000A;margin-bottom:6px">'+ch.length+' article(s) seront modifiés :</div>';
+    ch.slice(0,6).forEach(function(c){
+      html+='<div style="font-size:11px;padding:3px 0;border-bottom:1px solid #f1f5f9"><span style="color:#dc2626;text-decoration:line-through">'+esc(c.old.slice(0,60))+'</span> → <span style="color:#16a34a">'+esc(c.nw.slice(0,60))+'</span></div>';
+    });
+    if(ch.length>6) html+='<div style="font-size:11px;color:#9ca3af;margin-top:4px">… et '+(ch.length-6)+' autre(s)</div>';
+    prevBox.innerHTML=html;
+  }
+
+  function applyChanges(){
+    var ch=computeChanges(), f=fieldSel.value;
+    if(ch===null){ alert('Expression régulière invalide.'); return; }
+    if(!ch.length){ alert('Aucun article concerné.'); return; }
+    if(!confirm('Appliquer la correction du champ « '+f+' » à '+ch.length+' article(s) ?\n\nCette action est irréversible.')) return;
+    ch.forEach(function(c){ setVal(c.a, f, c.nw); });
+    try{ if(typeof window.idbSaveAll==='function') window.idbSaveAll(window.FCR_DB); }catch(e){ console.warn('[Cleaner] idbSaveAll',e); }
+    try{ if(window.HubViews&&window.HubViews.refresh) window.HubViews.refresh(); }catch(_){}
+    try{ if(typeof window.renderArticles==='function') window.renderArticles(); }catch(_){}
+    alert(ch.length+' article(s) corrigé(s) et enregistré(s).');
+    refreshDistinct(); refreshPreview();
+  }
+
+  function build(){
+    modal=document.createElement('div');
+    modal.id='ac-modal';
+    modal.style.cssText='position:fixed;inset:0;z-index:99999;background:rgba(15,23,42,.55);display:flex;align-items:center;justify-content:center;padding:20px;font-family:inherit';
+    modal.innerHTML='<div style="background:#fff;border-radius:14px;width:760px;max-width:96%;max-height:90vh;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,.3)">'
+      +'<div style="padding:16px 20px;border-bottom:1px solid #e5e7eb;display:flex;align-items:center;justify-content:space-between">'
+        +'<div style="font-size:16px;font-weight:800">🧹 Nettoyer la base Articles</div>'
+        +'<button id="ac-close" style="border:0;background:transparent;font-size:20px;cursor:pointer;color:#6b7280">✕</button></div>'
+      +'<div style="padding:18px 20px;overflow-y:auto;display:grid;grid-template-columns:1fr 1fr;gap:18px">'
+        +'<div>'
+          +'<label style="display:block;font-size:10px;font-weight:700;color:#6b7280;text-transform:uppercase;margin-bottom:4px">Champ à corriger</label>'
+          +'<select id="ac-field" style="width:100%;padding:9px;border:1px solid #cbd5e1;border-radius:8px;margin-bottom:12px;font-family:inherit"></select>'
+          +'<label style="display:block;font-size:10px;font-weight:700;color:#6b7280;text-transform:uppercase;margin-bottom:4px">Mode</label>'
+          +'<select id="ac-mode" style="width:100%;padding:9px;border:1px solid #cbd5e1;border-radius:8px;margin-bottom:12px;font-family:inherit">'
+            +'<option value="egal">Égal à (valeur entière)</option><option value="contient">Contient (remplace dans le texte)</option><option value="regex">Expression régulière</option></select>'
+          +'<label style="display:block;font-size:10px;font-weight:700;color:#6b7280;text-transform:uppercase;margin-bottom:4px">Rechercher</label>'
+          +'<input id="ac-find" style="width:100%;padding:9px;border:1px solid #cbd5e1;border-radius:8px;margin-bottom:12px;font-family:inherit" placeholder="Texte à rechercher…"/>'
+          +'<label style="display:block;font-size:10px;font-weight:700;color:#6b7280;text-transform:uppercase;margin-bottom:4px">Remplacer par</label>'
+          +'<input id="ac-repl" style="width:100%;padding:9px;border:1px solid #cbd5e1;border-radius:8px;margin-bottom:12px;font-family:inherit" placeholder="Nouvelle valeur…"/>'
+          +'<label style="display:flex;align-items:center;gap:6px;font-size:12px;color:#374151;cursor:pointer"><input type="checkbox" id="ac-case"/> Sensible à la casse</label>'
+          +'<div id="ac-preview" style="margin-top:14px;padding:10px;background:#f8fafc;border-radius:8px;min-height:40px;font-size:12px"></div>'
+        +'</div>'
+        +'<div style="display:flex;flex-direction:column;min-height:0">'
+          +'<label style="display:block;font-size:10px;font-weight:700;color:#6b7280;text-transform:uppercase;margin-bottom:4px">Valeurs existantes</label>'
+          +'<div id="ac-dist" style="flex:1;overflow-y:auto;border:1px solid #e5e7eb;border-radius:8px;max-height:360px"></div>'
+        +'</div>'
+      +'</div>'
+      +'<div style="padding:14px 20px;border-top:1px solid #e5e7eb;display:flex;justify-content:flex-end;gap:8px">'
+        +'<button id="ac-cancel" style="padding:9px 18px;border-radius:8px;border:1px solid #cbd5e1;background:#fff;cursor:pointer;font-family:inherit">Fermer</button>'
+        +'<button id="ac-apply" style="padding:9px 18px;border-radius:8px;border:0;background:#B5000A;color:#fff;font-weight:700;cursor:pointer;font-family:inherit">Appliquer la correction</button>'
+      +'</div></div>';
+    document.body.appendChild(modal);
+    fieldSel=modal.querySelector('#ac-field'); modeSel=modal.querySelector('#ac-mode');
+    caseChk=modal.querySelector('#ac-case'); findInp=modal.querySelector('#ac-find');
+    replInp=modal.querySelector('#ac-repl'); distBox=modal.querySelector('#ac-dist');
+    prevBox=modal.querySelector('#ac-preview');
+    fieldSel.innerHTML=FIELDS.map(function(f){ return '<option value="'+f[0]+'">'+f[1]+'</option>'; }).join('');
+    fieldSel.onchange=function(){ refreshDistinct(); refreshPreview(); };
+    modeSel.onchange=refreshPreview; caseChk.onchange=refreshPreview;
+    findInp.oninput=refreshPreview; replInp.oninput=refreshPreview;
+    modal.querySelector('#ac-close').onclick=close; modal.querySelector('#ac-cancel').onclick=close;
+    modal.querySelector('#ac-apply').onclick=applyChanges;
+    modal.addEventListener('click',function(e){ if(e.target===modal) close(); });
+  }
+  function open(){ if(!modal) build(); modal.style.display='flex'; refreshDistinct(); refreshPreview(); }
+  function close(){ if(modal) modal.style.display='none'; }
+  window.openArticlesCleaner=open;
+
+  function setup(){
+    var v=document.getElementById('view-articles'); if(!v) return;
+    if(v.querySelector('.ac-btn')) return;
+    var head=v.querySelector('.view-head')||v.firstElementChild; if(!head) return;
+    var btn=document.createElement('button');
+    btn.className='ac-btn'; btn.innerHTML='🧹 Nettoyer';
+    btn.style.cssText='padding:8px 16px;border-radius:8px;background:#0f766e;color:#fff;border:0;cursor:pointer;font-family:inherit;font-size:13px;font-weight:700;margin-left:8px';
+    btn.onclick=open;
+    var actions=head.querySelector('.actions');
+    if(actions) actions.appendChild(btn);
+    else { btn.style.position='absolute'; btn.style.top='14px'; btn.style.right='150px'; head.style.position='relative'; head.appendChild(btn); }
+  }
+  var t=0; (function poll(){ setup(); if(t++>400) return; setTimeout(poll,400); })();
+  try{ new MutationObserver(function(){ setup(); }).observe(document.body,{childList:true,subtree:true}); }catch(_){}
+})();
+</script>
 </body>
 </html>
