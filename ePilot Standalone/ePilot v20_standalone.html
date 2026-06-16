@@ -436,6 +436,20 @@ document.addEventListener('DOMContentLoaded', async function() {
       })();
     }
 
+    // Motif partagé « ré-appliquer en continu » : relance fn() périodiquement
+    // (jusqu'à `tries` fois) ET sur chaque mutation du DOM, pour réimposer un
+    // patch que l'app hôte pourrait écraser en re-rendant. Atteindre la limite
+    // est le cas normal (pas un échec). Exposé en global car réutilisé par des
+    // modules <script> séparés (__ARTICLES_CLEANER, __BACKUP_TOOL, …).
+    window.__epKeepApplying = function(fn, opts){
+      opts = opts || {};
+      var interval = opts.interval || 400;
+      var tries = (opts.tries != null) ? opts.tries : 400;
+      var t = 0;
+      (function poll(){ fn(); if (t++ > tries) return; setTimeout(poll, interval); })();
+      try { new MutationObserver(function(){ fn(); }).observe(document.body, { childList: true, subtree: true }); } catch(_){}
+    };
+
     (function injectContrat(){
       function patch(){
         var el = document.getElementById('ch-src');
@@ -2058,8 +2072,7 @@ document.addEventListener('DOMContentLoaded', async function() {
     if(actions) actions.appendChild(btn);
     else { btn.style.position='absolute'; btn.style.top='14px'; btn.style.right='150px'; head.style.position='relative'; head.appendChild(btn); }
   }
-  var t=0; (function poll(){ setup(); if(t++>400) return; setTimeout(poll,400); })();
-  try{ new MutationObserver(function(){ setup(); }).observe(document.body,{childList:true,subtree:true}); }catch(_){}
+  window.__epKeepApplying(setup, { interval: 400, tries: 400 });
 })();
 </script>
 <script id="__BACKUP_TOOL_v1__">
@@ -2133,8 +2146,7 @@ document.addEventListener('DOMContentLoaded', async function() {
     btn.style.cssText='padding:8px 16px;border-radius:8px;background:#475569;color:#fff;border:0;cursor:pointer;font-family:inherit;font-size:13px;font-weight:700;margin-left:8px';
     btn.onclick=open; actions.appendChild(btn);
   }
-  var t=0; (function poll(){ setup(); if(t++>400) return; setTimeout(poll,400); })();
-  try{ new MutationObserver(function(){ setup(); }).observe(document.body,{childList:true,subtree:true}); }catch(_){}
+  window.__epKeepApplying(setup, { interval: 400, tries: 400 });
   setTimeout(maybeAutoBackup, 8000);
 })();
 </script>
@@ -2184,8 +2196,7 @@ document.addEventListener('DOMContentLoaded', async function() {
     btn.style.cssText='padding:8px 16px;border-radius:8px;background:#7c3aed;color:#fff;border:0;cursor:pointer;font-family:inherit;font-size:13px;font-weight:700;margin-left:8px';
     btn.onclick=open; actions.appendChild(btn);
   }
-  var t=0; (function poll(){ setup(); if(t++>400) return; setTimeout(poll,400); })();
-  try{ new MutationObserver(function(){ setup(); }).observe(document.body,{childList:true,subtree:true}); }catch(_){}
+  window.__epKeepApplying(setup, { interval: 400, tries: 400 });
   log('app-open', (navigator.platform||''));
 })();
 </script>
@@ -2260,8 +2271,7 @@ document.addEventListener('DOMContentLoaded', async function() {
     btn.style.cssText='padding:8px 16px;border-radius:8px;background:#1e293b;color:#fff;border:0;cursor:pointer;font-family:inherit;font-size:13px;font-weight:700;margin-left:8px';
     btn.onclick=settings; actions.appendChild(btn);
   }
-  var t=0; (function poll(){ setup(); if(t++>400) return; setTimeout(poll,400); })();
-  try{ new MutationObserver(function(){ setup(); }).observe(document.body,{childList:true,subtree:true}); }catch(_){}
+  window.__epKeepApplying(setup, { interval: 400, tries: 400 });
   if(enabled()) lockScreen();
 })();
 </script>
