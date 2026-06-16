@@ -766,6 +766,122 @@ document.addEventListener('DOMContentLoaded', async function() {
       },1500);
     })();
 
+    /* [ClientsSkin v1] Lifting esthétique de la vue Clients (structure & logique
+       inchangées) : on superpose une feuille de style raffinée, scopée sous
+       #view-clients, qui prime par spécificité d'ID sur les règles d'origine. */
+    (function clientsSkin(){
+      'use strict';
+      if(document.getElementById('cl-skin-style'))return;
+      var css=`
+      /* ---- En-tête & KPI ---- */
+      #view-clients .view-head h1 .accent{color:var(--orange)}
+      #view-clients #cl-kpi-bar{font-weight:600;letter-spacing:.01em}
+
+      /* ---- Recherche ---- */
+      #view-clients .cl-search{border-radius:12px;background:var(--card);border:1px solid var(--line);
+        box-shadow:0 1px 2px rgba(16,24,40,.05);transition:border-color .15s,box-shadow .15s;padding:9px 12px}
+      #view-clients .cl-search:focus-within{border-color:var(--orange);
+        box-shadow:0 0 0 3px color-mix(in oklab,var(--orange) 16%,transparent)}
+      #view-clients .cl-search svg{color:var(--muted)}
+
+      /* ---- Filtres (segmented) ---- */
+      #view-clients .cl-filters{gap:5px}
+      #view-clients .cl-filters button{border-radius:9px;padding:5px 12px;font-weight:600;font-size:11.5px;
+        background:var(--card-2);border:1px solid transparent;color:var(--muted);transition:all .15s}
+      #view-clients .cl-filters button:hover{color:var(--text);background:color-mix(in oklab,var(--orange) 8%,var(--card-2))}
+      #view-clients .cl-filters button.on{background:var(--orange);border-color:var(--orange);color:#fff;
+        box-shadow:0 2px 8px color-mix(in oklab,var(--orange) 38%,transparent)}
+
+      /* ---- Liste clients ---- */
+      #view-clients .cl-list{padding:8px 8px 14px}
+      #view-clients .cl-row{padding:9px 12px;margin:2px 0;border-radius:11px;position:relative;
+        border:1px solid transparent;transition:background .15s,border-color .15s}
+      #view-clients .cl-row:hover{background:var(--card-2)}
+      #view-clients .cl-row.active{background:color-mix(in oklab,var(--orange) 9%,var(--card));
+        border-color:color-mix(in oklab,var(--orange) 35%,var(--line))}
+      #view-clients .cl-row.active::before{content:"";position:absolute;left:0;top:9px;bottom:9px;width:3px;
+        border-radius:0 999px 999px 0;background:var(--orange)}
+      #view-clients .cl-row .nm{font-size:13px;font-weight:650;letter-spacing:-.01em}
+      #view-clients .cl-row .meta .amt{font-size:13.5px;letter-spacing:-.02em}
+
+      /* ---- Badges statut (remplis, doux) ---- */
+      #view-clients .cl-badge{border:0;padding:3px 9px;font-weight:700;font-size:9.5px;text-transform:uppercase;letter-spacing:.04em}
+      #view-clients .cl-badge .d{width:5px;height:5px}
+      #view-clients .cl-badge.actif{background:color-mix(in oklab,var(--green) 15%,var(--card));color:var(--green)}
+      #view-clients .cl-badge.prospect{background:color-mix(in oklab,var(--blue) 15%,var(--card));color:var(--blue)}
+      #view-clients .cl-badge.vip{background:color-mix(in oklab,var(--orange) 16%,var(--card));color:var(--orange)}
+      #view-clients .cl-badge.dormant{background:var(--card-2);color:var(--muted)}
+
+      /* ---- Panneau sites (bas-gauche) ---- */
+      #view-clients #cl-sites-title{text-transform:uppercase;letter-spacing:.05em;font-size:10px;color:var(--muted)}
+      #view-clients #cl-sites-panel > div[style]{border-radius:9px}
+      #view-clients .cl-edit-btn{transition:background .15s,border-color .15s}
+      #view-clients .cl-edit-btn:hover{background:color-mix(in oklab,var(--orange) 10%,var(--card)) !important;
+        border-color:var(--orange) !important}
+
+      /* ---- Cartes de détail (frames) ---- */
+      #view-clients .cl-frames{gap:16px}
+      #view-clients .cl-frame{border-radius:16px;border:1px solid var(--line);padding:16px 18px;
+        box-shadow:0 1px 3px rgba(16,24,40,.06),0 10px 28px rgba(16,24,40,.05)}
+      #view-clients .cl-frame > .head{border-bottom:1px solid var(--border2,var(--line));padding-bottom:11px;margin-bottom:13px}
+      #view-clients .cl-frame > .head h4{font-size:10.5px;color:var(--muted)}
+      #view-clients .cl-frame > .head h4:not(.cl-name-title)::before{content:"";display:inline-block;width:6px;height:6px;
+        border-radius:2px;background:var(--orange);margin-right:8px;vertical-align:middle;transform:translateY(-1px)}
+      #view-clients .cl-frame > .head h4.cl-name-title{font-size:15px;font-weight:750}
+      #view-clients .cl-frame .pill-mini.orange{background:color-mix(in oklab,var(--orange) 12%,var(--card));
+        color:var(--orange);border-color:color-mix(in oklab,var(--orange) 30%,var(--line))}
+
+      /* ---- Champs ---- */
+      #view-clients .cl-frame .fields .f{padding:7px 0;border-bottom:1px solid color-mix(in oklab,var(--line) 60%,transparent)}
+      #view-clients .cl-frame .fields .f .k{font-size:10px}
+      #view-clients .cl-frame .fields .f .v{font-weight:600}
+
+      /* ---- Métriques (scoring) ---- */
+      #view-clients .cl-frame .metrics .m{border-radius:10px;background:var(--card-2);border:1px solid var(--line);
+        padding:9px 12px;transition:border-color .15s,transform .15s}
+      #view-clients .cl-frame .metrics .m:hover{border-color:color-mix(in oklab,var(--orange) 30%,var(--line));transform:translateY(-1px)}
+      #view-clients .cl-frame .metrics .m .val{font-size:13px}
+
+      /* ---- Top sites (classement) avec médailles ---- */
+      #view-clients .cl-frame .lite-list .li{border-radius:11px;padding:10px 12px;
+        transition:border-color .15s,transform .15s,box-shadow .15s}
+      #view-clients .cl-frame .lite-list .li:hover{border-color:color-mix(in oklab,var(--orange) 30%,var(--line));
+        transform:translateX(2px);box-shadow:0 4px 12px rgba(16,24,40,.06)}
+      #view-clients .cl-frame .lite-list .li .idx{display:inline-flex;align-items:center;justify-content:center;
+        width:22px;height:22px;border-radius:7px;background:var(--card);border:1px solid var(--line);
+        font-weight:700;font-size:11px;color:var(--muted)}
+      #view-clients .cl-frame .lite-list .li:nth-child(1) .idx{background:linear-gradient(135deg,#ffd873,#f5a623);color:#5a3b00;border-color:transparent}
+      #view-clients .cl-frame .lite-list .li:nth-child(2) .idx{background:linear-gradient(135deg,#e8edf3,#c2ccd8);color:#3a4654;border-color:transparent}
+      #view-clients .cl-frame .lite-list .li:nth-child(3) .idx{background:linear-gradient(135deg,#f3c99a,#d98b53);color:#5a2f10;border-color:transparent}
+      #view-clients .cl-frame .lite-list .li .tot{color:var(--orange)}
+
+      /* ---- Contacts / demandeurs ---- */
+      #view-clients .cl-frame .contacts-list .ci{border-radius:11px;padding:10px 12px;
+        transition:border-color .15s,transform .15s,box-shadow .15s}
+      #view-clients .cl-frame .contacts-list .ci:hover{border-color:color-mix(in oklab,var(--orange) 30%,var(--line));
+        transform:translateX(2px);box-shadow:0 4px 12px rgba(16,24,40,.06)}
+      #view-clients .cl-frame .contacts-list .ci .idx{display:inline-flex;align-items:center;justify-content:center;
+        width:24px;height:24px;border-radius:50%;background:color-mix(in oklab,var(--orange) 14%,var(--card));
+        color:var(--orange);font-weight:700;font-size:10.5px;font-family:inherit}
+
+      /* ---- Documents ---- */
+      #view-clients .cl-frame .docs .d{border-radius:10px;padding:9px 12px}
+      #view-clients .cl-frame .docs .d:hover{border-color:var(--orange);transform:translateX(2px)}
+
+      /* ---- Scrollbars ---- */
+      #view-clients .cl-list::-webkit-scrollbar,
+      #view-clients #cl-detail::-webkit-scrollbar,
+      #view-clients #cl-sites-panel::-webkit-scrollbar{width:8px;height:8px}
+      #view-clients .cl-list::-webkit-scrollbar-thumb,
+      #view-clients #cl-detail::-webkit-scrollbar-thumb,
+      #view-clients #cl-sites-panel::-webkit-scrollbar-thumb{background:var(--line-2,var(--line));border-radius:999px}
+      #view-clients #cl-detail::-webkit-scrollbar-thumb:hover{background:var(--muted)}
+      `;
+      var st=document.createElement('style'); st.id='cl-skin-style'; st.textContent=css;
+      function attach(){ (document.head||document.documentElement).appendChild(st); }
+      if(document.head)attach(); else document.addEventListener('DOMContentLoaded',attach);
+    })();
+
     /* [ConsoView v1] Vue consolidée multi-chantiers : PO + factures en attente */
     (function consoView(){
       function fmt(n){try{return (Number(n)||0).toLocaleString('fr-FR');}catch(e){return n;}}
