@@ -752,7 +752,7 @@ document.addEventListener('DOMContentLoaded', async function() {
             stageTot[st]=(stageTot[st]||0)+cout;
             if(st==='Paiement')bfrLines.push({imp:imp,codeA:c.codeA,designation:c.designation,qte:c.qte,unite:c.unite,cout:cout});
             if(st!=='Terminé'){
-              if(c.type==='service')nlServices.push({imp:imp,idx:ci,codeA:c.codeA,designation:c.designation,statut:st,vendeur:c.vendeur||'—',cout:cout,refs:_artRefs(d,c.codeA)});
+              if(c.type==='service')nlServices.push({imp:imp,idx:ci,codeA:c.codeA,designation:c.designation,unite:c.unite||'',statut:st,vendeur:c.vendeur||'—',cout:cout,refs:_artRefs(d,c.codeA)});
               else{var qc=cmd(c.codeA),qr=recu(c.codeA);nlArticles.push({imp:imp,idx:ci,codeA:c.codeA,designation:c.designation,cmd:qc,recu:qr,reste:Math.max(0,qc-qr),unite:c.unite||'',statut:st,cout:cout,vendeur:c.vendeur||'',refs:_artRefs(d,c.codeA)});}
             }
           });
@@ -868,7 +868,7 @@ document.addEventListener('DOMContentLoaded', async function() {
       function achatsTabBtn(key,label,active){return '<button data-atab="'+key+'" style="padding:7px 16px;border-radius:8px;border:1px solid '+(active?'#B5000A':'var(--border)')+';background:'+(active?'#B5000A':'#fff')+';color:'+(active?'#fff':'var(--t2)')+';font-weight:600;cursor:pointer;font-size:13px">'+label+'</button>';}
       function regBadges(refs){function grp(arr,cls){return (arr&&arr.length)?arr.map(function(id){return '<span class="rbadge '+cls+'">'+id+'</span>';}).join(''):'';}var h=grp(refs&&refs.po,'rb-po')+grp(refs&&refs.bl,'rb-bl')+grp(refs&&refs.br,'rb-br')+grp(refs&&refs.colis,'rb-co')+grp(refs&&refs.fac,'rb-fa');return h||'<span style="color:#cbd5e1">—</span>';}
       /* Avancement du chantier (depuis JIP_DATA) : Status ERP + % d'avancement, pour repérer une ligne en retard ou non mise à jour. */
-      function _chantierInfo(imp){var j=(window.JIP_DATA||[]).find(function(x){return String(x.Imputation)===String(imp);});if(!j)return {status:'',avp:null};var av=parseFloat(j.Avancement);if(isNaN(av))av=null;else av=Math.round(av<=1?av*100:av);return {status:(j.Status||j.EtatPI||'').trim(),avp:av};}
+      function _chantierInfo(imp){var j=(window.JIP_DATA||[]).find(function(x){return String(x.Imputation)===String(imp);});if(!j)return {status:'',avp:null,client:''};var av=parseFloat(j.Avancement);if(isNaN(av))av=null;else av=Math.round(av<=1?av*100:av);return {status:(j.Status||j.EtatPI||'').trim(),avp:av,client:(j.Client||'').trim()};}
       /* Niveau de retard d'une ligne vs l'avancement du chantier : na | done | ok | warn | late */
       function regAdvLevel(imp,statut,statutsAll){var av=_chantierInfo(imp).avp;if(av==null)return 'na';var N=statutsAll.length;if(statut===statutsAll[N-1])return 'done';var li=statutsAll.indexOf(statut);var linePct=(N>1&&li>=0)?Math.round(li/(N-1)*100):0;var lag=av-linePct;return lag>=30?'late':lag>=15?'warn':'ok';}
       function regAdvCell(imp,statut,statutsAll){var ci=_chantierInfo(imp);var av=ci.avp;var lvl=regAdvLevel(imp,statut,statutsAll);var col={late:'#dc2626',warn:'#d97706',ok:'#16a34a',done:'#64748b',na:'#cbd5e1'}[lvl];var lab={late:'⚠ en retard',warn:'à vérifier',ok:'à jour',done:'terminé',na:'—'}[lvl];if(av==null)return '<div style="min-width:92px;color:#cbd5e1;font-size:11px">—</div>';var bar='<div style="height:4px;border-radius:3px;background:#eef2f7;overflow:hidden;margin-top:3px"><div style="width:'+av+'%;height:100%;background:'+col+'"></div></div>';var st=ci.status?'<div style="font-size:10px;color:#94a3b8">'+ci.status+'</div>':'';return '<div style="min-width:92px" title="Avancement chantier '+av+'% — ligne '+lab+'"><b style="color:'+col+';font-size:11px">'+av+'%</b> <span style="font-size:10px;color:'+col+';font-weight:600">'+lab+'</span>'+bar+st+'</div>';}
@@ -879,7 +879,7 @@ document.addEventListener('DOMContentLoaded', async function() {
         var src=isSvc?agg.nlServices:agg.nlArticles;
         var pis={};src.forEach(function(l){pis[l.imp]=true;});
         var q=(f.q||'').toLowerCase();
-        var base=src.filter(function(l){if(f.statut&&l.statut!==f.statut)return false;if(f.pi&&l.imp!==f.pi)return false;if(q){var hay=((l.codeA||'')+' '+(l.designation||'')+' '+l.imp+' '+(l.vendeur||'')).toLowerCase();if(hay.indexOf(q)<0)return false;}return true;});
+        var base=src.filter(function(l){if(f.statut&&l.statut!==f.statut)return false;if(f.pi&&l.imp!==f.pi)return false;if(q){var hay=((l.codeA||'')+' '+(l.designation||'')+' '+l.imp+' '+(l.vendeur||'')+' '+(_chantierInfo(l.imp).client||'')).toLowerCase();if(hay.indexOf(q)<0)return false;}return true;});
         var lateCount=base.reduce(function(n,l){return n+(regAdvLevel(l.imp,l.statut,statutsAll)==='late'?1:0);},0);
         var filt=f.late?base.filter(function(l){return regAdvLevel(l.imp,l.statut,statutsAll)==='late';}):base;
         if(isSvc)filt.sort(function(a,b){return a.imp<b.imp?-1:a.imp>b.imp?1:0;});else filt.sort(function(a,b){return b.reste-a.reste;});
@@ -896,7 +896,7 @@ document.addEventListener('DOMContentLoaded', async function() {
           +'<div title="Lignes en retard sur l\'avancement du chantier (statut probablement non mis à jour)" style="background:'+(lateCount?'#fef2f2':'#f1f5f9')+';border:1px solid '+(lateCount?'#fecaca':'transparent')+';border-radius:10px;padding:10px 14px;min-width:96px"><div style="font-size:11px;color:'+(lateCount?'#dc2626':'#94a3b8')+';text-transform:uppercase;letter-spacing:.4px">⚠ En retard</div><div style="font-size:18px;font-weight:800;color:'+(lateCount?'#dc2626':'inherit')+'">'+lateCount+'</div></div>'
           +'</div>';
         var bar='<div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:14px">'
-          +'<input id="reg-q" placeholder="🔍 Rechercher (code, désignation, chantier, vendeur)" value="'+(f.q||'').replace(/"/g,'&quot;')+'" style="flex:1;min-width:240px;padding:8px 12px;border:1px solid var(--border);border-radius:8px;font-size:13px">'
+          +'<input id="reg-q" placeholder="🔍 Rechercher (code, désignation, PI, client, vendeur)" value="'+(f.q||'').replace(/"/g,'&quot;')+'" style="flex:1;min-width:240px;padding:8px 12px;border:1px solid var(--border);border-radius:8px;font-size:13px">'
           +'<select id="reg-pi" style="padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-size:13px">'+piOpts+'</select>'
           +'<select id="reg-st" style="padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-size:13px">'+stOpts+'</select>'
           +'<label style="display:flex;align-items:center;gap:5px;font-size:12px;color:#991b1b;cursor:pointer;white-space:nowrap;font-weight:600"><input type="checkbox" id="reg-late"'+(f.late?' checked':'')+' style="cursor:pointer"> ⚠ Retards uniquement</label>'
@@ -915,14 +915,21 @@ document.addEventListener('DOMContentLoaded', async function() {
           var stSel='<select data-st-imp="'+l.imp+'" data-st-idx="'+l.idx+'" style="font-size:11px;padding:3px 6px;border:1px solid var(--border);border-radius:6px;font-weight:600;cursor:pointer">'+statutsAll.map(function(s){return '<option value="'+s+'"'+(l.statut===s?' selected':'')+'>'+s+'</option>';}).join('')+'</select>';
           var openBtn='<td style="text-align:center"><button data-open-imp="'+l.imp+'" title="Ouvrir le chantier" style="border:none;background:#f1f5f9;border-radius:6px;cursor:pointer;padding:4px 8px;font-size:13px">↗</button></td>';
           var advTd='<td>'+regAdvCell(l.imp,l.statut,statutsAll)+'</td>';
-          var cmn='<td style="text-align:center">'+cb+'</td><td style="font-weight:600;color:#B5000A">'+l.imp+'</td><td><span style="font-family:monospace;font-size:11px">'+(l.codeA||'—')+'</span></td><td>'+(l.designation||'')+'</td>';
-          if(isSvc)return '<tr data-imp="'+l.imp+'">'+cmn+'<td>'+stSel+'</td>'+advTd+'<td style="text-align:right;font-weight:700">'+fmt(l.cout||0)+' F</td><td>'+(l.vendeur||'—')+'</td><td style="line-height:1.9;max-width:200px">'+regBadges(l.refs)+'</td>'+openBtn+'</tr>';
-          return '<tr data-imp="'+l.imp+'">'+cmn+'<td style="text-align:center">'+l.cmd+'</td><td style="text-align:center;color:#2563eb">'+l.recu+'</td><td style="text-align:center;font-weight:800;color:#B5000A">'+l.reste+' '+(l.unite||'')+'</td><td>'+stSel+'</td>'+advTd+'<td style="text-align:right;font-weight:700">'+fmt(l.cout||0)+' F</td><td style="line-height:1.9;max-width:200px">'+regBadges(l.refs)+'</td>'+openBtn+'</tr>';
-        }).join(''):'<tr><td colspan="'+(isSvc?10:12)+'" style="text-align:center;color:#999;padding:20px;font-style:italic">Aucun '+(isSvc?'service':'article')+' ne correspond.</td></tr>';
+          var client=(_chantierInfo(l.imp).client)||'—';
+          var cmn='<td style="text-align:center">'+cb+'</td>'
+            +'<td><span style="font-family:monospace;font-size:11px;font-weight:600">'+(l.codeA||'—')+'</span></td>'
+            +'<td>'+(l.designation||'')+'</td>'
+            +'<td style="color:#64748b">'+(l.unite||'—')+'</td>'
+            +'<td style="font-weight:600;color:#B5000A">'+l.imp+'</td>'
+            +'<td style="text-align:right;font-weight:700">'+fmt(l.cout||0)+' F</td>'
+            +'<td style="color:#475569">'+client+'</td>';
+          if(isSvc)return '<tr data-imp="'+l.imp+'">'+cmn+'<td>'+stSel+'</td>'+advTd+'<td>'+(l.vendeur||'—')+'</td><td style="line-height:1.9;max-width:200px">'+regBadges(l.refs)+'</td>'+openBtn+'</tr>';
+          return '<tr data-imp="'+l.imp+'">'+cmn+'<td style="text-align:center">'+l.cmd+'</td><td style="text-align:center;color:#2563eb">'+l.recu+'</td><td style="text-align:center;font-weight:800;color:#B5000A">'+l.reste+'</td><td>'+stSel+'</td>'+advTd+'<td style="line-height:1.9;max-width:200px">'+regBadges(l.refs)+'</td>'+openBtn+'</tr>';
+        }).join(''):'<tr><td colspan="'+(isSvc?12:14)+'" style="text-align:center;color:#999;padding:20px;font-style:italic">Aucun '+(isSvc?'service':'article')+' ne correspond.</td></tr>';
         var allSel=filt.length>0&&filt.every(function(l){return f.sel[selKey(l)];});
         var selAll='<input type="checkbox" id="reg-selall"'+(allSel?' checked':'')+' title="Tout sélectionner" style="cursor:pointer">';
-        var head=isSvc?(th(selAll,'center')+th('CHANTIER')+th('CODE')+th('DÉSIGNATION')+th('STATUT')+th('AVANCEMENT CHANTIER')+th('COÛT','right')+th('VENDEUR')+th('LIENS')+th('','center'))
-          :(th(selAll,'center')+th('CHANTIER')+th('CODE')+th('DÉSIGNATION')+th('CMD','center')+th('REÇU','center')+th('RESTE','center')+th('STATUT')+th('AVANCEMENT CHANTIER')+th('COÛT','right')+th('LIENS PO·BL·BR·COLIS·FAC')+th('','center'));
+        var head=isSvc?(th(selAll,'center')+th('CODE')+th('DÉSIGNATION')+th('UNITÉ')+th('PI')+th('COÛT','right')+th('CLIENT')+th('STATUT')+th('AVANCEMENT CHANTIER')+th('VENDEUR')+th('LIENS')+th('','center'))
+          :(th(selAll,'center')+th('CODE')+th('DÉSIGNATION')+th('UNITÉ')+th('PI')+th('COÛT','right')+th('CLIENT')+th('CMD','center')+th('REÇU','center')+th('RESTE','center')+th('STATUT')+th('AVANCEMENT CHANTIER')+th('LIENS PO·BL·BR·COLIS·FAC')+th('','center'));
         return kpis+bar+bulk+'<table style="width:100%;border-collapse:collapse;font-size:12.5px"><thead><tr style="background:#f8fafc">'+head+'</tr></thead><tbody>'+rows+'</tbody></table>';
       }
       function setArticleStatut(imp,idx,statut){getAll().then(function(recs){var r=recs.find(function(x){return x.imp===imp;});if(!r)return;var d=r.data||{};if(!d.contrat||!d.contrat[idx])return;d.contrat[idx].statut=statut;putRec(imp,d).then(function(){renderAchats();});});}
@@ -943,7 +950,7 @@ document.addEventListener('DOMContentLoaded', async function() {
         var ba=document.getElementById('reg-bulk-apply');if(ba)ba.onclick=function(){var sv=document.getElementById('reg-bulk-st').value;var items=Object.keys(f.sel).map(function(k){return f.sel[k];});if(!items.length)return;f.sel={};setStatutBulk(items,sv);};
       }
       function renderAchatsContent(){var c=document.getElementById('achats-content');if(!c||!_achatsAgg)return;var t=_achatsState.tab;if(t==='overview')c.innerHTML=bfrHTML(_achatsAgg);else if(t==='nonlivres'){c.innerHTML=nonLivresHTML(_achatsAgg);wireNL();}else if(t==='register'){c.innerHTML=articlesRegHTML(_achatsAgg,'articles');wireArticlesReg('articles');}else if(t==='services'){c.innerHTML=articlesRegHTML(_achatsAgg,'services');wireArticlesReg('services');}if(t!=='register'&&t!=='services')c.querySelectorAll('tbody tr[data-imp]').forEach(function(tr){tr.onclick=function(e){if(e.target.tagName==='BUTTON')return;var imp=tr.getAttribute('data-imp');try{if(window.HubViews)window.HubViews.showView('chantiers');setTimeout(function(){if(window.__chantiersEmbedOpen)window.__chantiersEmbedOpen(imp);},400);}catch(e){}};});}
-      function renderAchats(){var body=document.getElementById('view-achats-body');if(!body)return;body.innerHTML='<div style="padding:14px 0;color:#999">Chargement…</div>';getAll().then(function(recs){_achatsAgg=build(recs);var tabs=[['register','🗂️ Articles (gestion)'],['services','🛠️ Services Non livrés'],['overview','📊 Vue d\'ensemble'],['nonlivres','📦 Non livrés']];var bar='<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:18px">'+tabs.map(function(t){return achatsTabBtn(t[0],t[1],_achatsState.tab===t[0]);}).join('')+'</div>';body.innerHTML=bar+'<div id="achats-content"></div>';body.querySelectorAll('button[data-atab]').forEach(function(b){b.onclick=function(){_achatsState.tab=b.getAttribute('data-atab');renderAchats();};});renderAchatsContent();});}
+      function renderAchats(){var body=document.getElementById('view-achats-body');if(!body)return;body.innerHTML='<div style="padding:14px 0;color:#999">Chargement…</div>';getAll().then(function(recs){_achatsAgg=build(recs);var tabs=[['register','🗂️ Articles (gestion)'],['services','🛠️ Services Non livrés'],['nonlivres','📦 Non livrés']];var bar='<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:18px">'+tabs.map(function(t){return achatsTabBtn(t[0],t[1],_achatsState.tab===t[0]);}).join('')+'</div>';body.innerHTML=bar+'<div id="achats-content"></div>';body.querySelectorAll('button[data-atab]').forEach(function(b){b.onclick=function(){_achatsState.tab=b.getAttribute('data-atab');renderAchats();};});renderAchatsContent();});}
       window.__refreshAchats=renderAchats;
       function ensureAchatsView(){
         var v=document.getElementById('view-achats');
