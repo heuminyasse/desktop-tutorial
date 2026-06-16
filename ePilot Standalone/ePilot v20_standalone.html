@@ -555,15 +555,8 @@ document.addEventListener('DOMContentLoaded', async function() {
       (function poll(){ if (patch() || t++>150) return; setTimeout(poll, 80); })();
     })();
 
-    // [Contrat PO v1] — intégré dans injectContrat (bloc ci-dessus)
-    // sur chaque ligne Contrat avec badge. Injecté dans ch-src APRÈS
-    // [Contrat v1] et AVANT compilation Babel.
-    // ─────────────────────────────────────────────────────────────
-    (function injectContratPO(){
-      function patch2(){ return true; /* injectContratPO desactive (integre dans injectContrat) */ }
-      var t=0;
-      (function poll2(){ if(patch2()||t++>150) return; setTimeout(poll2,80); })();
-    })();
+    // [Contrat PO v1] est désormais intégré directement dans injectContrat
+    // (marqueur __CONTRAT_PO_V1__) : plus d'IIFE de patch séparée ici.
 
     /* [HideOrderTabs v1] retire Sourcing / Articles non livrés / Colis dans Orders */
     (function hideOrderTabs(){
@@ -1078,12 +1071,25 @@ document.addEventListener('DOMContentLoaded', async function() {
             if(window.__EditChantierForm){ res(true); return; }
             if(typeof window.Babel==='undefined'){ if(tries++>60){res(false);return;} setTimeout(step,150); return; }
             if(!window.__chReady){
+              var __el=document.getElementById('ch-src');
+              if(!__el){
+                try{ console.warn('[RichEdit] source #ch-src introuvable — module Chantiers non compilé.'); }catch(_){}
+                res(false); return;
+              }
+              var code;
               try{
-                var s=document.getElementById('ch-src').textContent;
-                var code=window.Babel.transform(s,{presets:['react'],sourceType:'script'}).code;
+                code=window.Babel.transform(__el.textContent,{presets:['react'],sourceType:'script'}).code;
+              }catch(e){
+                try{ console.error('[RichEdit] échec de compilation Babel de #ch-src :', e); if(window.__cwToast)window.__cwToast('Erreur de compilation du module Chantiers (voir console).'); }catch(_){}
+                res(false); return;
+              }
+              try{
                 var sc=document.createElement('script'); sc.textContent='(function(){\n'+code+'\n})();';
                 document.body.appendChild(sc); window.__chReady=true;
-              }catch(e){ res(false); return; }
+              }catch(e){
+                try{ console.error('[RichEdit] échec d\'initialisation du module Chantiers compilé :', e); if(window.__cwToast)window.__cwToast('Erreur d\'initialisation du module Chantiers (voir console).'); }catch(_){}
+                res(false); return;
+              }
             }
             setTimeout(function(){ res(!!window.__EditChantierForm); }, 60);
           })();
@@ -1106,7 +1112,9 @@ document.addEventListener('DOMContentLoaded', async function() {
           function close(){ try{root.unmount();}catch(_){}; host.remove(); }
           function save(p){
             var updated=Object.assign({}, jip, p||{});
-            try{ if(window.EpilotConnector&&window.EpilotConnector.saveOps) window.EpilotConnector.saveOps(updated); }catch(e){}
+            var __saveOk=true;
+            try{ if(window.EpilotConnector&&window.EpilotConnector.saveOps) window.EpilotConnector.saveOps(updated); }
+            catch(e){ __saveOk=false; try{ console.error('[RichEdit] échec de l\'enregistrement du chantier (saveOps) :', e); if(window.__cwToast)window.__cwToast('Échec de l\'enregistrement du chantier (voir console).'); }catch(_){} }
             /* reflète dans les listes Quote / OA */
             try{ var ov=JSON.parse(localStorage.getItem('epilot_quotes_overrides_v1'))||{};
               ov[ref]=Object.assign({}, ov[ref], { OA_Num:updated.poNumber, Type:updated.type, Description:updated.description });
@@ -1115,7 +1123,7 @@ document.addEventListener('DOMContentLoaded', async function() {
             }catch(_){}
             if(updated.budgetContractuel && window._updateJipBudget) window._updateJipBudget(ref, updated.budgetContractuel);
             reRenderQuote();
-            if(window.__cwToast) window.__cwToast('Chantier '+(jip.imputation||ref)+' mis \u00e0 jour');
+            if(__saveOk && window.__cwToast) window.__cwToast('Chantier '+(jip.imputation||ref)+' mis \u00e0 jour');
             close();
           }
           root.render(window.React.createElement(window.__EditChantierForm, { jip:jip, clients:d.clients, employees:d.employees, onSave:save, onClose:close }));
