@@ -752,7 +752,7 @@ document.addEventListener('DOMContentLoaded', async function() {
             stageTot[st]=(stageTot[st]||0)+cout;
             if(st==='Paiement')bfrLines.push({imp:imp,codeA:c.codeA,designation:c.designation,qte:c.qte,unite:c.unite,cout:cout});
             if(st!=='Terminé'){
-              if(c.type==='service')nlServices.push({imp:imp,codeA:c.codeA,designation:c.designation,statut:st,vendeur:c.vendeur||'—'});
+              if(c.type==='service')nlServices.push({imp:imp,idx:ci,codeA:c.codeA,designation:c.designation,statut:st,vendeur:c.vendeur||'—',cout:cout,refs:_artRefs(d,c.codeA)});
               else{var qc=cmd(c.codeA),qr=recu(c.codeA);nlArticles.push({imp:imp,idx:ci,codeA:c.codeA,designation:c.designation,cmd:qc,recu:qr,reste:Math.max(0,qc-qr),unite:c.unite||'',statut:st,cout:cout,vendeur:c.vendeur||'',refs:_artRefs(d,c.codeA)});}
             }
           });
@@ -867,19 +867,24 @@ document.addEventListener('DOMContentLoaded', async function() {
       function colisHTML(agg){var rows=agg.colis.length?agg.colis.map(function(c){return '<tr style="cursor:pointer" data-imp="'+c.imp+'"><td style="font-weight:600;color:#B5000A">'+c.imp+'</td><td><span style="font-family:monospace;font-size:11px">'+c.id+'</span></td><td>'+(c.type||'—')+'</td><td>'+c.transitaire+'</td><td>'+c.destinataire+'</td><td><span class="cbadge cwarn">'+c.statut+'</span></td><td style="text-align:right">'+(c.poids||0)+' kg</td></tr>';}).join(''):'<tr><td colspan="7" style="text-align:center;color:#999;padding:18px;font-style:italic">Aucun colis en transit</td></tr>';return '<div style="font-size:13px;font-weight:700;margin:2px 0 10px">🚢 Colis en cours ('+agg.colis.length+')</div><table style="width:100%;border-collapse:collapse;font-size:12.5px"><thead><tr style="background:#f8fafc">'+th('CHANTIER')+th('N° COLIS')+th('TYPE')+th('TRANSITAIRE')+th('DESTINATAIRE')+th('STATUT')+th('POIDS','right')+'</tr></thead><tbody>'+rows+'</tbody></table>';}
       function achatsTabBtn(key,label,active){return '<button data-atab="'+key+'" style="padding:7px 16px;border-radius:8px;border:1px solid '+(active?'#B5000A':'var(--border)')+';background:'+(active?'#B5000A':'#fff')+';color:'+(active?'#fff':'var(--t2)')+';font-weight:600;cursor:pointer;font-size:13px">'+label+'</button>';}
       function regBadges(refs){function grp(arr,cls){return (arr&&arr.length)?arr.map(function(id){return '<span class="rbadge '+cls+'">'+id+'</span>';}).join(''):'';}var h=grp(refs&&refs.po,'rb-po')+grp(refs&&refs.bl,'rb-bl')+grp(refs&&refs.br,'rb-br')+grp(refs&&refs.colis,'rb-co')+grp(refs&&refs.fac,'rb-fa');return h||'<span style="color:#cbd5e1">—</span>';}
-      function articlesRegHTML(agg){
-        var f=_achatsState.reg||(_achatsState.reg={q:'',statut:'',pi:''});
-        var statutsAll=window.CW_STAGES_ARTICLE||["Paiement","Production","Expédition","Conditionnement","Livraison","Réception","Terminé"];
-        var pis={};agg.nlArticles.forEach(function(l){pis[l.imp]=true;});
+      function articlesRegHTML(agg,kind){
+        kind=kind||'articles';var isSvc=kind==='services';var sk=isSvc?'regS':'reg';
+        var f=_achatsState[sk]||(_achatsState[sk]={q:'',statut:'',pi:'',sel:{}});if(!f.sel)f.sel={};
+        var statutsAll=isSvc?(window.CW_STAGES_SERVICE||["Paiement","Exécution","Contrôle","Réception","Terminé"]):(window.CW_STAGES_ARTICLE||["Paiement","Production","Expédition","Conditionnement","Livraison","Réception","Terminé"]);
+        var src=isSvc?agg.nlServices:agg.nlArticles;
+        var pis={};src.forEach(function(l){pis[l.imp]=true;});
         var q=(f.q||'').toLowerCase();
-        var filt=agg.nlArticles.filter(function(l){if(f.statut&&l.statut!==f.statut)return false;if(f.pi&&l.imp!==f.pi)return false;if(q){var hay=((l.codeA||'')+' '+(l.designation||'')+' '+l.imp+' '+(l.vendeur||'')).toLowerCase();if(hay.indexOf(q)<0)return false;}return true;}).sort(function(a,b){return b.reste-a.reste;});
+        var filt=src.filter(function(l){if(f.statut&&l.statut!==f.statut)return false;if(f.pi&&l.imp!==f.pi)return false;if(q){var hay=((l.codeA||'')+' '+(l.designation||'')+' '+l.imp+' '+(l.vendeur||'')).toLowerCase();if(hay.indexOf(q)<0)return false;}return true;});
+        if(isSvc)filt.sort(function(a,b){return a.imp<b.imp?-1:a.imp>b.imp?1:0;});else filt.sort(function(a,b){return b.reste-a.reste;});
+        function selKey(l){return l.imp+'|'+l.idx;}
+        var selCount=Object.keys(f.sel).length;
         var totReste=filt.reduce(function(s,l){return s+(Number(l.reste)||0);},0);
         var totBFR=filt.reduce(function(s,l){return s+(l.statut==='Paiement'?(Number(l.cout)||0):0);},0);
         var piOpts='<option value="">Tous chantiers</option>'+Object.keys(pis).sort().map(function(p){return '<option value="'+p+'"'+(f.pi===p?' selected':'')+'>'+p+'</option>';}).join('');
         var stOpts='<option value="">Tous statuts</option>'+statutsAll.map(function(s){return '<option value="'+s+'"'+(f.statut===s?' selected':'')+'>'+s+'</option>';}).join('');
         var kpis='<div style="display:flex;gap:12px;margin-bottom:14px;flex-wrap:wrap">'
-          +'<div style="background:#f1f5f9;border-radius:10px;padding:10px 14px;min-width:96px"><div style="font-size:11px;color:#64748b;text-transform:uppercase;letter-spacing:.4px">Articles</div><div style="font-size:18px;font-weight:800">'+filt.length+'</div></div>'
-          +'<div style="background:#eff6ff;border-radius:10px;padding:10px 14px;min-width:96px"><div style="font-size:11px;color:#2563eb;text-transform:uppercase;letter-spacing:.4px">Reste à livrer</div><div style="font-size:18px;font-weight:800">'+totReste+'</div></div>'
+          +'<div style="background:#f1f5f9;border-radius:10px;padding:10px 14px;min-width:96px"><div style="font-size:11px;color:#64748b;text-transform:uppercase;letter-spacing:.4px">'+(isSvc?'Services':'Articles')+'</div><div style="font-size:18px;font-weight:800">'+filt.length+'</div></div>'
+          +(isSvc?'':'<div style="background:#eff6ff;border-radius:10px;padding:10px 14px;min-width:96px"><div style="font-size:11px;color:#2563eb;text-transform:uppercase;letter-spacing:.4px">Reste à livrer</div><div style="font-size:18px;font-weight:800">'+totReste+'</div></div>')
           +'<div style="background:#fee2e2;border-radius:10px;padding:10px 14px;min-width:96px"><div style="font-size:11px;color:#991b1b;text-transform:uppercase;letter-spacing:.4px">BFR (affiché)</div><div style="font-size:18px;font-weight:800">'+fmt(totBFR)+' F</div></div>'
           +'</div>';
         var bar='<div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:14px">'
@@ -887,24 +892,47 @@ document.addEventListener('DOMContentLoaded', async function() {
           +'<select id="reg-pi" style="padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-size:13px">'+piOpts+'</select>'
           +'<select id="reg-st" style="padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-size:13px">'+stOpts+'</select>'
           +'</div>';
+        var bulkStOpts=statutsAll.map(function(s){return '<option value="'+s+'">'+s+'</option>';}).join('');
+        var bulk=selCount?('<div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:12px;background:#fef9c3;border:1px solid #fde047;border-radius:10px;padding:8px 12px">'
+          +'<b style="color:#854d0e">'+selCount+' sélectionné'+(selCount>1?'s':'')+'</b>'
+          +'<span style="color:#a16207">→ statut :</span>'
+          +'<select id="reg-bulk-st" style="padding:5px 8px;border:1px solid var(--border);border-radius:7px;font-size:12px;font-weight:600">'+bulkStOpts+'</select>'
+          +'<button id="reg-bulk-apply" style="border:none;background:#B5000A;color:#fff;border-radius:7px;cursor:pointer;padding:6px 14px;font-size:12px;font-weight:700">Appliquer</button>'
+          +'<button id="reg-bulk-clear" style="border:1px solid var(--border);background:#fff;color:#555;border-radius:7px;cursor:pointer;padding:6px 12px;font-size:12px">Effacer la sélection</button>'
+          +'</div>'):'';
         var rows=filt.length?filt.map(function(l){
+          var k=selKey(l);
+          var cb='<input type="checkbox" data-sel-key="'+k+'" data-sel-imp="'+l.imp+'" data-sel-idx="'+l.idx+'"'+(f.sel[k]?' checked':'')+' style="cursor:pointer">';
           var stSel='<select data-st-imp="'+l.imp+'" data-st-idx="'+l.idx+'" style="font-size:11px;padding:3px 6px;border:1px solid var(--border);border-radius:6px;font-weight:600;cursor:pointer">'+statutsAll.map(function(s){return '<option value="'+s+'"'+(l.statut===s?' selected':'')+'>'+s+'</option>';}).join('')+'</select>';
-          return '<tr data-imp="'+l.imp+'"><td style="font-weight:600;color:#B5000A">'+l.imp+'</td><td><span style="font-family:monospace;font-size:11px">'+(l.codeA||'—')+'</span></td><td>'+(l.designation||'')+'</td><td style="text-align:center">'+l.cmd+'</td><td style="text-align:center;color:#2563eb">'+l.recu+'</td><td style="text-align:center;font-weight:800;color:#B5000A">'+l.reste+' '+(l.unite||'')+'</td><td>'+stSel+'</td><td style="text-align:right;font-weight:700">'+fmt(l.cout||0)+' F</td><td style="line-height:1.9;max-width:200px">'+regBadges(l.refs)+'</td><td style="text-align:center"><button data-open-imp="'+l.imp+'" title="Ouvrir le chantier" style="border:none;background:#f1f5f9;border-radius:6px;cursor:pointer;padding:4px 8px;font-size:13px">↗</button></td></tr>';
-        }).join(''):'<tr><td colspan="10" style="text-align:center;color:#999;padding:20px;font-style:italic">Aucun article ne correspond.</td></tr>';
-        return kpis+bar+'<table style="width:100%;border-collapse:collapse;font-size:12.5px"><thead><tr style="background:#f8fafc">'+th('CHANTIER')+th('CODE')+th('DÉSIGNATION')+th('CMD','center')+th('REÇU','center')+th('RESTE','center')+th('STATUT')+th('COÛT','right')+th('LIENS PO·BL·BR·COLIS·FAC')+th('','center')+'</tr></thead><tbody>'+rows+'</tbody></table>';
+          var openBtn='<td style="text-align:center"><button data-open-imp="'+l.imp+'" title="Ouvrir le chantier" style="border:none;background:#f1f5f9;border-radius:6px;cursor:pointer;padding:4px 8px;font-size:13px">↗</button></td>';
+          var cmn='<td style="text-align:center">'+cb+'</td><td style="font-weight:600;color:#B5000A">'+l.imp+'</td><td><span style="font-family:monospace;font-size:11px">'+(l.codeA||'—')+'</span></td><td>'+(l.designation||'')+'</td>';
+          if(isSvc)return '<tr data-imp="'+l.imp+'">'+cmn+'<td>'+stSel+'</td><td style="text-align:right;font-weight:700">'+fmt(l.cout||0)+' F</td><td>'+(l.vendeur||'—')+'</td><td style="line-height:1.9;max-width:200px">'+regBadges(l.refs)+'</td>'+openBtn+'</tr>';
+          return '<tr data-imp="'+l.imp+'">'+cmn+'<td style="text-align:center">'+l.cmd+'</td><td style="text-align:center;color:#2563eb">'+l.recu+'</td><td style="text-align:center;font-weight:800;color:#B5000A">'+l.reste+' '+(l.unite||'')+'</td><td>'+stSel+'</td><td style="text-align:right;font-weight:700">'+fmt(l.cout||0)+' F</td><td style="line-height:1.9;max-width:200px">'+regBadges(l.refs)+'</td>'+openBtn+'</tr>';
+        }).join(''):'<tr><td colspan="'+(isSvc?9:11)+'" style="text-align:center;color:#999;padding:20px;font-style:italic">Aucun '+(isSvc?'service':'article')+' ne correspond.</td></tr>';
+        var allSel=filt.length>0&&filt.every(function(l){return f.sel[selKey(l)];});
+        var selAll='<input type="checkbox" id="reg-selall"'+(allSel?' checked':'')+' title="Tout sélectionner" style="cursor:pointer">';
+        var head=isSvc?(th(selAll,'center')+th('CHANTIER')+th('CODE')+th('DÉSIGNATION')+th('STATUT')+th('COÛT','right')+th('VENDEUR')+th('LIENS')+th('','center'))
+          :(th(selAll,'center')+th('CHANTIER')+th('CODE')+th('DÉSIGNATION')+th('CMD','center')+th('REÇU','center')+th('RESTE','center')+th('STATUT')+th('COÛT','right')+th('LIENS PO·BL·BR·COLIS·FAC')+th('','center'));
+        return kpis+bar+bulk+'<table style="width:100%;border-collapse:collapse;font-size:12.5px"><thead><tr style="background:#f8fafc">'+head+'</tr></thead><tbody>'+rows+'</tbody></table>';
       }
       function setArticleStatut(imp,idx,statut){getAll().then(function(recs){var r=recs.find(function(x){return x.imp===imp;});if(!r)return;var d=r.data||{};if(!d.contrat||!d.contrat[idx])return;d.contrat[idx].statut=statut;putRec(imp,d).then(function(){renderAchats();});});}
-      function wireArticlesReg(){
+      function setStatutBulk(items,statut){var byImp={};items.forEach(function(it){(byImp[it.imp]=byImp[it.imp]||[]).push(it.idx);});getAll().then(function(recs){var ops=[];Object.keys(byImp).forEach(function(imp){var r=recs.find(function(x){return x.imp===imp;});if(!r)return;var d=r.data||{};if(!d.contrat)return;byImp[imp].forEach(function(idx){if(d.contrat[idx])d.contrat[idx].statut=statut;});ops.push(putRec(imp,d));});Promise.all(ops).then(function(){renderAchats();});});}
+      function wireArticlesReg(kind){
+        kind=kind||'articles';var isSvc=kind==='services';var sk=isSvc?'regS':'reg';
         var c=document.getElementById('achats-content');if(!c)return;
-        var f=_achatsState.reg||(_achatsState.reg={q:'',statut:'',pi:''});
+        var f=_achatsState[sk]||(_achatsState[sk]={q:'',statut:'',pi:'',sel:{}});if(!f.sel)f.sel={};
         var q=document.getElementById('reg-q');if(q)q.oninput=function(){f.q=q.value;clearTimeout(window.__regT);window.__regT=setTimeout(function(){renderAchatsContent();var nq=document.getElementById('reg-q');if(nq){nq.focus();try{nq.setSelectionRange(nq.value.length,nq.value.length);}catch(_){}}},220);};
         var pi=document.getElementById('reg-pi');if(pi)pi.onchange=function(){f.pi=pi.value;renderAchatsContent();};
         var st=document.getElementById('reg-st');if(st)st.onchange=function(){f.statut=st.value;renderAchatsContent();};
         c.querySelectorAll('[data-st-imp]').forEach(function(sel){sel.onchange=function(e){e.stopPropagation();setArticleStatut(sel.getAttribute('data-st-imp'),parseInt(sel.getAttribute('data-st-idx'),10),sel.value);};});
         c.querySelectorAll('[data-open-imp]').forEach(function(b){b.onclick=function(e){e.stopPropagation();var imp=b.getAttribute('data-open-imp');try{if(window.HubViews)window.HubViews.showView('chantiers');setTimeout(function(){if(window.__chantiersEmbedOpen)window.__chantiersEmbedOpen(imp);},400);}catch(_){}};});
+        c.querySelectorAll('[data-sel-key]').forEach(function(cb){cb.onclick=function(e){e.stopPropagation();var k=cb.getAttribute('data-sel-key');if(cb.checked)f.sel[k]={imp:cb.getAttribute('data-sel-imp'),idx:parseInt(cb.getAttribute('data-sel-idx'),10)};else delete f.sel[k];renderAchatsContent();};});
+        var selall=document.getElementById('reg-selall');if(selall)selall.onclick=function(e){e.stopPropagation();var on=selall.checked;c.querySelectorAll('[data-sel-key]').forEach(function(cb){var k=cb.getAttribute('data-sel-key');if(on)f.sel[k]={imp:cb.getAttribute('data-sel-imp'),idx:parseInt(cb.getAttribute('data-sel-idx'),10)};else delete f.sel[k];});renderAchatsContent();};
+        var bc=document.getElementById('reg-bulk-clear');if(bc)bc.onclick=function(){f.sel={};renderAchatsContent();};
+        var ba=document.getElementById('reg-bulk-apply');if(ba)ba.onclick=function(){var sv=document.getElementById('reg-bulk-st').value;var items=Object.keys(f.sel).map(function(k){return f.sel[k];});if(!items.length)return;f.sel={};setStatutBulk(items,sv);};
       }
-      function renderAchatsContent(){var c=document.getElementById('achats-content');if(!c||!_achatsAgg)return;var t=_achatsState.tab;if(t==='overview')c.innerHTML=bfrHTML(_achatsAgg);else if(t==='nonlivres'){c.innerHTML=nonLivresHTML(_achatsAgg);wireNL();}else if(t==='register'){c.innerHTML=articlesRegHTML(_achatsAgg);wireArticlesReg();}if(t!=='register')c.querySelectorAll('tbody tr[data-imp]').forEach(function(tr){tr.onclick=function(e){if(e.target.tagName==='BUTTON')return;var imp=tr.getAttribute('data-imp');try{if(window.HubViews)window.HubViews.showView('chantiers');setTimeout(function(){if(window.__chantiersEmbedOpen)window.__chantiersEmbedOpen(imp);},400);}catch(e){}};});}
-      function renderAchats(){var body=document.getElementById('view-achats-body');if(!body)return;body.innerHTML='<div style="padding:14px 0;color:#999">Chargement…</div>';getAll().then(function(recs){_achatsAgg=build(recs);var tabs=[['register','🗂️ Articles (gestion)'],['overview','📊 Vue d\'ensemble'],['nonlivres','📦 Non livrés']];var bar='<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:18px">'+tabs.map(function(t){return achatsTabBtn(t[0],t[1],_achatsState.tab===t[0]);}).join('')+'</div>';body.innerHTML=bar+'<div id="achats-content"></div>';body.querySelectorAll('button[data-atab]').forEach(function(b){b.onclick=function(){_achatsState.tab=b.getAttribute('data-atab');renderAchats();};});renderAchatsContent();});}
+      function renderAchatsContent(){var c=document.getElementById('achats-content');if(!c||!_achatsAgg)return;var t=_achatsState.tab;if(t==='overview')c.innerHTML=bfrHTML(_achatsAgg);else if(t==='nonlivres'){c.innerHTML=nonLivresHTML(_achatsAgg);wireNL();}else if(t==='register'){c.innerHTML=articlesRegHTML(_achatsAgg,'articles');wireArticlesReg('articles');}else if(t==='services'){c.innerHTML=articlesRegHTML(_achatsAgg,'services');wireArticlesReg('services');}if(t!=='register'&&t!=='services')c.querySelectorAll('tbody tr[data-imp]').forEach(function(tr){tr.onclick=function(e){if(e.target.tagName==='BUTTON')return;var imp=tr.getAttribute('data-imp');try{if(window.HubViews)window.HubViews.showView('chantiers');setTimeout(function(){if(window.__chantiersEmbedOpen)window.__chantiersEmbedOpen(imp);},400);}catch(e){}};});}
+      function renderAchats(){var body=document.getElementById('view-achats-body');if(!body)return;body.innerHTML='<div style="padding:14px 0;color:#999">Chargement…</div>';getAll().then(function(recs){_achatsAgg=build(recs);var tabs=[['register','🗂️ Articles (gestion)'],['services','🛠️ Services Non livrés'],['overview','📊 Vue d\'ensemble'],['nonlivres','📦 Non livrés']];var bar='<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:18px">'+tabs.map(function(t){return achatsTabBtn(t[0],t[1],_achatsState.tab===t[0]);}).join('')+'</div>';body.innerHTML=bar+'<div id="achats-content"></div>';body.querySelectorAll('button[data-atab]').forEach(function(b){b.onclick=function(){_achatsState.tab=b.getAttribute('data-atab');renderAchats();};});renderAchatsContent();});}
       window.__refreshAchats=renderAchats;
       function ensureAchatsView(){
         var v=document.getElementById('view-achats');
