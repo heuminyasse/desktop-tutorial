@@ -2146,5 +2146,81 @@ document.addEventListener('DOMContentLoaded', async function() {
   log('app-open', (navigator.platform||''));
 })();
 </script>
+<script id="__PIN_LOCK_v1__">
+/* Verrou d'accès optionnel (dissuasif — fichier local). PIN désactivé par défaut. */
+(function pinLock(){
+  var HKEY='epilot_pin_hash';
+  function hash(s){ var h=5381; s=String(s); for(var i=0;i<s.length;i++){ h=((h<<5)+h+s.charCodeAt(i))>>>0; } return 'h'+h.toString(16); }
+  function getHash(){ try{ return localStorage.getItem(HKEY)||''; }catch(e){ return ''; } }
+  function setHash(v){ try{ if(v) localStorage.setItem(HKEY,v); else localStorage.removeItem(HKEY); }catch(e){} }
+  function enabled(){ return !!getHash(); }
+
+  function lockScreen(){
+    if(document.getElementById('pin-lock')) return;
+    var d=document.createElement('div');
+    d.id='pin-lock';
+    d.style.cssText='position:fixed;inset:0;z-index:2147483647;background:#0f172a;display:flex;align-items:center;justify-content:center;font-family:-apple-system,Segoe UI,sans-serif';
+    d.innerHTML='<div style="background:#fff;border-radius:16px;padding:32px;width:320px;max-width:90%;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,.5)">'
+      +'<div style="font-size:40px;margin-bottom:8px">🔒</div>'
+      +'<div style="font-size:18px;font-weight:800;margin-bottom:4px">ePilot verrouillé</div>'
+      +'<div style="font-size:12px;color:#6b7280;margin-bottom:18px">Entrez le code d’accès</div>'
+      +'<input id="pin-in" type="password" inputmode="numeric" autocomplete="off" style="width:100%;padding:12px;font-size:18px;text-align:center;letter-spacing:6px;border:1px solid #cbd5e1;border-radius:10px;margin-bottom:12px"/>'
+      +'<div id="pin-err" style="color:#dc2626;font-size:12px;height:16px;margin-bottom:8px"></div>'
+      +'<button id="pin-ok" style="width:100%;padding:12px;border:0;border-radius:10px;background:#B5000A;color:#fff;font-weight:700;font-size:15px;cursor:pointer">Déverrouiller</button>'
+      +'</div>';
+    document.body.appendChild(d);
+    var inp=d.querySelector('#pin-in'), err=d.querySelector('#pin-err');
+    function tryUnlock(){ if(hash(inp.value)===getHash()){ d.remove(); } else { err.textContent='Code incorrect.'; inp.value=''; inp.focus(); } }
+    d.querySelector('#pin-ok').onclick=tryUnlock;
+    inp.addEventListener('keydown',function(e){ if(e.key==='Enter') tryUnlock(); });
+    setTimeout(function(){ inp.focus(); },100);
+  }
+
+  function settings(){
+    var ov=document.createElement('div');
+    ov.style.cssText='position:fixed;inset:0;z-index:99999;background:rgba(15,23,42,.55);display:flex;align-items:center;justify-content:center;font-family:inherit';
+    var on=enabled();
+    ov.innerHTML='<div style="background:#fff;border-radius:14px;width:380px;max-width:94%;box-shadow:0 20px 60px rgba(0,0,0,.3)">'
+      +'<div style="padding:16px 20px;border-bottom:1px solid #e5e7eb;display:flex;justify-content:space-between;align-items:center"><div style="font-size:16px;font-weight:800">🔒 Verrou d’accès</div><button id="pl-x" style="border:0;background:transparent;font-size:20px;cursor:pointer;color:#6b7280">✕</button></div>'
+      +'<div style="padding:20px;font-size:13px;color:#374151;line-height:1.6">'
+        +'<p style="margin-bottom:12px">État : <b style="color:'+(on?'#16a34a':'#9ca3af')+'">'+(on?'Activé':'Désactivé')+'</b></p>'
+        +(on
+          ? '<label style="display:block;font-size:11px;font-weight:700;color:#6b7280;margin-bottom:4px">Code actuel</label><input id="pl-cur" type="password" inputmode="numeric" style="width:100%;padding:9px;border:1px solid #cbd5e1;border-radius:8px;margin-bottom:12px"/>'
+            +'<label style="display:block;font-size:11px;font-weight:700;color:#6b7280;margin-bottom:4px">Nouveau code (vide = désactiver)</label><input id="pl-new" type="password" inputmode="numeric" style="width:100%;padding:9px;border:1px solid #cbd5e1;border-radius:8px;margin-bottom:14px"/>'
+          : '<label style="display:block;font-size:11px;font-weight:700;color:#6b7280;margin-bottom:4px">Définir un code (4+ chiffres)</label><input id="pl-new" type="password" inputmode="numeric" style="width:100%;padding:9px;border:1px solid #cbd5e1;border-radius:8px;margin-bottom:14px"/>')
+        +'<div id="pl-err" style="color:#dc2626;font-size:12px;min-height:16px;margin-bottom:8px"></div>'
+        +'<button id="pl-save" style="width:100%;padding:11px;border:0;border-radius:8px;background:#B5000A;color:#fff;font-weight:700;cursor:pointer;font-size:14px">Enregistrer</button>'
+        +'<p style="margin-top:12px;font-size:11px;color:#9ca3af">⚠ Protection dissuasive uniquement (fichier local). Code oublié = effacer les données du site.</p>'
+      +'</div></div>';
+    document.body.appendChild(ov);
+    function close(){ document.body.removeChild(ov); }
+    ov.querySelector('#pl-x').onclick=close;
+    ov.addEventListener('click',function(e){ if(e.target===ov) close(); });
+    var err=ov.querySelector('#pl-err');
+    ov.querySelector('#pl-save').onclick=function(){
+      var cur=ov.querySelector('#pl-cur'), nw=ov.querySelector('#pl-new').value;
+      if(on){ if(hash(cur.value)!==getHash()){ err.textContent='Code actuel incorrect.'; return; } }
+      if(nw===''){ if(on){ setHash(''); alert('Verrou désactivé.'); close(); } else { err.textContent='Saisissez un code.'; } return; }
+      if(!/^\d{4,}$/.test(nw)){ err.textContent='Au moins 4 chiffres.'; return; }
+      setHash(hash(nw)); alert('Verrou activé. Il s’appliquera au prochain démarrage.'); close();
+    };
+  }
+  window.openPinSettings=settings;
+
+  function setup(){
+    var v=document.getElementById('view-articles'); if(!v) return;
+    if(v.querySelector('.pl-btn')) return;
+    var head=v.querySelector('.view-head')||v.firstElementChild; if(!head) return;
+    var actions=head.querySelector('.actions'); if(!actions) return;
+    var btn=document.createElement('button');
+    btn.className='pl-btn'; btn.innerHTML='🔒 Verrou';
+    btn.style.cssText='padding:8px 16px;border-radius:8px;background:#1e293b;color:#fff;border:0;cursor:pointer;font-family:inherit;font-size:13px;font-weight:700;margin-left:8px';
+    btn.onclick=settings; actions.appendChild(btn);
+  }
+  var t=0; (function poll(){ setup(); if(t++>400) return; setTimeout(poll,400); })();
+  try{ new MutationObserver(function(){ setup(); }).observe(document.body,{childList:true,subtree:true}); }catch(_){}
+  if(enabled()) lockScreen();
+})();
+</script>
 </body>
 </html>
