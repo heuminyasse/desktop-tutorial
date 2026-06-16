@@ -727,6 +727,15 @@ document.addEventListener('DOMContentLoaded', async function() {
       function fmt(n){try{return (Number(n)||0).toLocaleString('fr-FR');}catch(e){return n;}}
       function openDB(){return new Promise(function(res,rej){var p=indexedDB.open('epilot_chantier_v2');p.onsuccess=function(e){res(e.target.result);};p.onerror=function(e){rej(e);};});}
       function getAll(){return openDB().then(function(db){return new Promise(function(res){if(!db.objectStoreNames.contains('chantiers')){res([]);return;}var tx=db.transaction('chantiers');var st=tx.objectStore('chantiers');var out=[];var req=st.openCursor();req.onsuccess=function(e){var c=e.target.result;if(c){out.push({imp:c.key,data:c.value});c.continue();}else res(out);};req.onerror=function(){res(out);};});});}
+      function _artRefs(d,codeA){
+        var po=(d.pos||[]).filter(function(p){return (p.articles||[]).some(function(a){return a.codeA===codeA;});}).map(function(p){return p.id;});
+        var bl=(d.bls||[]).filter(function(b){return (b.articles||[]).some(function(a){return a.codeA===codeA;});}).map(function(b){return b.id;});
+        var br=(d.brs||[]).filter(function(b){return (b.articles||[]).some(function(a){return a.codeA===codeA;});}).map(function(b){return b.id;});
+        var colis=(d.colis||[]).filter(function(c){return (c.articleCodes||[]).indexOf(codeA)>=0;}).map(function(c){return c.id;});
+        var seen={};bl.concat(br).forEach(function(id){seen[id]=true;});
+        var fac=(d.facs||[]).filter(function(f){return (f.blIds||[]).concat(f.brIds||[]).some(function(id){return seen[id];});}).map(function(f){return f.numero||f.id;});
+        return {po:po,bl:bl,br:br,colis:colis,fac:fac};
+      }
       function build(records){
         var pos=[],facs=[],bfrLines=[],colis=[],expenses=[];
         var nlArticles=[],nlServices=[],nlBL=[],nlBR=[];
@@ -737,14 +746,14 @@ document.addEventListener('DOMContentLoaded', async function() {
           function cmd(codeA){var s=0;(d.pos||[]).forEach(function(p){(p.articles||[]).forEach(function(a){if(a.codeA===codeA)s+=Number(a.qte)||0;});});return s;}
           function lineVal(codeA,qte){var cc=contrat.find(function(c){return c.codeA===codeA;});return cc?(Number(cc.pu_vendeur)||0)*(Number(qte)||0):0;}
           var factIds={};(d.facs||[]).forEach(function(f){(f.blIds||[]).concat(f.brIds||[]).forEach(function(id){factIds[id]=true;});});
-          contrat.forEach(function(c){
+          contrat.forEach(function(c,ci){
             var st=c.statut||'Paiement';
             var cout=(Number(c.pu_oa)||0)*(Number(c.qte)||0);
             stageTot[st]=(stageTot[st]||0)+cout;
             if(st==='Paiement')bfrLines.push({imp:imp,codeA:c.codeA,designation:c.designation,qte:c.qte,unite:c.unite,cout:cout});
             if(st!=='Terminé'){
               if(c.type==='service')nlServices.push({imp:imp,codeA:c.codeA,designation:c.designation,statut:st,vendeur:c.vendeur||'—'});
-              else{var qc=cmd(c.codeA),qr=recu(c.codeA);nlArticles.push({imp:imp,codeA:c.codeA,designation:c.designation,cmd:qc,recu:qr,reste:Math.max(0,qc-qr),unite:c.unite||'',statut:st,cout:cout});}
+              else{var qc=cmd(c.codeA),qr=recu(c.codeA);nlArticles.push({imp:imp,idx:ci,codeA:c.codeA,designation:c.designation,cmd:qc,recu:qr,reste:Math.max(0,qc-qr),unite:c.unite||'',statut:st,cout:cout,vendeur:c.vendeur||'',refs:_artRefs(d,c.codeA)});}
             }
           });
           (d.pos||[]).forEach(function(p){
@@ -806,7 +815,7 @@ document.addEventListener('DOMContentLoaded', async function() {
           if(it!==b)it.addEventListener('click',function(){hideAchatsView();});
         });
       }
-      var _achatsState={tab:'overview',depMode:'engage',depPeriod:'mois'};var _achatsAgg=null;
+      var _achatsState={tab:'register',depMode:'engage',depPeriod:'mois'};var _achatsAgg=null;
       function putRec(imp,data){return openDB().then(function(db){return new Promise(function(res){var tx=db.transaction('chantiers','readwrite');tx.objectStore('chantiers').put(data,imp);tx.oncomplete=function(){res();};});});}
       function markPaid(imp,poId){getAll().then(function(recs){var r=recs.find(function(x){return x.imp===imp;});if(!r)return;var d=r.data||{};(d.pos||[]).forEach(function(p){if(p.id===poId)p.date_paiement=new Date().toISOString().slice(0,10);});putRec(imp,d).then(function(){renderAchats();});});}
       function periodKey(s,period){if(!s)return null;var d=new Date(s);if(isNaN(d))return null;var y=d.getFullYear();if(period==='mois')return y+'-'+String(d.getMonth()+1).padStart(2,'0');if(period==='trimestre')return y+'-T'+(Math.floor(d.getMonth()/3)+1);var oj=new Date(y,0,1);var wk=Math.ceil((((d-oj)/86400000)+oj.getDay()+1)/7);return y+'-S'+String(wk).padStart(2,'0');}
@@ -857,8 +866,45 @@ document.addEventListener('DOMContentLoaded', async function() {
       function wireNL(){var c=document.getElementById('achats-content');if(!c)return;c.querySelectorAll('[data-nltab]').forEach(function(b){b.onclick=function(){_achatsState.nlTab=b.getAttribute('data-nltab');renderAchatsContent();};});}
       function colisHTML(agg){var rows=agg.colis.length?agg.colis.map(function(c){return '<tr style="cursor:pointer" data-imp="'+c.imp+'"><td style="font-weight:600;color:#B5000A">'+c.imp+'</td><td><span style="font-family:monospace;font-size:11px">'+c.id+'</span></td><td>'+(c.type||'—')+'</td><td>'+c.transitaire+'</td><td>'+c.destinataire+'</td><td><span class="cbadge cwarn">'+c.statut+'</span></td><td style="text-align:right">'+(c.poids||0)+' kg</td></tr>';}).join(''):'<tr><td colspan="7" style="text-align:center;color:#999;padding:18px;font-style:italic">Aucun colis en transit</td></tr>';return '<div style="font-size:13px;font-weight:700;margin:2px 0 10px">🚢 Colis en cours ('+agg.colis.length+')</div><table style="width:100%;border-collapse:collapse;font-size:12.5px"><thead><tr style="background:#f8fafc">'+th('CHANTIER')+th('N° COLIS')+th('TYPE')+th('TRANSITAIRE')+th('DESTINATAIRE')+th('STATUT')+th('POIDS','right')+'</tr></thead><tbody>'+rows+'</tbody></table>';}
       function achatsTabBtn(key,label,active){return '<button data-atab="'+key+'" style="padding:7px 16px;border-radius:8px;border:1px solid '+(active?'#B5000A':'var(--border)')+';background:'+(active?'#B5000A':'#fff')+';color:'+(active?'#fff':'var(--t2)')+';font-weight:600;cursor:pointer;font-size:13px">'+label+'</button>';}
-      function renderAchatsContent(){var c=document.getElementById('achats-content');if(!c||!_achatsAgg)return;var t=_achatsState.tab;if(t==='overview')c.innerHTML=bfrHTML(_achatsAgg);else if(t==='nonlivres'){c.innerHTML=nonLivresHTML(_achatsAgg);wireNL();}c.querySelectorAll('tbody tr[data-imp]').forEach(function(tr){tr.onclick=function(e){if(e.target.tagName==='BUTTON')return;var imp=tr.getAttribute('data-imp');try{if(window.HubViews)window.HubViews.showView('chantiers');setTimeout(function(){if(window.__chantiersEmbedOpen)window.__chantiersEmbedOpen(imp);},400);}catch(e){}};});}
-      function renderAchats(){var body=document.getElementById('view-achats-body');if(!body)return;body.innerHTML='<div style="padding:14px 0;color:#999">Chargement…</div>';getAll().then(function(recs){_achatsAgg=build(recs);var tabs=[['overview','📊 Vue d\'ensemble'],['nonlivres','📦 Non livrés']];var bar='<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:18px">'+tabs.map(function(t){return achatsTabBtn(t[0],t[1],_achatsState.tab===t[0]);}).join('')+'</div>';body.innerHTML=bar+'<div id="achats-content"></div>';body.querySelectorAll('button[data-atab]').forEach(function(b){b.onclick=function(){_achatsState.tab=b.getAttribute('data-atab');renderAchats();};});renderAchatsContent();});}
+      function regBadges(refs){function grp(arr,cls){return (arr&&arr.length)?arr.map(function(id){return '<span class="rbadge '+cls+'">'+id+'</span>';}).join(''):'';}var h=grp(refs&&refs.po,'rb-po')+grp(refs&&refs.bl,'rb-bl')+grp(refs&&refs.br,'rb-br')+grp(refs&&refs.colis,'rb-co')+grp(refs&&refs.fac,'rb-fa');return h||'<span style="color:#cbd5e1">—</span>';}
+      function articlesRegHTML(agg){
+        var f=_achatsState.reg||(_achatsState.reg={q:'',statut:'',pi:''});
+        var statutsAll=window.CW_STAGES_ARTICLE||["Paiement","Production","Expédition","Conditionnement","Livraison","Réception","Terminé"];
+        var pis={};agg.nlArticles.forEach(function(l){pis[l.imp]=true;});
+        var q=(f.q||'').toLowerCase();
+        var filt=agg.nlArticles.filter(function(l){if(f.statut&&l.statut!==f.statut)return false;if(f.pi&&l.imp!==f.pi)return false;if(q){var hay=((l.codeA||'')+' '+(l.designation||'')+' '+l.imp+' '+(l.vendeur||'')).toLowerCase();if(hay.indexOf(q)<0)return false;}return true;}).sort(function(a,b){return b.reste-a.reste;});
+        var totReste=filt.reduce(function(s,l){return s+(Number(l.reste)||0);},0);
+        var totBFR=filt.reduce(function(s,l){return s+(l.statut==='Paiement'?(Number(l.cout)||0):0);},0);
+        var piOpts='<option value="">Tous chantiers</option>'+Object.keys(pis).sort().map(function(p){return '<option value="'+p+'"'+(f.pi===p?' selected':'')+'>'+p+'</option>';}).join('');
+        var stOpts='<option value="">Tous statuts</option>'+statutsAll.map(function(s){return '<option value="'+s+'"'+(f.statut===s?' selected':'')+'>'+s+'</option>';}).join('');
+        var kpis='<div style="display:flex;gap:12px;margin-bottom:14px;flex-wrap:wrap">'
+          +'<div style="background:#f1f5f9;border-radius:10px;padding:10px 14px;min-width:96px"><div style="font-size:11px;color:#64748b;text-transform:uppercase;letter-spacing:.4px">Articles</div><div style="font-size:18px;font-weight:800">'+filt.length+'</div></div>'
+          +'<div style="background:#eff6ff;border-radius:10px;padding:10px 14px;min-width:96px"><div style="font-size:11px;color:#2563eb;text-transform:uppercase;letter-spacing:.4px">Reste à livrer</div><div style="font-size:18px;font-weight:800">'+totReste+'</div></div>'
+          +'<div style="background:#fee2e2;border-radius:10px;padding:10px 14px;min-width:96px"><div style="font-size:11px;color:#991b1b;text-transform:uppercase;letter-spacing:.4px">BFR (affiché)</div><div style="font-size:18px;font-weight:800">'+fmt(totBFR)+' F</div></div>'
+          +'</div>';
+        var bar='<div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:14px">'
+          +'<input id="reg-q" placeholder="🔍 Rechercher (code, désignation, chantier, vendeur)" value="'+(f.q||'').replace(/"/g,'&quot;')+'" style="flex:1;min-width:240px;padding:8px 12px;border:1px solid var(--border);border-radius:8px;font-size:13px">'
+          +'<select id="reg-pi" style="padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-size:13px">'+piOpts+'</select>'
+          +'<select id="reg-st" style="padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-size:13px">'+stOpts+'</select>'
+          +'</div>';
+        var rows=filt.length?filt.map(function(l){
+          var stSel='<select data-st-imp="'+l.imp+'" data-st-idx="'+l.idx+'" style="font-size:11px;padding:3px 6px;border:1px solid var(--border);border-radius:6px;font-weight:600;cursor:pointer">'+statutsAll.map(function(s){return '<option value="'+s+'"'+(l.statut===s?' selected':'')+'>'+s+'</option>';}).join('')+'</select>';
+          return '<tr data-imp="'+l.imp+'"><td style="font-weight:600;color:#B5000A">'+l.imp+'</td><td><span style="font-family:monospace;font-size:11px">'+(l.codeA||'—')+'</span></td><td>'+(l.designation||'')+'</td><td style="text-align:center">'+l.cmd+'</td><td style="text-align:center;color:#2563eb">'+l.recu+'</td><td style="text-align:center;font-weight:800;color:#B5000A">'+l.reste+' '+(l.unite||'')+'</td><td>'+stSel+'</td><td style="text-align:right;font-weight:700">'+fmt(l.cout||0)+' F</td><td style="line-height:1.9;max-width:200px">'+regBadges(l.refs)+'</td><td style="text-align:center"><button data-open-imp="'+l.imp+'" title="Ouvrir le chantier" style="border:none;background:#f1f5f9;border-radius:6px;cursor:pointer;padding:4px 8px;font-size:13px">↗</button></td></tr>';
+        }).join(''):'<tr><td colspan="10" style="text-align:center;color:#999;padding:20px;font-style:italic">Aucun article ne correspond.</td></tr>';
+        return kpis+bar+'<table style="width:100%;border-collapse:collapse;font-size:12.5px"><thead><tr style="background:#f8fafc">'+th('CHANTIER')+th('CODE')+th('DÉSIGNATION')+th('CMD','center')+th('REÇU','center')+th('RESTE','center')+th('STATUT')+th('COÛT','right')+th('LIENS PO·BL·BR·COLIS·FAC')+th('','center')+'</tr></thead><tbody>'+rows+'</tbody></table>';
+      }
+      function setArticleStatut(imp,idx,statut){getAll().then(function(recs){var r=recs.find(function(x){return x.imp===imp;});if(!r)return;var d=r.data||{};if(!d.contrat||!d.contrat[idx])return;d.contrat[idx].statut=statut;putRec(imp,d).then(function(){renderAchats();});});}
+      function wireArticlesReg(){
+        var c=document.getElementById('achats-content');if(!c)return;
+        var f=_achatsState.reg||(_achatsState.reg={q:'',statut:'',pi:''});
+        var q=document.getElementById('reg-q');if(q)q.oninput=function(){f.q=q.value;clearTimeout(window.__regT);window.__regT=setTimeout(function(){renderAchatsContent();var nq=document.getElementById('reg-q');if(nq){nq.focus();try{nq.setSelectionRange(nq.value.length,nq.value.length);}catch(_){}}},220);};
+        var pi=document.getElementById('reg-pi');if(pi)pi.onchange=function(){f.pi=pi.value;renderAchatsContent();};
+        var st=document.getElementById('reg-st');if(st)st.onchange=function(){f.statut=st.value;renderAchatsContent();};
+        c.querySelectorAll('[data-st-imp]').forEach(function(sel){sel.onchange=function(e){e.stopPropagation();setArticleStatut(sel.getAttribute('data-st-imp'),parseInt(sel.getAttribute('data-st-idx'),10),sel.value);};});
+        c.querySelectorAll('[data-open-imp]').forEach(function(b){b.onclick=function(e){e.stopPropagation();var imp=b.getAttribute('data-open-imp');try{if(window.HubViews)window.HubViews.showView('chantiers');setTimeout(function(){if(window.__chantiersEmbedOpen)window.__chantiersEmbedOpen(imp);},400);}catch(_){}};});
+      }
+      function renderAchatsContent(){var c=document.getElementById('achats-content');if(!c||!_achatsAgg)return;var t=_achatsState.tab;if(t==='overview')c.innerHTML=bfrHTML(_achatsAgg);else if(t==='nonlivres'){c.innerHTML=nonLivresHTML(_achatsAgg);wireNL();}else if(t==='register'){c.innerHTML=articlesRegHTML(_achatsAgg);wireArticlesReg();}if(t!=='register')c.querySelectorAll('tbody tr[data-imp]').forEach(function(tr){tr.onclick=function(e){if(e.target.tagName==='BUTTON')return;var imp=tr.getAttribute('data-imp');try{if(window.HubViews)window.HubViews.showView('chantiers');setTimeout(function(){if(window.__chantiersEmbedOpen)window.__chantiersEmbedOpen(imp);},400);}catch(e){}};});}
+      function renderAchats(){var body=document.getElementById('view-achats-body');if(!body)return;body.innerHTML='<div style="padding:14px 0;color:#999">Chargement…</div>';getAll().then(function(recs){_achatsAgg=build(recs);var tabs=[['register','🗂️ Articles (gestion)'],['overview','📊 Vue d\'ensemble'],['nonlivres','📦 Non livrés']];var bar='<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:18px">'+tabs.map(function(t){return achatsTabBtn(t[0],t[1],_achatsState.tab===t[0]);}).join('')+'</div>';body.innerHTML=bar+'<div id="achats-content"></div>';body.querySelectorAll('button[data-atab]').forEach(function(b){b.onclick=function(){_achatsState.tab=b.getAttribute('data-atab');renderAchats();};});renderAchatsContent();});}
       window.__refreshAchats=renderAchats;
       function ensureAchatsView(){
         var v=document.getElementById('view-achats');
@@ -867,7 +913,7 @@ document.addEventListener('DOMContentLoaded', async function() {
         v=document.createElement('div');v.id='view-achats';v.className='hub-view';
         v.innerHTML='<div class="view-head" style="padding:18px 0"><div style="font-size:11px;letter-spacing:1px;color:#888;text-transform:uppercase">Projects / Achats</div><div style="font-size:22px;font-weight:800">Achats consolidés <span style="color:#B5000A">Tous chantiers</span></div></div><div id="view-achats-body" style="padding:0 0 40px"></div>';
         (shell||document.body).appendChild(v);
-        var stl=document.createElement('style');stl.textContent='#view-achats .cbadge{background:#dbeafe;color:#1e40af;padding:2px 8px;border-radius:10px;font-size:11px}#view-achats .cbadge.cwarn{background:#fef3c7;color:#92400e}#view-achats tbody tr{border-bottom:1px solid #f1f5f9}#view-achats tbody tr:hover{background:#fafafa}#view-achats td{padding:8px 10px}';document.head.appendChild(stl);
+        var stl=document.createElement('style');stl.textContent='#view-achats .cbadge{background:#dbeafe;color:#1e40af;padding:2px 8px;border-radius:10px;font-size:11px}#view-achats .cbadge.cwarn{background:#fef3c7;color:#92400e}#view-achats tbody tr{border-bottom:1px solid #f1f5f9}#view-achats tbody tr:hover{background:#fafafa}#view-achats td{padding:8px 10px}#view-achats .rbadge{display:inline-block;padding:1px 6px;border-radius:8px;font-size:10px;font-weight:600;margin:1px 2px;font-family:monospace}#view-achats .rb-po{background:#dbeafe;color:#1e40af}#view-achats .rb-bl{background:#e0e7ff;color:#3730a3}#view-achats .rb-br{background:#ede9fe;color:#6d28d9}#view-achats .rb-co{background:#cffafe;color:#155e75}#view-achats .rb-fa{background:#dcfce7;color:#166534}';document.head.appendChild(stl);
         return v;
       }
       function showAchatsView(){
