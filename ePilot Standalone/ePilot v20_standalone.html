@@ -752,8 +752,9 @@ document.addEventListener('DOMContentLoaded', async function() {
             stageTot[st]=(stageTot[st]||0)+cout;
             if(st==='Paiement')bfrLines.push({imp:imp,codeA:c.codeA,designation:c.designation,qte:c.qte,unite:c.unite,cout:cout});
             if(st!=='Terminé'){
-              if(c.type==='service')nlServices.push({imp:imp,idx:ci,codeA:c.codeA,designation:c.designation,unite:c.unite||'',statut:st,vendeur:c.vendeur||'—',cout:cout,refs:_artRefs(d,c.codeA)});
-              else{var qc=cmd(c.codeA),qr=recu(c.codeA);nlArticles.push({imp:imp,idx:ci,codeA:c.codeA,designation:c.designation,cmd:qc,recu:qr,reste:Math.max(0,qc-qr),unite:c.unite||'',statut:st,cout:cout,vendeur:c.vendeur||'',refs:_artRefs(d,c.codeA)});}
+              var rep=c.repere||('M'+String(imp).replace(/^PI/i,'')+'.'+(ci+1));
+              if(c.type==='service')nlServices.push({imp:imp,idx:ci,repere:rep,codeA:c.codeA,designation:c.designation,unite:c.unite||'',statut:st,vendeur:c.vendeur||'—',cout:cout,refs:_artRefs(d,c.codeA)});
+              else{var qc=cmd(c.codeA),qr=recu(c.codeA);nlArticles.push({imp:imp,idx:ci,repere:rep,codeA:c.codeA,designation:c.designation,cmd:qc,recu:qr,reste:Math.max(0,qc-qr),unite:c.unite||'',statut:st,cout:cout,vendeur:c.vendeur||'',refs:_artRefs(d,c.codeA)});}
             }
           });
           (d.pos||[]).forEach(function(p){
@@ -879,7 +880,7 @@ document.addEventListener('DOMContentLoaded', async function() {
         var src=isSvc?agg.nlServices:agg.nlArticles;
         var pis={};src.forEach(function(l){pis[l.imp]=true;});
         var q=(f.q||'').toLowerCase();
-        var base=src.filter(function(l){if(f.statut&&l.statut!==f.statut)return false;if(f.pi&&l.imp!==f.pi)return false;if(q){var hay=((l.codeA||'')+' '+(l.designation||'')+' '+l.imp+' '+(l.vendeur||'')+' '+(_chantierInfo(l.imp).client||'')).toLowerCase();if(hay.indexOf(q)<0)return false;}return true;});
+        var base=src.filter(function(l){if(f.statut&&l.statut!==f.statut)return false;if(f.pi&&l.imp!==f.pi)return false;if(q){var hay=((l.repere||'')+' '+(l.codeA||'')+' '+(l.designation||'')+' '+l.imp+' '+(l.vendeur||'')+' '+(_chantierInfo(l.imp).client||'')).toLowerCase();if(hay.indexOf(q)<0)return false;}return true;});
         var lateCount=base.reduce(function(n,l){return n+(regAdvLevel(l.imp,l.statut,statutsAll)==='late'?1:0);},0);
         var filt=f.late?base.filter(function(l){return regAdvLevel(l.imp,l.statut,statutsAll)==='late';}):base;
         if(isSvc)filt.sort(function(a,b){return a.imp<b.imp?-1:a.imp>b.imp?1:0;});else filt.sort(function(a,b){return b.reste-a.reste;});
@@ -896,7 +897,7 @@ document.addEventListener('DOMContentLoaded', async function() {
           +'<div title="Lignes en retard sur l\'avancement du chantier (statut probablement non mis à jour)" style="background:'+(lateCount?'#fef2f2':'#f1f5f9')+';border:1px solid '+(lateCount?'#fecaca':'transparent')+';border-radius:10px;padding:10px 14px;min-width:96px"><div style="font-size:11px;color:'+(lateCount?'#dc2626':'#94a3b8')+';text-transform:uppercase;letter-spacing:.4px">⚠ En retard</div><div style="font-size:18px;font-weight:800;color:'+(lateCount?'#dc2626':'inherit')+'">'+lateCount+'</div></div>'
           +'</div>';
         var bar='<div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:14px">'
-          +'<input id="reg-q" placeholder="🔍 Rechercher (code, désignation, PI, client, vendeur)" value="'+(f.q||'').replace(/"/g,'&quot;')+'" style="flex:1;min-width:240px;padding:8px 12px;border:1px solid var(--border);border-radius:8px;font-size:13px">'
+          +'<input id="reg-q" placeholder="🔍 Rechercher (repère, code A, désignation, PI, client, vendeur)" value="'+(f.q||'').replace(/"/g,'&quot;')+'" style="flex:1;min-width:240px;padding:8px 12px;border:1px solid var(--border);border-radius:8px;font-size:13px">'
           +'<select id="reg-pi" style="padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-size:13px">'+piOpts+'</select>'
           +'<select id="reg-st" style="padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-size:13px">'+stOpts+'</select>'
           +'<label style="display:flex;align-items:center;gap:5px;font-size:12px;color:#991b1b;cursor:pointer;white-space:nowrap;font-weight:600"><input type="checkbox" id="reg-late"'+(f.late?' checked':'')+' style="cursor:pointer"> ⚠ Retards uniquement</label>'
@@ -917,7 +918,8 @@ document.addEventListener('DOMContentLoaded', async function() {
           var advTd='<td>'+regAdvCell(l.imp,l.statut,statutsAll)+'</td>';
           var client=(_chantierInfo(l.imp).client)||'—';
           var cmn='<td style="text-align:center">'+cb+'</td>'
-            +'<td><span style="font-family:monospace;font-size:11px;font-weight:600">'+(l.codeA||'—')+'</span></td>'
+            +'<td><span style="font-family:monospace;font-size:11px;font-weight:700;color:#B5000A">'+(l.repere||'—')+'</span></td>'
+            +'<td><span style="font-family:monospace;font-size:11px;color:#64748b">'+(l.codeA||'—')+'</span></td>'
             +'<td>'+(l.designation||'')+'</td>'
             +'<td style="color:#64748b">'+(l.unite||'—')+'</td>'
             +'<td style="font-weight:600;color:#B5000A">'+l.imp+'</td>'
@@ -925,11 +927,11 @@ document.addEventListener('DOMContentLoaded', async function() {
             +'<td style="color:#475569">'+client+'</td>';
           if(isSvc)return '<tr data-imp="'+l.imp+'">'+cmn+'<td>'+stSel+'</td>'+advTd+'<td>'+(l.vendeur||'—')+'</td><td style="line-height:1.9;max-width:200px">'+regBadges(l.refs)+'</td>'+openBtn+'</tr>';
           return '<tr data-imp="'+l.imp+'">'+cmn+'<td style="text-align:center">'+l.cmd+'</td><td style="text-align:center;color:#2563eb">'+l.recu+'</td><td style="text-align:center;font-weight:800;color:#B5000A">'+l.reste+'</td><td>'+stSel+'</td>'+advTd+'<td style="line-height:1.9;max-width:200px">'+regBadges(l.refs)+'</td>'+openBtn+'</tr>';
-        }).join(''):'<tr><td colspan="'+(isSvc?12:14)+'" style="text-align:center;color:#999;padding:20px;font-style:italic">Aucun '+(isSvc?'service':'article')+' ne correspond.</td></tr>';
+        }).join(''):'<tr><td colspan="'+(isSvc?13:15)+'" style="text-align:center;color:#999;padding:20px;font-style:italic">Aucun '+(isSvc?'service':'article')+' ne correspond.</td></tr>';
         var allSel=filt.length>0&&filt.every(function(l){return f.sel[selKey(l)];});
         var selAll='<input type="checkbox" id="reg-selall"'+(allSel?' checked':'')+' title="Tout sélectionner" style="cursor:pointer">';
-        var head=isSvc?(th(selAll,'center')+th('CODE')+th('DÉSIGNATION')+th('UNITÉ')+th('PI')+th('COÛT','right')+th('CLIENT')+th('STATUT')+th('AVANCEMENT CHANTIER')+th('VENDEUR')+th('LIENS')+th('','center'))
-          :(th(selAll,'center')+th('CODE')+th('DÉSIGNATION')+th('UNITÉ')+th('PI')+th('COÛT','right')+th('CLIENT')+th('CMD','center')+th('REÇU','center')+th('RESTE','center')+th('STATUT')+th('AVANCEMENT CHANTIER')+th('LIENS PO·BL·BR·COLIS·FAC')+th('','center'));
+        var head=isSvc?(th(selAll,'center')+th('CODE')+th('CODE A')+th('DÉSIGNATION')+th('UNITÉ')+th('PI')+th('COÛT','right')+th('CLIENT')+th('STATUT')+th('AVANCEMENT CHANTIER')+th('VENDEUR')+th('LIENS')+th('','center'))
+          :(th(selAll,'center')+th('CODE')+th('CODE A')+th('DÉSIGNATION')+th('UNITÉ')+th('PI')+th('COÛT','right')+th('CLIENT')+th('CMD','center')+th('REÇU','center')+th('RESTE','center')+th('STATUT')+th('AVANCEMENT CHANTIER')+th('LIENS PO·BL·BR·COLIS·FAC')+th('','center'));
         return kpis+bar+bulk+'<table style="width:100%;border-collapse:collapse;font-size:12.5px"><thead><tr style="background:#f8fafc">'+head+'</tr></thead><tbody>'+rows+'</tbody></table>';
       }
       function setArticleStatut(imp,idx,statut){getAll().then(function(recs){var r=recs.find(function(x){return x.imp===imp;});if(!r)return;var d=r.data||{};if(!d.contrat||!d.contrat[idx])return;d.contrat[idx].statut=statut;putRec(imp,d).then(function(){renderAchats();});});}
