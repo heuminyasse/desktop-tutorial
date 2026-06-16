@@ -490,7 +490,7 @@ document.addEventListener('DOMContentLoaded', async function() {
         );
         src = src.replace(
           "sub==='po' && (\n        <div style={{ display:'flex', flexDirection:'column', gap:10 }}>",
-          "sub==='po' && <POBView posB={posB} contrat={contrat||[]} imp={imp_cwc} blsB={blsB} brsB={brsB} onStatus={function(po,st){_cwGet(imp_cwc).then(function(stt){stt=stt||_cwEmpty();stt.pos=(stt.pos||[]).map(function(p){return p.id===po.id?Object.assign({},p,{statut:st}):p;});_cwPut(imp_cwc,stt).then(function(){setPosB(stt.pos);});});}} onEdit={function(po){setCwcPOCreate(po);}} onDelete={function(po){if(!confirm('Supprimer le PO '+po.id+' ?'))return;_cwGet(imp_cwc).then(function(stt){stt=stt||_cwEmpty();stt.pos=(stt.pos||[]).filter(function(p){return p.id!==po.id;});_cwPut(imp_cwc,stt).then(function(){setPosB(stt.pos);var pm={};(stt.pos||[]).forEach(function(p){(p.articles||[]).forEach(function(a){if(a.codeA){pm[a.codeA]=pm[a.codeA]||[];if(pm[a.codeA].indexOf(p.id)<0)pm[a.codeA].push(p.id);}});});setPoMap(pm);if(onUpdate){var newDep=(jip.depenses||[]).filter(function(d){return d.poId!==po.id;});onUpdate(Object.assign({},jip,{depenses:newDep}));}});});}} onSave={function(stt){setPosB(stt.pos||[]);var pm={};(stt.pos||[]).forEach(function(po){(po.articles||[]).forEach(function(a){if(a.codeA){pm[a.codeA]=pm[a.codeA]||[];if(pm[a.codeA].indexOf(po.id)<0)pm[a.codeA].push(po.id);}});});setPoMap(pm);}}/>} {false && (<div style={{ display:'flex', flexDirection:'column', gap:10 }}>"
+          "sub==='po' && <POBView posB={posB} contrat={contrat||[]} imp={imp_cwc} blsB={blsB} brsB={brsB} onStatus={function(po,st){_cwGet(imp_cwc).then(function(stt){stt=stt||_cwEmpty();stt.pos=(stt.pos||[]).map(function(p){return p.id===po.id?Object.assign({},p,{statut:st}):p;});_cwPut(imp_cwc,stt).then(function(){setPosB(stt.pos);});});}} onEdit={function(po){setCwcPOCreate(po);}} onDelete={function(po){if(!confirm('Supprimer le PO '+po.id+' ?'))return;_cwGet(imp_cwc).then(function(stt){stt=stt||_cwEmpty();stt.pos=(stt.pos||[]).filter(function(p){return p.id!==po.id;});_cwPut(imp_cwc,stt).then(function(){setPosB(stt.pos);var pm={};(stt.pos||[]).forEach(function(p){(p.articles||[]).forEach(function(a){if(a.codeA){pm[a.codeA]=pm[a.codeA]||[];if(pm[a.codeA].indexOf(p.id)<0)pm[a.codeA].push(p.id);}});});setPoMap(pm);if(onUpdate){var _rm=(jip.depenses||[]).filter(function(d){return d.poId===po.id;});var _dec=_rm.reduce(function(s,d){return s+(d.etat&&d.etat!=="\u00c0 valider"?(Number(d.montant)||0):0);},0);var newDep=(jip.depenses||[]).filter(function(d){return d.poId!==po.id;});onUpdate(Object.assign({},jip,{depenses:newDep,budgetDepense:Math.max(0,(Number(jip.budgetDepense)||0)-_dec)}));}});});}} onSave={function(stt){setPosB(stt.pos||[]);var pm={};(stt.pos||[]).forEach(function(po){(po.articles||[]).forEach(function(a){if(a.codeA){pm[a.codeA]=pm[a.codeA]||[];if(pm[a.codeA].indexOf(po.id)<0)pm[a.codeA].push(po.id);}});});setPoMap(pm);}}/>} {false && (<div style={{ display:'flex', flexDirection:'column', gap:10 }}>"
         );
         src = src.replace(
           "{sub==='bl'       && <button className=\"btn btn-p btn-sm\" onClick={()=>setShowBL(true)}>+ Nouveau bordereau</button>}",
@@ -1990,7 +1990,7 @@ document.addEventListener('DOMContentLoaded', async function() {
 })();
 </script>
 <script id="__ARTICLES_CLEANER_v1__">
-/* Outil de nettoyage de la base Articles (window.FCR_DB) — recherche/remplacement en masse */
+/* Outil de nettoyage de la base Articles (window.FCR_DB) — recherche/remplacement + extraction en masse */
 (function articlesCleaner(){
   var FIELDS=[['categorie','Catégorie'],['sousCategorie','Sous-catégorie'],['desc','Description'],['reference','Référence'],['fabricant','Fabricant'],['vendeur','Vendeur'],['section','Section'],['type','Type'],['unite','Unité'],['tags','Tags']];
   function db(){ return window.FCR_DB || []; }
@@ -1998,36 +1998,58 @@ document.addEventListener('DOMContentLoaded', async function() {
   function setVal(a,f,v){ if(f==='tags'){ a.tags=v.split(',').map(function(t){return t.trim();}).filter(Boolean); } else { a[f]=v; } }
   function escRe(s){ return s.replace(/[.*+?^${}()|[\]\\]/g,'\\$&'); }
   function esc(s){ return String(s==null?'':s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];}); }
+  function tidy(s){ return s.replace(/\s{2,}/g,' ').replace(/\s+([,;.])/g,'$1').trim(); }
+  function addToken(dest,token,cs){ var present=cs?dest.indexOf(token)!==-1:dest.toLowerCase().indexOf(token.toLowerCase())!==-1; if(present) return dest; return dest.trim()?(dest.trim()+' '+token):token; }
 
-  var modal=null, fieldSel, modeSel, caseChk, findInp, replInp, distBox, prevBox;
+  var modal=null, fieldSel, modeSel, destSel, caseChk, findInp, replInp, distBox, prevBox, replRow, destRow;
+
+  function isExtract(){ return modeSel.value==='extract'; }
 
   function computeChanges(){
-    var f=fieldSel.value, mode=modeSel.value, find=findInp.value, repl=replInp.value, cs=caseChk.checked;
+    var f=fieldSel.value, mode=modeSel.value, find=findInp.value, repl=replInp.value, cs=caseChk.checked, dest=destSel.value;
     if(!find && mode!=='regex') return [];
+    var out=[];
+    if(mode==='extract'){
+      if(!find) return [];
+      if(dest===f) return null; /* source = destination interdit */
+      db().forEach(function(a){
+        if(!a) return;
+        var src=val(a,f);
+        var has=cs?src.indexOf(find)!==-1:src.toLowerCase().indexOf(find.toLowerCase())!==-1;
+        if(!has) return;
+        var newSrc=cs?src.split(find).join(''):src.replace(new RegExp(escRe(find),'gi'),'');
+        newSrc=tidy(newSrc);
+        var dOld=val(a,dest), dNew=addToken(dOld, find.trim(), cs);
+        if(newSrc===src && dNew===dOld) return;
+        out.push({a:a, ex:true, f:f, old:src, nw:newSrc, dest:dest, dOld:dOld, dNw:dNew});
+      });
+      return out;
+    }
     var re=null;
     if(mode==='regex'){ try{ re=new RegExp(find, cs?'g':'gi'); }catch(e){ return null; } }
-    var out=[];
     db().forEach(function(a){
       if(!a) return;
       var old=val(a,f), nw=old;
-      if(mode==='egal'){
-        var ca=cs?old.trim():old.trim().toLowerCase(), cf=cs?find.trim():find.trim().toLowerCase();
-        if(ca===cf) nw=repl;
-      } else if(mode==='contient'){
-        if(!find) return;
-        if(cs){ if(old.indexOf(find)!==-1) nw=old.split(find).join(repl); }
-        else { nw=old.replace(new RegExp(escRe(find),'gi'), repl); }
-      } else if(mode==='regex'){ nw=old.replace(re, repl); }
-      if(nw!==old) out.push({a:a, old:old, nw:nw});
+      if(mode==='egal'){ var ca=cs?old.trim():old.trim().toLowerCase(), cf=cs?find.trim():find.trim().toLowerCase(); if(ca===cf) nw=repl; }
+      else if(mode==='contient'){ if(!find) return; if(cs){ if(old.indexOf(find)!==-1) nw=old.split(find).join(repl); } else { nw=old.replace(new RegExp(escRe(find),'gi'), repl); } }
+      else if(mode==='regex'){ nw=old.replace(re, repl); }
+      if(nw!==old) out.push({a:a, f:f, old:old, nw:nw});
     });
     return out;
+  }
+
+  function syncMode(){
+    var ex=isExtract();
+    replRow.style.display=ex?'none':'';
+    destRow.style.display=ex?'':'none';
+    refreshPreview();
   }
 
   function refreshDistinct(){
     var f=fieldSel.value, m={};
     db().forEach(function(a){ if(!a) return; var v=val(a,f); m[v]=(m[v]||0)+1; });
     var keys=Object.keys(m).sort(function(x,y){ return m[y]-m[x]; });
-    var html='<div style="font-size:11px;color:#6b7280;margin-bottom:6px">'+keys.length+' valeur(s) distincte(s) — cliquez pour cibler</div>';
+    var html='<div style="font-size:11px;color:#6b7280;margin-bottom:6px">'+keys.length+' valeur(s) distincte(s) dans « '+esc(fieldLabel(f))+' » — cliquez pour cibler</div>';
     keys.slice(0,300).forEach(function(k){
       html+='<div class="ac-dist" data-v="'+esc(k)+'" style="display:flex;justify-content:space-between;gap:8px;padding:4px 8px;border-bottom:1px solid #f1f5f9;cursor:pointer;font-size:12px">'
         +'<span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:340px">'+(k===''?'<i style="color:#9ca3af">(vide)</i>':esc(k))+'</span>'
@@ -2035,30 +2057,38 @@ document.addEventListener('DOMContentLoaded', async function() {
     });
     distBox.innerHTML=html;
     Array.prototype.forEach.call(distBox.querySelectorAll('.ac-dist'),function(el){
-      el.onclick=function(){ findInp.value=el.getAttribute('data-v'); modeSel.value='egal'; refreshPreview(); };
+      el.onclick=function(){ findInp.value=el.getAttribute('data-v'); if(!isExtract()) modeSel.value='egal'; refreshPreview(); };
       el.onmouseenter=function(){ el.style.background='#f8fafc'; };
       el.onmouseleave=function(){ el.style.background='#fff'; };
     });
   }
+  function fieldLabel(f){ for(var i=0;i<FIELDS.length;i++) if(FIELDS[i][0]===f) return FIELDS[i][1]; return f; }
 
   function refreshPreview(){
     var ch=computeChanges();
-    if(ch===null){ prevBox.innerHTML='<span style="color:#dc2626">Expression régulière invalide.</span>'; return; }
+    if(ch===null){ prevBox.innerHTML='<span style="color:#dc2626">'+(isExtract()?'Le champ destination doit être différent de la source.':'Expression régulière invalide.')+'</span>'; return; }
     if(!ch.length){ prevBox.innerHTML='<span style="color:#6b7280">Aucun article concerné.</span>'; return; }
     var html='<div style="font-weight:700;color:#B5000A;margin-bottom:6px">'+ch.length+' article(s) seront modifiés :</div>';
     ch.slice(0,6).forEach(function(c){
-      html+='<div style="font-size:11px;padding:3px 0;border-bottom:1px solid #f1f5f9"><span style="color:#dc2626;text-decoration:line-through">'+esc(c.old.slice(0,60))+'</span> → <span style="color:#16a34a">'+esc(c.nw.slice(0,60))+'</span></div>';
+      if(c.ex){
+        html+='<div style="font-size:11px;padding:4px 0;border-bottom:1px solid #f1f5f9">'
+          +'<div><b>'+esc(fieldLabel(c.f))+'</b> : <span style="color:#dc2626;text-decoration:line-through">'+esc(c.old.slice(0,55))+'</span> → <span style="color:#16a34a">'+esc(c.nw.slice(0,55))+'</span></div>'
+          +'<div><b>'+esc(fieldLabel(c.dest))+'</b> : <span style="color:#9ca3af">'+esc(c.dOld.slice(0,40))+'</span> → <span style="color:#16a34a">'+esc(c.dNw.slice(0,55))+'</span></div></div>';
+      } else {
+        html+='<div style="font-size:11px;padding:3px 0;border-bottom:1px solid #f1f5f9"><span style="color:#dc2626;text-decoration:line-through">'+esc(c.old.slice(0,60))+'</span> → <span style="color:#16a34a">'+esc(c.nw.slice(0,60))+'</span></div>';
+      }
     });
     if(ch.length>6) html+='<div style="font-size:11px;color:#9ca3af;margin-top:4px">… et '+(ch.length-6)+' autre(s)</div>';
     prevBox.innerHTML=html;
   }
 
   function applyChanges(){
-    var ch=computeChanges(), f=fieldSel.value;
-    if(ch===null){ alert('Expression régulière invalide.'); return; }
+    var ch=computeChanges();
+    if(ch===null){ alert(isExtract()?'Le champ destination doit être différent de la source.':'Expression régulière invalide.'); return; }
     if(!ch.length){ alert('Aucun article concerné.'); return; }
-    if(!confirm('Appliquer la correction du champ « '+f+' » à '+ch.length+' article(s) ?\n\nCette action est irréversible.')) return;
-    ch.forEach(function(c){ setVal(c.a, f, c.nw); });
+    var lbl=isExtract()?('extraction « '+findInp.value+' » de '+fieldLabel(fieldSel.value)+' vers '+fieldLabel(destSel.value)):('correction du champ « '+fieldLabel(fieldSel.value)+' »');
+    if(!confirm('Appliquer la '+lbl+' à '+ch.length+' article(s) ?\n\nCette action est irréversible.')) return;
+    ch.forEach(function(c){ if(c.ex){ setVal(c.a, c.f, c.nw); setVal(c.a, c.dest, c.dNw); } else { setVal(c.a, c.f, c.nw); } });
     try{ if(typeof window.idbSaveAll==='function') window.idbSaveAll(window.FCR_DB); }catch(e){ console.warn('[Cleaner] idbSaveAll',e); }
     try{ if(window.HubViews&&window.HubViews.refresh) window.HubViews.refresh(); }catch(_){}
     try{ if(typeof window.renderArticles==='function') window.renderArticles(); }catch(_){}
@@ -2076,41 +2106,45 @@ document.addEventListener('DOMContentLoaded', async function() {
         +'<button id="ac-close" style="border:0;background:transparent;font-size:20px;cursor:pointer;color:#6b7280">✕</button></div>'
       +'<div style="padding:18px 20px;overflow-y:auto;display:grid;grid-template-columns:1fr 1fr;gap:18px">'
         +'<div>'
-          +'<label style="display:block;font-size:10px;font-weight:700;color:#6b7280;text-transform:uppercase;margin-bottom:4px">Champ à corriger</label>'
+          +'<label style="display:block;font-size:10px;font-weight:700;color:#6b7280;text-transform:uppercase;margin-bottom:4px">Champ source</label>'
           +'<select id="ac-field" style="width:100%;padding:9px;border:1px solid #cbd5e1;border-radius:8px;margin-bottom:12px;font-family:inherit"></select>'
           +'<label style="display:block;font-size:10px;font-weight:700;color:#6b7280;text-transform:uppercase;margin-bottom:4px">Mode</label>'
           +'<select id="ac-mode" style="width:100%;padding:9px;border:1px solid #cbd5e1;border-radius:8px;margin-bottom:12px;font-family:inherit">'
-            +'<option value="egal">Égal à (valeur entière)</option><option value="contient">Contient (remplace dans le texte)</option><option value="regex">Expression régulière</option></select>'
-          +'<label style="display:block;font-size:10px;font-weight:700;color:#6b7280;text-transform:uppercase;margin-bottom:4px">Rechercher</label>'
+            +'<option value="egal">Égal à (valeur entière)</option><option value="contient">Contient (remplace dans le texte)</option><option value="regex">Expression régulière</option><option value="extract">Extraction (déplacer vers un autre champ)</option></select>'
+          +'<label style="display:block;font-size:10px;font-weight:700;color:#6b7280;text-transform:uppercase;margin-bottom:4px">Rechercher / Mot à extraire</label>'
           +'<input id="ac-find" style="width:100%;padding:9px;border:1px solid #cbd5e1;border-radius:8px;margin-bottom:12px;font-family:inherit" placeholder="Texte à rechercher…"/>'
-          +'<label style="display:block;font-size:10px;font-weight:700;color:#6b7280;text-transform:uppercase;margin-bottom:4px">Remplacer par</label>'
-          +'<input id="ac-repl" style="width:100%;padding:9px;border:1px solid #cbd5e1;border-radius:8px;margin-bottom:12px;font-family:inherit" placeholder="Nouvelle valeur…"/>'
+          +'<div id="ac-repl-row"><label style="display:block;font-size:10px;font-weight:700;color:#6b7280;text-transform:uppercase;margin-bottom:4px">Remplacer par</label>'
+          +'<input id="ac-repl" style="width:100%;padding:9px;border:1px solid #cbd5e1;border-radius:8px;margin-bottom:12px;font-family:inherit" placeholder="Nouvelle valeur…"/></div>'
+          +'<div id="ac-dest-row" style="display:none"><label style="display:block;font-size:10px;font-weight:700;color:#6b7280;text-transform:uppercase;margin-bottom:4px">Champ destination (recevra le mot)</label>'
+          +'<select id="ac-dest" style="width:100%;padding:9px;border:1px solid #cbd5e1;border-radius:8px;margin-bottom:12px;font-family:inherit"></select></div>'
           +'<label style="display:flex;align-items:center;gap:6px;font-size:12px;color:#374151;cursor:pointer"><input type="checkbox" id="ac-case"/> Sensible à la casse</label>'
           +'<div id="ac-preview" style="margin-top:14px;padding:10px;background:#f8fafc;border-radius:8px;min-height:40px;font-size:12px"></div>'
         +'</div>'
         +'<div style="display:flex;flex-direction:column;min-height:0">'
-          +'<label style="display:block;font-size:10px;font-weight:700;color:#6b7280;text-transform:uppercase;margin-bottom:4px">Valeurs existantes</label>'
+          +'<label style="display:block;font-size:10px;font-weight:700;color:#6b7280;text-transform:uppercase;margin-bottom:4px">Valeurs existantes (champ source)</label>'
           +'<div id="ac-dist" style="flex:1;overflow-y:auto;border:1px solid #e5e7eb;border-radius:8px;max-height:360px"></div>'
         +'</div>'
       +'</div>'
       +'<div style="padding:14px 20px;border-top:1px solid #e5e7eb;display:flex;justify-content:flex-end;gap:8px">'
         +'<button id="ac-cancel" style="padding:9px 18px;border-radius:8px;border:1px solid #cbd5e1;background:#fff;cursor:pointer;font-family:inherit">Fermer</button>'
-        +'<button id="ac-apply" style="padding:9px 18px;border-radius:8px;border:0;background:#B5000A;color:#fff;font-weight:700;cursor:pointer;font-family:inherit">Appliquer la correction</button>'
+        +'<button id="ac-apply" style="padding:9px 18px;border-radius:8px;border:0;background:#B5000A;color:#fff;font-weight:700;cursor:pointer;font-family:inherit">Appliquer</button>'
       +'</div></div>';
     document.body.appendChild(modal);
     fieldSel=modal.querySelector('#ac-field'); modeSel=modal.querySelector('#ac-mode');
-    caseChk=modal.querySelector('#ac-case'); findInp=modal.querySelector('#ac-find');
-    replInp=modal.querySelector('#ac-repl'); distBox=modal.querySelector('#ac-dist');
-    prevBox=modal.querySelector('#ac-preview');
-    fieldSel.innerHTML=FIELDS.map(function(f){ return '<option value="'+f[0]+'">'+f[1]+'</option>'; }).join('');
+    destSel=modal.querySelector('#ac-dest'); caseChk=modal.querySelector('#ac-case');
+    findInp=modal.querySelector('#ac-find'); replInp=modal.querySelector('#ac-repl');
+    distBox=modal.querySelector('#ac-dist'); prevBox=modal.querySelector('#ac-preview');
+    replRow=modal.querySelector('#ac-repl-row'); destRow=modal.querySelector('#ac-dest-row');
+    var opts=FIELDS.map(function(f){ return '<option value="'+f[0]+'">'+f[1]+'</option>'; }).join('');
+    fieldSel.innerHTML=opts; destSel.innerHTML=opts; destSel.value='reference';
     fieldSel.onchange=function(){ refreshDistinct(); refreshPreview(); };
-    modeSel.onchange=refreshPreview; caseChk.onchange=refreshPreview;
+    modeSel.onchange=syncMode; caseChk.onchange=refreshPreview; destSel.onchange=refreshPreview;
     findInp.oninput=refreshPreview; replInp.oninput=refreshPreview;
     modal.querySelector('#ac-close').onclick=close; modal.querySelector('#ac-cancel').onclick=close;
     modal.querySelector('#ac-apply').onclick=applyChanges;
     modal.addEventListener('click',function(e){ if(e.target===modal) close(); });
   }
-  function open(){ if(!modal) build(); modal.style.display='flex'; refreshDistinct(); refreshPreview(); }
+  function open(){ if(!modal) build(); modal.style.display='flex'; syncMode(); refreshDistinct(); refreshPreview(); }
   function close(){ if(modal) modal.style.display='none'; }
   window.openArticlesCleaner=open;
 
