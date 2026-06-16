@@ -413,6 +413,29 @@ document.addEventListener('DOMContentLoaded', async function() {
     // dans CommandesTab, branché sur IndexedDB epilot_chantier_v2.
     // Modifie le texte de #ch-src AVANT que Babel ne le compile.
     // ─────────────────────────────────────────────────────────────
+    // Sonde « attendre-jusqu'au-succès » partagée : appelle fn() toutes les
+    // `interval` ms jusqu'à ce qu'elle renvoie une valeur vraie, ou jusqu'à
+    // `tries` tentatives. Atteindre la limite est un échec : on le signale
+    // (console.warn ou opts.onTimeout) au lieu d'abandonner en silence.
+    function pollUntil(fn, opts){
+      opts = opts || {};
+      var interval = opts.interval || 100;
+      var tries = (opts.tries != null) ? opts.tries : 100;
+      var n = 0;
+      (function tick(){
+        var done = false;
+        try { done = !!fn(); }
+        catch(e){ try { console.warn('[pollUntil] ' + (opts.label || 'poll') + ' — erreur dans la sonde :', e); } catch(_){} }
+        if (done) return;
+        if (n++ >= tries){
+          if (opts.onTimeout){ try { opts.onTimeout(); } catch(_){} }
+          else { try { console.warn('[pollUntil] ' + (opts.label || 'condition') + ' jamais remplie après ' + tries + ' tentatives — abandon.'); } catch(_){} }
+          return;
+        }
+        setTimeout(tick, interval);
+      })();
+    }
+
     (function injectContrat(){
       function patch(){
         var el = document.getElementById('ch-src');
@@ -551,8 +574,7 @@ document.addEventListener('DOMContentLoaded', async function() {
         try {  } catch(_){}
         return true;
       }
-      var t=0;
-      (function poll(){ if (patch() || t++>150) return; setTimeout(poll, 80); })();
+      pollUntil(patch, { interval: 80, tries: 150, label: 'injectContrat (sous-onglets Contrat/PO/BL/Facture/Colis)' });
     })();
 
     // [Contrat PO v1] est désormais intégré directement dans injectContrat
