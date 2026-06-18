@@ -189,9 +189,10 @@ document.addEventListener('DOMContentLoaded', async function() {
     }
     try {
       var __bg=document.createElement('div');
-      __bg.textContent='\u2705 ePilot build FR/EN actif \u2014 v20-standalone';
-      __bg.style.cssText='position:fixed;z-index:2147483647;bottom:14px;right:14px;background:#16a34a;color:#fff;font:700 13px Arial,sans-serif;padding:10px 14px;border-radius:10px;box-shadow:0 4px 14px rgba(0,0,0,.35)';
-      var __showBg=function(){ (document.body||document.documentElement).appendChild(__bg); setTimeout(function(){ __bg.style.transition='opacity .6s'; __bg.style.opacity='0'; setTimeout(function(){ if(__bg.remove)__bg.remove(); },700); }, 8000); };
+      __bg.innerHTML='\u2705 NOUVELLE VERSION FR/EN ACTIVE \u00b7 clique ici pour fermer';
+      __bg.style.cssText='position:fixed;z-index:2147483647;top:0;left:0;right:0;background:#16a34a;color:#fff;font:800 18px Arial,sans-serif;padding:16px 12px;text-align:center;cursor:pointer;box-shadow:0 4px 18px rgba(0,0,0,.4)';
+      __bg.onclick=function(){ if(__bg.remove)__bg.remove(); };
+      var __showBg=function(){ (document.body||document.documentElement).appendChild(__bg); };
       if(document.body) __showBg(); else document.addEventListener('DOMContentLoaded', __showBg);
     } catch(__e){}
 
