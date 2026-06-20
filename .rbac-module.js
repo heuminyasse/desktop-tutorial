@@ -559,3 +559,41 @@
   function boot(){ setTimeout(run,600); setInterval(run,1200); }
   if(document.readyState!=='loading') boot(); else document.addEventListener('DOMContentLoaded',boot);
 })();
+
+/* ───────── Fourniture (Achats) : colonne Vendeur (depuis SOURCING_DATA, par PI + désignation) ───────── */
+;(function(){
+  'use strict';
+  function nd(s){ return String(s==null?'':s).replace(/\s+/g,' ').trim().toLowerCase(); }
+  function nc(c){ return String(c==null?'':c).replace(/^M(\d{2})(\d+)/,'M$2'); }
+  var _look=null;
+  function buildLookup(){ var SD=window.SOURCING_DATA||[]; if(!SD.length) return null; var L={}; SD.forEach(function(r){ var imp=String(r.Imputation||''); var vd=r.Vendeur||r.Payeur||''; if(!vd) return; L['d|'+imp+'|'+nd(r['Description of Equipment'])]=vd; var kc='c|'+imp+'|'+nc(r.ProductCode); if(!L[kc]) L[kc]=vd; }); return L; }
+  function addVendeur(){
+    var v=document.getElementById('view-achats'); if(!v||!v.classList.contains('active')) return;
+    var tbl=v.querySelector('table'); if(!tbl) return;
+    var thead=tbl.querySelector('thead tr'); if(!thead) return;
+    var ths=[].slice.call(thead.children);
+    // only the Fourniture table (has a CLIENT column)
+    var clientIdx=-1; ths.forEach(function(th,i){ if(/^client$/i.test(th.textContent.replace(/[⇅▲▼\s]/g,''))) clientIdx=i; });
+    if(clientIdx<0) return;
+    if(thead.querySelector('th[data-ep-vend]')) { /* header ok, still fill any new rows below */ }
+    else {
+      var ref=ths[clientIdx]; var th=document.createElement('th'); th.setAttribute('data-ep-vend','1'); th.className=ref.className||''; var st=ref.getAttribute('style')||''; th.setAttribute('style', st.replace(/cursor:[^;]*;?/,'')); th.textContent='Vendeur';
+      thead.insertBefore(th, ths[clientIdx+1]||null);
+    }
+    if(!_look) _look=buildLookup(); var L=_look||{};
+    var insAt=clientIdx+1;
+    [].slice.call(tbl.querySelectorAll('tbody tr')).forEach(function(tr){
+      if(tr.querySelector('td[data-ep-vend]')) return;
+      if(tr.children.length<clientIdx+1) return;
+      var imp=tr.getAttribute('data-imp')||'';
+      var dcell=tr.children[3]; var desig=dcell?(dcell.getAttribute('title')||dcell.textContent||''):'';
+      var ccell=tr.children[1]; var code=ccell?ccell.textContent.trim():'';
+      var vd=L['d|'+imp+'|'+nd(desig)] || L['c|'+imp+'|'+nc(code)] || '—';
+      var td=document.createElement('td'); td.setAttribute('data-ep-vend','1'); td.style.cssText='padding:5px 8px;font-size:11px;white-space:nowrap;'; td.textContent=vd;
+      tr.insertBefore(td, tr.children[insAt]||null);
+    });
+  }
+  try{ new MutationObserver(function(){ try{addVendeur();}catch(e){} }).observe(document.documentElement,{childList:true,subtree:true}); }catch(e){}
+  function boot(){ setTimeout(addVendeur,700); setInterval(addVendeur,1200); }
+  if(document.readyState!=='loading') boot(); else document.addEventListener('DOMContentLoaded',boot);
+})();
