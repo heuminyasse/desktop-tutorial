@@ -538,3 +538,10 @@
   function boot(){ setTimeout(norm,600); setInterval(norm,1500); }
   if(document.readyState!=='loading') boot(); else document.addEventListener('DOMContentLoaded',boot);
 })();
+
+/* ───────── « Salary » au lieu de « Payroll » en anglais (cohérent avec l'onglet/fil d'Ariane) ───────── */
+;(function(){
+  'use strict';
+  function ov(){ try{ var I=window.EPilotI18n; if(!I||!I.toEN) return false; I.toEN['Payroll']='Salary'; I.toEN['Salary']='Salary'; I.toEN['Paie']='Salary'; if(window.__applyAppLang && (window.__appLang||'fr')==='en'){ try{window.__applyAppLang();}catch(e){} } return true; }catch(e){ return false; } }
+  if(!ov()){ var n=0, iv=setInterval(function(){ if(ov()||++n>50) clearInterval(iv); },100); }
+})();
