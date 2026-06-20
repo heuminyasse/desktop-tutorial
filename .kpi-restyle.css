@@ -1,7 +1,6 @@
 #view-vacation .vac-stat .v, #view-marketing .mkt-kpi-v, #view-rfq .stat-cell .v, #view-chantiers .stat-cell .v, #view-papiers [data-fst] > div:first-child, #view-orders .ep-dep-kpis > div > div:last-child, #view-orders .ep-det-kpis > div > div:nth-child(2), #view-achats .ep-ach-kpis > div > div:nth-child(2){ font-family:Inter,'Segoe UI',Arial,sans-serif !important; font-weight:800 !important; }
-.hub-view h1, .hub-view h1 > span:not([style*='font-weight']), .mkt-title{ font-family:Inter,'Segoe UI',Arial,sans-serif !important; font-weight:800 !important; line-height:1.25 !important; }
-.hub-view h1, .mkt-title{ font-size:16px !important; }
-
+.hub-view h1, .mkt-title{ font-family:Outfit,Inter,'Segoe UI',sans-serif !important; font-weight:700 !important; font-size:18px !important; line-height:1.25 !important; }
+.hub-view h1 .accent, .mkt-title .accent{ color:rgb(232,0,13) !important; }
 /* ===== Congés ===== */
 #view-vacation .vac-stats{ display:flex !important; gap:6px !important; flex-wrap:wrap; justify-content:flex-end !important; margin-bottom:12px !important; }
 #view-vacation .vac-stat{ display:flex !important; flex-direction:column; align-items:center; justify-content:center; flex:0 0 auto !important; padding:4px 12px !important; border-radius:6px !important; min-width:62px; box-shadow:none !important; background:#eff6ff !important; border:1px solid rgba(37,99,235,.13) !important; }

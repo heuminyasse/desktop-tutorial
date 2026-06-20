@@ -515,3 +515,25 @@
   function boot(){ setTimeout(move,600); setInterval(move,1500); }
   if(document.readyState!=='loading') boot(); else document.addEventListener('DOMContentLoaded',boot);
 })();
+
+/* ───────── Uniformiser titres React : accent rouge Congés + fil d'Ariane (pages sans classes) ───────── */
+;(function(){
+  'use strict';
+  var RED='rgb(232, 0, 13)';
+  function reddish(c){ var m=c.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)/); if(!m) return false; var r=+m[1],g=+m[2],b=+m[3]; var mx=Math.max(r,g,b),mn=Math.min(r,g,b); return (mx-mn)>60; }
+  var _t=0;
+  function norm(){ var now=Date.now(); if(now-_t<150) return; _t=now;
+    var v=document.querySelector('.hub-view.active'); if(!v) return;
+    var title=v.querySelector('h1')||v.querySelector('.mkt-title');
+    if(title){ [].slice.call(title.querySelectorAll('span,b,strong')).forEach(function(s){ if(s.children.length) return; var c; try{c=getComputedStyle(s).color;}catch(e){return;} if(reddish(c) && c!==RED) s.style.setProperty('color',RED,'important'); }); }
+    // fil d'Ariane sans classe .crumb (pages React) → aligner sur .crumb
+    if(!v.querySelector('.crumb')){
+      var cand=[].slice.call(v.querySelectorAll('div,span')).filter(function(e){ if(e.children.length>3) return false; var t=e.textContent.replace(/\s+/g,' ').trim(); if(!/^[^\/]{1,16}\/[^\/]{1,16}$/.test(t)) return false; var fs; try{fs=parseFloat(getComputedStyle(e).fontSize);}catch(_){return false;} return fs>0 && fs<14; });
+      var crumb=cand[0];
+      if(crumb && !crumb.__epCrumb){ crumb.__epCrumb=1; crumb.style.setProperty('font-size','11px','important'); crumb.style.setProperty('font-weight','700','important'); crumb.style.setProperty('text-transform','none','important'); crumb.style.setProperty('color','rgb(138,148,166)','important'); crumb.style.setProperty('font-family','Outfit,Inter,sans-serif','important'); crumb.style.setProperty('letter-spacing','0','important'); }
+    }
+  }
+  try{ new MutationObserver(function(){ try{norm();}catch(e){} }).observe(document.documentElement,{childList:true,subtree:true}); }catch(e){}
+  function boot(){ setTimeout(norm,600); setInterval(norm,1500); }
+  if(document.readyState!=='loading') boot(); else document.addEventListener('DOMContentLoaded',boot);
+})();
