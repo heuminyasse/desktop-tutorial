@@ -67,4 +67,38 @@
 #view-chantiers .stat-cell:nth-child(5n){ background:#f5f3ff !important; border:1px solid #7c3aed2e !important; }
 #view-chantiers .stat-cell:nth-child(5n) .v{ color:#7c3aed !important; }
 
+#view-orders .ep-dep-kpis, #view-orders .ep-det-kpis{ display:flex !important; gap:6px !important; flex-wrap:wrap !important; align-items:center !important; margin-left:auto !important; }
+#view-orders .ep-dep-kpis > div, #view-orders .ep-det-kpis > div{ border-radius:6px !important; padding:4px 12px !important; min-width:60px !important; display:flex !important; flex-direction:column !important; align-items:center !important; justify-content:center !important; box-shadow:none !important; position:static !important; overflow:visible !important; }
+#view-orders .ep-dep-kpis > div > div:first-child{ order:2 !important; display:flex !important; flex-direction:column !important; align-items:center !important; margin:0 !important; }
+#view-orders .ep-dep-kpis > div > div:first-child > span:first-child{ font-size:9px !important; color:#666 !important; text-transform:none !important; font-weight:600 !important; }
+#view-orders .ep-dep-kpis > div > div:first-child > span:last-child{ display:none !important; }
+#view-orders .ep-dep-kpis > div > div:last-child{ font-size:16px !important; font-weight:800 !important; order:1 !important; margin:0 !important; line-height:1.1 !important; }
+#view-orders .ep-det-kpis > div > div:nth-child(1){ font-size:9px !important; color:#666 !important; text-transform:none !important; order:2 !important; margin:0 !important; letter-spacing:0 !important; }
+#view-orders .ep-det-kpis > div > div:nth-child(2){ font-size:16px !important; font-weight:800 !important; order:1 !important; margin:0 !important; line-height:1.1 !important; }
+#view-orders .ep-det-kpis > div > div:nth-child(n+3){ display:none !important; }
+#view-orders .ep-dep-kpis > div:nth-child(1){ background:#eff6ff !important; border:1px solid #2563eb2e !important; }
+#view-orders .ep-dep-kpis > div:nth-child(1) > div:last-child{ color:#2563eb !important; }
+#view-orders .ep-det-kpis > div:nth-child(1){ background:#eff6ff !important; border:1px solid #2563eb2e !important; }
+#view-orders .ep-det-kpis > div:nth-child(1) > div:nth-child(2){ color:#2563eb !important; }
+#view-orders .ep-dep-kpis > div:nth-child(2){ background:#f0fdf4 !important; border:1px solid #16a34a2e !important; }
+#view-orders .ep-dep-kpis > div:nth-child(2) > div:last-child{ color:#16a34a !important; }
+#view-orders .ep-det-kpis > div:nth-child(2){ background:#f0fdf4 !important; border:1px solid #16a34a2e !important; }
+#view-orders .ep-det-kpis > div:nth-child(2) > div:nth-child(2){ color:#16a34a !important; }
+#view-orders .ep-dep-kpis > div:nth-child(3){ background:#fff7ed !important; border:1px solid #d977062e !important; }
+#view-orders .ep-dep-kpis > div:nth-child(3) > div:last-child{ color:#d97706 !important; }
+#view-orders .ep-det-kpis > div:nth-child(3){ background:#fff7ed !important; border:1px solid #d977062e !important; }
+#view-orders .ep-det-kpis > div:nth-child(3) > div:nth-child(2){ color:#d97706 !important; }
+#view-orders .ep-dep-kpis > div:nth-child(4){ background:#fff5f5 !important; border:1px solid #C412302e !important; }
+#view-orders .ep-dep-kpis > div:nth-child(4) > div:last-child{ color:#C41230 !important; }
+#view-orders .ep-det-kpis > div:nth-child(4){ background:#fff5f5 !important; border:1px solid #C412302e !important; }
+#view-orders .ep-det-kpis > div:nth-child(4) > div:nth-child(2){ color:#C41230 !important; }
+#view-orders .ep-dep-kpis > div:nth-child(5){ background:#f5f3ff !important; border:1px solid #7c3aed2e !important; }
+#view-orders .ep-dep-kpis > div:nth-child(5) > div:last-child{ color:#7c3aed !important; }
+#view-orders .ep-det-kpis > div:nth-child(5){ background:#f5f3ff !important; border:1px solid #7c3aed2e !important; }
+#view-orders .ep-det-kpis > div:nth-child(5) > div:nth-child(2){ color:#7c3aed !important; }
+#view-orders .ep-dep-kpis > div:nth-child(6){ background:#eff6ff !important; border:1px solid #2563eb2e !important; }
+#view-orders .ep-dep-kpis > div:nth-child(6) > div:last-child{ color:#2563eb !important; }
+#view-orders .ep-det-kpis > div:nth-child(6){ background:#eff6ff !important; border:1px solid #2563eb2e !important; }
+#view-orders .ep-det-kpis > div:nth-child(6) > div:nth-child(2){ color:#2563eb !important; }
+
 /* @@GEN_END */

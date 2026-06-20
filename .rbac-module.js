@@ -464,7 +464,8 @@
   var CFG=[
     {view:'view-marketing', kpi:'.mkt-kpis',  header:'.mkt-head',  before:'.mkt-head-r'},
     {view:'view-chantiers', kpi:'.stat-strip',header:'.view-head', before:null},
-    {view:'view-rfq',       kpi:'.stat-strip',header:'.view-head', before:'.actions'}
+    {view:'view-rfq',       kpi:'.stat-strip',header:'.view-head', before:'.actions'},
+    {view:'view-orders',    kpi:'.ep-dep-kpis, .ep-det-kpis', header:'.view-head', before:'.actions'}
   ];
   function place(){
     CFG.forEach(function(cfg){
