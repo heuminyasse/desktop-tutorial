@@ -17,7 +17,7 @@
 
 /* @@GEN_START (marketing/rfq/chantiers) */
 /* #view-marketing .mkt-kpi */
-#view-marketing .mkt-kpis{ display:flex !important; gap:6px !important; flex-wrap:wrap !important; align-items:stretch !important; justify-content:flex-end !important; margin-left:auto !important; width:100% !important; }
+#view-marketing .mkt-kpis{ display:flex !important; gap:6px !important; flex-wrap:wrap !important; align-items:stretch !important; align-items:center !important; margin-left:auto !important; }
 #view-marketing .mkt-kpi{ display:flex !important; flex-direction:column !important; align-items:center !important; justify-content:center !important; flex:0 0 auto !important; padding:4px 12px !important; border-radius:6px !important; min-width:60px !important; box-shadow:none !important; gap:0 !important; }
 #view-marketing .mkt-kpi .mkt-kpi-v{ font-size:16px !important; font-weight:800 !important; line-height:1.1 !important; margin:0 !important; order:1 !important; }
 #view-marketing .mkt-kpi .mkt-kpi-l{ font-size:9px !important; color:#666 !important; font-weight:600 !important; line-height:1.2 !important; margin:0 !important; order:2 !important; text-align:center !important; text-transform:none !important; letter-spacing:0 !important; }
@@ -34,7 +34,7 @@
 #view-marketing .mkt-kpi:nth-child(5n) .mkt-kpi-v{ color:#7c3aed !important; }
 
 /* #view-rfq .stat-cell */
-#view-rfq .stat-strip{ display:flex !important; gap:6px !important; flex-wrap:wrap !important; align-items:stretch !important; justify-content:flex-end !important; margin-left:auto !important; width:100% !important; }
+#view-rfq .stat-strip{ display:flex !important; gap:6px !important; flex-wrap:wrap !important; align-items:stretch !important; align-items:center !important; margin-left:auto !important; }
 #view-rfq .stat-cell{ display:flex !important; flex-direction:column !important; align-items:center !important; justify-content:center !important; flex:0 0 auto !important; padding:4px 12px !important; border-radius:6px !important; min-width:60px !important; box-shadow:none !important; gap:0 !important; }
 #view-rfq .stat-cell .v{ font-size:16px !important; font-weight:800 !important; line-height:1.1 !important; margin:0 !important; order:1 !important; }
 #view-rfq .stat-cell .l{ font-size:9px !important; color:#666 !important; font-weight:600 !important; line-height:1.2 !important; margin:0 !important; order:2 !important; text-align:center !important; text-transform:none !important; letter-spacing:0 !important; }
@@ -51,7 +51,7 @@
 #view-rfq .stat-cell:nth-child(5n) .v{ color:#7c3aed !important; }
 
 /* #view-chantiers .stat-cell */
-#view-chantiers .stat-strip{ display:flex !important; gap:6px !important; flex-wrap:wrap !important; align-items:stretch !important; justify-content:flex-end !important; margin-left:auto !important; width:100% !important; }
+#view-chantiers .stat-strip{ display:flex !important; gap:6px !important; flex-wrap:wrap !important; align-items:stretch !important; align-items:center !important; margin-left:auto !important; }
 #view-chantiers .stat-cell{ display:flex !important; flex-direction:column !important; align-items:center !important; justify-content:center !important; flex:0 0 auto !important; padding:4px 12px !important; border-radius:6px !important; min-width:60px !important; box-shadow:none !important; gap:0 !important; }
 #view-chantiers .stat-cell .v{ font-size:16px !important; font-weight:800 !important; line-height:1.1 !important; margin:0 !important; order:1 !important; }
 #view-chantiers .stat-cell .l{ font-size:9px !important; color:#666 !important; font-weight:600 !important; line-height:1.2 !important; margin:0 !important; order:2 !important; text-align:center !important; text-transform:none !important; letter-spacing:0 !important; }
