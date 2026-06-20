@@ -1,6 +1,6 @@
 /* ===== Congés ===== */
-#view-vacation .vac-stats{ display:flex !important; gap:6px !important; flex-wrap:wrap; margin-bottom:12px !important; }
-#view-vacation .vac-stat{ display:flex !important; flex-direction:column; align-items:center; justify-content:center; padding:4px 12px !important; border-radius:6px !important; min-width:62px; box-shadow:none !important; background:#eff6ff !important; border:1px solid rgba(37,99,235,.13) !important; }
+#view-vacation .vac-stats{ display:flex !important; gap:6px !important; flex-wrap:wrap; justify-content:flex-end !important; margin-bottom:12px !important; }
+#view-vacation .vac-stat{ display:flex !important; flex-direction:column; align-items:center; justify-content:center; flex:0 0 auto !important; padding:4px 12px !important; border-radius:6px !important; min-width:62px; box-shadow:none !important; background:#eff6ff !important; border:1px solid rgba(37,99,235,.13) !important; }
 #view-vacation .vac-stat .v{ font-size:16px !important; font-weight:800 !important; line-height:1.1 !important; margin:0 !important; order:1; color:#3b82f6 !important; letter-spacing:0 !important; }
 #view-vacation .vac-stat .v.blue{ color:#2563eb !important; } #view-vacation .vac-stat .v.green{ color:#16a34a !important; } #view-vacation .vac-stat .v.orange{ color:#d97706 !important; }
 #view-vacation .vac-stat .l{ font-size:9px !important; color:#666 !important; text-transform:none !important; letter-spacing:0 !important; font-weight:600 !important; line-height:1.2 !important; margin:0 !important; order:2; text-align:center; }
@@ -9,16 +9,16 @@
 #view-vacation .vac-stat:has(.v.orange){ background:#fff7ed !important; border-color:rgba(217,119,6,.16) !important; }
 #view-vacation .vac-stat:has(.v.blue){ background:#eff6ff !important; border-color:rgba(37,99,235,.16) !important; }
 
-/* ===== Papiers (cartes [data-fst], styles inline) ===== */
-#view-papiers div:has(> [data-fst]){ display:flex !important; gap:6px !important; flex-wrap:wrap !important; }
+/* ===== Papiers ===== */
+#view-papiers div:has(> [data-fst]){ display:flex !important; gap:6px !important; flex-wrap:wrap !important; justify-content:flex-end !important; }
 #view-papiers [data-fst]{ flex:0 0 auto !important; min-width:62px !important; padding:5px 12px !important; border-radius:6px !important; display:flex !important; flex-direction:column !important; align-items:center !important; justify-content:center !important; }
-#view-papiers [data-fst] > div{ font-size:9px !important; font-weight:600 !important; line-height:1.2 !important; color:#666 !important; margin:0 !important; text-align:center !important; }
+#view-papiers [data-fst] > div{ font-size:9px !important; font-weight:600 !important; line-height:1.2 !important; color:#666 !important; margin:0 !important; text-align:center !important; text-transform:none !important; }
 #view-papiers [data-fst] > div:first-child{ font-size:16px !important; font-weight:800 !important; line-height:1.1 !important; color:inherit !important; }
 
 /* @@GEN_START (marketing/rfq/chantiers) */
 /* #view-marketing .mkt-kpi */
-#view-marketing .mkt-kpis{ display:flex !important; gap:6px !important; flex-wrap:wrap !important; align-items:stretch !important; margin-left:auto; }
-#view-marketing .mkt-kpi{ display:flex !important; flex-direction:column !important; align-items:center !important; justify-content:center !important; padding:4px 12px !important; border-radius:6px !important; min-width:60px !important; box-shadow:none !important; gap:0 !important; }
+#view-marketing .mkt-kpis{ display:flex !important; gap:6px !important; flex-wrap:wrap !important; align-items:stretch !important; justify-content:flex-end !important; margin-left:auto !important; width:100% !important; }
+#view-marketing .mkt-kpi{ display:flex !important; flex-direction:column !important; align-items:center !important; justify-content:center !important; flex:0 0 auto !important; padding:4px 12px !important; border-radius:6px !important; min-width:60px !important; box-shadow:none !important; gap:0 !important; }
 #view-marketing .mkt-kpi .mkt-kpi-v{ font-size:16px !important; font-weight:800 !important; line-height:1.1 !important; margin:0 !important; order:1 !important; }
 #view-marketing .mkt-kpi .mkt-kpi-l{ font-size:9px !important; color:#666 !important; font-weight:600 !important; line-height:1.2 !important; margin:0 !important; order:2 !important; text-align:center !important; text-transform:none !important; letter-spacing:0 !important; }
 #view-marketing .mkt-kpi .mkt-kpi-s{ display:none !important; }
@@ -34,8 +34,8 @@
 #view-marketing .mkt-kpi:nth-child(5n) .mkt-kpi-v{ color:#7c3aed !important; }
 
 /* #view-rfq .stat-cell */
-#view-rfq .stat-strip{ display:flex !important; gap:6px !important; flex-wrap:wrap !important; align-items:stretch !important; margin-left:auto; }
-#view-rfq .stat-cell{ display:flex !important; flex-direction:column !important; align-items:center !important; justify-content:center !important; padding:4px 12px !important; border-radius:6px !important; min-width:60px !important; box-shadow:none !important; gap:0 !important; }
+#view-rfq .stat-strip{ display:flex !important; gap:6px !important; flex-wrap:wrap !important; align-items:stretch !important; justify-content:flex-end !important; margin-left:auto !important; width:100% !important; }
+#view-rfq .stat-cell{ display:flex !important; flex-direction:column !important; align-items:center !important; justify-content:center !important; flex:0 0 auto !important; padding:4px 12px !important; border-radius:6px !important; min-width:60px !important; box-shadow:none !important; gap:0 !important; }
 #view-rfq .stat-cell .v{ font-size:16px !important; font-weight:800 !important; line-height:1.1 !important; margin:0 !important; order:1 !important; }
 #view-rfq .stat-cell .l{ font-size:9px !important; color:#666 !important; font-weight:600 !important; line-height:1.2 !important; margin:0 !important; order:2 !important; text-align:center !important; text-transform:none !important; letter-spacing:0 !important; }
 #view-rfq .stat-cell .s{ display:none !important; }
@@ -51,8 +51,8 @@
 #view-rfq .stat-cell:nth-child(5n) .v{ color:#7c3aed !important; }
 
 /* #view-chantiers .stat-cell */
-#view-chantiers .stat-strip{ display:flex !important; gap:6px !important; flex-wrap:wrap !important; align-items:stretch !important; margin-left:auto; }
-#view-chantiers .stat-cell{ display:flex !important; flex-direction:column !important; align-items:center !important; justify-content:center !important; padding:4px 12px !important; border-radius:6px !important; min-width:60px !important; box-shadow:none !important; gap:0 !important; }
+#view-chantiers .stat-strip{ display:flex !important; gap:6px !important; flex-wrap:wrap !important; align-items:stretch !important; justify-content:flex-end !important; margin-left:auto !important; width:100% !important; }
+#view-chantiers .stat-cell{ display:flex !important; flex-direction:column !important; align-items:center !important; justify-content:center !important; flex:0 0 auto !important; padding:4px 12px !important; border-radius:6px !important; min-width:60px !important; box-shadow:none !important; gap:0 !important; }
 #view-chantiers .stat-cell .v{ font-size:16px !important; font-weight:800 !important; line-height:1.1 !important; margin:0 !important; order:1 !important; }
 #view-chantiers .stat-cell .l{ font-size:9px !important; color:#666 !important; font-weight:600 !important; line-height:1.2 !important; margin:0 !important; order:2 !important; text-align:center !important; text-transform:none !important; letter-spacing:0 !important; }
 #view-chantiers .stat-cell .s{ display:none !important; }
