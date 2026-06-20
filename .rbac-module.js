@@ -490,3 +490,23 @@
   function boot(){ setTimeout(place,600); setInterval(place,1500); }
   if(document.readyState!=='loading') boot(); else document.addEventListener('DOMContentLoaded',boot);
 })();
+
+/* ───────── Papiers : remonter les KPI dans la ligne de titre (pas de classes → ancrage sur le H1) ───────── */
+;(function(){
+  'use strict';
+  function move(){
+    var v=document.getElementById('view-papiers'); if(!v) return;
+    var h=v.querySelector('h1,h2'); if(!h) return;
+    var titleRow=h.parentElement; var flexRow=titleRow&&titleRow.parentElement; if(!flexRow) return;
+    var fsts=[].slice.call(v.querySelectorAll('[data-fst]')); if(!fsts.length) return;
+    var kcont=fsts[fsts.length-1].parentElement; if(!kcont) return;
+    if(kcont.parentElement===flexRow){ kcont.style.marginLeft='auto'; return; }
+    [].slice.call(flexRow.querySelectorAll('[data-ep-pap]')).forEach(function(e){ if(e!==kcont) e.remove(); });
+    try{ flexRow.style.display='flex'; flexRow.style.alignItems='center'; flexRow.style.flexWrap='wrap'; }catch(e){}
+    flexRow.insertBefore(kcont, titleRow.nextSibling);
+    kcont.style.marginLeft='auto'; kcont.setAttribute('data-ep-pap','1');
+  }
+  try{ new MutationObserver(function(){ try{move();}catch(e){} }).observe(document.documentElement,{childList:true,subtree:true}); }catch(e){}
+  function boot(){ setTimeout(move,600); setInterval(move,1500); }
+  if(document.readyState!=='loading') boot(); else document.addEventListener('DOMContentLoaded',boot);
+})();
