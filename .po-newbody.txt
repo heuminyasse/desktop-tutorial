@@ -1,0 +1,12 @@
+body += '<tr style="border-bottom:1px solid #e5e7eb;" data-row="'+rowIdx+'">'
+          + '<td style="'+S+'font-family:monospace;font-weight:700;font-size:11px;white-space:nowrap;cursor:pointer" data-action="oa" data-row="'+rowIdx+'">'+escapeHtml(r.PO||r.OA||'—')+'</td>'
+          + '<td style="'+S+'text-align:right;font-family:monospace">'+_fmtN(val)+'</td>'
+          + '<td style="'+S+'">'+escapeHtml(r.Vendeur||r.Payeur||'—')+'</td>'
+          + '<td style="'+S+'font-family:monospace;font-weight:700;white-space:nowrap;cursor:pointer" data-action="pi" data-row="'+rowIdx+'">'+escapeHtml(r.Imputation||'—')+'</td>'
+          + '<td style="'+S+'">'+escapeHtml(r.Unite||'—')+'</td>'
+          + '<td style="'+S+'font-size:11px;white-space:nowrap">'+escapeHtml(String((r['Date'+String.fromCharCode(10)+'Commande'])||r['Date Commande']||'—').slice(0,10))+'</td>'
+          + '<td style="'+S+'">'+_badge(closed?'Livré':r.Status||'En cours')+'</td>'
+          + '<td style="'+S+'font-family:monospace;font-size:11px">'+escapeHtml(r.ProductCode||'—')+'</td>'
+          + '<td style="'+S+'max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="'+escapeHtml(r['Description of Equipment']||'')+'">'+escapeHtml((r['Description of Equipment']||'').slice(0,45))+'</td>'
+          + '<td style="'+S+'text-align:right">'+escapeHtml(String(r.Qty||'—'))+'</td>'
+          + '</tr>';
