@@ -1315,7 +1315,7 @@ document.addEventListener('DOMContentLoaded', async function() {
           var q2=(window.QUOTE_DATA||[]).find(function(x){return x.Dossier===ref;});
           if(q2) Object.assign(q2, ov[ref]);
           var dv2=getDevis(ref);
-          if(dv2){ dv2.oa=outv.oa; dv2.client=outv.client; dv2.site=outv.site; dv2.unite=outv.site; dv2.resp=outv.resp; dv2.team=outv.team; dv2.objet=outv.objet; dv2.description=outv.objet; dv2.net=outv.net; dv2.montant=outv.net; dv2.type=outv.type; dv2.typeChantier=outv.type; dv2.oa_date=outv.oa_date; }
+          if(dv2){ dv2.oa=outv.oa; dv2.client=outv.client; dv2.site=outv.site; dv2.resp=outv.resp; dv2.team=outv.team; dv2.objet=outv.objet; dv2.description=outv.objet; dv2.net=outv.net; dv2.montant=outv.net; dv2.type=outv.type; dv2.typeChantier=outv.type; dv2.oa_date=outv.oa_date; }
           if(outv.budget && window._updateJipBudget) window._updateJipBudget(ref, outv.budget);
           reRenderQuote();
           if(window.__cwToast) window.__cwToast('Chantier '+ref+' mis \u00e0 jour');
