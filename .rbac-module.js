@@ -78,7 +78,7 @@
   try{ if(DB.accounts&&DB.accounts.bnyasse){ if(DB.accounts.bnyasse.groupId!=='admin'||DB.accounts.bnyasse.active===false){ DB.accounts.bnyasse.groupId='admin'; DB.accounts.bnyasse.active=true; save(); } } }catch(e){}
   var EMP_SUBTABS={
     'view-salary':{all:['✦ Prime','📅 Pointage','📄 Bulletins','🗂 Paie','💳 Crédits','📋 Contrats'],keep:['📅 Pointage','📄 Bulletins','💳 Crédits','📋 Contrats']},
-    'view-achats':{all:['🗂️ Articles (gestion)','🛠️ Services Non livrés','📦 Non livrés'],keep:['📦 Non livrés']},
+    'view-achats':{all:['🗂️ Articles (gestion)','🛠️ Services Non livrés','📦 Non livrés','📦 Articles non livrés'],keep:['📦 Non livrés','📦 Articles non livrés']},
     'view-orders':{all:['💰 Dépenses','🏦 Dettes','📋 Commandes'],keep:['💰 Dépenses']},
     'view-parametres':{mode:'siblings',keep:['🎨 Apparence','Apparence']}
   };
@@ -465,9 +465,13 @@
     {view:'view-marketing', kpi:'.mkt-kpis',  header:'.mkt-head',  before:'.mkt-head-r'},
     {view:'view-chantiers', kpi:'.stat-strip',header:'.view-head', before:null},
     {view:'view-rfq',       kpi:'.stat-strip',header:'.view-head', before:'.actions'},
-    {view:'view-orders',    kpi:'.ep-dep-kpis, .ep-det-kpis', header:'.view-head', before:'.actions'}
+    {view:'view-orders',    kpi:'.ep-dep-kpis, .ep-det-kpis', header:'.view-head', before:'.actions'},
+    {view:'view-achats',    kpi:'.ep-ach-kpis', header:'.view-head', before:null}
   ];
+  function renameAchatsTab(){ var v=document.getElementById('view-achats'); if(!v) return; [].slice.call(v.querySelectorAll('button,[role=tab]')).forEach(function(b){ var t=(b.textContent||'').replace(/\s+/g,' ').trim(); if(/Non livr[ée]s$/.test(t) && !/Services/i.test(t) && !/Articles non/i.test(t)) b.textContent=t.replace(/Non livr/, 'Articles non livr'); else if(/Undelivered$/.test(t) && !/services/i.test(t) && !/items/i.test(t)) b.textContent=t.replace(/Undelivered/, 'Undelivered items'); }); }
+  function baliseAchats(){ var v=document.getElementById('view-achats'); if(!v) return; var card=v.querySelector('div[style*="min-width:96px"]'); if(card&&card.parentElement&&!card.parentElement.classList.contains('ep-ach-kpis')) card.parentElement.classList.add('ep-ach-kpis'); }
   function place(){
+    try{baliseAchats();}catch(e){} try{renameAchatsTab();}catch(e){}
     CFG.forEach(function(cfg){
       var v=document.getElementById(cfg.view); if(!v) return;
       var header=v.querySelector(cfg.header); if(!header) return;
