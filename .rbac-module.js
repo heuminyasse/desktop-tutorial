@@ -468,7 +468,7 @@
     {view:'view-orders',    kpi:'.ep-dep-kpis, .ep-det-kpis', header:'.view-head', before:'.actions'},
     {view:'view-achats',    kpi:'.ep-ach-kpis', header:'.view-head', before:null}
   ];
-  function renameAchatsTab(){ var v=document.getElementById('view-achats'); if(!v) return; [].slice.call(v.querySelectorAll('button,[role=tab]')).forEach(function(b){ var t=(b.textContent||'').replace(/\s+/g,' ').trim(); if(/Non livr[ée]s$/.test(t) && !/Services/i.test(t) && !/Articles non/i.test(t)) b.textContent=t.replace(/Non livr/, 'Articles non livr'); else if(/Undelivered$/.test(t) && !/services/i.test(t) && !/items/i.test(t)) b.textContent=t.replace(/Undelivered/, 'Undelivered items'); }); }
+  function renameAchatsTab(){ var v=document.getElementById('view-achats'); if(!v) return; [].slice.call(v.querySelectorAll('button,[role=tab]')).forEach(function(b){ var t=(b.textContent||'').replace(/\s+/g,' ').trim(); if(/Non livr[ée]s$/.test(t) && !/Services/i.test(t) && !/Articles non/i.test(t)) b.textContent=t.replace(/Non livr/, 'Articles non livr'); else if(/Undelivered$/.test(t) && !/services/i.test(t) && !/items/i.test(t)) b.textContent=t.replace(/Undelivered/, 'Undelivered items'); if(/Articles \(gestion\)/.test(t)) b.textContent=t.replace(/Articles \(gestion\)/,'Fourniture'); else if(/Items \(management\)/.test(t)) b.textContent=t.replace(/Items \(management\)/,'Supply'); }); }
   function baliseAchats(){ var v=document.getElementById('view-achats'); if(!v) return; var card=v.querySelector('div[style*="min-width:96px"]'); if(card&&card.parentElement&&!card.parentElement.classList.contains('ep-ach-kpis')) card.parentElement.classList.add('ep-ach-kpis'); }
   function place(){
     try{baliseAchats();}catch(e){} try{renameAchatsTab();}catch(e){}
@@ -544,4 +544,18 @@
   'use strict';
   function ov(){ try{ var I=window.EPilotI18n; if(!I||!I.toEN) return false; I.toEN['Payroll']='Salary'; I.toEN['Salary']='Salary'; I.toEN['Paie']='Salary'; if(window.__applyAppLang && (window.__appLang||'fr')==='en'){ try{window.__applyAppLang();}catch(e){} } return true; }catch(e){ return false; } }
   if(!ov()){ var n=0, iv=setInterval(function(){ if(ov()||++n>50) clearInterval(iv); },100); }
+})();
+
+/* ───────── Commandes→PO + nettoyage KPI du détail chantier ───────── */
+;(function(){
+  'use strict';
+  function renameOrdersPO(){ var v=document.getElementById('view-orders'); if(!v) return; var b=v.querySelector('[data-ordtab="commandes"]'); if(b){ var t=(b.textContent||'').replace(/\s+/g,' ').trim(); if(/Commandes$|Orders$/.test(t) && !/\bPO$/.test(t)) b.textContent='📋 PO'; } }
+  function chantierStrip(){ var v=document.getElementById('view-chantiers'); if(!v) return; var strip=v.querySelector('.stat-strip'); if(!strip) return;
+    var isDetail=(v.textContent.indexOf('Suivi financier')>=0) || [].slice.call(v.querySelectorAll('button,[role=tab]')).some(function(x){ return /PV du jour|Cahier des charges|Visites de Site/i.test(x.textContent||''); });
+    if(isDetail){ strip.style.setProperty('display','none','important'); } else { strip.style.removeProperty('display'); }
+  }
+  function run(){ try{renameOrdersPO();}catch(e){} try{chantierStrip();}catch(e){} }
+  try{ new MutationObserver(run).observe(document.documentElement,{childList:true,subtree:true}); }catch(e){}
+  function boot(){ setTimeout(run,600); setInterval(run,1200); }
+  if(document.readyState!=='loading') boot(); else document.addEventListener('DOMContentLoaded',boot);
 })();
