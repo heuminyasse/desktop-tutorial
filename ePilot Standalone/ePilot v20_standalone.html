@@ -2720,6 +2720,20 @@ document.addEventListener('DOMContentLoaded', async function() {
     else { var it=f.t==='num'||f.t==='money'?'number':(f.t==='date'?'date':(f.t==='month'?'month':'text')); ctl='<input type="'+it+'" id="'+id+'" style="'+base+'"'+(f.t==='money'?' step="any" placeholder="0"':'')+'>'; }
     return '<div style="margin-bottom:12px"><label style="display:block;font-size:11px;font-weight:700;color:#475569;text-transform:uppercase;letter-spacing:.3px;margin-bottom:4px">'+_qEsc(f.l)+(f.r?' <span style="color:#B5000A">*</span>':'')+'</label>'+ctl+'</div>';
   }
+  function _qInjectDepenses(){ try{ var list=JSON.parse(localStorage.getItem('epilot_quest_depenses')||'[]'); if(!list.length||!window.EXPENSES_DATA) return; var have={}; window.EXPENSES_DATA.forEach(function(r){ have[r.id]=1; }); list.forEach(function(r){ if(!have[r.id]) window.EXPENSES_DATA.push(r); }); }catch(e){} }
+  setInterval(_qInjectDepenses, 2000); setTimeout(_qInjectDepenses, 1500);
+  function _qPushDepense(req){
+    try{ var f=req.fields||{};
+      var maxRef=0; (window.EXPENSES_DATA||[]).forEach(function(r){ var n=parseInt((r.ref||'').replace(/\D/g,''))||0; if(n>maxRef)maxRef=n; });
+      var qlist=[]; try{ qlist=JSON.parse(localStorage.getItem('epilot_quest_depenses')||'[]'); }catch(_e){} qlist.forEach(function(r){ var n=parseInt((r.ref||'').replace(/\D/g,''))||0; if(n>maxRef)maxRef=n; });
+      var yr=String(new Date().getFullYear()); var ref='D'+String(maxRef+1).padStart(4,'0');
+      var rec={ id:yr+'_'+ref, ref:ref, categorie:(f.categorie||''), date:(f.date||new Date().toISOString().slice(0,10)), description:(f.justification||req.titre||''), demandeur:(req.demandeur||''), montant:(Number(f.montant)||0), monnaie:(f.devise||'XAF'), imputation:(f.chantier||''), unite:'', etat:'Review', fournisseur:(f.beneficiaire||''), annee:yr, _quest:req.id };
+      qlist.push(rec); try{ localStorage.setItem('epilot_quest_depenses', JSON.stringify(qlist)); }catch(_e){}
+      window.EXPENSES_DATA=window.EXPENSES_DATA||[]; window.EXPENSES_DATA.push(rec);
+      req.linkedDepense=ref; req.history.push({ts:Date.now(),txt:'D\u00e9pense '+ref+' cr\u00e9\u00e9e (Commandes \u25b8 D\u00e9penses)'});
+      return true;
+    }catch(e){ return false; }
+  }
   function _qPushChantierContrainte(req){
     try{ var imp=req.fields&&req.fields.chantier; if(!imp) return false;
       var sm={'Faible':'mineure','Moyenne':'majeure','Forte':'critique','Bloquante':'critique'};
@@ -2758,7 +2772,7 @@ document.addEventListener('DOMContentLoaded', async function() {
       var titre=ty.label; for(var i=0;i<ty.f.length;i++){ var f=ty.f[i],v=vals[f.k]; if(v && (f.t==='text'||f.t==='area'||f.t==='sel')){ titre=String(v).slice(0,60); break; } }
       var req={ id:'Q'+ms.toString(36)+Math.random().toString(36).slice(2,5), type:ty.id, domain:ty.d, titre:titre, service:ty.svc, svcGrp:svc.grp, conf:ty.conf?1:0,
         demandeur:me.name, matricule:me.matricule, date:now.toISOString().slice(0,10), ts:ms, due:ms+svc.sla*86400000, priorite:(document.getElementById('qf__prio')||{}).value||'Normale', statut:'Nouvelle', closeTs:null, eval:null, fields:vals, comments:[], history:[{ts:ms,txt:'Créée par '+me.name}] };
-      var arr=_qStore(); arr.push(req); if(req.type==='chantier_action'){ try{ _qPushChantierAction(req); }catch(_e){} } if(req.type==='chantier_contrainte'){ try{ _qPushChantierContrainte(req); }catch(_e){} } _qSave(arr);
+      var arr=_qStore(); arr.push(req); if(req.type==='chantier_action'){ try{ _qPushChantierAction(req); }catch(_e){} } if(req.type==='chantier_contrainte'){ try{ _qPushChantierContrainte(req); }catch(_e){} } if(req.type==='achat_depense'){ try{ _qPushDepense(req); }catch(_e){} } _qSave(arr);
       o.remove(); window.__qTab='mine'; _qRender(); _qSyncAlerts();
     };
   }
@@ -2783,10 +2797,12 @@ document.addEventListener('DOMContentLoaded', async function() {
       +'<div style="padding:14px 20px"><table style="width:100%;border-collapse:collapse;background:#f8fafc;border-radius:8px;overflow:hidden">'+rows+'</table>'
       +'<div style="margin-top:14px;font-size:11px;font-weight:700;color:#475569;text-transform:uppercase">Commentaires</div><div style="margin-top:6px">'+coms+'</div>'
       +((r.linkedAction||r.linkedContrainte)?'<div style="margin-top:14px;background:#ecfdf5;border:1px solid #a7f3d0;border-radius:8px;padding:10px 12px;font-size:12.5px;color:#065f46;display:flex;align-items:center;justify-content:space-between"><span>\u2705 '+(r.linkedContrainte?'Contrainte':'Action')+' cr\u00e9\u00e9e dans le chantier <b>'+_qEsc(r.linkedImp||'')+'</b></span><button id="ep-qopench" style="border:0;background:#059669;color:#fff;border-radius:7px;padding:5px 11px;cursor:pointer;font-weight:700">Ouvrir le chantier</button></div>':'')
+      +(r.linkedDepense?'<div style="margin-top:14px;background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;padding:10px 12px;font-size:12.5px;color:#1e40af;display:flex;align-items:center;justify-content:space-between"><span>\uD83D\uDCB8 D\u00e9pense <b>'+_qEsc(r.linkedDepense)+'</b> cr\u00e9\u00e9e dans Commandes \u25b8 D\u00e9penses</span><button id="ep-qopendep" style="border:0;background:#2563eb;color:#fff;border-radius:7px;padding:5px 11px;cursor:pointer;font-weight:700">Ouvrir D\u00e9penses</button></div>':'')
       +proc+evalBlock
       +'<div style="margin-top:12px;font-size:10px;color:#94a3b8">'+hist+'</div></div>', 620);
     o.querySelector('.ep-qx').onclick=function(){ o.remove(); };
     var _oc=o.querySelector('#ep-qopench'); if(_oc) _oc.onclick=function(){ o.remove(); try{ if(window.openChantier) window.openChantier(r.linkedImp); }catch(_e){} };
+    var _od=o.querySelector('#ep-qopendep'); if(_od) _od.onclick=function(){ o.remove(); try{ if(window.HubViews) window.HubViews.showView('orders'); }catch(_e){} };
     var upd=o.querySelector('#ep-qupd'); if(upd) upd.onclick=function(){ var ns=document.getElementById('ep-qstatut').value; var com=(document.getElementById('ep-qcom').value||'').trim(); if(com){ r.comments=r.comments||[]; r.comments.push({by:me.name,ts:Date.now(),txt:com}); } if(ns!==r.statut){ if(_Q_CLOSED.indexOf(ns)>=0 && _Q_CLOSED.indexOf(r.statut)<0) r.closeTs=Date.now(); r.statut=ns; r.history.push({ts:Date.now(),txt:'Statut → '+ns+' par '+me.name}); } _qSave(arr); o.remove(); _qRender(); _qSyncAlerts(); };
     var del=o.querySelector('#ep-qdel'); if(del) del.onclick=function(){ if(!confirm('Supprimer cette requête ?')) return; _qSave(arr.filter(function(x){return x.id!==r.id;})); o.remove(); _qRender(); _qSyncAlerts(); };
     var evs=o.querySelector('#ep-qev-save'); if(evs) evs.onclick=function(){ r.eval={reponse:+document.getElementById('ep-qev-rep').value,attitude:+document.getElementById('ep-qev-att').value,note:(document.getElementById('ep-qev-note').value||'').trim(),ts:Date.now()}; r.history.push({ts:Date.now(),txt:'Évaluée par '+me.name+' ('+r.eval.reponse+'/5, '+r.eval.attitude+'/5)'}); _qSave(arr); o.remove(); _qRender(); };
