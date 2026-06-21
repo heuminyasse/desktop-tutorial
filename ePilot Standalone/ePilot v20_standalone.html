@@ -2748,7 +2748,7 @@ document.addEventListener('DOMContentLoaded', async function() {
   function _qIsMgr(){ var g=_qMe().group; return g==='admin'||g==='direction'; }
   var _Q_DEP_ICONS={'transport':'🚗','douane':'🛃','cnps':'🏛️','impot':'🧾','taxe':'🧾','maintenance':'🔧','frais':'💼','nutrition':'🍽️','repas':'🍽️','achat r':'🔬','achat t':'🏗️','achat':'🛒','assurance':'🛡️','communication':'📡','consommable':'📦','formation':'📚','hébergement':'🏨','hebergement':'🏨','honoraire':'🤝','location':'🔑','loyer':'🏠','matériau':'🪨','materiau':'🪨','sous-traitance':'🤝','carburant':'⛽','mission':'✈️','fourniture':'📝','eau':'💧','électricité':'⚡','electricite':'⚡','sécurité':'🦺','securite':'🦺','divers':'📌','autre':'📌'};
   function _qDepIcon(cat){ if(!cat) return '💰'; var lo=cat.toLowerCase(); var ks=Object.keys(_Q_DEP_ICONS); for(var i=0;i<ks.length;i++) if(lo.indexOf(ks[i])>=0) return _Q_DEP_ICONS[ks[i]]; return '💰'; }
-  var _Q_DEP_FIELDS=[{k:'montant',l:'Montant',t:'money',r:1},{k:'description',l:'Description',t:'area',r:1},{k:'fournisseur',l:'Fournisseur',t:'text'},{k:'imputation',l:'Imputation (N° Chantier/Devis)',t:'imp'},{k:'date',l:'Date',t:'date'},{k:'monnaie',l:'Monnaie',t:'sel',o:['XAF','EUR','USD']}];
+  var _Q_DEP_FIELDS=[{k:'montant',l:'Montant',t:'money',r:1},{k:'description',l:'Désignation',t:'desg',r:1},{k:'monnaie',l:'Monnaie',t:'sel',o:['XAF','EUR','USD']},{k:'fournisseur',l:'Fournisseur',t:'frn'},{k:'imputation',l:'Imputation',t:'imp2'},{k:'date',l:'Date',t:'date'}];
   function _qType(id){ for(var i=0;i<_Q_TYPES.length;i++) if(_Q_TYPES[i].id===id) return _Q_TYPES[i]; if(id&&id.indexOf('dep__')===0){var cat=id.slice(5);return {id:id,d:'dep',label:cat,icon:_qDepIcon(cat),svc:'Comptabilité',f:_Q_DEP_FIELDS};} return null; }
   function _qDomain(id){ for(var i=0;i<_Q_DOMAINS.length;i++) if(_Q_DOMAINS[i].id===id) return _Q_DOMAINS[i]; return {label:id,icon:'•'}; }
   function _qOpen(r){ return _Q_CLOSED.indexOf(r.statut)<0; }
@@ -2887,6 +2887,53 @@ document.addEventListener('DOMContentLoaded', async function() {
     }
     showCats();
   }
+  function _qDepDesignations(){
+    var seen={},res=[];
+    var all=(window.EXPENSES_DATA||[]).slice();
+    try{ var _nd=JSON.parse(localStorage.getItem('epilot_dep_new_v1')||'[]'); var _xi={}; all.forEach(function(r){_xi[r.id]=1;}); _nd.forEach(function(r){if(!_xi[r.id])all.push(r);}); }catch(_e){}
+    all.forEach(function(r){ if(r.description&&!seen[r.description]){ seen[r.description]=1; res.push(r.description); } });
+    return res;
+  }
+  function _qDepFournisseurs(){
+    var seen={},res=[];
+    (window.SOURCING_DATA||[]).forEach(function(r){ if(r.Vendeur&&!seen[r.Vendeur]){ seen[r.Vendeur]=1; res.push(r.Vendeur); } });
+    var all=(window.EXPENSES_DATA||[]).slice();
+    try{ var _nd=JSON.parse(localStorage.getItem('epilot_dep_new_v1')||'[]'); var _xi={}; all.forEach(function(r){_xi[r.id]=1;}); _nd.forEach(function(r){if(!_xi[r.id])all.push(r);}); }catch(_e){}
+    all.forEach(function(r){ if(r.fournisseur&&!seen[r.fournisseur]){ seen[r.fournisseur]=1; res.push(r.fournisseur); } });
+    return res;
+  }
+  function _qImpCandidates(){
+    var res=[];
+    (window.QUOTE_DATA||[]).forEach(function(r){ var ref=r.Dossier||''; if(!ref) return; res.push({ref:ref,desc:(r.Description||r.description||''),client:(r.Client||r.client||''),unite:(r.Unite||r['Unité']||'')}); });
+    (window.JIP_DATA||[]).forEach(function(r){ var ref=r.Imputation||''; if(!ref) return; res.push({ref:ref,desc:(r.Description||r.description||''),client:(r.Client||r.client||''),unite:(r['Unité']||r.Unite||'')}); });
+    return res;
+  }
+  function _qWireImp2(inp,drop){
+    if(!inp||!drop) return;
+    var _cands=null;
+    function _getCands(){ if(!_cands) _cands=_qImpCandidates(); return _cands; }
+    function _render(q){
+      var q2=(q||'').trim().toLowerCase(); var cands=_getCands();
+      var hits=q2?cands.filter(function(c){ return (c.ref+' '+c.desc+' '+c.client+' '+c.unite).toLowerCase().indexOf(q2)>=0; }):cands.slice(0,30);
+      if(!hits.length){ drop.style.display='none'; return; }
+      drop.innerHTML=hits.slice(0,20).map(function(c){
+        return '<div class="ep-imp2-item" data-val="'+_qEsc(c.ref)+'" style="padding:7px 12px;cursor:pointer;border-bottom:1px solid #f1f5f9">'
+          +'<span style="font-size:12px;font-weight:700;color:#0f172a">'+_qEsc(c.ref)+'</span>'
+          +(c.client?' <span style="font-size:11.5px;color:#64748b">· '+_qEsc(c.client)+'</span>':'')
+          +(c.desc?'<div style="font-size:11px;color:#94a3b8">'+_qEsc(c.desc.slice(0,70))+'</div>':'')
+          +'</div>';
+      }).join('');
+      drop.style.display='block';
+      drop.querySelectorAll('.ep-imp2-item').forEach(function(it){
+        it.onmousedown=function(e){ e.preventDefault(); inp.value=it.getAttribute('data-val'); drop.style.display='none'; };
+        it.onmouseover=function(){ it.style.background='#f0f9ff'; };
+        it.onmouseout=function(){ it.style.background=''; };
+      });
+    }
+    inp.addEventListener('input',function(){ _render(inp.value); });
+    inp.addEventListener('focus',function(){ _render(inp.value); });
+    inp.addEventListener('blur',function(){ setTimeout(function(){ drop.style.display='none'; },180); });
+  }
   function _qFieldHtml(f){
     var id='qf_'+f.k; var base='width:100%;padding:8px 10px;border:1px solid #d1d5db;border-radius:8px;font-size:13px;font-family:inherit;box-sizing:border-box'; var ctl;
     if(f.t==='area') ctl='<textarea id="'+id+'" rows="3" style="'+base+'"></textarea>';
@@ -2894,6 +2941,9 @@ document.addEventListener('DOMContentLoaded', async function() {
     else if(f.t==='chantier'){ var ch=_qChantierOpts(); ctl='<select id="'+id+'" style="'+base+'"><option value="">—</option>'+ch.map(function(o){return '<option>'+_qEsc(o)+'</option>';}).join('')+'</select>'; }
     else if(f.t==='imp'){ var ci=_qImpOpts(); ctl='<input list="'+id+'_dl" id="'+id+'" autocomplete="off" style="'+base+'" placeholder="N\u00b0 Chantier / Devis (saisie libre)"><datalist id="'+id+'_dl">'+ci.map(function(o){return '<option value="'+_qEsc(o)+'">';}).join('')+'</datalist>'; }
     else if(f.t==='depcat'){ var cc=_qDepCatOpts(); ctl='<input list="'+id+'_dl" id="'+id+'" autocomplete="off" style="'+base+'" placeholder="Transport, Douane, CNPS\u2026"><datalist id="'+id+'_dl">'+cc.map(function(o){return '<option value="'+_qEsc(o)+'">';}).join('')+'</datalist>'; }
+    else if(f.t==='desg'){ var _dg=_qDepDesignations(); ctl='<input list="'+id+'_dl" id="'+id+'" autocomplete="off" style="'+base+'" placeholder="Saisir ou choisir une désignation…"><datalist id="'+id+'_dl">'+_dg.map(function(d){return '<option value="'+_qEsc(d)+'">';}).join('')+'</datalist>'; }
+    else if(f.t==='frn'){ var _fn=_qDepFournisseurs(); ctl='<input list="'+id+'_dl" id="'+id+'" autocomplete="off" style="'+base+'" placeholder="Nom du fournisseur…"><datalist id="'+id+'_dl">'+_fn.map(function(v){return '<option value="'+_qEsc(v)+'">';}).join('')+'</datalist>'; }
+    else if(f.t==='imp2'){ ctl='<div style="position:relative"><input id="'+id+'" autocomplete="off" style="'+base+'" placeholder="Rechercher N° PI, devis, client, unité…"><div id="'+id+'_drop" style="display:none;position:absolute;top:100%;left:0;right:0;background:#fff;border:1px solid #d1d5db;border-top:0;border-radius:0 0 8px 8px;max-height:210px;overflow-y:auto;z-index:2000;box-shadow:0 4px 14px rgba(0,0,0,.12)"></div></div>'; }
     else if(f.t==='check') ctl='<label style="display:flex;align-items:center;gap:8px;font-size:13px;color:#334155"><input type="checkbox" id="'+id+'"'+(f.def?' checked':'')+'> Oui</label>';
     else { var it=f.t==='num'||f.t==='money'?'number':(f.t==='date'?'date':(f.t==='month'?'month':'text')); ctl='<input type="'+it+'" id="'+id+'" style="'+base+'"'+(f.t==='money'?' step="any" placeholder="0"':'')+'>'; }
     return '<div style="margin-bottom:12px"><label style="display:block;font-size:11px;font-weight:700;color:#475569;text-transform:uppercase;letter-spacing:.3px;margin-bottom:4px">'+_qEsc(f.l)+(f.r?' <span style="color:#B5000A">*</span>':'')+'</label>'+ctl+'</div>';
@@ -2971,7 +3021,7 @@ document.addEventListener('DOMContentLoaded', async function() {
     var sig = on ? ('on:'+_qJSAStore().length) : 'off';
     if(sig!==_qJSAlast){ _qJSAlast=sig; try{ _qRenderJSAArchive(); }catch(e){} }
   }, 500);
-  function _qFormModal(typeId){
+  function _qFormModal(typeId, _onSaved){
     var ty=_qType(typeId); if(!ty) return; var svc=_qSvc(ty.svc);
     var fields=ty.f.map(_qFieldHtml).join('');
     var o=_qOverlay('<div style="padding:16px 20px;border-bottom:1px solid #eef0f3;position:sticky;top:0;background:#fff;display:flex;justify-content:space-between;align-items:center"><div><div style="font-size:16px;font-weight:800">'+ty.icon+' '+_qEsc(ty.label)+'</div><div style="font-size:11.5px;color:#64748b;margin-top:2px">À : <b>'+_qEsc(ty.svc)+'</b> · délai <b>'+svc.sla+'j</b>'+(ty.conf?' · 🔒 confidentiel':'')+'</div></div><button class="ep-qx" style="border:0;background:#f1f5f9;border-radius:8px;padding:4px 12px;cursor:pointer">Fermer</button></div>'
@@ -2979,18 +3029,28 @@ document.addEventListener('DOMContentLoaded', async function() {
       +'<div style="margin-bottom:12px"><label style="display:block;font-size:11px;font-weight:700;color:#475569;text-transform:uppercase;letter-spacing:.3px;margin-bottom:4px">Priorité</label><select id="qf__prio" style="width:100%;padding:8px 10px;border:1px solid #d1d5db;border-radius:8px;font-size:13px"><option>Normale</option><option>Basse</option><option>Haute</option><option>Urgente</option></select></div>'
       +'<div style="display:flex;gap:8px;margin-top:6px"><button class="ep-qx" style="flex:1;border:1px solid #d1d5db;background:#fff;border-radius:8px;padding:10px;cursor:pointer;font-weight:700">Annuler</button><button id="ep-qsubmit" style="flex:2;border:0;background:#B5000A;color:#fff;border-radius:8px;padding:10px;cursor:pointer;font-weight:700">Envoyer la requête</button></div></div>', 600);
     o.querySelectorAll('.ep-qx').forEach(function(b){ b.onclick=function(){ o.remove(); }; });
+    var _i2=o.querySelector('#qf_imputation'), _i2d=o.querySelector('#qf_imputation_drop'); if(_i2&&_i2d) _qWireImp2(_i2,_i2d);
     o.querySelector('#ep-qsubmit').onclick=function(){
       var vals={}, miss=null;
       ty.f.forEach(function(f){ var el=document.getElementById('qf_'+f.k); if(!el) return; var v=f.t==='check'?el.checked:el.value; vals[f.k]=v; if(f.r && (v===''||v==null)) miss=miss||f.l; });
       if(miss){ alert('Champ requis : '+miss); return; }
       var me=_qMe(); var now=new Date(); var ms=now.getTime();
-      var titre=ty.label; for(var i=0;i<ty.f.length;i++){ var f=ty.f[i],v=vals[f.k]; if(v && (f.t==='text'||f.t==='area'||f.t==='sel')){ titre=String(v).slice(0,60); break; } }
+      var titre=ty.label; for(var i=0;i<ty.f.length;i++){ var f=ty.f[i],v=vals[f.k]; if(v && (f.t==='text'||f.t==='area'||f.t==='sel'||f.t==='desg')){ titre=String(v).slice(0,60); break; } }
       var req={ id:'Q'+ms.toString(36)+Math.random().toString(36).slice(2,5), type:ty.id, domain:ty.d, titre:titre, service:ty.svc, svcGrp:svc.grp, conf:ty.conf?1:0,
         demandeur:me.name, matricule:me.matricule, date:now.toISOString().slice(0,10), ts:ms, due:ms+svc.sla*86400000, priorite:(document.getElementById('qf__prio')||{}).value||'Normale', statut:'Nouvelle', closeTs:null, eval:null, fields:vals, comments:[], history:[{ts:ms,txt:'Créée par '+me.name}] };
       var arr=_qStore(); arr.push(req); if(req.type==='chantier_action'){ try{ _qPushChantierAction(req); }catch(_e){} } if(req.type==='chantier_contrainte'){ try{ _qPushChantierContrainte(req); }catch(_e){} } if(req.type==='hse_jsa'){ try{ _qPushJSA(req); }catch(_e){} } if(req.domain==='dep'){ try{ _qPushDepense(req); }catch(_e){} } _qSave(arr);
       o.remove(); window.__qTab='mine'; _qRender(); _qSyncAlerts();
+      if(typeof _onSaved==='function') try{ _onSaved(req); }catch(_ex){}
     };
   }
+  window._depFormModal = function(opts, onSave){
+    opts=opts||{};
+    var typeId=opts.typeId||('dep__'+(opts.categorie||'Divers'));
+    _qFormModal(typeId, function(req){
+      try{ if(window._rDepenses) window._rDepenses(document.getElementById('dep-root')||document.createElement('div')); }catch(_e){}
+      if(typeof onSave==='function') onSave(req);
+    });
+  };
   function _qDetail(id){
     var arr=_qStore(); var r=arr.filter(function(x){return x.id===id;})[0]; if(!r) return; var ty=_qType(r.type)||{f:[]}; var me=_qMe();
     var canProcess=_qIsTodo(r)||_qIsMgr()||r.svcGrp===me.group;
