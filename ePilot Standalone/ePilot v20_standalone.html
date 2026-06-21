@@ -2887,6 +2887,14 @@ document.addEventListener('DOMContentLoaded', async function() {
   setInterval(_qSyncAlerts, 2500); setTimeout(_qSyncAlerts, 1500);
   setInterval(function(){ var navQ=document.querySelector('#navlinks [data-page="quest"]'); if(navQ&&navQ.classList.contains('active')){ var q=document.getElementById('view-quest'); if(!q||!q.classList.contains('active')) _qActivate(); } }, 1000);
 
+  /* Masquer l'alerte « Papiers à renouveler » sur l'Accueil et dans « Événements à venir » (désactivée — à revoir plus tard) */
+  (function _qHidePapiersAlert(){
+    function kill(){ try{ var s=document.getElementById('pap-evt-alerts'); if(s) s.remove(); var o=document.getElementById('papiers-home-alert'); if(o) o.remove(); }catch(_e){} }
+    try{ Object.defineProperty(window,'renderPapiersAlert',{configurable:true,get:function(){ return function(){ kill(); }; },set:function(){ /* ignore les réassignations du bundle */ }}); }catch(_e){ try{ window.renderPapiersAlert=function(){ kill(); }; }catch(__e){} }
+    var acc=document.getElementById('view-accueil');
+    try{ var obs=new MutationObserver(kill); obs.observe(acc||document.body,{childList:true,subtree:true}); }catch(_e){}
+    setInterval(kill, 1000); setTimeout(kill, 400); setTimeout(kill, 1200); setTimeout(kill, 2200);
+  })();
 
   setTimeout(maybeAutoBackup, 8000);
 })();
