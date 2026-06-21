@@ -201,7 +201,7 @@ document.addEventListener('DOMContentLoaded', async function() {
       try{ if(localStorage.getItem('epilot_pending_wipe')){ localStorage.removeItem('epilot_pending_wipe');
         var _wipe1=function(dbn,store){ try{ var rq=indexedDB.open(dbn); rq.onsuccess=function(e){ var db=e.target.result; try{ if(db.objectStoreNames.contains(store)){ var tx=db.transaction(store,'readwrite'); tx.objectStore(store).clear(); tx.oncomplete=function(){ try{db.close();}catch(_){} }; tx.onerror=tx.onabort=function(){ try{db.close();}catch(_){} }; } else { db.close(); } }catch(_e){ try{db.close();}catch(__){} } }; }catch(_e){} };
         ['chantiers','photos','sheets','articles'].forEach(function(s){ _wipe1('epilot_chantier_v2', s); }); _wipe1('fcr_db','articles');
-        ['sourcing','oa_docs','snapshots','meta'].forEach(function(s){ _wipe1('epilot_orders', s); });
+        ['sourcing','oa_docs','snapshots','meta'].forEach(function(s){ _wipe1('epilot_orders', s); }); _wipe1('epilot_chantier_ops','ops');
         try{ window.FCR_DB=[]; }catch(_e){}
       } }catch(_e){}
       function gunzipB64(b64){
@@ -2334,6 +2334,9 @@ document.addEventListener('DOMContentLoaded', async function() {
   function dumpLocalStorage(){ var o={}; try{ for(var i=0;i<localStorage.length;i++){ var k=localStorage.key(i); o[k]=localStorage.getItem(k); } }catch(e){} return o; }
 
   function _ordersOpen(){ return new Promise(function(res,rej){ var STORES=['sourcing','oa_docs','snapshots','meta']; var p=indexedDB.open('epilot_orders'); p.onsuccess=function(e){ var db=e.target.result; var miss=STORES.filter(function(s){return !db.objectStoreNames.contains(s);}); if(!miss.length){ res(db); return; } var v=db.version; db.close(); var u=indexedDB.open('epilot_orders', v+1); u.onupgradeneeded=function(e2){ var db2=e2.target.result; miss.forEach(function(s){ if(!db2.objectStoreNames.contains(s)) db2.createObjectStore(s); }); }; u.onsuccess=function(e2){ res(e2.target.result); }; u.onerror=function(e2){ rej(e2.target.error); }; }; p.onerror=function(e){ rej(e.target.error); }; }); }
+  function _opsOpen(){ return new Promise(function(res,rej){ var p=indexedDB.open('epilot_chantier_ops'); p.onsuccess=function(e){ var db=e.target.result; if(db.objectStoreNames.contains('ops')){ res(db); return; } var v=db.version; db.close(); var u=indexedDB.open('epilot_chantier_ops', v+1); u.onupgradeneeded=function(e2){ var db2=e2.target.result; if(!db2.objectStoreNames.contains('ops')) db2.createObjectStore('ops',{keyPath:'imputation'}); }; u.onsuccess=function(e2){ res(e2.target.result); }; u.onerror=function(e2){ rej(e2.target.error); }; }; p.onerror=function(e){ rej(e.target.error); }; }); }
+  function _opsGetAll(){ return _opsOpen().then(function(db){ return new Promise(function(res){ var r=db.transaction('ops').objectStore('ops').getAll(); r.onsuccess=function(){ try{db.close();}catch(_){} res(r.result||[]); }; r.onerror=function(){ try{db.close();}catch(_){} res([]); }; }); }).catch(function(){ return []; }); }
+  function _opsPutAll(db, recs){ return new Promise(function(res){ if(!db.objectStoreNames.contains('ops')){ res(); return; } var tx=db.transaction('ops','readwrite'); var st=tx.objectStore('ops'); (recs||[]).forEach(function(r){ try{ st.put(r); }catch(e){} }); tx.oncomplete=function(){ res(); }; tx.onerror=function(){ res(); }; }); }
   function buildBundle(){ var warn=false;
     try{ var _sv=function(k,g){ try{ if(window[g]!=null) localStorage.setItem(k, JSON.stringify(window[g])); }catch(_e){} };
       _sv('ePilot_QUOTE_DATA','QUOTE_DATA'); _sv('ePilot_JIP_DATA','JIP_DATA'); _sv('ePilot_SOURCING_DATA','SOURCING_DATA');
@@ -2341,7 +2344,7 @@ document.addEventListener('DOMContentLoaded', async function() {
     }catch(_e){}
     return openIDB('epilot_chantier_v2').then(function(db){ return getAllKV(db,'chantiers'); }).catch(function(e){ warn='chantiers'; try{ console.warn('[Backup] lecture des chantiers impossible — sauvegarde potentiellement incomplète :', e); }catch(_){} return []; }).then(function(chs){
       return _ordersOpen().then(function(odb){ return Promise.all([getAllKV(odb,'sourcing'), getAllKV(odb,'oa_docs')]).then(function(o){ try{odb.close();}catch(_){} return {sourcing:o[0]||[], oa_docs:o[1]||[]}; }); }).catch(function(e){ try{console.warn('[Backup] epilot_orders illisible :',e);}catch(_){} return {sourcing:[], oa_docs:[]}; }).then(function(orders){
-        return { app:'ePilot', version:1, date:new Date().toISOString(), fcr:(window.FCR_DB||[]), chantiers:chs, orders:orders, localStorage:dumpLocalStorage(), incomplete:warn };
+        return _opsGetAll().then(function(_ops){ return { app:'ePilot', version:1, date:new Date().toISOString(), fcr:(window.FCR_DB||[]), chantiers:chs, orders:orders, chantierOps:_ops, localStorage:dumpLocalStorage(), incomplete:warn }; });
       });
     }); }
 
@@ -2355,6 +2358,7 @@ document.addEventListener('DOMContentLoaded', async function() {
     var steps=[];
     steps.push(openIDB('fcr_db').then(function(db){ return clearStore(db,'articles').then(function(){ db.close(); window.FCR_DB=Array.isArray(data.fcr)?data.fcr:[]; if(typeof window.idbSaveAll==='function') return window.idbSaveAll(window.FCR_DB); }); }).catch(function(e){ console.warn('[Backup] fcr',e); errors.push('articles'); }));
     steps.push(openIDB('epilot_chantier_v2').then(function(db){ return clearStore(db,'chantiers').then(function(){ return putAll(db,'chantiers',(data.chantiers||[]),true); }).then(function(){ db.close(); }); }).catch(function(e){ console.warn('[Backup] chantiers',e); errors.push('chantiers'); }));
+    steps.push(_opsOpen().then(function(db){ return clearStore(db,'ops').then(function(){ return _opsPutAll(db,(data.chantierOps||[])); }).then(function(){ try{db.close();}catch(_){} }); }).catch(function(e){ try{console.warn('[Backup] chantierOps',e);}catch(_){} errors.push('chantierOps'); }));
     steps.push(_ordersOpen().then(function(db){ var o=data.orders||{}; return clearStore(db,'sourcing').then(function(){ return clearStore(db,'oa_docs'); }).then(function(){ return putAll(db,'sourcing',(o.sourcing||[]),true); }).then(function(){ return putAll(db,'oa_docs',(o.oa_docs||[]),true); }).then(function(){ try{db.close();}catch(_){} }); }).catch(function(e){ console.warn('[Backup] orders',e); errors.push('orders'); }));
     return Promise.all(steps).then(function(){ return { ok: errors.length===0, errors: errors }; });
   }
@@ -2424,7 +2428,7 @@ document.addEventListener('DOMContentLoaded', async function() {
   function _renderDataCenter(){
     var root=document.getElementById('ep-dc-root'); if(!root) return;
     var lsCount=0, lsBytes=0; try{ for(var i=0;i<localStorage.length;i++){ var k=localStorage.key(i); var v=localStorage.getItem(k)||''; lsCount++; lsBytes+=(k.length+v.length); } }catch(e){}
-    var DBS=['epilot_chantier_v2','fcr_db','epilot_orders','epilot_autobackup'];
+    var DBS=['epilot_chantier_v2','fcr_db','epilot_orders','epilot_chantier_ops','epilot_autobackup'];
     Promise.all(DBS.map(_dcInfo)).then(function(infos){ var est=(navigator.storage&&navigator.storage.estimate)?navigator.storage.estimate():Promise.resolve(null); return Promise.resolve(est).then(function(e){ return {infos:infos,est:e}; }); }).then(function(d){
       var usage=d.est&&d.est.usage, quota=d.est&&d.est.quota;
       var th='text-align:left;padding:5px 8px;color:#64748b;border-bottom:1px solid #e5e7eb;font-size:10px;text-transform:uppercase;letter-spacing:.3px';
