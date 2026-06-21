@@ -2576,14 +2576,113 @@ document.addEventListener('DOMContentLoaded', async function() {
 
 
   /* ============================ QUÊTES — Workflow de requêtes ============================ */
+  /* Traductions EN pour la page Quêtes — chargé en différé car EPilotI18n est asynchrone */
+  (function _qI18n(){
+    var _dict={
+    /* Navigation & titres */
+    "Quêtes":"Tickets","Requêtes":"Requests","Gestion des requêtes":"Request management",
+    "Quêtes / Requêtes":"Tickets / Requests","Gestion des":"Management of",
+    /* Onglets principaux */
+    "À traiter":"To process","Mes requêtes":"My requests","+ Nouvelle requête":"+ New request",
+    "Nouvelle requête":"New request",
+    /* Domaines */
+    "Travaux":"Works","Achats":"Purchasing","RH":"HR","Social":"Social","Training":"Training",
+    /* Statuts */
+    "Nouvelle":"New","Traitée":"Processed","Refusée":"Refused","clôturée":"closed",
+    /* Tableau de bord */
+    "Par statut":"By status","Par service":"By department","Retard":"Overdue",
+    /* Cartes */
+    "par":"by","⏰ En retard de":"⏰ Overdue by","j restant":"d remaining","j restants":"d remaining",
+    "⏳":"⏳","Vue manager : vous voyez toutes les requêtes ouvertes.":"Manager view: you see all open requests.",
+    /* Messages vides */
+    "Aucune requête à traiter. 🎉":"No requests to process. 🎉",
+    "Vous n'avez créé aucune requête.":"You haven't created any request.",
+    /* Filtres */
+    "tout afficher":"show all","Filtre :":"Filter:","types de requête":"request types","type de requête":"request type",
+    /* Modale catégories */
+    "← Retour":"← Back",
+    /* Types de requête — Travaux */
+    "Nouvelle action chantier":"New site action","Signaler une contrainte / blocage":"Report a constraint / blockage",
+    "Demande de réception / PV":"Reception request / PV","Demande de modification planning":"Schedule change request",
+    /* Types — HSE */
+    "Créer une JSA (analyse de risques)":"Create a JSA (risk analysis)","Déclarer un incident / presqu'accident":"Report an incident / near-miss",
+    "Demande d'EPI":"PPE request","Signaler une situation dangereuse":"Report a hazardous situation",
+    /* Types — Achats */
+    "Demande d'achat":"Purchase request","Retrait d'article au magasin":"Warehouse withdrawal",
+    "Demande de réapprovisionnement":"Replenishment request",
+    /* Types — RH */
+    "Erreur sur salaire":"Payroll error","Demande de congé / absence":"Leave / absence request",
+    "Demande d'avance / prêt":"Advance / loan request","Demande d'attestation / document":"Certificate / document request",
+    "Question impôts / cotisations":"Tax / contribution query","Mise à jour infos personnelles":"Personal info update",
+    /* Types — IT */
+    "Demande de badge":"Badge request","Demande d'accès":"Access request",
+    "Réinitialisation mot de passe":"Password reset","Demande de matériel IT":"IT equipment request",
+    /* Types — Social */
+    "Plainte sur un collègue (confidentiel)":"Complaint about a colleague (confidential)",
+    "Plainte / réclamation RH":"HR complaint / grievance","Remarque / suggestion":"Remark / suggestion",
+    "Signalement (harcèlement / éthique)":"Report (harassment / ethics)",
+    /* Types — Training */
+    "Demande de formation":"Training request","Demande de certification":"Certification request",
+    /* Champs formulaire */
+    "Chantier":"Site","Titre de l'action":"Action title","Description":"Description","Échéance":"Deadline",
+    "Contrainte rencontrée":"Constraint encountered","Gravité":"Severity","À lever avant le":"To be resolved by",
+    "Faible":"Low","Moyenne":"Medium","Forte":"High","Bloquante":"Blocking",
+    "Type":"Type","Date souhaitée":"Desired date","Modification souhaitée":"Requested change","Nouvelle date cible":"New target date",
+    "Tâche analysée":"Analysed task","Risques identifiés":"Identified risks","Mesures de prévention":"Prevention measures",
+    "EPI requis":"Required PPE","Date":"Date",
+    "Chantier / Lieu":"Site / Location","Presqu'accident":"Near-miss","Accident":"Accident","Incident":"Incident",
+    "Légère":"Minor","Modérée":"Moderate","Grave":"Severe","Nombre de blessés":"Number of injured",
+    "Équipement":"Equipment","Casque":"Helmet","Gants":"Gloves","Chaussures de sécurité":"Safety shoes",
+    "Harnais":"Harness","Lunettes":"Goggles","Gilet":"Vest","Masque":"Mask","Autre":"Other",
+    "Taille / spéc.":"Size / spec.","Quantité":"Quantity","Justification":"Justification","Lieu":"Location",
+    "Niveau de risque":"Risk level","Critique":"Critical",
+    "Désignation":"Description","Budget estimé":"Estimated budget","Imputation (N° Chantier/Devis)":"Allocation (Site/Quote N°)",
+    "Article":"Item","Date de besoin":"Required date","Seuil d'alerte":"Alert threshold","Magasin":"Warehouse",
+    "Mois concerné":"Concerned month","Type d'erreur":"Error type","Montant net":"Net amount","Prime":"Bonus",
+    "Heures sup.":"Overtime","Retenue":"Deduction","Cotisation":"Contribution","Détail":"Detail",
+    "Congé annuel":"Annual leave","Maladie":"Sick leave","Exceptionnel":"Exceptional","Sans solde":"Unpaid",
+    "Récupération":"Compensatory","Du":"From","Au":"To","Motif":"Reason",
+    "Montant demandé":"Requested amount","Remboursement sur":"Repayment over",
+    "1 mois":"1 month","2 mois":"2 months","3 mois":"3 months","6 mois":"6 months",
+    "Document":"Document","Attestation de travail":"Employment certificate","Attestation de salaire":"Salary certificate",
+    "Certificat de travail":"Work certificate","Bulletin":"Payslip","Motif / destinataire":"Reason / recipient",
+    "Sujet":"Subject","Question":"Question",
+    "Information":"Information","RIB / compte":"Bank details","Adresse":"Address","Téléphone":"Phone",
+    "Situation familiale":"Family status","Personne à contacter":"Emergency contact","Nouvelle valeur":"New value",
+    "Création":"Creation","Renouvellement":"Renewal","Perte / vol":"Loss / theft","Modification":"Update",
+    "Ressource (module / site / local)":"Resource (module / site / room)","Niveau":"Level",
+    "Lecture":"Read","Modification":"Write","Gestion":"Admin",
+    "Compte / application":"Account / application","Précisions":"Details",
+    "Matériel":"Equipment","Ordinateur":"Computer","Écran":"Monitor","Imprimante":"Printer","Accessoire":"Accessory",
+    "Personne concernée":"Concerned person","Description des faits":"Description of facts",
+    "Traiter en confidentiel":"Handle confidentially",
+    "Harcèlement":"Harassment","Sécurité":"Safety","Éthique":"Ethics","Discrimination":"Discrimination",
+    "Thème / formation":"Theme / training","Période souhaitée":"Desired period","Certification":"Certification","Organisme":"Organization",
+    /* Détail requête */
+    "Soumettre":"Submit","Annuler":"Cancel","Fermer":"Close","Envoyer":"Send",
+    "Demandeur":"Requester","Service destinataire":"Target department","Statut":"Status",
+    "Confidentiel":"Confidential","Évaluée":"Evaluated",
+    "→ Traiter":"→ Process","→ Refuser":"→ Refuse","→ Clôturer":"→ Close",
+    "Marquer En cours":"Mark In progress","Marquer Traitée":"Mark Processed","Marquer Refusée":"Mark Refused",
+    "Évaluer la réponse":"Rate the response","Réponse du service":"Department reply",
+    "Attitude du service":"Department attitude","Commentaire (optionnel)":"Comment (optional)",
+    "Envoyer l'évaluation":"Submit rating",
+    /* JSA archive */
+    "Rapports JSA":"JSA Reports","Créer une JSA":"Create a JSA",
+    "Aucun rapport JSA.":"No JSA reports yet."
+    };
+    if(window.EPilotI18n){ window.EPilotI18n.addDict(_dict); return; }
+    window.__epKeepApplying(function(){ if(!window.EPilotI18n) throw 0; window.EPilotI18n.addDict(_dict); },{tries:40,interval:250});
+  })();
+
   var _Q_DOMAINS=[
-    {id:'chantier', label:'Chantiers / Projets', icon:'🏗️'},
-    {id:'hse',      label:'HSE / Sécurité',       icon:'🦺'},
-    {id:'achat',    label:'Achats / Magasin',     icon:'🛒'},
-    {id:'paie',     label:'Paie / RH',            icon:'💰'},
-    {id:'acces',    label:'Accès / Badge / IT',   icon:'🔐'},
-    {id:'social',   label:'Climat social / Divers',icon:'🗣️'},
-    {id:'comp',     label:'Compétences',          icon:'🎓'}
+    {id:'chantier', label:'Travaux',  icon:'🏗️'},
+    {id:'hse',      label:'HSE',      icon:'🦺'},
+    {id:'achat',    label:'Achats',   icon:'🛒'},
+    {id:'paie',     label:'RH',       icon:'💰'},
+    {id:'acces',    label:'IT',       icon:'🔐'},
+    {id:'social',   label:'Social',   icon:'🗣️'},
+    {id:'comp',     label:'Training', icon:'🎓'}
   ];
   function _qChantierOpts(){ try{ return (window.JIP_DATA||[]).map(function(j){return j.Imputation;}).filter(Boolean); }catch(e){ return []; } }
   function _qImpOpts(){ try{ var a=(window.JIP_DATA||[]).map(function(j){return j.Imputation;}); var b=(window.QUOTE_DATA||[]).map(function(q){return q.Dossier;}); var s={}, out=[]; a.concat(b).forEach(function(x){ if(x&&!s[x]){ s[x]=1; out.push(x); } }); return out.sort(); }catch(e){ return _qChantierOpts(); } }
@@ -2597,7 +2696,6 @@ document.addEventListener('DOMContentLoaded', async function() {
     {id:'hse_incident', d:'hse', label:'Déclarer un incident / presqu\'accident', icon:'🚑', svc:'HSE', f:[{k:'chantier',l:'Chantier / Lieu',t:'chantier'},{k:'type',l:'Type',t:'sel',o:['Presqu\'accident','Incident','Accident']},{k:'date_incident',l:'Date',t:'date',r:1},{k:'description',l:'Description',t:'area',r:1},{k:'gravite',l:'Gravité',t:'sel',o:['Légère','Modérée','Grave']},{k:'blesses',l:'Nombre de blessés',t:'num'}]},
     {id:'hse_epi', d:'hse', label:'Demande d\'EPI', icon:'🥽', svc:'HSE', f:[{k:'epi',l:'Équipement',t:'sel',o:['Casque','Gants','Chaussures de sécurité','Harnais','Lunettes','Gilet','Masque','Autre'],r:1},{k:'taille',l:'Taille / spéc.',t:'text'},{k:'quantite',l:'Quantité',t:'num'},{k:'justification',l:'Justification',t:'area'}]},
     {id:'hse_danger', d:'hse', label:'Signaler une situation dangereuse', icon:'⚠️', svc:'HSE', f:[{k:'lieu',l:'Lieu',t:'text',r:1},{k:'description',l:'Description du danger',t:'area',r:1},{k:'niveau',l:'Niveau de risque',t:'sel',o:['Faible','Moyen','Élevé','Critique']}]},
-    {id:'achat_demande', d:'achat', label:'Demande d\'achat', icon:'🧾', svc:'Achats', f:[{k:'designation',l:'Désignation',t:'text',r:1},{k:'quantite',l:'Quantité',t:'num',r:1},{k:'unite',l:'Unité',t:'text'},{k:'budget',l:'Budget estimé',t:'money'},{k:'chantier',l:'Imputation (N\u00b0 Chantier/Devis)',t:'imp'},{k:'justification',l:'Justification',t:'area'}]},
     {id:'magasin_retrait', d:'achat', label:'Retrait d\'article au magasin', icon:'📦', svc:'Magasin', f:[{k:'article',l:'Article',t:'text',r:1},{k:'quantite',l:'Quantité',t:'num',r:1},{k:'unite',l:'Unité',t:'text'},{k:'chantier',l:'Imputation (N\u00b0 Chantier/Devis)',t:'imp'},{k:'date_besoin',l:'Date de besoin',t:'date'}]},
     {id:'achat_reappro', d:'achat', label:'Demande de réapprovisionnement', icon:'🔄', svc:'Magasin', f:[{k:'article',l:'Article',t:'text',r:1},{k:'quantite',l:'Quantité à commander',t:'num',r:1},{k:'seuil',l:'Seuil d\'alerte',t:'num'},{k:'magasin',l:'Magasin',t:'text'}]},
     {id:'paie_erreur', d:'paie', label:'Erreur sur salaire', icon:'❗', svc:'RH / Paie', f:[{k:'mois',l:'Mois concerné',t:'month',r:1},{k:'type',l:'Type d\'erreur',t:'sel',o:['Montant net','Prime','Heures sup.','Retenue','Cotisation','Autre'],r:1},{k:'montant',l:'Montant contesté',t:'money'},{k:'description',l:'Détail',t:'area',r:1}]},
@@ -2653,7 +2751,7 @@ document.addEventListener('DOMContentLoaded', async function() {
     var _dc={}; list.forEach(function(r){ _dc[r.domain]=(_dc[r.domain]||0)+1; });
     var dom=window.__qDom||'';
     var items=[{id:'',icon:'📋',label:'Tous'}].concat(_Q_DOMAINS);
-    nav.innerHTML=items.map(function(d){ var c=d.id?(_dc[d.id]||0):list.length; return '<button class="item'+(dom===d.id?' active':'')+'" data-qd="'+d.id+'" style="display:inline-flex;align-items:center;gap:6px;">'+(d.icon?d.icon+' ':'')+_qEsc(d.label)+(c?' ('+c+')':'')+'</button>'; }).join('');
+    nav.innerHTML=items.map(function(d){ var c=d.id?(_dc[d.id]||0):list.length; return '<button class="item'+(dom===d.id?' active':'')+'" data-qd="'+d.id+'" style="display:inline-flex;align-items:center;gap:6px;">'+(d.icon?'<span aria-hidden="true">'+d.icon+'</span> ':'')+_qEsc(d.label)+(c?' <span class="ep-qcnt">('+c+')</span>':'')+'</button>'; }).join('');
     nav.querySelectorAll('[data-qd]').forEach(function(b){ b.onclick=function(){ window.__qDom=b.getAttribute('data-qd'); nav.querySelectorAll('.item').forEach(function(x){x.classList.remove('active');}); b.classList.add('active'); _qRender(); }; });
   }
   function _qActivate(){
@@ -2684,9 +2782,9 @@ document.addEventListener('DOMContentLoaded', async function() {
     var tab=window.__qTab||'todo';
     var todoN=all.filter(_qIsTodo).length; var odN=all.filter(function(r){return _qOverdue(r)&&_qIsTodo(r);}).length;
     var mineN=all.filter(function(r){return r.matricule===me.matricule;}).length;
-    var _qtabs=[['todo','📥','À traiter'+(todoN?' ('+todoN+(odN?' · '+odN+' ⏰':'')+')':'')],['mine','📤','Mes requêtes'+(mineN?' ('+mineN+')':'')],['dash','📊','Tableau de bord']];
+    var _qtabs=[['todo','📥','À traiter',(todoN?' ('+todoN+(odN?' · '+odN+' ⏰':'')+')':'')],['mine','📤','Mes requêtes',(mineN?' ('+mineN+')':'')],['dash','📊','Tableau de bord','']];
     var bar='<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:6px 0 16px">'
-      +_qtabs.map(function(t){ return '<button class="ep-qmain" data-qsub="'+t[0]+'" style="border:1px solid '+(tab===t[0]?'#0f172a':'#e5e7eb')+';background:'+(tab===t[0]?'#0f172a':'#fff')+';color:'+(tab===t[0]?'#fff':'#334155')+';border-radius:20px;padding:7px 14px;font-size:13px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:5px">'+t[1]+' '+t[2]+'</button>'; }).join('')
+      +_qtabs.map(function(t){ return '<button class="ep-qmain" data-qsub="'+t[0]+'" style="border:1px solid '+(tab===t[0]?'#0f172a':'#e5e7eb')+';background:'+(tab===t[0]?'#0f172a':'#fff')+';color:'+(tab===t[0]?'#fff':'#334155')+';border-radius:20px;padding:7px 14px;font-size:13px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:5px"><span aria-hidden="true">'+t[1]+'</span> <span>'+t[2]+'</span>'+(t[3]?'<span class="ep-qcnt">'+t[3]+'</span>':'')+'</button>'; }).join('')
       +'<button id="ep-qnew" style="margin-left:auto;background:#B5000A;color:#fff;border:0;border-radius:8px;padding:9px 16px;font-weight:700;cursor:pointer">+ Nouvelle requête</button></div>';
     var content='';
     if(tab==='dash'){ content=_qDashboard(all); }
@@ -2744,7 +2842,7 @@ document.addEventListener('DOMContentLoaded', async function() {
       var cards=_Q_DOMAINS.map(function(dom){ var n=_Q_TYPES.filter(function(t){return t.d===dom.id;}).length;
         return '<button class="ep-qcat" data-qd="'+dom.id+'" style="display:flex;align-items:center;gap:12px;text-align:left;padding:14px 16px;border:1px solid #e5e7eb;border-radius:11px;background:#fff;cursor:pointer">'
           +'<span style="font-size:24px">'+dom.icon+'</span>'
-          +'<span style="flex:1;min-width:0"><span style="display:block;font-weight:700;font-size:13.5px;color:#0f172a">'+_qEsc(dom.label)+'</span><span style="font-size:11.5px;color:#94a3b8">'+n+' type'+(n>1?'s':'')+' de requête</span></span>'
+          +'<span style="flex:1;min-width:0"><span style="display:block;font-weight:700;font-size:13.5px;color:#0f172a">'+_qEsc(dom.label)+'</span><span style="font-size:11.5px;color:#94a3b8"><b>'+n+'</b> <span>'+(n>1?'types de requête':'type de requête')+'</span></span></span>'
           +'<span style="color:#cbd5e1;font-size:18px">›</span></button>';
       }).join('');
       box.innerHTML=head('Nouvelle requête', false)+'<div style="padding:16px 20px 20px;display:grid;grid-template-columns:1fr 1fr;gap:10px">'+cards+'</div>';
