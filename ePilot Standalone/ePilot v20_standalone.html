@@ -2599,7 +2599,6 @@ document.addEventListener('DOMContentLoaded', async function() {
     {id:'hse_danger', d:'hse', label:'Signaler une situation dangereuse', icon:'⚠️', svc:'HSE', f:[{k:'lieu',l:'Lieu',t:'text',r:1},{k:'description',l:'Description du danger',t:'area',r:1},{k:'niveau',l:'Niveau de risque',t:'sel',o:['Faible','Moyen','Élevé','Critique']}]},
     {id:'achat_demande', d:'achat', label:'Demande d\'achat', icon:'🧾', svc:'Achats', f:[{k:'designation',l:'Désignation',t:'text',r:1},{k:'quantite',l:'Quantité',t:'num',r:1},{k:'unite',l:'Unité',t:'text'},{k:'budget',l:'Budget estimé',t:'money'},{k:'chantier',l:'Imputation (N\u00b0 Chantier/Devis)',t:'imp'},{k:'justification',l:'Justification',t:'area'}]},
     {id:'magasin_retrait', d:'achat', label:'Retrait d\'article au magasin', icon:'📦', svc:'Magasin', f:[{k:'article',l:'Article',t:'text',r:1},{k:'quantite',l:'Quantité',t:'num',r:1},{k:'unite',l:'Unité',t:'text'},{k:'chantier',l:'Imputation (N\u00b0 Chantier/Devis)',t:'imp'},{k:'date_besoin',l:'Date de besoin',t:'date'}]},
-    {id:'achat_depense', d:'achat', label:'Créer une dépense', icon:'💸', svc:'Comptabilité', f:[{k:'beneficiaire',l:'Bénéficiaire / Fournisseur',t:'text',r:1},{k:'categorie',l:'Catégorie',t:'depcat',r:1},{k:'montant',l:'Montant',t:'money',r:1},{k:'devise',l:'Devise',t:'sel',o:['XAF','EUR','USD']},{k:'chantier',l:'Imputation (N\u00b0 Chantier/Devis)',t:'imp'},{k:'date',l:'Date',t:'date'},{k:'justification',l:'Objet / justification',t:'area'}]},
     {id:'achat_reappro', d:'achat', label:'Demande de réapprovisionnement', icon:'🔄', svc:'Magasin', f:[{k:'article',l:'Article',t:'text',r:1},{k:'quantite',l:'Quantité à commander',t:'num',r:1},{k:'seuil',l:'Seuil d\'alerte',t:'num'},{k:'magasin',l:'Magasin',t:'text'}]},
     {id:'paie_erreur', d:'paie', label:'Erreur sur salaire', icon:'❗', svc:'RH / Paie', f:[{k:'mois',l:'Mois concerné',t:'month',r:1},{k:'type',l:'Type d\'erreur',t:'sel',o:['Montant net','Prime','Heures sup.','Retenue','Cotisation','Autre'],r:1},{k:'montant',l:'Montant contesté',t:'money'},{k:'description',l:'Détail',t:'area',r:1}]},
     {id:'paie_conge', d:'paie', label:'Demande de congé / absence', icon:'🏖️', svc:'RH / Paie', f:[{k:'type',l:'Type',t:'sel',o:['Congé annuel','Maladie','Exceptionnel','Sans solde','Récupération'],r:1},{k:'date_debut',l:'Du',t:'date',r:1},{k:'date_fin',l:'Au',t:'date',r:1},{k:'motif',l:'Motif',t:'area'}]},
@@ -2745,20 +2744,6 @@ document.addEventListener('DOMContentLoaded', async function() {
     else { var it=f.t==='num'||f.t==='money'?'number':(f.t==='date'?'date':(f.t==='month'?'month':'text')); ctl='<input type="'+it+'" id="'+id+'" style="'+base+'"'+(f.t==='money'?' step="any" placeholder="0"':'')+'>'; }
     return '<div style="margin-bottom:12px"><label style="display:block;font-size:11px;font-weight:700;color:#475569;text-transform:uppercase;letter-spacing:.3px;margin-bottom:4px">'+_qEsc(f.l)+(f.r?' <span style="color:#B5000A">*</span>':'')+'</label>'+ctl+'</div>';
   }
-  function _qInjectDepenses(){ try{ var list=JSON.parse(localStorage.getItem('epilot_quest_depenses')||'[]'); if(!list.length||!window.EXPENSES_DATA) return; var have={}; window.EXPENSES_DATA.forEach(function(r){ have[r.id]=1; }); list.forEach(function(r){ if(!have[r.id]) window.EXPENSES_DATA.push(r); }); }catch(e){} }
-  setInterval(_qInjectDepenses, 2000); setTimeout(_qInjectDepenses, 1500);
-  function _qPushDepense(req){
-    try{ var f=req.fields||{};
-      var maxRef=0; (window.EXPENSES_DATA||[]).forEach(function(r){ var n=parseInt((r.ref||'').replace(/\D/g,''))||0; if(n>maxRef)maxRef=n; });
-      var qlist=[]; try{ qlist=JSON.parse(localStorage.getItem('epilot_quest_depenses')||'[]'); }catch(_e){} qlist.forEach(function(r){ var n=parseInt((r.ref||'').replace(/\D/g,''))||0; if(n>maxRef)maxRef=n; });
-      var yr=String(new Date().getFullYear()); var ref='D'+String(maxRef+1).padStart(4,'0');
-      var rec={ id:yr+'_'+ref, ref:ref, categorie:(f.categorie||''), date:(f.date||new Date().toISOString().slice(0,10)), description:(f.justification||req.titre||''), demandeur:(req.demandeur||''), montant:(Number(f.montant)||0), monnaie:(f.devise||'XAF'), imputation:(f.chantier||''), unite:'', etat:'Review', fournisseur:(f.beneficiaire||''), annee:yr, _quest:req.id };
-      qlist.push(rec); try{ localStorage.setItem('epilot_quest_depenses', JSON.stringify(qlist)); }catch(_e){}
-      window.EXPENSES_DATA=window.EXPENSES_DATA||[]; window.EXPENSES_DATA.push(rec);
-      req.linkedDepense=ref; req.history.push({ts:Date.now(),txt:'D\u00e9pense '+ref+' cr\u00e9\u00e9e (Commandes \u25b8 D\u00e9penses)'});
-      return true;
-    }catch(e){ return false; }
-  }
   function _qPushChantierContrainte(req){
     try{ var imp=req.fields&&req.fields.chantier; if(!imp) return false;
       var sm={'Faible':'mineure','Moyenne':'majeure','Forte':'critique','Bloquante':'critique'};
@@ -2848,7 +2833,7 @@ document.addEventListener('DOMContentLoaded', async function() {
       var titre=ty.label; for(var i=0;i<ty.f.length;i++){ var f=ty.f[i],v=vals[f.k]; if(v && (f.t==='text'||f.t==='area'||f.t==='sel')){ titre=String(v).slice(0,60); break; } }
       var req={ id:'Q'+ms.toString(36)+Math.random().toString(36).slice(2,5), type:ty.id, domain:ty.d, titre:titre, service:ty.svc, svcGrp:svc.grp, conf:ty.conf?1:0,
         demandeur:me.name, matricule:me.matricule, date:now.toISOString().slice(0,10), ts:ms, due:ms+svc.sla*86400000, priorite:(document.getElementById('qf__prio')||{}).value||'Normale', statut:'Nouvelle', closeTs:null, eval:null, fields:vals, comments:[], history:[{ts:ms,txt:'Créée par '+me.name}] };
-      var arr=_qStore(); arr.push(req); if(req.type==='chantier_action'){ try{ _qPushChantierAction(req); }catch(_e){} } if(req.type==='chantier_contrainte'){ try{ _qPushChantierContrainte(req); }catch(_e){} } if(req.type==='achat_depense'){ try{ _qPushDepense(req); }catch(_e){} } if(req.type==='hse_jsa'){ try{ _qPushJSA(req); }catch(_e){} } _qSave(arr);
+      var arr=_qStore(); arr.push(req); if(req.type==='chantier_action'){ try{ _qPushChantierAction(req); }catch(_e){} } if(req.type==='chantier_contrainte'){ try{ _qPushChantierContrainte(req); }catch(_e){} } if(req.type==='hse_jsa'){ try{ _qPushJSA(req); }catch(_e){} } _qSave(arr);
       o.remove(); window.__qTab='mine'; _qRender(); _qSyncAlerts();
     };
   }
