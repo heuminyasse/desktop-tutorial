@@ -2584,10 +2584,12 @@ document.addEventListener('DOMContentLoaded', async function() {
     "Quêtes / Requêtes":"Tickets / Requests","Gestion des":"Management of",
     /* Onglets principaux */
     "À traiter":"To process","Mes requêtes":"My requests","+ Nouvelle requête":"+ New request",
-    "Nouvelle requête":"New request","Dépenses":"Expenses","Toutes catégories":"All categories",
-    "Module Dépenses indisponible.":"Expenses module unavailable.",
+    "Nouvelle requête":"New request",
     /* Domaines */
-    "Travaux":"Works","Achats":"Purchasing","RH":"HR","Social":"Social","Training":"Training",
+    "Travaux":"Works","Achats":"Purchasing","RH":"HR","Social":"Social","Training":"Training","Dépenses":"Expenses",
+    /* Types de dépenses */
+    "Transport":"Transport","Douane":"Customs","Impôts / Taxes":"Taxes","Maintenance":"Maintenance","Frais généraux":"General expenses","Nutrition / Repas":"Catering","Autre dépense":"Other expense",
+    "Montant":"Amount","Fournisseur":"Supplier","Fournisseur / Transporteur":"Supplier / Carrier","Bureau de douane":"Customs office","Prestataire":"Contractor","Fournisseur / Restaurant":"Supplier / Restaurant","Monnaie":"Currency","Nature de l'impôt / taxe":"Tax / levy type","Description des travaux":"Work description","Fournisseur / Bureau de douane":"Customs office",
     /* Statuts */
     "Nouvelle":"New","Traitée":"Processed","Refusée":"Refused","clôturée":"closed",
     /* Tableau de bord */
@@ -2677,13 +2679,14 @@ document.addEventListener('DOMContentLoaded', async function() {
   })();
 
   var _Q_DOMAINS=[
-    {id:'chantier', label:'Travaux',  icon:'🏗️'},
-    {id:'hse',      label:'HSE',      icon:'🦺'},
-    {id:'achat',    label:'Achats',   icon:'🛒'},
-    {id:'paie',     label:'RH',       icon:'💰'},
-    {id:'acces',    label:'IT',       icon:'🔐'},
-    {id:'social',   label:'Social',   icon:'🗣️'},
-    {id:'comp',     label:'Training', icon:'🎓'}
+    {id:'chantier', label:'Travaux',   icon:'🏗️'},
+    {id:'hse',      label:'HSE',       icon:'🦺'},
+    {id:'achat',    label:'Achats',    icon:'🛒'},
+    {id:'paie',     label:'RH',        icon:'👤'},
+    {id:'acces',    label:'IT',        icon:'🔐'},
+    {id:'social',   label:'Social',    icon:'🗣️'},
+    {id:'comp',     label:'Training',  icon:'🎓'},
+    {id:'dep',      label:'Dépenses',  icon:'💰'}
   ];
   function _qChantierOpts(){ try{ return (window.JIP_DATA||[]).map(function(j){return j.Imputation;}).filter(Boolean); }catch(e){ return []; } }
   function _qImpOpts(){ try{ var a=(window.JIP_DATA||[]).map(function(j){return j.Imputation;}); var b=(window.QUOTE_DATA||[]).map(function(q){return q.Dossier;}); var s={}, out=[]; a.concat(b).forEach(function(x){ if(x&&!s[x]){ s[x]=1; out.push(x); } }); return out.sort(); }catch(e){ return _qChantierOpts(); } }
@@ -2714,9 +2717,34 @@ document.addEventListener('DOMContentLoaded', async function() {
     {id:'social_suggestion', d:'social', label:'Remarque / suggestion', icon:'💡', svc:'Direction', f:[{k:'titre',l:'Titre',t:'text',r:1},{k:'description',l:'Votre idée',t:'area',r:1}]},
     {id:'social_signalement', d:'social', label:'Signalement (harcèlement / éthique)', icon:'🚨', svc:'RH', conf:1, f:[{k:'type',l:'Type',t:'sel',o:['Harcèlement','Sécurité','Éthique','Discrimination','Autre'],r:1},{k:'description',l:'Description',t:'area',r:1},{k:'confidentiel',l:'Traiter en confidentiel',t:'check',def:1}]},
     {id:'comp_formation', d:'comp', label:'Demande de formation', icon:'📚', svc:'RH', f:[{k:'theme',l:'Thème / formation',t:'text',r:1},{k:'justification',l:'Justification',t:'area'},{k:'date_souhaitee',l:'Période souhaitée',t:'text'}]},
-    {id:'comp_certification', d:'comp', label:'Demande de certification', icon:'🏅', svc:'RH', f:[{k:'certification',l:'Certification',t:'text',r:1},{k:'organisme',l:'Organisme',t:'text'},{k:'justification',l:'Justification',t:'area'}]}
+    {id:'comp_certification', d:'comp', label:'Demande de certification', icon:'🏅', svc:'RH', f:[{k:'certification',l:'Certification',t:'text',r:1},{k:'organisme',l:'Organisme',t:'text'},{k:'justification',l:'Justification',t:'area'}]},
+    /* ── Dépenses ── */
+    {id:'dep_transport',   d:'dep', label:'Transport',        icon:'🚗', svc:'Comptabilité', f:[{k:'montant',l:'Montant',t:'money',r:1},{k:'description',l:'Description',t:'area',r:1},{k:'fournisseur',l:'Fournisseur / Transporteur',t:'text'},{k:'imputation',l:'Imputation (N° Chantier/Devis)',t:'imp'},{k:'date',l:'Date',t:'date'},{k:'monnaie',l:'Monnaie',t:'sel',o:['XAF','EUR','USD']}]},
+    {id:'dep_douane',      d:'dep', label:'Douane',           icon:'🛃', svc:'Comptabilité', f:[{k:'montant',l:'Montant',t:'money',r:1},{k:'description',l:'Description / Nature',t:'area',r:1},{k:'fournisseur',l:'Bureau de douane',t:'text'},{k:'imputation',l:'Imputation (N° Chantier/Devis)',t:'imp'},{k:'date',l:'Date',t:'date'},{k:'monnaie',l:'Monnaie',t:'sel',o:['XAF','EUR','USD']}]},
+    {id:'dep_cnps',        d:'dep', label:'CNPS',             icon:'🏛️', svc:'Comptabilité', f:[{k:'montant',l:'Montant',t:'money',r:1},{k:'description',l:'Description',t:'area'},{k:'imputation',l:'Imputation (N° Chantier/Devis)',t:'imp'},{k:'date',l:'Date',t:'date'},{k:'monnaie',l:'Monnaie',t:'sel',o:['XAF','EUR','USD']}]},
+    {id:'dep_impots',      d:'dep', label:'Impôts / Taxes',   icon:'🧾', svc:'Comptabilité', f:[{k:'montant',l:'Montant',t:'money',r:1},{k:'description',l:'Nature de l\'impôt / taxe',t:'area',r:1},{k:'imputation',l:'Imputation (N° Chantier/Devis)',t:'imp'},{k:'date',l:'Date',t:'date'},{k:'monnaie',l:'Monnaie',t:'sel',o:['XAF','EUR','USD']}]},
+    {id:'dep_maintenance', d:'dep', label:'Maintenance',      icon:'🔧', svc:'Comptabilité', f:[{k:'montant',l:'Montant',t:'money',r:1},{k:'description',l:'Description des travaux',t:'area',r:1},{k:'fournisseur',l:'Prestataire',t:'text'},{k:'imputation',l:'Imputation (N° Chantier/Devis)',t:'imp'},{k:'date',l:'Date',t:'date'},{k:'monnaie',l:'Monnaie',t:'sel',o:['XAF','EUR','USD']}]},
+    {id:'dep_frais_gen',   d:'dep', label:'Frais généraux',   icon:'💼', svc:'Comptabilité', f:[{k:'montant',l:'Montant',t:'money',r:1},{k:'description',l:'Description',t:'area',r:1},{k:'fournisseur',l:'Fournisseur',t:'text'},{k:'imputation',l:'Imputation (N° Chantier/Devis)',t:'imp'},{k:'date',l:'Date',t:'date'},{k:'monnaie',l:'Monnaie',t:'sel',o:['XAF','EUR','USD']}]},
+    {id:'dep_nutrition',   d:'dep', label:'Nutrition / Repas',icon:'🍽️', svc:'Comptabilité', f:[{k:'montant',l:'Montant',t:'money',r:1},{k:'description',l:'Description',t:'area'},{k:'fournisseur',l:'Fournisseur / Restaurant',t:'text'},{k:'imputation',l:'Imputation (N° Chantier/Devis)',t:'imp'},{k:'date',l:'Date',t:'date'},{k:'monnaie',l:'Monnaie',t:'sel',o:['XAF','EUR','USD']}]},
+    {id:'dep_autre',       d:'dep', label:'Autre dépense',    icon:'📌', svc:'Comptabilité', f:[{k:'montant',l:'Montant',t:'money',r:1},{k:'description',l:'Description',t:'area',r:1},{k:'fournisseur',l:'Fournisseur',t:'text'},{k:'imputation',l:'Imputation (N° Chantier/Devis)',t:'imp'},{k:'date',l:'Date',t:'date'},{k:'monnaie',l:'Monnaie',t:'sel',o:['XAF','EUR','USD']}]}
   ];
   var _Q_SVC={'Chef de projet':{grp:'chef',sla:2},'HSE':{grp:'direction',sla:1},'Achats':{grp:'commercial',sla:3},'Magasin':{grp:'commercial',sla:1},'Comptabilité':{grp:'rh',sla:3},'RH / Paie':{grp:'rh',sla:2},'RH':{grp:'rh',sla:2},'Administration':{grp:'admin',sla:2},'Direction':{grp:'direction',sla:3}};
+  function _qPushDepense(req){
+    try{
+      var f=req.fields||{};
+      var base=window.EXPENSES_DATA||(window.EXPENSES_DATA=[]);
+      var maxRef=0; base.forEach(function(r){var n=parseInt((r.ref||'').replace(/\D/g,''));if(n>maxRef)maxRef=n;});
+      var newRef='D'+String(maxRef+1).padStart(4,'0');
+      var year=new Date().getFullYear();
+      var newId=year+'_'+newRef;
+      var ty=_qType(req.type);
+      var rec={id:newId,ref:newRef,categorie:(ty?ty.label:''),date:(f.date||new Date().toISOString().slice(0,10)),description:(f.description||req.titre||''),demandeur:req.demandeur||'',montant:parseFloat(f.montant)||0,monnaie:(f.monnaie||'XAF'),imputation:(f.imputation||''),unite:'',etat:'Soumise',fournisseur:(f.fournisseur||''),annee:String(year),_quest:req.id};
+      base.push(rec);
+      req.linkedDepense=newRef;
+      req.history.push({ts:Date.now(),txt:'Dépense '+newRef+' créée · Catégorie : '+(ty?ty.label:'')});
+      return true;
+    }catch(e){ return false; }
+  }
   function _qSvc(n){ return _Q_SVC[n]||{grp:'admin',sla:2}; }
   var _Q_STATUSES=['Nouvelle','En cours','Traitée','Refusée'];
   var _Q_STCOL={'Nouvelle':'#2563eb','En cours':'#d97706','Traitée':'#16a34a','Refusée':'#b91c1c'};
@@ -2746,14 +2774,6 @@ document.addEventListener('DOMContentLoaded', async function() {
     var tab=window.__qTab||'todo';
     // Onglets latéraux = domaines (catégories). Sur le tableau de bord, le filtrage par domaine ne s'applique pas.
     if(tab==='dash'){ nav.innerHTML='<div style="padding:6px 4px;font-size:11.5px;color:#94a3b8;line-height:1.5">Filtres par domaine indisponibles sur le tableau de bord.</div>'; return; }
-    if(tab==='dep'){
-      var _cats=(typeof window._depCats==='function')?window._depCats():[];
-      var _cur=window.__qDepCat||'';
-      var _it=[{id:'',icon:'💰',label:'Toutes catégories'}].concat(_cats.map(function(c){ return {id:c,icon:'•',label:c}; }));
-      nav.innerHTML=_it.map(function(d){ return '<button class="item'+(_cur===d.id?' active':'')+'" data-qdep="'+_qEsc(d.id)+'" style="display:inline-flex;align-items:center;gap:6px;"><span aria-hidden="true">'+d.icon+'</span> '+_qEsc(d.label)+'</button>'; }).join('');
-      nav.querySelectorAll('[data-qdep]').forEach(function(b){ b.onclick=function(){ window.__qDepCat=b.getAttribute('data-qdep'); nav.querySelectorAll('.item').forEach(function(x){x.classList.remove('active');}); b.classList.add('active'); var h=document.getElementById('ep-qdep-host'); if(h&&typeof window._rDepenses==='function') window._rDepenses(h, window.__qDepCat||'all'); }; });
-      return;
-    }
     var list;
     if(tab==='mine'){ list=all.filter(function(r){return r.matricule===me.matricule;}); }
     else { list=all.filter(_qIsTodo); }
@@ -2791,13 +2811,12 @@ document.addEventListener('DOMContentLoaded', async function() {
     var tab=window.__qTab||'todo';
     var todoN=all.filter(_qIsTodo).length; var odN=all.filter(function(r){return _qOverdue(r)&&_qIsTodo(r);}).length;
     var mineN=all.filter(function(r){return r.matricule===me.matricule;}).length;
-    var _qtabs=[['todo','📥','À traiter',(todoN?' ('+todoN+(odN?' · '+odN+' ⏰':'')+')':'')],['mine','📤','Mes requêtes',(mineN?' ('+mineN+')':'')],['dash','📊','Tableau de bord',''],['dep','💰','Dépenses','']];
+    var _qtabs=[['todo','📥','À traiter',(todoN?' ('+todoN+(odN?' · '+odN+' ⏰':'')+')':'')],['mine','📤','Mes requêtes',(mineN?' ('+mineN+')':'')],['dash','📊','Tableau de bord','']];
     var bar='<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:6px 0 16px">'
       +_qtabs.map(function(t){ return '<button class="ep-qmain" data-qsub="'+t[0]+'" style="border:1px solid '+(tab===t[0]?'#0f172a':'#e5e7eb')+';background:'+(tab===t[0]?'#0f172a':'#fff')+';color:'+(tab===t[0]?'#fff':'#334155')+';border-radius:20px;padding:7px 14px;font-size:13px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:5px"><span aria-hidden="true">'+t[1]+'</span> <span>'+t[2]+'</span>'+(t[3]?'<span class="ep-qcnt">'+t[3]+'</span>':'')+'</button>'; }).join('')
-      +(tab==='dep'?'':'<button id="ep-qnew" style="margin-left:auto;background:#B5000A;color:#fff;border:0;border-radius:8px;padding:9px 16px;font-weight:700;cursor:pointer">+ Nouvelle requête</button>')+'</div>';
+      +'<button id="ep-qnew" style="margin-left:auto;background:#B5000A;color:#fff;border:0;border-radius:8px;padding:9px 16px;font-weight:700;cursor:pointer">+ Nouvelle requête</button></div>';
     var content='';
-    if(tab==='dep'){ content='<div id="ep-qdep-host"></div>'; }
-    else if(tab==='dash'){ content=_qDashboard(all); }
+    if(tab==='dash'){ content=_qDashboard(all); }
     else {
       var list,empty;
       if(tab==='todo'){ list=all.filter(_qIsTodo); empty='Aucune requête à traiter. 🎉'; list.sort(function(a,b){ return (a.due||9e15)-(b.due||9e15); }); }
@@ -2808,8 +2827,7 @@ document.addEventListener('DOMContentLoaded', async function() {
       content+= list.length? '<div style="display:flex;flex-direction:column;gap:8px">'+list.map(_qCardHtml).join('')+'</div>' : '<div style="padding:40px;text-align:center;color:#94a3b8">'+empty+'</div>';
     }
     body.innerHTML=bar+content;
-    if(tab==='dep'){ var _dh=body.querySelector('#ep-qdep-host'); if(_dh){ if(typeof window._rDepenses==='function') window._rDepenses(_dh, window.__qDepCat||'all'); else _dh.innerHTML='<div style="padding:40px;text-align:center;color:#94a3b8">Module Dépenses indisponible.</div>'; } }
-    body.querySelectorAll('.ep-qmain').forEach(function(b){ b.onclick=function(){ window.__qTab=b.getAttribute('data-qsub'); window.__qDom=''; window.__qDepCat=''; _qRender(); }; });
+    body.querySelectorAll('.ep-qmain').forEach(function(b){ b.onclick=function(){ window.__qTab=b.getAttribute('data-qsub'); window.__qDom=''; _qRender(); }; });
     var dc=body.querySelector('#ep-qdomclr'); if(dc) dc.onclick=function(e){ e.preventDefault(); window.__qDom=''; _qRender(); };
     _qBuildSubnav();
     var nb=body.querySelector('#ep-qnew'); if(nb) nb.onclick=_qNewModal;
@@ -2967,7 +2985,7 @@ document.addEventListener('DOMContentLoaded', async function() {
       var titre=ty.label; for(var i=0;i<ty.f.length;i++){ var f=ty.f[i],v=vals[f.k]; if(v && (f.t==='text'||f.t==='area'||f.t==='sel')){ titre=String(v).slice(0,60); break; } }
       var req={ id:'Q'+ms.toString(36)+Math.random().toString(36).slice(2,5), type:ty.id, domain:ty.d, titre:titre, service:ty.svc, svcGrp:svc.grp, conf:ty.conf?1:0,
         demandeur:me.name, matricule:me.matricule, date:now.toISOString().slice(0,10), ts:ms, due:ms+svc.sla*86400000, priorite:(document.getElementById('qf__prio')||{}).value||'Normale', statut:'Nouvelle', closeTs:null, eval:null, fields:vals, comments:[], history:[{ts:ms,txt:'Créée par '+me.name}] };
-      var arr=_qStore(); arr.push(req); if(req.type==='chantier_action'){ try{ _qPushChantierAction(req); }catch(_e){} } if(req.type==='chantier_contrainte'){ try{ _qPushChantierContrainte(req); }catch(_e){} } if(req.type==='hse_jsa'){ try{ _qPushJSA(req); }catch(_e){} } _qSave(arr);
+      var arr=_qStore(); arr.push(req); if(req.type==='chantier_action'){ try{ _qPushChantierAction(req); }catch(_e){} } if(req.type==='chantier_contrainte'){ try{ _qPushChantierContrainte(req); }catch(_e){} } if(req.type==='hse_jsa'){ try{ _qPushJSA(req); }catch(_e){} } if(req.domain==='dep'){ try{ _qPushDepense(req); }catch(_e){} } _qSave(arr);
       o.remove(); window.__qTab='mine'; _qRender(); _qSyncAlerts();
     };
   }
