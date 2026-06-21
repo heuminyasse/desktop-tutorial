@@ -2645,12 +2645,17 @@ document.addEventListener('DOMContentLoaded', async function() {
   function _qBuildSubnav(){
     var nav=document.getElementById('subnav'); if(!nav) return;
     var all=_qStore(); var me=_qMe();
-    var todoN=all.filter(_qIsTodo).length; var odN=all.filter(function(r){return _qOverdue(r)&&_qIsTodo(r);}).length;
-    var mineN=all.filter(function(r){return r.matricule===me.matricule;}).length;
     var tab=window.__qTab||'todo';
-    var tabs=[['todo','📥','À traiter'+(todoN?' ('+todoN+(odN?' · '+odN+' ⏰':'')+')':'')],['mine','📤','Mes requêtes'+(mineN?' ('+mineN+')':'')],['dash','📊','Tableau de bord']];
-    nav.innerHTML=tabs.map(function(t){ return '<button class="item'+(tab===t[0]?' active':'')+'" data-qsub="'+t[0]+'" style="display:inline-flex;align-items:center;gap:5px;">'+t[1]+' '+t[2]+'</button>'; }).join('');
-    nav.querySelectorAll('[data-qsub]').forEach(function(b){ b.onclick=function(){ window.__qTab=b.getAttribute('data-qsub'); window.__qDom=''; nav.querySelectorAll('.item').forEach(function(x){x.classList.remove('active');}); b.classList.add('active'); _qRender(); }; });
+    // Onglets latéraux = domaines (catégories). Sur le tableau de bord, le filtrage par domaine ne s'applique pas.
+    if(tab==='dash'){ nav.innerHTML='<div style="padding:6px 4px;font-size:11.5px;color:#94a3b8;line-height:1.5">Filtres par domaine indisponibles sur le tableau de bord.</div>'; return; }
+    var list;
+    if(tab==='mine'){ list=all.filter(function(r){return r.matricule===me.matricule;}); }
+    else { list=all.filter(_qIsTodo); }
+    var _dc={}; list.forEach(function(r){ _dc[r.domain]=(_dc[r.domain]||0)+1; });
+    var dom=window.__qDom||'';
+    var items=[{id:'',icon:'📋',label:'Tous'}].concat(_Q_DOMAINS);
+    nav.innerHTML=items.map(function(d){ var c=d.id?(_dc[d.id]||0):list.length; return '<button class="item'+(dom===d.id?' active':'')+'" data-qd="'+d.id+'" style="display:inline-flex;align-items:center;gap:6px;">'+(d.icon?d.icon+' ':'')+_qEsc(d.label)+(c?' ('+c+')':'')+'</button>'; }).join('');
+    nav.querySelectorAll('[data-qd]').forEach(function(b){ b.onclick=function(){ window.__qDom=b.getAttribute('data-qd'); nav.querySelectorAll('.item').forEach(function(x){x.classList.remove('active');}); b.classList.add('active'); _qRender(); }; });
   }
   function _qActivate(){
     var v=_qEnsureView();
@@ -2662,7 +2667,7 @@ document.addEventListener('DOMContentLoaded', async function() {
   }
   var _qNavActive=false;
   document.addEventListener('click', function(e){ var t=e.target&&e.target.closest&&e.target.closest('[data-page="quest"]'); if(t){ _qNavActive=true; _qActivate(); requestAnimationFrame(function(){ _qNavActive=false; _qBuildSubnav(); }); } }, true);
-  function _qClearSubnav(){ var nav=document.getElementById('subnav'); if(!nav) return; var qb=nav.querySelectorAll('[data-qsub]'); if(qb.length && qb.length===nav.children.length){ nav.innerHTML=''; } else { [].forEach.call(qb,function(b){ b.remove(); }); } }
+  function _qClearSubnav(){ var nav=document.getElementById('subnav'); if(!nav) return; var qb=nav.querySelectorAll('[data-qd]'); if(qb.length && qb.length===nav.children.length){ nav.innerHTML=''; } else if(qb.length){ [].forEach.call(qb,function(b){ b.remove(); }); } }
   document.addEventListener('click', function(e){ var t=e.target&&e.target.closest&&e.target.closest('#navlinks [data-page]'); if(t && t.getAttribute('data-page')!=='quest'){ setTimeout(function(){ var q=document.getElementById('view-quest'); if(q) q.classList.remove('active'); _qClearSubnav(); },0); } }, true);
   (function _qWrapSV(){ try{ if(window.HubViews&&window.HubViews.showView&&!window.HubViews.__qWrap){ var _osv=window.HubViews.showView; window.HubViews.showView=function(name){ if(_qNavActive) return; var r=_osv.apply(this,arguments); try{ if(name!=='quest'){ var q=document.getElementById('view-quest'); if(q&&q.classList.contains('active')) q.classList.remove('active'); _qClearSubnav(); } }catch(_e){} return r; }; window.HubViews.__qWrap=true; return; } }catch(_e){} setTimeout(_qWrapSV,400); })();
 
@@ -2680,22 +2685,24 @@ document.addEventListener('DOMContentLoaded', async function() {
     var tab=window.__qTab||'todo';
     var todoN=all.filter(_qIsTodo).length; var odN=all.filter(function(r){return _qOverdue(r)&&_qIsTodo(r);}).length;
     var mineN=all.filter(function(r){return r.matricule===me.matricule;}).length;
-    var _qttl={todo:'📥 À traiter',mine:'📤 Mes requêtes',dash:'📊 Tableau de bord'};
-    var bar='<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:6px 0 16px"><div style="font-size:16px;font-weight:800;color:#0f172a">'+(_qttl[tab]||'')+'</div><button id="ep-qnew" style="margin-left:auto;background:#B5000A;color:#fff;border:0;border-radius:8px;padding:9px 16px;font-weight:700;cursor:pointer">+ Nouvelle requête</button></div>';
+    var _qtabs=[['todo','📥','À traiter'+(todoN?' ('+todoN+(odN?' · '+odN+' ⏰':'')+')':'')],['mine','📤','Mes requêtes'+(mineN?' ('+mineN+')':'')],['dash','📊','Tableau de bord']];
+    var bar='<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:6px 0 16px">'
+      +_qtabs.map(function(t){ return '<button class="ep-qmain" data-qsub="'+t[0]+'" style="border:1px solid '+(tab===t[0]?'#0f172a':'#e5e7eb')+';background:'+(tab===t[0]?'#0f172a':'#fff')+';color:'+(tab===t[0]?'#fff':'#334155')+';border-radius:20px;padding:7px 14px;font-size:13px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:5px">'+t[1]+' '+t[2]+'</button>'; }).join('')
+      +'<button id="ep-qnew" style="margin-left:auto;background:#B5000A;color:#fff;border:0;border-radius:8px;padding:9px 16px;font-weight:700;cursor:pointer">+ Nouvelle requête</button></div>';
     var content='';
     if(tab==='dash'){ content=_qDashboard(all); }
     else {
       var list,empty;
       if(tab==='todo'){ list=all.filter(_qIsTodo); empty='Aucune requête à traiter. 🎉'; list.sort(function(a,b){ return (a.due||9e15)-(b.due||9e15); }); }
       else { list=all.filter(function(r){return r.matricule===me.matricule;}); empty='Vous n\'avez créé aucune requête.'; list.sort(function(a,b){return (b.ts||0)-(a.ts||0);}); }
-      var _qdom=window.__qDom||''; var _dc={}; list.forEach(function(r){ _dc[r.domain]=(_dc[r.domain]||0)+1; });
-      content+='<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px">'+[{id:'',icon:'',label:'Tous'}].concat(_Q_DOMAINS).map(function(d){ var c=d.id?(_dc[d.id]||0):list.length; return '<button class="ep-qdom" data-qd="'+d.id+'" style="border:1px solid '+(_qdom===d.id?'#0f172a':'#e5e7eb')+';background:'+(_qdom===d.id?'#0f172a':'#fff')+';color:'+(_qdom===d.id?'#fff':'#334155')+';border-radius:20px;padding:5px 12px;font-size:12px;cursor:pointer">'+(d.icon?d.icon+' ':'')+_qEsc(d.label)+(c?' <b>'+c+'</b>':'')+'</button>'; }).join('')+'</div>';
-      if(_qdom) list=list.filter(function(r){return r.domain===_qdom;});
+      var _qdom=window.__qDom||'';
+      if(_qdom){ list=list.filter(function(r){return r.domain===_qdom;}); var _dl=_qDomain(_qdom); content+='<p class="prm-p" style="margin-bottom:10px;font-size:12px;color:#64748b">Filtre : '+_dl.icon+' '+_qEsc(_dl.label)+' · <a href="#" id="ep-qdomclr" style="color:#B5000A;text-decoration:none">tout afficher</a></p>'; }
       if(tab==='todo' && (me.group==='admin'||me.group==='direction')) content+='<p class="prm-p" style="margin-bottom:10px;font-size:12px;color:#64748b">Vue manager : vous voyez toutes les requêtes ouvertes.</p>';
       content+= list.length? '<div style="display:flex;flex-direction:column;gap:8px">'+list.map(_qCardHtml).join('')+'</div>' : '<div style="padding:40px;text-align:center;color:#94a3b8">'+empty+'</div>';
     }
     body.innerHTML=bar+content;
-    body.querySelectorAll('.ep-qdom').forEach(function(b){ b.onclick=function(){ window.__qDom=b.getAttribute('data-qd'); _qRender(); }; });
+    body.querySelectorAll('.ep-qmain').forEach(function(b){ b.onclick=function(){ window.__qTab=b.getAttribute('data-qsub'); window.__qDom=''; _qRender(); }; });
+    var dc=body.querySelector('#ep-qdomclr'); if(dc) dc.onclick=function(e){ e.preventDefault(); window.__qDom=''; _qRender(); };
     _qBuildSubnav();
     var nb=body.querySelector('#ep-qnew'); if(nb) nb.onclick=_qNewModal;
     body.querySelectorAll('.ep-qcard').forEach(function(c){ c.onclick=function(){ _qDetail(c.getAttribute('data-qid')); }; });
