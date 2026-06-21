@@ -2773,6 +2773,57 @@ document.addEventListener('DOMContentLoaded', async function() {
       return true;
     }catch(e){ return false; }
   }
+  function _qJSAStore(){ try{ return JSON.parse(localStorage.getItem('epilot_jsa_reports')||'[]'); }catch(e){ return []; } }
+  function _qJSASave(a){ try{ localStorage.setItem('epilot_jsa_reports', JSON.stringify(a)); }catch(e){} }
+  function _qPushJSA(req){
+    try{ var f=req.fields||{};
+      var rec={ id:'JSA-'+Date.now().toString(36)+Math.random().toString(36).slice(2,4), chantier:(f.chantier||''), tache:(f.tache||req.titre||''), risques:(f.risques||''), mesures:(f.mesures||''), epi:(f.epi||''), date:(f.date||new Date().toISOString().slice(0,10)), demandeur:(req.demandeur||''), ts:Date.now(), statut:'Active', _quest:req.id };
+      var a=_qJSAStore(); a.push(rec); _qJSASave(a);
+      req.linkedJSA=rec.id; req.history.push({ts:Date.now(),txt:'JSA archivée dans HSE ▸ Rapports JSA'});
+      try{ _qJSAlast=''; _qRenderJSAArchive(); }catch(_e){}
+      return true;
+    }catch(e){ return false; }
+  }
+  function _qJSADetail(id){
+    var r=_qJSAStore().filter(function(x){return x.id===id;})[0]; if(!r) return;
+    function row(l,v){ return '<tr><td style="padding:6px 12px;color:#64748b;font-size:12px;width:34%;vertical-align:top">'+_qEsc(l)+'</td><td style="padding:6px 12px;font-size:13px;font-weight:600;white-space:pre-wrap">'+_qEsc(v||'—')+'</td></tr>'; }
+    var o=_qOverlay('<div style="padding:16px 20px;border-bottom:1px solid #eef0f3;display:flex;justify-content:space-between;align-items:center"><div><div style="font-size:16px;font-weight:800">🧯 '+_qEsc(r.tache||'JSA')+'</div><div style="font-size:11.5px;color:#64748b;margin-top:2px">'+_qEsc(r.id)+' · '+_qEsc(r.date||'')+(r.chantier?(' · '+_qEsc(r.chantier)):'')+'</div></div><button class="ep-qx" style="border:0;background:#f1f5f9;border-radius:8px;padding:4px 12px;cursor:pointer">Fermer</button></div>'
+      +'<div style="padding:8px 8px 16px"><table style="width:100%;border-collapse:collapse">'
+      +row('Chantier / Imputation', r.chantier)+row('Tâche analysée', r.tache)+row('Risques identifiés', r.risques)+row('Mesures de prévention', r.mesures)+row('EPI requis', r.epi)+row('Date', r.date)+row('Établi par', r.demandeur)
+      +'</table></div>', 600);
+    o.querySelector('.ep-qx').onclick=function(){ o.remove(); };
+  }
+  function _qRenderJSAArchive(){
+    var ev=document.getElementById('view-empty'); if(!ev) return;
+    var title=document.getElementById('empty-title');
+    var on = ev.classList.contains('active') && title && /Rapports JSA/i.test(title.textContent||'');
+    var box=document.getElementById('ep-jsa-archive');
+    var card=ev.querySelector('.empty-card');
+    if(!on){ if(box) box.remove(); if(card) card.style.display=''; return; }
+    if(card) card.style.display='none';
+    if(!box){ box=document.createElement('div'); box.id='ep-jsa-archive'; box.style.cssText='padding:10px 6px 40px;max-width:1000px;margin:0 auto;width:100%'; ev.appendChild(box); }
+    var list=_qJSAStore().slice().sort(function(a,b){ return (b.ts||0)-(a.ts||0); });
+    var head='<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:4px 0 16px"><div style="font-size:18px;font-weight:800;color:var(--t1,#0f172a)">🧯 Rapports JSA</div><span style="font-size:12px;color:#64748b">Analyses de risques (JSA) créées via les Quêtes</span><button id="ep-jsa-new" style="margin-left:auto;background:#B5000A;color:#fff;border:0;border-radius:8px;padding:9px 16px;font-weight:700;cursor:pointer">+ Nouvelle JSA</button></div>';
+    var body = list.length ? '<div style="display:flex;flex-direction:column;gap:8px">'+list.map(function(r){
+        return '<div class="ep-jsa-card" data-jid="'+r.id+'" style="display:flex;align-items:center;gap:14px;padding:12px 16px;border:1px solid #e5e7eb;border-left:4px solid #d97706;border-radius:10px;background:var(--card,#fff);cursor:pointer">'
+          +'<div style="font-size:22px">🧯</div>'
+          +'<div style="flex:1;min-width:0"><div style="font-weight:700;font-size:13.5px">'+_qEsc(r.tache||'JSA')+'</div>'
+          +'<div style="font-size:11.5px;color:#64748b;margin-top:2px">'+(r.chantier?(_qEsc(r.chantier)+' · '):'')+'par '+_qEsc(r.demandeur||'')+' · '+_qEsc(r.date||'')+(r.epi?(' · EPI: '+_qEsc(r.epi)):'')+'</div></div>'
+          +'<div style="background:#d97706;color:#fff;font-size:11px;font-weight:700;border-radius:20px;padding:4px 11px;white-space:nowrap">'+_qEsc(r.statut||'Active')+'</div></div>';
+      }).join('')+'</div>'
+      : '<div style="padding:40px;text-align:center;color:#94a3b8;border:1px dashed #e5e7eb;border-radius:12px">Aucune JSA archivée. Créez-en une via <b>Quêtes ▸ Créer une JSA</b> ou le bouton ci-dessus.</div>';
+    box.innerHTML=head+body;
+    var nb=box.querySelector('#ep-jsa-new'); if(nb) nb.onclick=function(){ _qFormModal('hse_jsa'); };
+    box.querySelectorAll('.ep-jsa-card').forEach(function(c){ c.onclick=function(){ _qJSADetail(c.getAttribute('data-jid')); }; });
+  }
+  var _qJSAlast='';
+  setInterval(function(){
+    var ev=document.getElementById('view-empty'); if(!ev) return;
+    var title=document.getElementById('empty-title');
+    var on = ev.classList.contains('active') && title && /Rapports JSA/i.test(title.textContent||'');
+    var sig = on ? ('on:'+_qJSAStore().length) : 'off';
+    if(sig!==_qJSAlast){ _qJSAlast=sig; try{ _qRenderJSAArchive(); }catch(e){} }
+  }, 500);
   function _qFormModal(typeId){
     var ty=_qType(typeId); if(!ty) return; var svc=_qSvc(ty.svc);
     var fields=ty.f.map(_qFieldHtml).join('');
@@ -2789,7 +2840,7 @@ document.addEventListener('DOMContentLoaded', async function() {
       var titre=ty.label; for(var i=0;i<ty.f.length;i++){ var f=ty.f[i],v=vals[f.k]; if(v && (f.t==='text'||f.t==='area'||f.t==='sel')){ titre=String(v).slice(0,60); break; } }
       var req={ id:'Q'+ms.toString(36)+Math.random().toString(36).slice(2,5), type:ty.id, domain:ty.d, titre:titre, service:ty.svc, svcGrp:svc.grp, conf:ty.conf?1:0,
         demandeur:me.name, matricule:me.matricule, date:now.toISOString().slice(0,10), ts:ms, due:ms+svc.sla*86400000, priorite:(document.getElementById('qf__prio')||{}).value||'Normale', statut:'Nouvelle', closeTs:null, eval:null, fields:vals, comments:[], history:[{ts:ms,txt:'Créée par '+me.name}] };
-      var arr=_qStore(); arr.push(req); if(req.type==='chantier_action'){ try{ _qPushChantierAction(req); }catch(_e){} } if(req.type==='chantier_contrainte'){ try{ _qPushChantierContrainte(req); }catch(_e){} } if(req.type==='achat_depense'){ try{ _qPushDepense(req); }catch(_e){} } _qSave(arr);
+      var arr=_qStore(); arr.push(req); if(req.type==='chantier_action'){ try{ _qPushChantierAction(req); }catch(_e){} } if(req.type==='chantier_contrainte'){ try{ _qPushChantierContrainte(req); }catch(_e){} } if(req.type==='achat_depense'){ try{ _qPushDepense(req); }catch(_e){} } if(req.type==='hse_jsa'){ try{ _qPushJSA(req); }catch(_e){} } _qSave(arr);
       o.remove(); window.__qTab='mine'; _qRender(); _qSyncAlerts();
     };
   }
