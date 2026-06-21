@@ -2660,10 +2660,11 @@ document.addEventListener('DOMContentLoaded', async function() {
     setTimeout(_qBuildSubnav, 60);
     _qRender();
   }
-  document.addEventListener('click', function(e){ var t=e.target&&e.target.closest&&e.target.closest('[data-page="quest"]'); if(t){ setTimeout(_qActivate, 0); } }, true);
+  var _qNavActive=false;
+  document.addEventListener('click', function(e){ var t=e.target&&e.target.closest&&e.target.closest('[data-page="quest"]'); if(t){ _qNavActive=true; _qActivate(); requestAnimationFrame(function(){ _qNavActive=false; _qBuildSubnav(); }); } }, true);
   function _qClearSubnav(){ var nav=document.getElementById('subnav'); if(!nav) return; var qb=nav.querySelectorAll('[data-qsub]'); if(qb.length && qb.length===nav.children.length){ nav.innerHTML=''; } else { [].forEach.call(qb,function(b){ b.remove(); }); } }
   document.addEventListener('click', function(e){ var t=e.target&&e.target.closest&&e.target.closest('#navlinks [data-page]'); if(t && t.getAttribute('data-page')!=='quest'){ setTimeout(function(){ var q=document.getElementById('view-quest'); if(q) q.classList.remove('active'); _qClearSubnav(); },0); } }, true);
-  (function _qWrapSV(){ try{ if(window.HubViews&&window.HubViews.showView&&!window.HubViews.__qWrap){ var _osv=window.HubViews.showView; window.HubViews.showView=function(name){ var r=_osv.apply(this,arguments); try{ if(name!=='quest'){ var q=document.getElementById('view-quest'); if(q&&q.classList.contains('active')) q.classList.remove('active'); _qClearSubnav(); } }catch(_e){} return r; }; window.HubViews.__qWrap=true; return; } }catch(_e){} setTimeout(_qWrapSV,400); })();
+  (function _qWrapSV(){ try{ if(window.HubViews&&window.HubViews.showView&&!window.HubViews.__qWrap){ var _osv=window.HubViews.showView; window.HubViews.showView=function(name){ if(_qNavActive) return; var r=_osv.apply(this,arguments); try{ if(name!=='quest'){ var q=document.getElementById('view-quest'); if(q&&q.classList.contains('active')) q.classList.remove('active'); _qClearSubnav(); } }catch(_e){} return r; }; window.HubViews.__qWrap=true; return; } }catch(_e){} setTimeout(_qWrapSV,400); })();
 
   function _qCardHtml(r){ var ty=_qType(r.type)||{icon:'•',label:r.type}; var dom=_qDomain(r.domain); var od=_qOverdue(r);
     return '<div class="ep-qcard" data-qid="'+r.id+'" style="display:flex;align-items:center;gap:14px;padding:12px 16px;border:1px solid '+(od?'#fecaca':'#e5e7eb')+';border-left:4px solid '+(_Q_STCOL[r.statut]||'#64748b')+';border-radius:10px;background:'+(od?'#fef2f2':'#fff')+';cursor:pointer">'
