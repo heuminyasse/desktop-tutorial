@@ -2643,6 +2643,8 @@ document.addEventListener('DOMContentLoaded', async function() {
     _qRender();
   }
   document.addEventListener('click', function(e){ var t=e.target&&e.target.closest&&e.target.closest('[data-page="quest"]'); if(t){ setTimeout(_qActivate, 0); } }, true);
+  document.addEventListener('click', function(e){ var t=e.target&&e.target.closest&&e.target.closest('#navlinks [data-page]'); if(t && t.getAttribute('data-page')!=='quest'){ setTimeout(function(){ var q=document.getElementById('view-quest'); if(q) q.classList.remove('active'); },0); } }, true);
+  (function _qWrapSV(){ try{ if(window.HubViews&&window.HubViews.showView&&!window.HubViews.__qWrap){ var _osv=window.HubViews.showView; window.HubViews.showView=function(name){ var r=_osv.apply(this,arguments); try{ if(name!=='quest'){ var q=document.getElementById('view-quest'); if(q&&q.classList.contains('active')) q.classList.remove('active'); } }catch(_e){} return r; }; window.HubViews.__qWrap=true; return; } }catch(_e){} setTimeout(_qWrapSV,400); })();
 
   function _qCardHtml(r){ var ty=_qType(r.type)||{icon:'•',label:r.type}; var dom=_qDomain(r.domain); var od=_qOverdue(r);
     return '<div class="ep-qcard" data-qid="'+r.id+'" style="display:flex;align-items:center;gap:14px;padding:12px 16px;border:1px solid '+(od?'#fecaca':'#e5e7eb')+';border-left:4px solid '+(_Q_STCOL[r.statut]||'#64748b')+';border-radius:10px;background:'+(od?'#fef2f2':'#fff')+';cursor:pointer">'
@@ -2666,10 +2668,14 @@ document.addEventListener('DOMContentLoaded', async function() {
       var list,empty;
       if(tab==='todo'){ list=all.filter(_qIsTodo); empty='Aucune requête à traiter. 🎉'; list.sort(function(a,b){ return (a.due||9e15)-(b.due||9e15); }); }
       else { list=all.filter(function(r){return r.matricule===me.matricule;}); empty='Vous n\'avez créé aucune requête.'; list.sort(function(a,b){return (b.ts||0)-(a.ts||0);}); }
+      var _qdom=window.__qDom||''; var _dc={}; list.forEach(function(r){ _dc[r.domain]=(_dc[r.domain]||0)+1; });
+      content+='<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px">'+[{id:'',icon:'',label:'Tous'}].concat(_Q_DOMAINS).map(function(d){ var c=d.id?(_dc[d.id]||0):list.length; return '<button class="ep-qdom" data-qd="'+d.id+'" style="border:1px solid '+(_qdom===d.id?'#0f172a':'#e5e7eb')+';background:'+(_qdom===d.id?'#0f172a':'#fff')+';color:'+(_qdom===d.id?'#fff':'#334155')+';border-radius:20px;padding:5px 12px;font-size:12px;cursor:pointer">'+(d.icon?d.icon+' ':'')+_qEsc(d.label)+(c?' <b>'+c+'</b>':'')+'</button>'; }).join('')+'</div>';
+      if(_qdom) list=list.filter(function(r){return r.domain===_qdom;});
       if(tab==='todo' && (me.group==='admin'||me.group==='direction')) content+='<p class="prm-p" style="margin-bottom:10px;font-size:12px;color:#64748b">Vue manager : vous voyez toutes les requêtes ouvertes.</p>';
       content+= list.length? '<div style="display:flex;flex-direction:column;gap:8px">'+list.map(_qCardHtml).join('')+'</div>' : '<div style="padding:40px;text-align:center;color:#94a3b8">'+empty+'</div>';
     }
     body.innerHTML=bar+content;
+    body.querySelectorAll('.ep-qdom').forEach(function(b){ b.onclick=function(){ window.__qDom=b.getAttribute('data-qd'); _qRender(); }; });
     body.querySelectorAll('.ep-qtab').forEach(function(b){ b.onclick=function(){ window.__qTab=b.getAttribute('data-qtab'); _qRender(); }; });
     var nb=body.querySelector('#ep-qnew'); if(nb) nb.onclick=_qNewModal;
     body.querySelectorAll('.ep-qcard').forEach(function(c){ c.onclick=function(){ _qDetail(c.getAttribute('data-qid')); }; });
