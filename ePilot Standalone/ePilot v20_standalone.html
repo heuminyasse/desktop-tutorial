@@ -4626,8 +4626,14 @@ document.addEventListener('DOMContentLoaded', async function() {
   function wrapShowView(){
     if(!window.HubViews || typeof window.HubViews.showView!=='function' || window.HubViews.__uniWrapped) return;
     var orig=window.HubViews.showView;
-    window.HubViews.showView=function(name,opts){ var r=orig.apply(this,arguments); try{ var sec=ensureView(); if(sec) sec.classList.toggle('active', name==='university'); }catch(e){} return r; };
+    /* masque la vue dès qu'on navigue ailleurs — AVANT orig, donc insensible à une erreur de la chaîne */
+    window.HubViews.showView=function(name,opts){ try{ if(name!=='university'){ var s=document.getElementById('view-university'); if(s) s.classList.remove('active'); } }catch(e){} return orig.apply(this,arguments); };
     window.HubViews.__uniWrapped=true;
+  }
+  function showUni(){
+    ensureView();
+    Array.prototype.forEach.call(document.querySelectorAll('.hub-view'),function(v){ v.classList.remove('active'); });
+    var s=document.getElementById('view-university'); if(s) s.classList.add('active');
   }
   function injectBtn(){
     var sub=document.getElementById('subnav'); if(!sub) return;
@@ -4639,12 +4645,12 @@ document.addEventListener('DOMContentLoaded', async function() {
     b.addEventListener('click', function(){
       Array.prototype.forEach.call(sub.querySelectorAll('.item'), function(x){ x.classList.remove('active'); });
       b.classList.add('active');
-      if(window.HubViews&&window.HubViews.showView) window.HubViews.showView('university');
-      else { ensureView(); Array.prototype.forEach.call(document.querySelectorAll('.hub-view'),function(v){v.classList.remove('active');}); var s=document.getElementById('view-university'); if(s) s.classList.add('active'); }
+      showUni(); /* affichage direct (ne dépend pas de la chaîne showView) */
     });
     ref.parentNode.insertBefore(b, ref.nextSibling);
   }
-  function hook(){ ensureView(); wrapShowView(); injectBtn(); }
+  function wireNav(){ var nl=document.getElementById('navlinks'); if(!nl||nl.__uniNav) return; nl.__uniNav=true; nl.addEventListener('click', function(){ setTimeout(injectBtn,50); setTimeout(injectBtn,220); setTimeout(injectBtn,500); }); }
+  function hook(){ ensureView(); wrapShowView(); injectBtn(); wireNav(); }
   if(window.__epOnBodyMut){ window.__epOnBodyMut(hook); }
   var tries=0; (function poll(){ try{ hook(); }catch(e){} if(++tries<60) setTimeout(poll, 700); })();
 })();
@@ -4848,8 +4854,13 @@ document.addEventListener('DOMContentLoaded', async function() {
   function wrapShowView(){
     if(!window.HubViews || typeof window.HubViews.showView!=='function' || window.HubViews.__exWrapped) return;
     var orig=window.HubViews.showView;
-    window.HubViews.showView=function(name,opts){ var r=orig.apply(this,arguments); try{ var sec=ensureView(); if(sec){ sec.classList.toggle('active', name==='exercices'); if(name==='exercices') render($('#ex-root',sec)); } }catch(e){} return r; };
+    window.HubViews.showView=function(name,opts){ try{ if(name!=='exercices'){ var s=document.getElementById('view-exercices'); if(s) s.classList.remove('active'); } }catch(e){} return orig.apply(this,arguments); };
     window.HubViews.__exWrapped=true;
+  }
+  function showEx(){
+    var sec=ensureView();
+    Array.prototype.forEach.call(document.querySelectorAll('.hub-view'),function(v){ v.classList.remove('active'); });
+    if(sec){ sec.classList.add('active'); render($('#ex-root',sec)); }
   }
   function injectBtn(){
     var sub=document.getElementById('subnav'); if(!sub) return;
@@ -4862,12 +4873,12 @@ document.addEventListener('DOMContentLoaded', async function() {
     b.addEventListener('click', function(){
       Array.prototype.forEach.call(sub.querySelectorAll('.item'), function(x){ x.classList.remove('active'); });
       b.classList.add('active');
-      if(window.HubViews&&window.HubViews.showView) window.HubViews.showView('exercices');
-      else { ensureView(); Array.prototype.forEach.call(document.querySelectorAll('.hub-view'),function(v){v.classList.remove('active');}); var s=document.getElementById('view-exercices'); if(s) s.classList.add('active'); }
+      showEx(); /* affichage direct */
     });
     ref.parentNode.insertBefore(b, ref.nextSibling);
   }
-  function hook(){ ensureView(); wrapShowView(); injectBtn(); }
+  function wireNav(){ var nl=document.getElementById('navlinks'); if(!nl||nl.__exNav) return; nl.__exNav=true; nl.addEventListener('click', function(){ setTimeout(injectBtn,60); setTimeout(injectBtn,230); setTimeout(injectBtn,520); }); }
+  function hook(){ ensureView(); wrapShowView(); injectBtn(); wireNav(); }
   if(window.__epOnBodyMut){ window.__epOnBodyMut(hook); }
   var tries=0; (function poll(){ try{ hook(); }catch(e){} if(++tries<60) setTimeout(poll, 700); })();
 })();
