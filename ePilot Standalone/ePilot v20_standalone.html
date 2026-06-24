@@ -4383,5 +4383,215 @@ document.addEventListener('DOMContentLoaded', async function() {
   if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', init); else init();
 })();
 </script>
+<script id="__UNIVERSITY_v1__">
+/* __UNIVERSITY_v1__ — Phase 1 : onglet « University » dans la page Compétences.
+   Configure les paliers/sujets (groupe, qualification, note de passage, durée de vie,
+   affectations) + certifications, puis PROJETTE les paliers vers epilot_pde_paliers_v1
+   (forme attendue par PDE) → PDE les exploite au rechargement.
+   Store riche : epilot_university_v1. Migration initiale depuis epilot_pde_paliers_v1.
+   IMPORTANT : les id de sujets existants sont préservés (PDE suit la progression par id). */
+(function(){
+  if(window.__university) return; window.__university=1;
+  var UNI='epilot_university_v1', PDEPAL='epilot_pde_paliers_v1';
+  function loadUni(){ try{ var o=JSON.parse(localStorage.getItem(UNI)); if(o&&typeof o==='object') return o; }catch(e){} return null; }
+  function saveUni(o){ try{ localStorage.setItem(UNI, JSON.stringify(o)); }catch(e){} }
+  function lsArr(k){ try{ var a=JSON.parse(localStorage.getItem(k)); return Array.isArray(a)?a:[]; }catch(e){ return []; } }
+  function uid(){ return 'u'+Date.now().toString(36)+Math.random().toString(36).slice(2,7); }
+  function esc(s){ return String(s==null?'':s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];}); }
+  function num(v,d){ var n=parseFloat(v); return isNaN(n)?(d||0):n; }
+  function $(s,r){ return (r||document).querySelector(s); }
+
+  /* ---------- employés / fonctions (pour les affectations) ---------- */
+  function employees(){ return (window.PERSONNEL_DATA||[]).filter(function(p){return p&&(p.matricule||p.nom);}).map(function(p){
+    return { mat:String(p.matricule||'').trim(), nom:((p.prenoms||'')+' '+(p.nom||'')).trim()||String(p.matricule||''), fonction:(p.fonction||'').trim() }; }); }
+  function fonctions(){ var set={}; employees().forEach(function(e){ if(e.fonction) set[e.fonction]=1; }); return Object.keys(set).sort(); }
+
+  /* ---------- modèle ---------- */
+  function blankSujet(){ return {id:uid(), role:'', item:'', notePassage:0}; }
+  function blankPalier(n){ return {niveau:n||1, palier:'', groupe:'', qualification:'', notePassage:3.5, dureeVieMois:0, sujets:[], affectations:{matricules:[],fonctions:[]}}; }
+  function blankCertif(){ return {id:uid(), nom:'', categorie:'', dureeVieMois:12, notePassage:0, affectations:{matricules:[],fonctions:[]}}; }
+
+  /* migration : depuis epilot_pde_paliers_v1 (forme PDE) → forme University */
+  function seed(){
+    var pal=lsArr(PDEPAL);
+    var paliers=pal.map(function(p){ return {
+      niveau:p.niveau, palier:p.palier||'', groupe:'', qualification:'', notePassage:num(p.notePassage,3.5), dureeVieMois:0,
+      sujets:(p.competences||[]).map(function(c){ return {id:c.id||uid(), role:c.role||'', item:c.item||'', notePassage:0}; }),
+      affectations:{matricules:[],fonctions:[]} }; });
+    return { paliers:paliers, certifications:[] };
+  }
+  function getData(){ var d=loadUni(); if(!d){ d=seed(); saveUni(d); } if(!Array.isArray(d.paliers)) d.paliers=[]; if(!Array.isArray(d.certifications)) d.certifications=[]; return d; }
+
+  /* projection vers PDE (préserve les id de sujets) */
+  function projectToPDE(d){
+    var out=(d.paliers||[]).map(function(p){ return {
+      niveau:num(p.niveau,0), palier:p.palier||'', notePassage:num(p.notePassage,3.5),
+      competences:(p.sujets||[]).map(function(s){ return {id:s.id||uid(), role:s.role||'', item:s.item||''}; }) }; });
+    try{ localStorage.setItem(PDEPAL, JSON.stringify(out)); }catch(e){}
+  }
+
+  /* ---------- collecte depuis le DOM ---------- */
+  function collectMulti(sel){ if(!sel) return []; return Array.prototype.filter.call(sel.options,function(o){return o.selected;}).map(function(o){return o.value;}); }
+  function collect(pane){
+    var d={paliers:[], certifications:[]};
+    Array.prototype.forEach.call(pane.querySelectorAll('[data-palier]'), function(pc){
+      var p=blankPalier();
+      p.niveau=num($('[data-f="niveau"]',pc).value,1);
+      p.palier=$('[data-f="palier"]',pc).value.trim();
+      p.groupe=$('[data-f="groupe"]',pc).value.trim();
+      p.qualification=$('[data-f="qualification"]',pc).value.trim();
+      p.notePassage=num($('[data-f="notePassage"]',pc).value,3.5);
+      p.dureeVieMois=num($('[data-f="dureeVieMois"]',pc).value,0);
+      p.sujets=Array.prototype.map.call(pc.querySelectorAll('[data-sujet]'), function(sr){
+        return { id:sr.getAttribute('data-id')||uid(), role:$('[data-sf="role"]',sr).value.trim(), item:$('[data-sf="item"]',sr).value.trim(), notePassage:num($('[data-sf="np"]',sr).value,0) };
+      }).filter(function(s){ return s.item; });
+      p.affectations={ matricules:collectMulti($('[data-af="mat"]',pc)), fonctions:collectMulti($('[data-af="fct"]',pc)) };
+      d.paliers.push(p);
+    });
+    Array.prototype.forEach.call(pane.querySelectorAll('[data-certif]'), function(cc){
+      d.certifications.push({ id:cc.getAttribute('data-id')||uid(),
+        nom:$('[data-cf="nom"]',cc).value.trim(), categorie:$('[data-cf="cat"]',cc).value.trim(),
+        dureeVieMois:num($('[data-cf="duree"]',cc).value,12), notePassage:num($('[data-cf="np"]',cc).value,0),
+        affectations:{ matricules:collectMulti($('[data-af="mat"]',cc)), fonctions:collectMulti($('[data-af="fct"]',cc)) } });
+    });
+    return d;
+  }
+
+  /* ---------- rendu ---------- */
+  function optsEmp(sel){ var s=sel||[]; return employees().map(function(e){ return '<option value="'+esc(e.mat)+'"'+(s.indexOf(e.mat)>=0?' selected':'')+'>'+esc(e.nom)+(e.mat?' ('+esc(e.mat)+')':'')+'</option>'; }).join(''); }
+  function optsFct(sel){ var s=sel||[]; return fonctions().map(function(f){ return '<option value="'+esc(f)+'"'+(s.indexOf(f)>=0?' selected':'')+'>'+esc(f)+'</option>'; }).join(''); }
+  function affBlock(aff){ aff=aff||{}; return '<div class="uni-aff">'+
+      '<div><label>Employés affectés</label><select multiple size="4" data-af="mat">'+optsEmp(aff.matricules)+'</select></div>'+
+      '<div><label>Fonctions affectées</label><select multiple size="4" data-af="fct">'+optsFct(aff.fonctions)+'</select></div>'+
+    '</div>'; }
+  function sujetRow(s){ s=s||blankSujet(); return '<div class="uni-suj" data-sujet data-id="'+esc(s.id)+'">'+
+      '<input class="uni-in" data-sf="role" placeholder="Rôle / catégorie" value="'+esc(s.role)+'" style="flex:0 0 130px">'+
+      '<input class="uni-in" data-sf="item" placeholder="Sujet / compétence" value="'+esc(s.item)+'">'+
+      '<input class="uni-in" data-sf="np" type="number" step="0.1" placeholder="Note" value="'+(s.notePassage||'')+'" style="flex:0 0 70px" title="Note de passage du sujet">'+
+      '<button class="uni-del" data-del="sujet" title="Supprimer">×</button></div>'; }
+  function palierCard(p){ p=p||blankPalier();
+    return '<div class="uni-card" data-palier>'+
+      '<div class="uni-row">'+
+        '<div class="uni-fld" style="flex:0 0 70px"><label>Niveau</label><input class="uni-in" data-f="niveau" type="number" value="'+esc(p.niveau)+'"></div>'+
+        '<div class="uni-fld"><label>Palier</label><input class="uni-in" data-f="palier" value="'+esc(p.palier)+'" placeholder="Les basiques, Stage A…"></div>'+
+        '<button class="uni-del big" data-del="palier" title="Supprimer le palier">🗑</button>'+
+      '</div>'+
+      '<div class="uni-row">'+
+        '<div class="uni-fld"><label>Groupe</label><input class="uni-in" data-f="groupe" value="'+esc(p.groupe)+'" placeholder="Sécurité, Technique…"></div>'+
+        '<div class="uni-fld"><label>Qualification</label><input class="uni-in" data-f="qualification" value="'+esc(p.qualification)+'" placeholder="Opérateur, Référent…"></div>'+
+        '<div class="uni-fld" style="flex:0 0 120px"><label>Note passage</label><input class="uni-in" data-f="notePassage" type="number" step="0.1" value="'+esc(p.notePassage)+'"></div>'+
+        '<div class="uni-fld" style="flex:0 0 130px"><label>Durée de vie (mois)</label><input class="uni-in" data-f="dureeVieMois" type="number" value="'+esc(p.dureeVieMois)+'" placeholder="0 = illimité"></div>'+
+      '</div>'+
+      '<div class="uni-sub"><div class="uni-sub-h">Sujets / compétences du palier</div><div data-sujets>'+(p.sujets||[]).map(sujetRow).join('')+'</div>'+
+        '<button class="uni-add" data-add="sujet">+ Ajouter un sujet</button></div>'+
+      affBlock(p.affectations)+
+    '</div>'; }
+  function certifCard(c){ c=c||blankCertif();
+    return '<div class="uni-card" data-certif data-id="'+esc(c.id)+'">'+
+      '<div class="uni-row">'+
+        '<div class="uni-fld"><label>Certification / habilitation</label><input class="uni-in" data-cf="nom" value="'+esc(c.nom)+'" placeholder="Travail en hauteur, Électricité BT…"></div>'+
+        '<div class="uni-fld"><label>Catégorie</label><input class="uni-in" data-cf="cat" value="'+esc(c.categorie)+'" placeholder="HSE, Technique…"></div>'+
+        '<button class="uni-del big" data-del="certif" title="Supprimer">🗑</button>'+
+      '</div>'+
+      '<div class="uni-row">'+
+        '<div class="uni-fld" style="flex:0 0 140px"><label>Durée de vie (mois)</label><input class="uni-in" data-cf="duree" type="number" value="'+esc(c.dureeVieMois)+'"></div>'+
+        '<div class="uni-fld" style="flex:0 0 120px"><label>Note passage</label><input class="uni-in" data-cf="np" type="number" step="0.1" value="'+esc(c.notePassage)+'"></div>'+
+      '</div>'+
+      affBlock(c.affectations)+
+    '</div>'; }
+  function render(pane, d){
+    pane.innerHTML=
+      '<div class="uni-bar"><button class="uni-btn p" data-act="save">💾 Enregistrer & relier à PDE</button>'+
+        '<span class="uni-hint">Les paliers configurés ici sont exploités par PDE (au rechargement de la page).</span></div>'+
+      '<div class="uni-sec"><div class="uni-sec-h">📚 Paliers & sujets</div><div id="uni-paliers">'+(d.paliers||[]).map(palierCard).join('')+'</div>'+
+        '<button class="uni-add big" data-add="palier">+ Ajouter un palier</button></div>'+
+      '<div class="uni-sec"><div class="uni-sec-h">🎖 Certifications & habilitations</div><div id="uni-certifs">'+(d.certifications||[]).map(certifCard).join('')+'</div>'+
+        '<button class="uni-add big" data-add="certif">+ Ajouter une certification</button></div>';
+  }
+
+  /* ---------- CSS ---------- */
+  function css(){ if($('#uni-css')) return; var s=document.createElement('style'); s.id='uni-css'; s.textContent=[
+    '.uni-tabs{display:flex;gap:4px;padding:8px 20px 0;border-bottom:1px solid #e5e7eb}',
+    '.uni-tabs button{border:0;background:transparent;padding:8px 16px;font-size:13px;font-weight:700;color:#64748b;cursor:pointer;border-bottom:2px solid transparent}',
+    '.uni-tabs button.on{color:#0f766e;border-bottom-color:#0f766e}',
+    '.uni-pane{padding:16px 20px}',
+    '.uni-bar{display:flex;align-items:center;gap:12px;margin-bottom:14px;flex-wrap:wrap}',
+    '.uni-btn{border:0;border-radius:8px;padding:9px 16px;font-weight:700;cursor:pointer;font-size:13px}',
+    '.uni-btn.p{background:#0f766e;color:#fff}',
+    '.uni-hint{font-size:12px;color:#6b7280}',
+    '.uni-sec{margin-bottom:22px}',
+    '.uni-sec-h{font-size:13px;font-weight:800;color:#0f766e;text-transform:uppercase;letter-spacing:.04em;margin-bottom:10px}',
+    '.uni-card{border:1px solid #e5e7eb;border-radius:10px;padding:12px;margin-bottom:12px;background:#fff}',
+    '.uni-row{display:flex;gap:10px;align-items:flex-end;margin-bottom:10px;flex-wrap:wrap}',
+    '.uni-fld{flex:1;min-width:120px;display:flex;flex-direction:column}',
+    '.uni-fld label{font-size:11px;color:#64748b;margin-bottom:3px}',
+    '.uni-in{padding:7px 9px;border:1px solid #d1d5db;border-radius:6px;font-size:13px;width:100%}',
+    '.uni-sub{border-top:1px dashed #e5e7eb;padding-top:10px;margin-top:4px}',
+    '.uni-sub-h{font-size:11px;font-weight:700;color:#475569;text-transform:uppercase;margin-bottom:6px}',
+    '.uni-suj{display:flex;gap:6px;align-items:center;margin-bottom:6px}',
+    '.uni-aff{display:flex;gap:14px;margin-top:10px;border-top:1px dashed #e5e7eb;padding-top:10px;flex-wrap:wrap}',
+    '.uni-aff>div{flex:1;min-width:180px;display:flex;flex-direction:column}',
+    '.uni-aff label{font-size:11px;color:#64748b;margin-bottom:3px}',
+    '.uni-aff select{border:1px solid #d1d5db;border-radius:6px;font-size:12px;padding:4px}',
+    '.uni-add{border:1px dashed #0f766e;background:#fff;color:#0f766e;border-radius:6px;padding:6px 12px;font-weight:700;cursor:pointer;font-size:12px}',
+    '.uni-add.big{margin-top:4px}',
+    '.uni-del{border:0;background:#fee2e2;color:#b91c1c;border-radius:5px;width:24px;height:24px;cursor:pointer;font-weight:700;flex:0 0 24px}',
+    '.uni-del.big{width:34px;height:34px;font-size:15px;align-self:center}'
+  ].join('\n'); document.head.appendChild(s); }
+
+  /* ---------- montage : onglets dans la page Compétences ---------- */
+  function build(view){
+    if(view.getAttribute('data-uni')) return; view.setAttribute('data-uni','1');
+    css();
+    var head=view.querySelector('.view-head');
+    var actions=view.querySelector('.actions');
+    var panel=view.querySelector('.dt-panel');
+    /* barre d'onglets */
+    var tabs=document.createElement('div'); tabs.className='uni-tabs';
+    tabs.innerHTML='<button class="on" data-tab="cat">Catalogue</button><button data-tab="uni">University</button>';
+    /* panneau Catalogue = contenu existant regroupé */
+    var catPane=document.createElement('div'); catPane.id='uni-cat-pane';
+    var uniPane=document.createElement('div'); uniPane.className='uni-pane'; uniPane.id='uni-pane'; uniPane.style.display='none';
+    /* insère la barre après le head ; déplace actions+panel dans catPane */
+    if(head && head.parentNode){ head.parentNode.insertBefore(tabs, head.nextSibling); }
+    else { view.insertBefore(tabs, view.firstChild); }
+    tabs.parentNode.insertBefore(catPane, tabs.nextSibling);
+    catPane.parentNode.insertBefore(uniPane, catPane.nextSibling);
+    if(actions) catPane.appendChild(actions);
+    if(panel) catPane.appendChild(panel);
+    /* contenu University */
+    render(uniPane, getData());
+    /* onglets */
+    tabs.addEventListener('click', function(e){ var b=e.target.closest('[data-tab]'); if(!b) return;
+      Array.prototype.forEach.call(tabs.children,function(x){x.classList.remove('on');}); b.classList.add('on');
+      var u=(b.getAttribute('data-tab')==='uni');
+      uniPane.style.display=u?'':'none'; catPane.style.display=u?'none':'';
+    });
+    /* actions University (délégation) */
+    uniPane.addEventListener('click', function(e){ var t=e.target; if(!t) return;
+      var add=t.getAttribute&&t.getAttribute('data-add');
+      if(add==='sujet'){ e.preventDefault(); var holder=t.parentNode.querySelector('[data-sujets]'); if(holder){ holder.insertAdjacentHTML('beforeend', sujetRow(blankSujet())); } return; }
+      if(add==='palier'){ e.preventDefault(); var n=$('#uni-paliers',uniPane).querySelectorAll('[data-palier]').length+1; $('#uni-paliers',uniPane).insertAdjacentHTML('beforeend', palierCard(blankPalier(n))); return; }
+      if(add==='certif'){ e.preventDefault(); $('#uni-certifs',uniPane).insertAdjacentHTML('beforeend', certifCard(blankCertif())); return; }
+      var del=t.getAttribute&&t.getAttribute('data-del');
+      if(del==='sujet'){ e.preventDefault(); var sr=t.closest('[data-sujet]'); if(sr) sr.parentNode.removeChild(sr); return; }
+      if(del==='palier'){ e.preventDefault(); var pc=t.closest('[data-palier]'); if(pc&&confirm('Supprimer ce palier ?')) pc.parentNode.removeChild(pc); return; }
+      if(del==='certif'){ e.preventDefault(); var cc=t.closest('[data-certif]'); if(cc&&confirm('Supprimer cette certification ?')) cc.parentNode.removeChild(cc); return; }
+      if(t.getAttribute&&t.getAttribute('data-act')==='save'){ e.preventDefault();
+        var d=collect(uniPane); saveUni(d); projectToPDE(d);
+        t.textContent='✓ Enregistré'; setTimeout(function(){ t.textContent='💾 Enregistrer & relier à PDE'; }, 1500);
+        return;
+      }
+    });
+  }
+  function hook(){
+    var v=document.getElementById('view-competences');
+    if(v) build(v);
+  }
+  /* la vue peut être (re)créée par l'app : on observe le DOM via le dispatcher partagé si présent, sinon polling léger */
+  if(window.__epOnBodyMut){ window.__epOnBodyMut(hook); }
+  var tries=0; (function poll(){ hook(); if(++tries<40) setTimeout(poll, 700); })();
+})();
+</script>
 </body>
 </html>
