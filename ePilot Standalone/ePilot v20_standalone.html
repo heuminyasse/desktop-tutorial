@@ -238,7 +238,6 @@ document.addEventListener('DOMContentLoaded', async function() {
         });
         /* Ré-invalide le cache EpilotConnector pour que buildData recharche */
         try{if(window.EpilotConnector&&window.EpilotConnector._clearCache)window.EpilotConnector._clearCache();}catch(_){}
-        try{}catch(_){}
         /* Les scripts du template peuvent ajouter des enregistrements APRÈS
            la résolution de la promesse (via SOURCING_DATA.unshift etc.).
            On refiltre à nouveau 600 ms plus tard pour ne garder que PI25+PI26. */
@@ -254,7 +253,6 @@ document.addEventListener('DOMContentLoaded', async function() {
           /* Réindexe sourcing */
           window._sourcingIdx={};
           (window.SOURCING_DATA||[]).forEach(function(r){var i=r.Imputation;if(!i)return;window._sourcingIdx[i]=window._sourcingIdx[i]||[];window._sourcingIdx[i].push(r);});
-          try{}catch(_){}
         }, 600);
       }).catch(function(e){console.error('[DataOverride v1]',e);});
     })();
@@ -641,7 +639,6 @@ document.addEventListener('DOMContentLoaded', async function() {
       }
       new MutationObserver(go).observe(document.body,{childList:true,subtree:true});
       var t2=0;(function p(){ go(); if(t2++>200)return; setTimeout(p,150); })();
-      try{}catch(_){}
     })();
 
     /* ─────────────────────────────────────────────────────────────
@@ -739,7 +736,6 @@ document.addEventListener('DOMContentLoaded', async function() {
               if(n>0){total+=n;return dbPut(db,imp,stt);}
             });
           })).then(function(){
-            try{}catch(_){}
             /* Rafraîchit la vue Achats si elle est déjà ouverte */
             try{if(typeof window.__refreshAchats==='function'&&document.getElementById('view-achats')&&document.getElementById('view-achats').classList.contains('active'))window.__refreshAchats();}catch(_){}
           }).catch(function(e){console.error('[AutoImportSourcing v1]',e);});
@@ -756,7 +752,6 @@ document.addEventListener('DOMContentLoaded', async function() {
           setTimeout(poll,STEP);
         })();
       },900);
-      try{}catch(_){}
     })();
 
     /* [NormalizeCodeA v1] Migre les anciennes lignes où codeA = repère (M…) :
@@ -1204,9 +1199,6 @@ document.addEventListener('DOMContentLoaded', async function() {
       function cpoApply(force){var btn=document.getElementById('btn-new-po');if(!btn)return;var cc=document.getElementById('comp-content');if(!cc)return;var header=btn;while(header&&header.parentElement!==cc)header=header.parentElement;if(!header)return;var area=header.nextElementSibling;if(!area)return;if(!force&&area.querySelector('#cpo-panel'))return;getAll().then(function(recs){_cpoList=cpoList(recs);try{var cnt=header.querySelector('*');[].forEach.call(header.querySelectorAll('*'),function(el){var own=[].filter.call(el.childNodes,function(n){return n.nodeType===3;}).map(function(n){return n.textContent.trim();}).join('');if(/^\d+\s*PO$/.test(own))el.textContent=_cpoList.length+' PO';});}catch(e){}area.innerHTML='<div id="cpo-panel"><div style="margin-bottom:12px"><input id="cpo-q" placeholder="🔍 Rechercher (n° PO, chantier, fournisseur…)" style="width:100%;max-width:340px;padding:8px 12px;border:1px solid #ddd;border-radius:8px;font-size:13px;outline:none;box-sizing:border-box"></div><div id="cpo-body"></div></div>';var q=document.getElementById('cpo-q');q.oninput=function(){cpoRenderBody(q.value);};cpoRenderBody('');});}
       try{new MutationObserver(function(){cpoApply(false);}).observe(document.body,{childList:true,subtree:true});}catch(_){}
       var cpt=0;(function cpp(){cpoApply(false);if(cpt++>200)return;setTimeout(cpp,400);})();
-      try{}catch(_){}
-      try{}catch(_){}
-      try{}catch(_){}
     })();
 
     /* [RenameHSE v1] « HSE & PDE » → « Compétences » (libellé app principale) */
@@ -1221,7 +1213,6 @@ document.addEventListener('DOMContentLoaded', async function() {
       }
       new MutationObserver(go).observe(document.body,{childList:true,subtree:true,characterData:true});
       var t=0;(function p(){go();if(t++>200)return;setTimeout(p,300);})();
-      try{}catch(_){}
     })();
 
     /* [FilterChantiers v1] Liste Chantiers : 2026 + chantiers 2025 non terminés */
@@ -1244,7 +1235,6 @@ document.addEventListener('DOMContentLoaded', async function() {
       }
       new MutationObserver(go).observe(document.body,{childList:true,subtree:true});
       var t=0;(function p(){go();if(t++>300)return;setTimeout(p,500);})();
-      try{}catch(_){}
     })();
 
     /* [ClickablePI v1] N° chantier cliquables (Dépenses, Quote, Liste…) sans changement visuel */
@@ -1269,7 +1259,6 @@ document.addEventListener('DOMContentLoaded', async function() {
       var pend=null;function sched(){if(pend)return;pend=setTimeout(function(){pend=null;go();},300);}
       new MutationObserver(sched).observe(document.body,{childList:true,subtree:true});
       var t=0;(function p(){go();if(t++>300)return;setTimeout(p,700);})();
-      try{}catch(_){}
     })();
 
     /* ─────────────────────────────────────────────────────────────
@@ -1461,7 +1450,6 @@ document.addEventListener('DOMContentLoaded', async function() {
         e.preventDefault(); e.stopImmediatePropagation();          /* bloque la navigation ClickablePI */
         openChantierPage(ref);                                     /* ouvre la PAGE chantier (comme Chantiers) */
       }, true); /* capture : passe avant les handlers bubble */
-      try{}catch(_){}
     })();
   } catch (err) {
     setStatus('Erreur de décompression : ' + err.message);
