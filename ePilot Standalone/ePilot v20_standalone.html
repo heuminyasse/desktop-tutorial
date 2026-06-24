@@ -3428,21 +3428,35 @@ document.addEventListener('DOMContentLoaded', async function() {
     var personnel = window.PERSONNEL_DATA || [];
     var actifs = personnel.filter(function (p) { var s = low(p.statut); return s.indexOf('empl') >= 0 && s.indexOf('arret') < 0 && s.indexOf('demis') < 0; });
 
-    /* 1 — Note moyenne du personnel (sur 10 → ×10) */
-    var pde = lsArr('epilot_pde_v1');
-    var byEmp = {};
-    pde.forEach(function (rec) {
-      var id = rec.employeeId || rec.id || rec.matricule; if (!id) return;
-      var key = id + '|' + (rec.period || rec.periode || '');
-      if (!byEmp[key] || (rec.updatedAt || 0) > (byEmp[key].updatedAt || 0)) byEmp[key] = rec;
+    /* 1 — Note moyenne du personnel (PDE v5 : global = moy(Performance, Engagement), /5 → ×20)
+       Structure réelle : store[empId].evaluations["AAAA-Tn"].items[{categorie,note}] */
+    var store = {};
+    try { store = JSON.parse(localStorage.getItem('epilot_pde_v1')) || {}; } catch (e) { store = {}; }
+    var globals = [];          /* notes globales /5 de l'année courante */
+    var nbEvalues = 0;
+    Object.keys(store).forEach(function (empId) {
+      var rec = store[empId] || {};
+      var evs = rec.evaluations || {};
+      /* dernière évaluation publiée de l'année courante pour cet employé */
+      var best = null;
+      Object.keys(evs).forEach(function (k) {
+        var ev = evs[k];
+        if (!ev || !ev.items) return;
+        if (String(ev.year) !== YEAR) return;             /* année courante uniquement */
+        if (!best || (ev.quarter || 0) > (best.quarter || 0)) best = ev;
+      });
+      if (!best) return;
+      /* Moyenne Performance + Engagement (cœur de la note globale) */
+      var core = best.items.filter(function (it) {
+        return (it.categorie === 'Performance' || it.categorie === 'Engagement') && typeof it.note === 'number';
+      });
+      if (!core.length) return;
+      var g = core.reduce(function (s, it) { return s + it.note; }, 0) / core.length;
+      globals.push(g);
+      nbEvalues++;
     });
-    var recs = Object.keys(byEmp).map(function (k) { return byEmp[k]; });
-    var avecNote = recs.filter(function (r) { var v = r.globalScore != null ? r.globalScore : (r.noteGlobale != null ? r.noteGlobale : (r.score != null ? r.score : r.note)); return v != null && !isNaN(Number(v)); });
-    var n1 = null;
-    if (avecNote.length > 0) {
-      var sum = avecNote.reduce(function (s, r) { var v = r.globalScore != null ? r.globalScore : (r.noteGlobale != null ? r.noteGlobale : (r.score != null ? r.score : r.note)); return s + Number(v); }, 0);
-      n1 = Math.round(sum / avecNote.length * 10);  /* note /10 → /100 */
-    }
+    /* note /100 = moyenne des globales /5 × 20 ; null si aucune évaluation */
+    var n1 = globals.length ? Math.round(globals.reduce(function (a, b) { return a + b; }, 0) / globals.length * 20) : null;
 
     /* 2 — Présentations / formations (volume, pas une note de retard) */
     var mkt = null; try { mkt = window.MarketingApp && window.MarketingApp._state && window.MarketingApp._state.data; } catch (e) {}
@@ -3471,7 +3485,7 @@ document.addEventListener('DOMContentLoaded', async function() {
     var n6 = noteRetard(mtgRet, mtgAct26.length);
 
     return [
-      { label: 'Note moyenne personnel ' + YEAR, note: n1, weight: 2, detail: (n1 !== null ? (n1 / 10) + '/10' : '—') + ' · ' + avecNote.length + '/' + actifs.length + ' évalués' },
+      { label: 'Note moyenne personnel ' + YEAR, note: n1, weight: 2, detail: (n1 !== null ? (Math.round(n1 / 20 * 10) / 10) + '/5 · ' + nbEvalues + '/' + actifs.length + ' évalués' : 'Aucune évaluation faite') },
       { label: 'Présentations / formations ' + YEAR, note: null, weight: 0, detail: presentations + ' réalisées', volume: presentations },
       { label: 'Retard projets & stages ' + YEAR, note: n3, weight: 1.5, detail: projRet + '/' + projets.length + ' en retard' },
       { label: 'Retard quêtes ' + YEAR, note: n4, weight: 1, detail: quetesRet + '/' + quetesAct.length + ' en retard' },
@@ -3513,13 +3527,27 @@ document.addEventListener('DOMContentLoaded', async function() {
       var nEmp = Object.keys(empIds).length || congesData.length || 1;
       alloues = 21 * nEmp;  /* 18 j légaux + bonus ≈ 21 j Cameroun */
     }
-    /* Consommation : on VEUT que les congés soient consommés avant fin d'année.
-       Note = taux de consommation (haut = bon, congés écoulés). */
-    var conso = alloues > 0 ? Math.round(pris / alloues * 100) : null;
+    /* Consommation : on VEUT que les congés soient consommés AU RYTHME de l'année
+       pour éviter l'accumulation et la perte en fin d'année.
+       Note = avancement réel / avancement attendu à ce stade de l'année.
+         - rythme attendu = fraction de l'année écoulée
+         - 100 % si on consomme au rythme attendu (ou plus)
+         - < 100 % si on est en retard de consommation (risque d'accumulation) */
+    var tauxConso = alloues > 0 ? (pris / alloues) : null;        /* part réellement consommée */
+    var startYear = new Date(year, 0, 1);
+    var fracAnnee = Math.min(1, Math.max(0.001, (now.getTime() - startYear.getTime()) / (endOfYear.getTime() - startYear.getTime())));
+    var conso = null, consoPct = null;
+    if (tauxConso !== null) {
+      consoPct = Math.round(tauxConso * 100);                     /* % brut consommé (info) */
+      /* note = consommation rapportée au rythme attendu, plafonnée à 100 */
+      conso = Math.min(100, Math.round((tauxConso / fracAnnee) * 100));
+    }
 
     return [
       { label: 'Retard validation congés', note: n1, weight: 1, detail: attRet + '/' + attente.length + ' en attente > 5 j' },
-      { label: 'Consommation congés ' + year, note: conso, weight: 1, detail: pris + ' j pris / ' + alloues + ' j · reste ' + daysLeft + ' j' },
+      { label: 'Rythme consommation congés ' + year, note: conso, weight: 1,
+        detail: pris + '/' + alloues + ' j (' + (consoPct == null ? '—' : consoPct + '%') + ') · attendu ~' + Math.round(fracAnnee * 100) + '% · reste ' + daysLeft + ' j',
+        sub: 'Note = rythme réel vs rythme attendu (évite l\'accumulation en fin d\'année)' },
     ];
   }
 
