@@ -3106,7 +3106,7 @@ document.addEventListener('DOMContentLoaded', async function() {
 
 <script>
 /* ════════════════════════════════════════════════════════════════════
-   HOME KPI DASHBOARD v3 — Notes de groupe sur "Mon Tableau de Bord"
+   HOME KPI DASHBOARD v3.1 — Notes de groupe sur "Mon Tableau de Bord"
    Alimente les badges existants (#items .item[data-key]) avec la note
    moyenne calculée du groupe, et ouvre un popup au clic.
 
@@ -3124,7 +3124,7 @@ document.addEventListener('DOMContentLoaded', async function() {
     try { return JSON.parse(localStorage.getItem(key) || '[]') || []; } catch (e) { return []; }
   }
   function today() { var d = new Date(); d.setHours(0, 0, 0, 0); return d; }
-  var YEAR = String(new Date().getFullYear()); /* "2026" */
+  var YEAR = String(new Date().getFullYear());
   function parseD(v) {
     if (!v) return null;
     var d = new Date(typeof v === 'number' ? v : (String(v).length === 10 ? v + 'T00:00:00' : v));
@@ -3135,26 +3135,48 @@ document.addEventListener('DOMContentLoaded', async function() {
   function daysAgo(v) { var d = parseD(v); return d ? Math.floor((today().getTime() - d.getTime()) / 86400000) : null; }
   function low(s) { return String(s == null ? '' : s).toLowerCase(); }
 
-  /* Trouve dynamiquement le champ date de début dans SOURCING_DATA */
-  function sourcingDateKey() {
-    var S = window.SOURCING_DATA || [];
-    if (!S.length) return '';
-    var keys = Object.keys(S[0]);
-    for (var i = 0; i < keys.length; i++) { if (keys[i].indexOf('de debut') >= 0) return keys[i]; }
-    var fallbacks = ['DateOA', 'DateCommande', 'Date', 'date'];
-    for (var j = 0; j < fallbacks.length; j++) { if (S[0][fallbacks[j]] !== undefined) return fallbacks[j]; }
-    return '';
+  /* Échappe les caractères HTML dangereux dans les chaînes injectées dans innerHTML */
+  function esc(s) {
+    return String(s == null ? '' : s).replace(/[&<>"]/g, function (c) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c];
+    });
   }
 
-  /* Note d'un taux de remplissage / réussite : ratio (0..1) → 0..100 */
+  /* ─── Caches par cycle de render (invalidés à chaque render()) ─── */
+  var _sourcingKey = null;   /* résultat de sourcingDateKey() */
+  var _quetes26 = null;      /* epilot_quests_v1 filtré sur l'année */
+  var _groupCache = {};      /* résultat de computeGroup() par clé */
+
+  /* Trouve dynamiquement le champ date de début dans SOURCING_DATA — résultat mis en cache */
+  function getSourcingKey() {
+    if (_sourcingKey !== null) return _sourcingKey;
+    var S = window.SOURCING_DATA || [];
+    if (!S.length) return (_sourcingKey = '');
+    var keys = Object.keys(S[0]);
+    for (var i = 0; i < keys.length; i++) { if (keys[i].indexOf('de debut') >= 0) return (_sourcingKey = keys[i]); }
+    var fallbacks = ['DateOA', 'DateCommande', 'Date', 'date'];
+    for (var j = 0; j < fallbacks.length; j++) { if (S[0][fallbacks[j]] !== undefined) return (_sourcingKey = fallbacks[j]); }
+    return (_sourcingKey = '');
+  }
+
+  /* Retourne les quêtes de l'année — lecture localStorage une seule fois par render */
+  function getQuetes26() {
+    if (_quetes26 !== null) return _quetes26;
+    _quetes26 = lsArr('epilot_quests_v1').filter(function (r) { return isYear(r.createdAt || r.dateCreation || r.due); });
+    return _quetes26;
+  }
+
+  /* Note d'un taux de remplissage / réussite */
   function noteScore(done, total) { return total > 0 ? Math.round(done / total * 100) : null; }
+
   /* Note d'un retard : 0 retard = 100 % (note maximale), tout en retard = 0 % */
   function noteRetard(retard, total) {
-    if (retard === 0) return 100;            /* zéro retard → note maximale, même si total=0 */
+    if (retard == null) return null;           /* garde null/undefined */
+    if (retard === 0) return 100;              /* zéro retard → note maximale */
     return total > 0 ? Math.round((1 - retard / total) * 100) : null;
   }
 
-  /* Couleur / classe selon la note (plus haut = mieux) */
+  /* Couleur / classe selon la note */
   function noteClass(note) {
     if (note === null || note === undefined) return '';
     if (note >= 80) return 'high';
@@ -3214,14 +3236,18 @@ document.addEventListener('DOMContentLoaded', async function() {
         sub: 'JSA ' + Math.round(rConf * 100) + '% · EPI ' + Math.round(rEpi * 100) + '% · briefing ' + Math.round(rBrief * 100) + '%'
       };
     }
+    /* Repli JSA simple — utilise Status || Statut pour cohérence avec le reste */
     var jip = window.JIP_DATA || [];
-    var actifs = jip.filter(function (r) { return low(r.Status) !== 'terminé' && low(r.Status) !== 'termine' && low(r.Status) !== 'annulé'; });
+    var actifs = jip.filter(function (r) {
+      var s = low(r.Status || r.Statut);
+      return s !== 'terminé' && s !== 'termine' && s !== 'annulé' && s !== 'annule';
+    });
+    if (!actifs.length) return { note: null, detail: 'Aucun chantier actif', sub: '' };
     var jsaReports = lsArr('epilot_jsa_reports');
     var chantiersJSA = {};
     jsaReports.forEach(function (r) { var k = low(r.chantier || r.imputation); if (k) chantiersJSA[k] = 1; });
     var couverts = actifs.filter(function (r) { return chantiersJSA[low(r.Imputation)]; }).length;
-    var note = noteScore(couverts, actifs.length);
-    return { note: note, detail: couverts + '/' + actifs.length + ' chantiers avec JSA', sub: 'Aucun PV détaillé — couverture JSA seule' };
+    return { note: noteScore(couverts, actifs.length), detail: couverts + '/' + actifs.length + ' chantiers avec JSA', sub: 'Aucun PV détaillé — couverture JSA seule' };
   }
 
   /* ══════════════════════════════════════════════════════════════
@@ -3269,9 +3295,10 @@ document.addEventListener('DOMContentLoaded', async function() {
     var depRetard = depSoumises.filter(function (r) { var a = daysAgo(r.date || r.Date || r.dateCreation); return a !== null && a > 7; }).length;
     var n5 = noteRetard(depRetard, depSoumises.length);
 
-    /* 6 — Retard quêtes */
-    var quetes26 = lsArr('epilot_quests_v1').filter(function (r) { return isYear(r.createdAt || r.dateCreation || r.due); });
-    var quetesAct = quetes26.filter(function (r) { var s = low(r.statut); return ['clôturée', 'cloturee', 'rejetée', 'rejetee', 'annulée', 'annulee', 'terminée'].indexOf(s) < 0; });
+    /* 6 — Retard quêtes (cache partagé avec kpiPDE) */
+    var quetes26 = getQuetes26();
+    var STATUTS_CLOS = ['clôturée', 'cloturee', 'rejetée', 'rejetee', 'annulée', 'annulee', 'terminée'];
+    var quetesAct = quetes26.filter(function (r) { return STATUTS_CLOS.indexOf(low(r.statut)) < 0; });
     var quetesRet = quetesAct.filter(function (r) { if (!r.due) return false; var d = parseD(r.due); return d && d < now; }).length;
     var n6 = noteRetard(quetesRet, quetesAct.length);
 
@@ -3305,10 +3332,10 @@ document.addEventListener('DOMContentLoaded', async function() {
     function isOpen(r) { var e = low(r.EtatPI); return e.indexOf('termin') < 0 && e.indexOf('annul') < 0; }
     var ouverts26 = quotes26.filter(isOpen);
 
-    var debKey = sourcingDateKey();
+    var debKey = getSourcingKey();
     var sourcing26 = (window.SOURCING_DATA || []).filter(function (r) { return isYear(debKey ? r[debKey] : null); });
 
-    /* 1 — Taux de réponse */
+    /* 1 — Taux de réponse : EtatPI renseigné ET hors statuts "en cours" */
     var avecRep = quotes26.filter(function (r) {
       var e = low(r.EtatPI);
       return e !== '' && e !== 'en cours' && e !== 'soumis' && e !== 'nouveau' && e !== 'ouvert';
@@ -3355,7 +3382,7 @@ document.addEventListener('DOMContentLoaded', async function() {
   ══════════════════════════════════════════════════════════════ */
   function kpiFourniture() {
     var now = today();
-    var debKey = sourcingDateKey();
+    var debKey = getSourcingKey();
     var sourcing26 = (window.SOURCING_DATA || []).filter(function (r) { return isYear(debKey ? r[debKey] : null); });
 
     function isLivree(r) { var s = low(r.Status || r.Statut); return /livr|termin|clôt|clot|paid/.test(s); }
@@ -3368,12 +3395,13 @@ document.addEventListener('DOMContentLoaded', async function() {
       return null;
     }
 
-    /* 1 — Délai livraison */
-    var avecDate = actives26.filter(dateLivraison);
-    var retard = avecDate.filter(function (r) { var d = dateLivraison(r); return d && d < now; }).length;
+    /* 1 — Délai livraison — date calculée une seule fois par entrée */
+    var pairsActives = actives26.map(function (r) { return { r: r, dl: dateLivraison(r) }; });
+    var avecDate = pairsActives.filter(function (x) { return x.dl; });
+    var retard = avecDate.filter(function (x) { return x.dl < now; }).length;
     var n1 = noteRetard(retard, avecDate.length);
 
-    /* 2 — Remplissage commandes */
+    /* 2 — Remplissage commandes — score calculé une seule fois par entrée */
     var oaDocs = window._oaDocs || {};
     function completude(r) {
       var oa = r.OA || r['N° OA'] || '';
@@ -3387,8 +3415,9 @@ document.addEventListener('DOMContentLoaded', async function() {
       return score / 5;
     }
     var total26 = sourcing26.length;
-    var complet = sourcing26.filter(function (r) { return completude(r) >= 0.8; }).length;
-    var avgCompl = total26 > 0 ? Math.round(sourcing26.reduce(function (s, r) { return s + completude(r); }, 0) / total26 * 100) : null;
+    var scores = sourcing26.map(completude);
+    var complet = scores.filter(function (s) { return s >= 0.8; }).length;
+    var avgCompl = total26 > 0 ? Math.round(scores.reduce(function (a, b) { return a + b; }, 0) / total26 * 100) : null;
 
     return [
       { label: 'Retard délai livraison ' + YEAR, note: n1, weight: 1.5, detail: retard + '/' + avecDate.length + ' en retard' },
@@ -3428,19 +3457,24 @@ document.addEventListener('DOMContentLoaded', async function() {
     });
     var n1 = globals.length ? Math.round(globals.reduce(function (a, b) { return a + b; }, 0) / globals.length * 20) : null;
 
-    /* 2 — Présentations / formations */
+    /* 2 — Présentations / formations (indicateur informatif, non pondéré) */
     var mkt = null; try { mkt = window.MarketingApp && window.MarketingApp._state && window.MarketingApp._state.data; } catch (e) {}
     var meetings = (mkt && mkt.meetings) || [];
     var presentations = meetings.filter(function (m) { var o = low(m.objet || m.type); return /présent|present|formation|séminaire|seminaire/.test(o); }).length;
 
-    /* 3 — Retard projets & stages */
-    var quetes26 = lsArr('epilot_quests_v1').filter(function (r) { return isYear(r.createdAt || r.dateCreation || r.due); });
+    /* 3 — Retard projets & stages (cache partagé avec kpiTravaux) */
+    var quetes26 = getQuetes26();
+    var STATUTS_CLOS = ['clôturée', 'cloturee', 'rejetée', 'rejetee', 'annulée', 'annulee', 'terminée'];
     var projets = quetes26.filter(function (r) { var t = low(r.type || r.titre || r.categorie); return /projet|stage|intern/.test(t); });
-    var projRet = projets.filter(function (r) { if (!r.due) return false; var d = parseD(r.due); var s = low(r.statut); return d && d < now && ['clôturée', 'cloturee', 'rejetée', 'terminée'].indexOf(s) < 0; }).length;
+    var projRet = projets.filter(function (r) {
+      if (!r.due) return false;
+      var d = parseD(r.due);
+      return d && d < now && STATUTS_CLOS.indexOf(low(r.statut)) < 0;
+    }).length;
     var n3 = noteRetard(projRet, projets.length);
 
     /* 4 — Retard quêtes */
-    var quetesAct = quetes26.filter(function (r) { var s = low(r.statut); return ['clôturée', 'cloturee', 'rejetée', 'rejetee', 'annulée', 'annulee', 'terminée'].indexOf(s) < 0; });
+    var quetesAct = quetes26.filter(function (r) { return STATUTS_CLOS.indexOf(low(r.statut)) < 0; });
     var quetesRet = quetesAct.filter(function (r) { if (!r.due) return false; var d = parseD(r.due); return d && d < now; }).length;
     var n4 = noteRetard(quetesRet, quetesAct.length);
 
@@ -3466,11 +3500,9 @@ document.addEventListener('DOMContentLoaded', async function() {
 
   /* ══════════════════════════════════════════════════════════════
      SUIVI CONGÉS — 3 KPI
-       1. Retard validation congés (note inversée)
-       2. Consommation congés = jours consommés / jours acquis cumulés
-          (acquis = cumul des droits de TOUS les employés actifs)
-       3. Taux de remplissage congés = part des employés actifs
-          dont le dossier congés est renseigné (donne une note stable)
+       1. Retard validation (note inversée, statuts explicites seulement)
+       2. Consommation = jours consommés / droits cumulés tous actifs
+       3. Taux de remplissage = part des actifs avec dossier renseigné
   ══════════════════════════════════════════════════════════════ */
   var DROIT_ANNUEL_CONGES = 18;  /* jours/an légal Cameroun (1,5 j/mois) */
 
@@ -3483,17 +3515,20 @@ document.addEventListener('DOMContentLoaded', async function() {
     var congesData = lsArr('epilot_conges_v1').concat(lsArr('epilot_conges')).concat(lsArr('epilot_hr_conges')).concat(lsArr('hbo_conges'));
     var payslips = lsArr('epilot_paie_payslips').filter(function (p) { return String(p.annee) === String(year); });
 
-    /* Employés actifs (source des droits cumulés) */
     var personnel = window.PERSONNEL_DATA || [];
     var actifs = personnel.filter(function (p) { var s = low(p.statut); return s.indexOf('empl') >= 0 && s.indexOf('arret') < 0 && s.indexOf('demis') < 0; });
     var nbActifs = actifs.length;
 
-    /* 1 — Retard validation congés (en attente > 5 j) */
-    var attente = congesData.filter(function (c) { var s = low(c.statut || c.status || c.etat); return s.indexOf('attente') >= 0 || s === 'pending' || s === ''; });
+    /* 1 — Retard validation : statuts "attente"/"pending" explicites uniquement
+       (on exclut s==='' pour ne pas compter les entrées sans statut) */
+    var attente = congesData.filter(function (c) {
+      var s = low(c.statut || c.status || c.etat);
+      return s.indexOf('attente') >= 0 || s === 'pending';
+    });
     var attRet = attente.filter(function (c) { var a = daysAgo(c.dateCreation || c.dateDemande || c.date || c.createdAt); return a !== null && a > 5; }).length;
     var n1 = noteRetard(attRet, attente.length);
 
-    /* Jours pris (consommés) cette année — payslips puis repli congesData */
+    /* Jours pris cette année — payslips puis repli congesData */
     var pris = 0, acquisPaie = 0;
     payslips.forEach(function (p) {
       pris += Number(p.joursConges || p.congesPris || p.joursCongesPris || 0);
@@ -3506,18 +3541,12 @@ document.addEventListener('DOMContentLoaded', async function() {
       });
     }
 
-    /* Droits cumulés par tous les employés actifs.
-       Priorité aux acquis réels de la paie ; sinon estimation
-       = nb actifs × droit annuel légal (18 j). */
+    /* 2 — Droits cumulés tous actifs : paie réelle sinon estimation légale */
     var acquis = acquisPaie > 0 ? acquisPaie : (nbActifs > 0 ? nbActifs * DROIT_ANNUEL_CONGES : 0);
     var sourceAcquis = acquisPaie > 0 ? 'paie' : (nbActifs + ' actifs × ' + DROIT_ANNUEL_CONGES + ' j');
+    var consoPct = acquis > 0 ? Math.min(100, Math.round(pris / acquis * 100)) : null;
 
-    /* 2 — Consommation congés = ratio jours consommés / jours acquis cumulés */
-    var consoPct = null;
-    if (acquis > 0) consoPct = Math.min(100, Math.round(pris / acquis * 100));
-
-    /* 3 — Taux de remplissage congés : employés actifs avec un dossier congés
-       renseigné (au moins une demande OU une ligne de paie congés). */
+    /* 3 — Taux de remplissage : actifs avec dossier congés renseigné */
     var empAvecDossier = {};
     function markEmp(id) { if (id != null && id !== '') empAvecDossier[String(id).toLowerCase()] = 1; }
     congesData.forEach(function (c) { markEmp(c.employeeId || c.matricule || c.empId || c.idEmploye || c.nom); });
@@ -3525,10 +3554,9 @@ document.addEventListener('DOMContentLoaded', async function() {
       if (Number(p.joursConges || p.congesPris || p.joursCongesAcquis || p.congesAcquis || 0) > 0) markEmp(p.employeeId || p.matricule || p.nom);
     });
     function empKey(p) { return String(p.matricule || p.id || p.employeeId || p.nom || '').toLowerCase(); }
-    var renseignes = nbActifs > 0
-      ? actifs.filter(function (p) { return empAvecDossier[empKey(p)]; }).length
-      : Object.keys(empAvecDossier).length;
-    var n3 = nbActifs > 0 ? noteScore(renseignes, nbActifs) : (Object.keys(empAvecDossier).length > 0 ? 100 : null);
+    /* Si PERSONNEL_DATA absent → null (on ne peut pas connaître le taux réel) */
+    var renseignes = nbActifs > 0 ? actifs.filter(function (p) { return empAvecDossier[empKey(p)]; }).length : 0;
+    var n3 = nbActifs > 0 ? noteScore(renseignes, nbActifs) : null;
 
     return [
       { label: 'Retard validation congés', note: n1, weight: 1,
@@ -3555,17 +3583,23 @@ document.addEventListener('DOMContentLoaded', async function() {
   /* ══════════════════════════════════════════════════════════════
      RENDU : badges + popup au clic
   ══════════════════════════════════════════════════════════════ */
+
+  /* Résultat mis en cache le temps du cycle de render courant */
   function computeGroup(key) {
+    if (_groupCache[key]) return _groupCache[key];
     var g = GROUPS[key]; if (!g) return null;
     var kpis;
     try { kpis = g.fn(); } catch (e) { console.warn('[HomeKPI]', key, e); kpis = []; }
-    return { label: g.label, kpis: kpis, note: groupNote(kpis) };
+    return (_groupCache[key] = { label: g.label, kpis: kpis, note: groupNote(kpis) });
   }
 
   /* ── Popup modal ── */
+  var _escHandler = null;
+
   function closeModal() {
     var bd = document.getElementById('hk-modal-backdrop');
     if (bd) bd.remove();
+    if (_escHandler) { document.removeEventListener('keydown', _escHandler); _escHandler = null; }
     Array.prototype.forEach.call(
       document.querySelectorAll('#items .item.hk-active'),
       function (it) { it.classList.remove('hk-active'); }
@@ -3584,18 +3618,18 @@ document.addEventListener('DOMContentLoaded', async function() {
       if (item) item.classList.add('hk-active');
     }
 
-    /* Construit les lignes de KPI */
+    /* Construit les lignes de KPI (labels et détails échappés) */
     var rows = data.kpis.map(function (k) {
       var col = k.note !== null && k.note !== undefined ? noteColor(k.note) : 'var(--muted)';
-      var val = k.note !== null && k.note !== undefined ? (k.note + '%') : (k.volume !== undefined ? k.volume : '—');
+      var val = k.note !== null && k.note !== undefined ? (k.note + '%') : (k.volume !== undefined ? String(k.volume) : '—');
       return [
         '<div class="hk-row">',
         '<div class="hk-row-main">',
-        '<span class="hk-row-label">' + k.label + '</span>',
-        (k.sub ? '<span class="hk-row-sub">' + k.sub + '</span>' : ''),
-        '<span class="hk-row-detail">' + (k.detail || '') + '</span>',
+        '<span class="hk-row-label">' + esc(k.label) + '</span>',
+        (k.sub ? '<span class="hk-row-sub">' + esc(k.sub) + '</span>' : ''),
+        '<span class="hk-row-detail">' + esc(k.detail || '') + '</span>',
         '</div>',
-        '<span class="hk-row-note" style="color:' + col + '">' + val + '</span>',
+        '<span class="hk-row-note" style="color:' + col + '">' + esc(val) + '</span>',
         '</div>',
       ].join('');
     }).join('');
@@ -3606,11 +3640,12 @@ document.addEventListener('DOMContentLoaded', async function() {
       scoreHtml = '<span class="hk-modal-score" style="color:' + noteColor(data.note) + '">' + data.note + '%</span>';
     }
 
+    var titleId = 'hk-modal-title-' + key;
     var html = [
       '<div id="hk-modal-backdrop" class="hk-modal-backdrop">',
-      '<div class="hk-modal" role="dialog">',
+      '<div class="hk-modal" role="dialog" aria-modal="true" aria-labelledby="' + titleId + '">',
       '<div class="hk-modal-head">',
-      '<span class="hk-modal-title">' + data.label + '</span>',
+      '<span class="hk-modal-title" id="' + titleId + '">' + esc(data.label) + '</span>',
       scoreHtml,
       '<button class="hk-modal-close" title="Fermer">✕</button>',
       '</div>',
@@ -3628,6 +3663,9 @@ document.addEventListener('DOMContentLoaded', async function() {
     backdrop.addEventListener('click', function (e) {
       if (e.target === backdrop || e.target.classList.contains('hk-modal-close')) closeModal();
     });
+    /* Fermeture : touche Échap */
+    _escHandler = function (e) { if (e.key === 'Escape') closeModal(); };
+    document.addEventListener('keydown', _escHandler);
   }
 
   function updateBadges() {
@@ -3661,15 +3699,17 @@ document.addEventListener('DOMContentLoaded', async function() {
   }
 
   function render() {
+    /* Invalide les caches à chaque cycle de render */
+    _groupCache = {};
+    _sourcingKey = null;
+    _quetes26 = null;
     return updateBadges();
   }
 
   /* ──────────────── CSS ──────────────── */
   var CSS = [
-    /* Item actif */
     '#items .item.hk-active { outline: 2px solid var(--orange); outline-offset: 2px; }',
 
-    /* Backdrop */
     '.hk-modal-backdrop {',
     '  position: fixed; inset: 0; z-index: 9990;',
     '  background: rgba(0,0,0,.45);',
@@ -3677,7 +3717,6 @@ document.addEventListener('DOMContentLoaded', async function() {
     '  padding: 16px;',
     '}',
 
-    /* Panneau modal */
     '.hk-modal {',
     '  background: var(--bg-2, #1e1e2e);',
     '  border: 1px solid var(--line); border-top: 3px solid var(--orange);',
@@ -3688,7 +3727,6 @@ document.addEventListener('DOMContentLoaded', async function() {
     '}',
     '@keyframes hkPop { from { opacity:0; transform:scale(.93) translateY(6px); } to { opacity:1; transform:none; } }',
 
-    /* En-tête modal */
     '.hk-modal-head {',
     '  display: flex; align-items: center; gap: 8px; margin-bottom: 12px;',
     '}',
@@ -3697,9 +3735,7 @@ document.addEventListener('DOMContentLoaded', async function() {
     '  font-size: 11px; font-weight: 700; letter-spacing: .05em; text-transform: uppercase;',
     '  color: var(--muted);',
     '}',
-    '.hk-modal-score {',
-    '  font-size: 18px; font-weight: 800;',
-    '}',
+    '.hk-modal-score { font-size: 18px; font-weight: 800; }',
     '.hk-modal-close {',
     '  width: 26px; height: 26px; border-radius: 50%; flex-shrink: 0;',
     '  border: 1px solid var(--line); background: var(--bg-3, #2a2a3e);',
@@ -3709,7 +3745,6 @@ document.addEventListener('DOMContentLoaded', async function() {
     '}',
     '.hk-modal-close:hover { color: var(--text); border-color: var(--orange); }',
 
-    /* Lignes KPI */
     '.hk-row {',
     '  display: flex; align-items: center; justify-content: space-between; gap: 10px;',
     '  padding: 7px 2px; border-top: 1px solid var(--line);',
@@ -3750,6 +3785,8 @@ document.addEventListener('DOMContentLoaded', async function() {
     } else if (_dataRetries < 20) {
       _dataRetries++;
       setTimeout(renderWhenReady, 500);
+    } else {
+      render(); /* après 10 s : affiche les notes calculables avec les données disponibles */
     }
   }
 
