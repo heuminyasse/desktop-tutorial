@@ -4539,58 +4539,59 @@ document.addEventListener('DOMContentLoaded', async function() {
     '.uni-del.big{width:34px;height:34px;font-size:15px;align-self:center}'
   ].join('\n'); document.head.appendChild(s); }
 
-  /* ---------- montage : onglets dans la page Compétences ---------- */
-  function build(view){
-    if(view.getAttribute('data-uni')) return; view.setAttribute('data-uni','1');
-    css();
-    var head=view.querySelector('.view-head');
-    var actions=view.querySelector('.actions');
-    var panel=view.querySelector('.dt-panel');
-    /* barre d'onglets */
-    var tabs=document.createElement('div'); tabs.className='uni-tabs';
-    tabs.innerHTML='<button class="on" data-tab="cat">Catalogue</button><button data-tab="uni">University</button>';
-    /* panneau Catalogue = contenu existant regroupé */
-    var catPane=document.createElement('div'); catPane.id='uni-cat-pane';
-    var uniPane=document.createElement('div'); uniPane.className='uni-pane'; uniPane.id='uni-pane'; uniPane.style.display='none';
-    /* insère la barre après le head ; déplace actions+panel dans catPane */
-    if(head && head.parentNode){ head.parentNode.insertBefore(tabs, head.nextSibling); }
-    else { view.insertBefore(tabs, view.firstChild); }
-    tabs.parentNode.insertBefore(catPane, tabs.nextSibling);
-    catPane.parentNode.insertBefore(uniPane, catPane.nextSibling);
-    if(actions) catPane.appendChild(actions);
-    if(panel) catPane.appendChild(panel);
-    /* contenu University */
-    render(uniPane, getData());
-    /* onglets */
-    tabs.addEventListener('click', function(e){ var b=e.target.closest('[data-tab]'); if(!b) return;
-      Array.prototype.forEach.call(tabs.children,function(x){x.classList.remove('on');}); b.classList.add('on');
-      var u=(b.getAttribute('data-tab')==='uni');
-      uniPane.style.display=u?'':'none'; catPane.style.display=u?'none':'';
-    });
-    /* actions University (délégation) */
-    uniPane.addEventListener('click', function(e){ var t=e.target; if(!t) return;
+  /* ---------- CRUD (délégation sur la racine University) ---------- */
+  function wireUni(root){
+    root.addEventListener('click', function(e){ var t=e.target; if(!t) return;
       var add=t.getAttribute&&t.getAttribute('data-add');
       if(add==='sujet'){ e.preventDefault(); var holder=t.parentNode.querySelector('[data-sujets]'); if(holder){ holder.insertAdjacentHTML('beforeend', sujetRow(blankSujet())); } return; }
-      if(add==='palier'){ e.preventDefault(); var n=$('#uni-paliers',uniPane).querySelectorAll('[data-palier]').length+1; $('#uni-paliers',uniPane).insertAdjacentHTML('beforeend', palierCard(blankPalier(n))); return; }
-      if(add==='certif'){ e.preventDefault(); $('#uni-certifs',uniPane).insertAdjacentHTML('beforeend', certifCard(blankCertif())); return; }
+      if(add==='palier'){ e.preventDefault(); var n=$('#uni-paliers',root).querySelectorAll('[data-palier]').length+1; $('#uni-paliers',root).insertAdjacentHTML('beforeend', palierCard(blankPalier(n))); return; }
+      if(add==='certif'){ e.preventDefault(); $('#uni-certifs',root).insertAdjacentHTML('beforeend', certifCard(blankCertif())); return; }
       var del=t.getAttribute&&t.getAttribute('data-del');
       if(del==='sujet'){ e.preventDefault(); var sr=t.closest('[data-sujet]'); if(sr) sr.parentNode.removeChild(sr); return; }
       if(del==='palier'){ e.preventDefault(); var pc=t.closest('[data-palier]'); if(pc&&confirm('Supprimer ce palier ?')) pc.parentNode.removeChild(pc); return; }
       if(del==='certif'){ e.preventDefault(); var cc=t.closest('[data-certif]'); if(cc&&confirm('Supprimer cette certification ?')) cc.parentNode.removeChild(cc); return; }
       if(t.getAttribute&&t.getAttribute('data-act')==='save'){ e.preventDefault();
-        var d=collect(uniPane); saveUni(d); projectToPDE(d);
-        t.textContent='✓ Enregistré'; setTimeout(function(){ t.textContent='💾 Enregistrer & relier à PDE'; }, 1500);
+        var d=collect(root); saveUni(d); projectToPDE(d);
+        t.textContent='✓ Enregistré — rechargez pour mettre à jour PDE'; setTimeout(function(){ t.textContent='💾 Enregistrer & relier à PDE'; }, 2200);
         return;
       }
     });
   }
-  function hook(){
-    var v=document.getElementById('view-competences');
-    if(v) build(v);
+
+  /* ---------- sous-page routée « University » (pair de Mes Compétences / PDE) ---------- */
+  function ensureView(){
+    var ex=document.getElementById('view-university'); if(ex) return ex;
+    var ref=document.getElementById('view-competences'); if(!ref||!ref.parentNode) return null;
+    css();
+    var sec=document.createElement('section'); sec.className='hub-view'; sec.id='view-university';
+    sec.innerHTML='<div class="view-head"><div class="crumb">Compétences <span class="sep">/</span> University</div><h1><span class="accent">University</span></h1></div><div class="uni-pane" id="uni-root"></div>';
+    ref.parentNode.appendChild(sec);
+    var root=sec.querySelector('#uni-root');
+    render(root, getData());
+    wireUni(root);
+    return sec;
   }
-  /* la vue peut être (re)créée par l'app : on observe le DOM via le dispatcher partagé si présent, sinon polling léger */
+  function showUniversity(){
+    ensureView();
+    Array.prototype.forEach.call(document.querySelectorAll('.hub-view'), function(v){ v.classList.remove('active'); });
+    var sec=document.getElementById('view-university'); if(sec) sec.classList.add('active');
+  }
+  function injectBtn(){
+    var sub=document.getElementById('subnav'); if(!sub) return;
+    var ref=sub.querySelector('[data-sub="Mes Compétences"]'); if(!ref) return; /* seulement sur la page Compétences */
+    if(sub.querySelector('[data-sub-uni]')) return; /* déjà injecté */
+    var b=document.createElement('button'); b.className='item'; b.setAttribute('data-sub-uni','university');
+    b.style.cssText='display:inline-flex;align-items:center;gap:5px;';
+    b.innerHTML='🎓 University';
+    b.addEventListener('click', function(){
+      Array.prototype.forEach.call(sub.querySelectorAll('.item'), function(x){ x.classList.remove('active'); });
+      b.classList.add('active'); showUniversity();
+    });
+    ref.parentNode.insertBefore(b, ref.nextSibling);
+  }
+  function hook(){ ensureView(); injectBtn(); }
   if(window.__epOnBodyMut){ window.__epOnBodyMut(hook); }
-  var tries=0; (function poll(){ hook(); if(++tries<40) setTimeout(poll, 700); })();
+  var tries=0; (function poll(){ try{ hook(); }catch(e){} if(++tries<60) setTimeout(poll, 700); })();
 })();
 </script>
 </body>
