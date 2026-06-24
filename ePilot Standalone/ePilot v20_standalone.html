@@ -4237,6 +4237,9 @@ document.addEventListener('DOMContentLoaded', async function() {
       sec.insertBefore(host, sec.firstChild);
       wire(host, mat);
     }
+    /* masque les cartes d'origine "CV & Diplômes" et "Parcours professionnel"
+       (display:none seulement : leurs champs restent dans le DOM pour la sauvegarde native) */
+    Array.prototype.forEach.call(sec.children, function(c){ if(c!==host && c.classList && c.classList.contains('ec-card')) c.style.display='none'; });
     paint(host, cv);
   }
   function paint(host, cv){
