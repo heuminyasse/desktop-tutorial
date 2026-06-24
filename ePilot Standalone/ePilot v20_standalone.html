@@ -3106,682 +3106,566 @@ document.addEventListener('DOMContentLoaded', async function() {
 
 <script>
 /* ════════════════════════════════════════════════════════════════════
-   HOME KPI DASHBOARD v1
-   Tableau de bord de la page d'accueil — 5 catégories de KPI
-   Branchés sur JIP_DATA, QUOTE_DATA, SOURCING_DATA, EXPENSES_DATA,
-   PERSONNEL_DATA, et localStorage (PDE, JSA, quêtes, papiers, paie)
+   HOME KPI DASHBOARD v2 — Notes de groupe sur "Mon Tableau de Bord"
+   Alimente les badges existants (#items .item[data-key]) avec la note
+   moyenne calculée du groupe, et déplie les KPI détaillés au clic.
+
+   Modèle de notation :
+     - Chaque KPI produit une note 0–100 (plus haut = mieux)
+     - Retards : note inversée  100·(1 − retards/total)  → 0 retard = 100 %
+     - Sécurité & évaluations pondérées ×2 (encouragées)
+     - Note du groupe = moyenne pondérée des notes non nulles
    ════════════════════════════════════════════════════════════════════ */
 (function () {
   'use strict';
 
-  /* ── Utilitaires ── */
+  /* ─────────────── Utilitaires ─────────────── */
   function lsArr(key) {
     try { return JSON.parse(localStorage.getItem(key) || '[]') || []; } catch (e) { return []; }
   }
-  function today() {
-    var d = new Date(); d.setHours(0, 0, 0, 0); return d;
-  }
+  function today() { var d = new Date(); d.setHours(0, 0, 0, 0); return d; }
   function parseD(v) {
     if (!v) return null;
     var d = new Date(typeof v === 'number' ? v : (String(v).length === 10 ? v + 'T00:00:00' : v));
     return isNaN(d.getTime()) ? null : d;
   }
-  function daysAgo(v) {
-    var d = parseD(v);
-    if (!d) return null;
-    return Math.floor((today().getTime() - d.getTime()) / 86400000);
+  function daysAgo(v) { var d = parseD(v); return d ? Math.floor((today().getTime() - d.getTime()) / 86400000) : null; }
+  function low(s) { return String(s == null ? '' : s).toLowerCase(); }
+
+  /* Note d'un taux de remplissage / réussite : ratio (0..1) → 0..100 */
+  function noteScore(done, total) { return total > 0 ? Math.round(done / total * 100) : null; }
+  /* Note d'un retard : 0 retard = 100 %, tout en retard = 0 % */
+  function noteRetard(retard, total) { return total > 0 ? Math.round((1 - retard / total) * 100) : null; }
+
+  /* Couleur / classe selon la note (plus haut = mieux) */
+  function noteClass(note) {
+    if (note === null || note === undefined) return '';
+    if (note >= 80) return 'high';
+    if (note >= 60) return 'mid';
+    return 'low';
   }
-  function pct(n, d) { return d > 0 ? Math.round(n / d * 100) : null; }
-  function fmt(v, suffix) {
-    if (v === null || v === undefined) return '—';
-    return String(v) + (suffix || '');
-  }
-  function fmtPct(v) {
-    if (v === null || v === undefined) return '—';
-    return v + '%';
+  function noteColor(note) {
+    if (note === null || note === undefined) return 'var(--muted)';
+    if (note >= 80) return 'var(--green)';
+    if (note >= 60) return 'var(--yellow)';
+    return 'var(--orange)';
   }
 
-  /* ── Couleurs selon niveau ── */
-  function scoreColor(ratio) {
-    if (ratio === null || ratio === undefined) return '#94a3b8';
-    if (ratio >= 0.85) return '#16a34a'; /* vert */
-    if (ratio >= 0.65) return '#d97706'; /* orange */
-    return '#dc2626';                    /* rouge */
+  /* Moyenne pondérée des notes non nulles */
+  function groupNote(kpis) {
+    var sum = 0, w = 0;
+    kpis.forEach(function (k) {
+      if (k.note === null || k.note === undefined) return;
+      var weight = k.weight || 1;
+      sum += k.note * weight; w += weight;
+    });
+    return w > 0 ? Math.round(sum / w) : null;
   }
-  function alertColor(ratio) {
-    /* Pour les taux d'alerte/retard : plus c'est bas, mieux c'est */
-    if (ratio === null || ratio === undefined) return '#94a3b8';
-    if (ratio <= 0.10) return '#16a34a';
-    if (ratio <= 0.25) return '#d97706';
-    return '#dc2626';
+
+  /* ─────────────── Source PV chantier (sécurité) ─────────────── */
+  var _pvs = null;        /* cache des PV (briefing, EPI, incidents) */
+  var _pvsLoaded = false;
+  function loadPVs(cb) {
+    if (_pvsLoaded) { cb && cb(); return; }
+    try {
+      if (window.EpilotConnector && window.EpilotConnector.ready && window.EpilotConnector.ready()) {
+        window.EpilotConnector.buildData().then(function (d) {
+          _pvs = (d && d.pvs) || []; _pvsLoaded = true; cb && cb();
+        }).catch(function () { _pvs = []; _pvsLoaded = true; cb && cb(); });
+        return;
+      }
+    } catch (e) {}
+    _pvs = []; _pvsLoaded = true; cb && cb();
   }
 
   /* ══════════════════════════════════════════════════════════════
-     CALCULS KPI
+     INDICE BONNE CONDUITE CHANTIER (sécurité sans accident)
+     Composite : 35 % conformité JSA · 35 % zéro accident
+                 20 % EPI vérifiés · 10 % briefing fait
+     Repli sur epilot_jsa_reports si pas de PV détaillés.
   ══════════════════════════════════════════════════════════════ */
+  function indiceBonneConduite() {
+    var pvs = _pvs || [];
+    if (pvs.length > 0) {
+      var n = pvs.length;
+      var briefing = pvs.filter(function (p) { return p.jsa && p.jsa.briefingFait; }).length;
+      var epi = pvs.filter(function (p) { return p.jsa && p.jsa.epiVerifies; }).length;
+      var jsaConf = pvs.filter(function (p) { return p.jsa && ((p.jsa.risques || []).length > 0) && p.jsa.signataire; }).length;
+      var incidents = pvs.filter(function (p) { return p.incidents && String(p.incidents).trim() !== ''; }).length;
 
-  /* ─────────── TRAVAUX (JIP_DATA) ─────────── */
+      var rConf = jsaConf / n;
+      var rZero = 1 - (incidents / n);   /* zéro accident = 1 */
+      var rEpi = epi / n;
+      var rBrief = briefing / n;
+
+      var ibc = Math.round((0.35 * rConf + 0.35 * rZero + 0.20 * rEpi + 0.10 * rBrief) * 100);
+      return {
+        note: ibc,
+        detail: incidents === 0 ? '✓ 0 accident · ' + n + ' PV' : incidents + ' incident(s) · ' + n + ' PV',
+        sub: 'JSA ' + Math.round(rConf * 100) + '% · EPI ' + Math.round(rEpi * 100) + '% · briefing ' + Math.round(rBrief * 100) + '%'
+      };
+    }
+    /* Repli : couverture JSA simple via epilot_jsa_reports */
+    var jip = window.JIP_DATA || [];
+    var actifs = jip.filter(function (r) { return low(r.Status) !== 'terminé' && low(r.Status) !== 'termine' && low(r.Status) !== 'annulé'; });
+    var jsaReports = lsArr('epilot_jsa_reports');
+    var chantiersJSA = {};
+    jsaReports.forEach(function (r) { var k = low(r.chantier || r.imputation); if (k) chantiersJSA[k] = 1; });
+    var couverts = actifs.filter(function (r) { return chantiersJSA[low(r.Imputation)]; }).length;
+    var note = noteScore(couverts, actifs.length);
+    return { note: note, detail: couverts + '/' + actifs.length + ' chantiers avec JSA', sub: 'Aucun PV détaillé — couverture JSA seule' };
+  }
+
+  /* ══════════════════════════════════════════════════════════════
+     TRAVAUX — 7 KPI
+  ══════════════════════════════════════════════════════════════ */
   function kpiTravaux() {
     var jip = window.JIP_DATA || [];
     var now = today();
+    var REQUIRED = ['Imputation', 'Client', 'Date', 'Budget', 'Unité'];
 
-    /* Champs clés pour détecter la complétude d'un chantier */
-    var REQUIRED_FIELDS = ['Imputation', 'Client', 'Date', 'Budget', 'Unité'];
-    function isActive(r) {
-      var s = (r.Status || r.Statut || '').toLowerCase();
-      return s !== 'terminé' && s !== 'termine' && s !== 'annulé' && s !== 'annule';
-    }
-    function isTermine(r) {
-      var s = (r.Status || r.Statut || '').toLowerCase();
-      return s === 'terminé' || s === 'termine' || s === 'réceptionné' || s === 'receptionne';
-    }
+    function isActive(r) { var s = low(r.Status || r.Statut); return s.indexOf('termin') < 0 && s.indexOf('annul') < 0; }
+    function isTermine(r) { var s = low(r.Status || r.Statut); return s.indexOf('termin') >= 0 || s.indexOf('réception') >= 0 || s.indexOf('reception') >= 0; }
     function finPrevue(r) {
-      /* Cherche la date de fin prévue dans les champs connus */
       if (r['Fin Prevue']) return parseD(r['Fin Prevue']);
-      if (r['Date de fin']) return parseD(r['Date de fin']);
-      for (var k in r) {
-        if (/fin.*prev|prev.*fin|end.?date|date.?fin/i.test(k)) {
-          var d = parseD(r[k]); if (d) return d;
-        }
-      }
-      return null;
-    }
-    function finReelle(r) {
-      if (r['Fin Reelle']) return parseD(r['Fin Reelle']);
-      if (r['Fin réelle']) return parseD(r['Fin réelle']);
+      for (var k in r) { if (/fin.*prev|prev.*fin|de fin|date.?fin|end.?date/i.test(k)) { var d = parseD(r[k]); if (d) return d; } }
       return null;
     }
 
     var actifs = jip.filter(isActive);
     var total = jip.length;
 
-    /* 1. Taux de remplissage des chantiers */
-    var filled = jip.filter(function (r) {
-      return REQUIRED_FIELDS.every(function (f) { return r[f] && String(r[f]).trim() !== ''; });
-    }).length;
-    var tauxRemplissage = pct(filled, total);
+    /* 1 — Remplissage chantiers */
+    var filled = jip.filter(function (r) { return REQUIRED.every(function (f) { return r[f] && String(r[f]).trim() !== ''; }); }).length;
+    var n1 = noteScore(filled, total);
 
-    /* 2. Rapport sécurité : chantiers actifs avec au moins un rapport JSA */
-    var jsaReports = lsArr('epilot_jsa_reports');
-    var chantiersAvecJSA = new Set(jsaReports.map(function (r) {
-      return (r.chantier || r.imputation || '').trim().toLowerCase();
-    }));
-    var avecJSA = actifs.filter(function (r) {
-      var imp = (r.Imputation || '').trim().toLowerCase();
-      return imp && chantiersAvecJSA.has(imp);
-    }).length;
-    var tauxJSA = pct(avecJSA, actifs.length);
+    /* 2 — Rapport sécurité = Indice Bonne Conduite (sans accident) */
+    var ibc = indiceBonneConduite();
 
-    /* 3. Évaluation chantier : chantiers avec une note ou évaluation */
+    /* 3 — Évaluation chantiers */
     var avecEval = jip.filter(function (r) {
-      for (var k in r) {
-        if (/note|eval|score|avis/i.test(k) && r[k] && String(r[k]).trim() !== '') return true;
-      }
+      for (var k in r) { if (/note|eval|score|avis|qualit/i.test(k) && r[k] && String(r[k]).trim() !== '') return true; }
       return false;
     }).length;
-    var tauxEval = pct(avecEval, total);
+    var n3 = noteScore(avecEval, total);
 
-    /* 4. Retard chantier : actifs dont la date de fin prévue est dépassée */
-    var enRetard = actifs.filter(function (r) {
-      var fp = finPrevue(r);
-      return fp && fp < now;
-    }).length;
-    var tauxRetardChantier = pct(enRetard, actifs.length);
+    /* 4 — Retard chantiers (fin prévue dépassée) */
+    var retardCh = actifs.filter(function (r) { var fp = finPrevue(r); return fp && fp < now; }).length;
+    var n4 = noteRetard(retardCh, actifs.length);
 
-    /* 5. Retard dépenses : dépenses "Soumise" depuis plus de 7 jours */
+    /* 5 — Retard dépenses (Soumises depuis > 7 j) */
     var deps = (window.EXPENSES_DATA || []).concat(lsArr('epilot_dep_new_v1'));
-    var depSoumises = deps.filter(function (r) {
-      var e = (r.etat || r.statut || r.Statut || '').toLowerCase();
-      return e === 'soumise' || e === 'en attente' || e === 'pending';
-    });
-    var depRetard = depSoumises.filter(function (r) {
-      var ag = daysAgo(r.date || r.Date || r.dateCreation);
-      return ag !== null && ag > 7;
-    }).length;
-    var tauxRetardDep = pct(depRetard, depSoumises.length);
+    var depSoumises = deps.filter(function (r) { var e = low(r.etat || r.statut || r.Statut); return e.indexOf('soumis') >= 0 || e.indexOf('attente') >= 0 || e === 'pending'; });
+    var depRetard = depSoumises.filter(function (r) { var a = daysAgo(r.date || r.Date || r.dateCreation); return a !== null && a > 7; }).length;
+    var n5 = noteRetard(depRetard, depSoumises.length);
 
-    /* 6. Retard actions/quêtes */
+    /* 6 — Retard actions / quêtes */
     var quetes = lsArr('epilot_quests_v1');
-    var quetesActives = quetes.filter(function (r) {
-      var s = (r.statut || '').toLowerCase();
-      return !['clôturée', 'cloturee', 'rejetée', 'rejetee', 'annulée', 'annulee'].includes(s);
-    });
-    var quetesRetard = quetesActives.filter(function (r) {
-      if (!r.due) return false;
-      var d = parseD(r.due);
-      return d && d < now;
-    }).length;
-    var tauxRetardQuetes = pct(quetesRetard, quetesActives.length);
+    var quetesAct = quetes.filter(function (r) { var s = low(r.statut); return ['clôturée', 'cloturee', 'rejetée', 'rejetee', 'annulée', 'annulee', 'terminée'].indexOf(s) < 0; });
+    var quetesRet = quetesAct.filter(function (r) { if (!r.due) return false; var d = parseD(r.due); return d && d < now; }).length;
+    var n6 = noteRetard(quetesRet, quetesAct.length);
 
-    /* 7. Remplissage facturation chantiers réceptionnés */
+    /* 7 — Facturation chantiers réceptionnés */
     var termines = jip.filter(isTermine);
-    var payments = window.PAYMENT_DATA || [];
-    var impAvecPmt = new Set(payments.map(function (p) {
-      return (p.Imputation || p.imputation || p.chantier || p.ref || '').trim().toLowerCase();
-    }));
-    var terminesFactures = termines.filter(function (r) {
-      var imp = (r.Imputation || '').trim().toLowerCase();
-      return imp && impAvecPmt.has(imp);
-    }).length;
-    var tauxFacturation = pct(terminesFactures, termines.length);
+    var payments = (window.PAYMENT_DATA || []).concat(lsArr('epilot_payment_data_v1'));
+    var impPmt = {};
+    payments.forEach(function (p) { var k = low(p.Imputation || p.imputation || p.chantier || p.ref); if (k) impPmt[k] = 1; });
+    var termFact = termines.filter(function (r) { return impPmt[low(r.Imputation)]; }).length;
+    var n7 = noteScore(termFact, termines.length);
 
     return [
-      { label: 'Remplissage chantiers', value: fmtPct(tauxRemplissage), ratio: tauxRemplissage !== null ? tauxRemplissage/100 : null, type: 'score', detail: filled + '/' + total },
-      { label: 'Couverture JSA/Sécurité', value: fmtPct(tauxJSA), ratio: tauxJSA !== null ? tauxJSA/100 : null, type: 'score', detail: avecJSA + '/' + actifs.length + ' actifs' },
-      { label: 'Évaluation chantiers', value: fmtPct(tauxEval), ratio: tauxEval !== null ? tauxEval/100 : null, type: 'score', detail: avecEval + '/' + total },
-      { label: 'Retard chantiers', value: fmtPct(tauxRetardChantier), ratio: tauxRetardChantier !== null ? tauxRetardChantier/100 : null, type: 'alert', detail: enRetard + ' en retard' },
-      { label: 'Retard dépenses', value: fmtPct(tauxRetardDep), ratio: tauxRetardDep !== null ? tauxRetardDep/100 : null, type: 'alert', detail: depRetard + '/' + depSoumises.length + ' soumises' },
-      { label: 'Retard actions/quêtes', value: fmtPct(tauxRetardQuetes), ratio: tauxRetardQuetes !== null ? tauxRetardQuetes/100 : null, type: 'alert', detail: quetesRetard + '/' + quetesActives.length },
-      { label: 'Facturation chantiers réceptionnés', value: fmtPct(tauxFacturation), ratio: tauxFacturation !== null ? tauxFacturation/100 : null, type: 'score', detail: terminesFactures + '/' + termines.length },
+      { label: 'Remplissage chantiers', note: n1, weight: 1, detail: filled + '/' + total + ' complets' },
+      { label: '🛡️ Bonne conduite / Sécurité', note: ibc.note, weight: 2, detail: ibc.detail, sub: ibc.sub },
+      { label: 'Évaluation chantiers', note: n3, weight: 2, detail: avecEval + '/' + total + ' évalués' },
+      { label: 'Retard chantiers', note: n4, weight: 1.5, detail: retardCh + '/' + actifs.length + ' en retard' },
+      { label: 'Retard dépenses', note: n5, weight: 1, detail: depRetard + '/' + depSoumises.length + ' en retard' },
+      { label: 'Retard actions/quêtes', note: n6, weight: 1, detail: quetesRet + '/' + quetesAct.length + ' en retard' },
+      { label: 'Facturation réceptionnés', note: n7, weight: 1, detail: termFact + '/' + termines.length + ' facturés' },
     ];
   }
 
-  /* ─────────── CHIFFRAGE (QUOTE_DATA) ─────────── */
+  /* ══════════════════════════════════════════════════════════════
+     CHIFFRAGE — 5 KPI
+  ══════════════════════════════════════════════════════════════ */
   function kpiChiffrage() {
     var quotes = window.QUOTE_DATA || [];
     var sourcing = window.SOURCING_DATA || [];
     var now = today();
     var ms7 = now.getTime() + 7 * 86400000;
-
-    function isOpen(r) {
-      var e = (r.EtatPI || '').toLowerCase();
-      return e !== 'terminé' && e !== 'termine' && e !== 'annulé' && e !== 'annule';
-    }
-
+    function isOpen(r) { var e = low(r.EtatPI); return e.indexOf('termin') < 0 && e.indexOf('annul') < 0; }
     var ouverts = quotes.filter(isOpen);
 
-    /* 1. Taux de réponse : devis avec une décision rendue (pas juste "en cours/soumis") */
-    var avecReponse = quotes.filter(function (r) {
-      var e = (r.EtatPI || '').toLowerCase();
-      return e !== '' && e !== 'en cours' && e !== 'soumis' && e !== 'nouveau';
-    }).length;
-    var tauxReponse = pct(avecReponse, quotes.length);
+    /* 1 — Taux de réponse */
+    var avecRep = quotes.filter(function (r) { var e = low(r.EtatPI); return e !== '' && e !== 'en cours' && e !== 'soumis' && e !== 'nouveau'; }).length;
+    var n1 = noteScore(avecRep, quotes.length);
 
-    /* 2. Taux d'alertes : devis ouverts dont l'échéance arrive dans < 7 jours ou déjà passée */
-    var alertes = ouverts.filter(function (r) {
-      if (!r.Echeance) return false;
-      var d = parseD(r.Echeance);
-      return d && d.getTime() <= ms7;
-    }).length;
-    var tauxAlertes = pct(alertes, ouverts.length);
+    /* 2 — Alertes à traiter (échéance < 7 j) → note inversée */
+    var alertes = ouverts.filter(function (r) { if (!r.Echeance) return false; var d = parseD(r.Echeance); return d && d.getTime() <= ms7; }).length;
+    var n2 = noteRetard(alertes, ouverts.length);
 
-    /* 3. Rapport OA/RFQ : commandes d'achat créées par rapport aux devis */
-    var oaCount = sourcing.length;
-    var rfqCount = quotes.length;
-    var ratioOA = rfqCount > 0 ? Math.round(oaCount / rfqCount * 100) : null;
+    /* 3 — Rapport OA/RFQ (taux de conversion en commande) */
+    var n3 = quotes.length > 0 ? Math.min(100, Math.round(sourcing.length / quotes.length * 100)) : null;
 
-    /* 4. Taux de remplissage devis (rapport visite + dépenses transport) */
+    /* 4 — Remplissage devis (rapport visite renseigné) */
+    var visites = lsArr('epilot_rfq_visite_v1');
+    var visiteByDoss = {};
+    visites.forEach(function (v) { var k = low(v.dossier || v.Dossier || v.ref); if (k) visiteByDoss[k] = 1; });
     var avecVisite = quotes.filter(function (r) {
-      return r.DateVisite && String(r.DateVisite).trim() !== '';
+      if (r.DateVisite && String(r.DateVisite).trim() !== '') return true;
+      return visiteByDoss[low(r.Dossier)];
     }).length;
-    var avecVisiteEtDep = quotes.filter(function (r) {
-      var visite = r.DateVisite && String(r.DateVisite).trim() !== '';
-      /* Cherche une dépense transport liée au dossier */
-      var doss = (r.Dossier || '').toLowerCase();
-      var deps = window.EXPENSES_DATA || [];
-      var hasDep = doss && deps.some(function (d) {
-        var ref = (d.ref || d.description || d.chantier || '').toLowerCase();
-        var cat = (d.categorie || '').toLowerCase();
-        return (ref.includes(doss) || cat.includes('transport')) && ref.includes(doss.slice(0, 5));
-      });
-      return visite && (hasDep || r.TransportCout || r.CoutTransport || r.transport);
-    }).length;
-    var tauxRemplissageDevis = pct(avecVisite, quotes.length);
+    var n4 = noteScore(avecVisite, quotes.length);
 
-    /* 5. Retard marketing : réunions/RDV commerciaux passés non clôturés */
-    var mktState = null;
-    try { mktState = window.MarketingApp && window.MarketingApp._state && window.MarketingApp._state.data; } catch(e){}
-    var meetings = (mktState && mktState.meetings) || [];
-    var mktActives = meetings.filter(function (m) { return m.status === 'upcoming'; });
-    var mktRetard = mktActives.filter(function (m) {
-      var d = parseD(m.date); return d && d < now;
-    }).length;
-    var tauxRetardMkt = pct(mktRetard, mktActives.length);
+    /* 5 — Retard marketing (RDV passés non clôturés) → note inversée */
+    var mkt = null; try { mkt = window.MarketingApp && window.MarketingApp._state && window.MarketingApp._state.data; } catch (e) {}
+    var meetings = (mkt && mkt.meetings) || [];
+    var mktAct = meetings.filter(function (m) { return m.status === 'upcoming'; });
+    var mktRet = mktAct.filter(function (m) { var d = parseD(m.date); return d && d < now; }).length;
+    var n5 = noteRetard(mktRet, mktAct.length);
 
     return [
-      { label: 'Taux de réponse devis', value: fmtPct(tauxReponse), ratio: tauxReponse !== null ? tauxReponse/100 : null, type: 'score', detail: avecReponse + '/' + quotes.length },
-      { label: 'Alertes à traiter', value: fmtPct(tauxAlertes), ratio: tauxAlertes !== null ? tauxAlertes/100 : null, type: 'alert', detail: alertes + ' devis proches échéance' },
-      { label: 'Rapport OA/RFQ', value: fmt(ratioOA, '%'), ratio: ratioOA !== null ? ratioOA/100 : null, type: 'score', detail: oaCount + ' OA / ' + rfqCount + ' RFQ' },
-      { label: 'Remplissage devis + visite', value: fmtPct(tauxRemplissageDevis), ratio: tauxRemplissageDevis !== null ? tauxRemplissageDevis/100 : null, type: 'score', detail: avecVisite + ' avec visite' },
-      { label: 'Retard marketing', value: fmtPct(tauxRetardMkt), ratio: tauxRetardMkt !== null ? tauxRetardMkt/100 : null, type: 'alert', detail: mktRetard + '/' + mktActives.length + ' RDV' },
+      { label: 'Taux de réponse devis', note: n1, weight: 1.5, detail: avecRep + '/' + quotes.length + ' traités' },
+      { label: 'Alertes à traiter', note: n2, weight: 1, detail: alertes + ' échéances < 7 j' },
+      { label: 'Rapport OA/RFQ', note: n3, weight: 1, detail: sourcing.length + ' OA / ' + quotes.length + ' RFQ' },
+      { label: 'Remplissage devis + visite', note: n4, weight: 1.5, detail: avecVisite + '/' + quotes.length + ' avec visite' },
+      { label: 'Retard marketing', note: n5, weight: 1, detail: mktRet + '/' + mktAct.length + ' RDV en retard' },
     ];
   }
 
-  /* ─────────── FOURNITURE MATÉRIELS (SOURCING_DATA) ─────────── */
+  /* ══════════════════════════════════════════════════════════════
+     FOURNITURE MATÉRIELS — 2 KPI
+  ══════════════════════════════════════════════════════════════ */
   function kpiFourniture() {
     var sourcing = window.SOURCING_DATA || [];
     var now = today();
-
-    /* 1. Délai : commandes en retard (date livraison dépassée et pas terminée) */
-    function isLivree(r) {
-      var s = (r.Status || r.Statut || '').toLowerCase();
-      return s.includes('livr') || s.includes('terminé') || s.includes('termine') || s.includes('clôt') || s.includes('paid');
-    }
+    function isLivree(r) { var s = low(r.Status || r.Statut); return /livr|termin|clôt|clot|paid/.test(s); }
     var actives = sourcing.filter(function (r) { return !isLivree(r); });
-
-    /* Cherche date de livraison dans les champs */
     function dateLivraison(r) {
       var keys = ['DateLivraison', 'Date livraison', 'DateEcheance', 'DueDate', 'Echeance'];
-      for (var i = 0; i < keys.length; i++) {
-        if (r[keys[i]]) { var d = parseD(r[keys[i]]); if (d) return d; }
-      }
-      /* Fallback : champ contenant "livr" ou "echean" */
-      for (var k in r) {
-        if (/livr|echean|due.*date|deadline/i.test(k) && r[k]) {
-          var d2 = parseD(r[k]); if (d2) return d2;
-        }
-      }
+      for (var i = 0; i < keys.length; i++) { if (r[keys[i]]) { var d = parseD(r[keys[i]]); if (d) return d; } }
+      for (var k in r) { if (/livr|echean|due.?date|deadline/i.test(k) && r[k]) { var d2 = parseD(r[k]); if (d2) return d2; } }
       return null;
     }
-    var enRetardDelai = actives.filter(function (r) {
-      var d = dateLivraison(r);
-      return d && d < now;
-    }).length;
-    /* Si aucune date de livraison trouvée, utiliser le taux de commandes anciennes (> 30 jours) */
-    var sansDate = actives.filter(function (r) { return !dateLivraison(r); }).length;
-    var avecDate = actives.length - sansDate;
-    var tauxDelai = avecDate > 0 ? pct(enRetardDelai, avecDate) : null;
 
-    /* 2. Taux de remplissage commandes (contrat/PO/BR/BL/Facture/colis) */
-    /*
-       SOURCING_DATA fields repérés: OA, Imputation, ProductCode, Description of Equipment,
-       CoutAcqXAF, Status, Avancement.
-       Les docs complémentaires (BR, BL, Fac) sont dans window._oaDocs par OA.
-    */
+    /* 1 — Délai : commandes en retard → note inversée */
+    var avecDate = actives.filter(dateLivraison);
+    var retard = avecDate.filter(function (r) { var d = dateLivraison(r); return d && d < now; }).length;
+    var n1 = noteRetard(retard, avecDate.length);
+
+    /* 2 — Remplissage commandes (PO/BR/BL/Facture/Colis) */
     var oaDocs = window._oaDocs || {};
-
     function completude(r) {
       var oa = r.OA || r['N° OA'] || '';
-      var doc = oa && oaDocs[oa] ? oaDocs[oa] : {};
-      var score = 0, total = 5;
-      if (oa) score++;                                           /* PO (OA) */
-      if (r.Imputation) score++;                                 /* Contrat/chantier lié */
-      if ((doc.bls && doc.bls.length) || r.BR || r['N°BR']) score++;   /* BR */
-      if ((doc.bls && doc.bls.length) || r.BL || r['N°BL']) score++;   /* BL */
-      if ((doc.facs && doc.facs.length) || r.Facture || r.NomFac) score++; /* Facture */
-      return score / total;
+      var doc = (oa && oaDocs[oa]) ? oaDocs[oa] : {};
+      var score = 0;
+      if (oa) score++;                                                       /* PO */
+      if (r.Imputation) score++;                                             /* Contrat lié */
+      if ((doc.brs && doc.brs.length) || r.BR) score++;                      /* BR */
+      if ((doc.bls && doc.bls.length) || r.BL) score++;                      /* BL */
+      if ((doc.facs && doc.facs.length) || r.Facture || r.NomFac) score++;   /* Facture */
+      return score / 5;
     }
-
-    var totalCom = sourcing.length;
-    var completCount = sourcing.filter(function (r) {
-      return completude(r) >= 0.8; /* ≥ 4/5 champs renseignés */
-    }).length;
-    var tauxRemplissageCom = pct(completCount, totalCom);
+    var total = sourcing.length;
+    var complet = sourcing.filter(function (r) { return completude(r) >= 0.8; }).length;
+    /* Note = % de complétude moyen (plus fin que le seuil) */
+    var avgCompl = total > 0 ? Math.round(sourcing.reduce(function (s, r) { return s + completude(r); }, 0) / total * 100) : null;
 
     return [
-      { label: 'Retard délai livraison', value: fmtPct(tauxDelai), ratio: tauxDelai !== null ? tauxDelai/100 : null, type: 'alert', detail: enRetardDelai + '/' + avecDate + ' commandes' },
-      { label: 'Remplissage commandes (PO/BR/BL/Fac)', value: fmtPct(tauxRemplissageCom), ratio: tauxRemplissageCom !== null ? tauxRemplissageCom/100 : null, type: 'score', detail: completCount + '/' + totalCom },
+      { label: 'Retard délai livraison', note: n1, weight: 1.5, detail: retard + '/' + avecDate.length + ' en retard' },
+      { label: 'Remplissage commandes', note: avgCompl, weight: 1, detail: complet + '/' + total + ' complètes (PO/BR/BL/Fac)' },
     ];
   }
 
-  /* ─────────── PDE (Personnel & localStorage) ─────────── */
+  /* ══════════════════════════════════════════════════════════════
+     PERF · DÉV · ENGAGEMENT — 6 KPI
+  ══════════════════════════════════════════════════════════════ */
   function kpiPDE() {
     var now = today();
     var personnel = window.PERSONNEL_DATA || [];
-    var actifs = personnel.filter(function (p) {
-      var s = (p.statut || '').toLowerCase();
-      return s.includes('empl') && !s.includes('arret') && !s.includes('demis');
-    });
+    var actifs = personnel.filter(function (p) { var s = low(p.statut); return s.indexOf('empl') >= 0 && s.indexOf('arret') < 0 && s.indexOf('demis') < 0; });
 
-    /* 1. Note globale du personnel : moyenne des notes PDE */
-    var pdeData = lsArr('epilot_pde_v1');
-    /* Regrouper par employé, prendre la dernière évaluation */
+    /* 1 — Note moyenne du personnel (sur 10 → ×10) */
+    var pde = lsArr('epilot_pde_v1');
     var byEmp = {};
-    pdeData.forEach(function (rec) {
-      var id = rec.employeeId || rec.id || rec.matricule;
-      if (!id) return;
-      var period = rec.period || rec.periode || '';
-      var key = id + '|' + period;
+    pde.forEach(function (rec) {
+      var id = rec.employeeId || rec.id || rec.matricule; if (!id) return;
+      var key = id + '|' + (rec.period || rec.periode || '');
       if (!byEmp[key] || (rec.updatedAt || 0) > (byEmp[key].updatedAt || 0)) byEmp[key] = rec;
     });
-
-    var pdeRecords = Object.values(byEmp);
-    var avecNote = pdeRecords.filter(function (r) {
-      var n = r.globalScore || r.noteGlobale || r.score || r.note;
-      return n !== null && n !== undefined && !isNaN(Number(n));
-    });
-    var moyenneNote = null;
+    var recs = Object.keys(byEmp).map(function (k) { return byEmp[k]; });
+    var avecNote = recs.filter(function (r) { var v = r.globalScore != null ? r.globalScore : (r.noteGlobale != null ? r.noteGlobale : (r.score != null ? r.score : r.note)); return v != null && !isNaN(Number(v)); });
+    var n1 = null;
     if (avecNote.length > 0) {
-      var sum = avecNote.reduce(function (s, r) {
-        return s + Number(r.globalScore || r.noteGlobale || r.score || r.note || 0);
-      }, 0);
-      moyenneNote = Math.round(sum / avecNote.length * 10) / 10;
+      var sum = avecNote.reduce(function (s, r) { var v = r.globalScore != null ? r.globalScore : (r.noteGlobale != null ? r.noteGlobale : (r.score != null ? r.score : r.note)); return s + Number(v); }, 0);
+      n1 = Math.round(sum / avecNote.length * 10);  /* note /10 → /100 */
     }
-    var noteRatio = moyenneNote !== null ? moyenneNote / 10 : null; /* sur 10 */
 
-    /* 2. Nombre de présentations (meetings avec type présentation) */
-    var mktState = null;
-    try { mktState = window.MarketingApp && window.MarketingApp._state && window.MarketingApp._state.data; } catch(e){}
-    var meetings = (mktState && mktState.meetings) || [];
-    var presentations = meetings.filter(function (m) {
-      var o = (m.objet || m.type || '').toLowerCase();
-      return o.includes('présent') || o.includes('present') || o.includes('formation') || o.includes('séminaire');
-    }).length;
+    /* 2 — Présentations / formations (volume, pas une note de retard) */
+    var mkt = null; try { mkt = window.MarketingApp && window.MarketingApp._state && window.MarketingApp._state.data; } catch (e) {}
+    var meetings = (mkt && mkt.meetings) || [];
+    var presentations = meetings.filter(function (m) { var o = low(m.objet || m.type); return /présent|present|formation|séminaire|seminaire/.test(o); }).length;
 
-    /* 3. Retard projets/stages : quêtes de type projet ou stage en retard */
+    /* 3 — Retard projets & stages → note inversée */
     var quetes = lsArr('epilot_quests_v1');
-    var projetsStages = quetes.filter(function (r) {
-      var t = (r.type || r.titre || r.categorie || '').toLowerCase();
-      return t.includes('projet') || t.includes('stage') || t.includes('intern');
-    });
-    var psRetard = projetsStages.filter(function (r) {
-      if (!r.due) return false;
-      var d = parseD(r.due);
-      var s = (r.statut || '').toLowerCase();
-      return d && d < now && !['clôturée', 'cloturee', 'rejetée', 'terminée'].includes(s);
-    }).length;
-    var tauxRetardPS = pct(psRetard, projetsStages.length);
+    var projets = quetes.filter(function (r) { var t = low(r.type || r.titre || r.categorie); return /projet|stage|intern/.test(t); });
+    var projRet = projets.filter(function (r) { if (!r.due) return false; var d = parseD(r.due); var s = low(r.statut); return d && d < now && ['clôturée', 'cloturee', 'rejetée', 'terminée'].indexOf(s) < 0; }).length;
+    var n3 = noteRetard(projRet, projets.length);
 
-    /* 4. Retard quêtes */
-    var quetesActives = quetes.filter(function (r) {
-      var s = (r.statut || '').toLowerCase();
-      return !['clôturée', 'cloturee', 'rejetée', 'rejetee', 'annulée', 'annulee', 'terminée'].includes(s);
-    });
-    var quetesRetard = quetesActives.filter(function (r) {
-      if (!r.due) return false;
-      var d = parseD(r.due);
-      return d && d < now;
-    }).length;
-    var tauxRetardQuetes = pct(quetesRetard, quetesActives.length);
+    /* 4 — Retard quêtes → note inversée */
+    var quetesAct = quetes.filter(function (r) { var s = low(r.statut); return ['clôturée', 'cloturee', 'rejetée', 'rejetee', 'annulée', 'annulee', 'terminée'].indexOf(s) < 0; });
+    var quetesRet = quetesAct.filter(function (r) { if (!r.due) return false; var d = parseD(r.due); return d && d < now; }).length;
+    var n4 = noteRetard(quetesRet, quetesAct.length);
 
-    /* 5. Retard documents */
-    var docs = lsArr('epilot_papiers');
-    var docsActifs = docs.filter(function (d) {
-      return d.expire && String(d.expire).trim() !== '';
-    });
-    var docsExpires = docsActifs.filter(function (d) {
-      var dd = parseD(d.expire + 'T00:00:00');
-      return dd && dd < now;
-    }).length;
-    var tauxRetardDocs = pct(docsExpires, docsActifs.length);
+    /* 5 — Retard documents (papiers expirés) → note inversée */
+    var docs = lsArr('epilot_papiers').filter(function (d) { return d.expire && String(d.expire).trim() !== ''; });
+    var docsExp = docs.filter(function (d) { var dd = parseD(d.expire + 'T00:00:00'); return dd && dd < now; }).length;
+    var n5 = noteRetard(docsExp, docs.length);
 
-    /* 6. Retard meetings : réunions passées sans compte-rendu */
-    var mktRetardMeetings = meetings.filter(function (m) {
-      if (m.status !== 'upcoming') return false;
-      var d = parseD(m.date);
-      return d && d < now;
-    }).length;
-    var tauxRetardMeetings = pct(mktRetardMeetings, meetings.filter(function(m){ return m.status === 'upcoming'; }).length);
+    /* 6 — Retard meetings (réunions passées non clôturées) → note inversée */
+    var mtgAct = meetings.filter(function (m) { return m.status === 'upcoming'; });
+    var mtgRet = mtgAct.filter(function (m) { var d = parseD(m.date); return d && d < now; }).length;
+    var n6 = noteRetard(mtgRet, mtgAct.length);
 
     return [
-      { label: 'Note moyenne personnel', value: moyenneNote !== null ? fmt(moyenneNote, '/10') : '—', ratio: noteRatio, type: 'score', detail: avecNote.length + ' évalués/' + actifs.length },
-      { label: 'Présentations / formations', value: fmt(presentations), ratio: null, type: 'info', detail: 'cette période' },
-      { label: 'Retard projets & stages', value: fmtPct(tauxRetardPS), ratio: tauxRetardPS !== null ? tauxRetardPS/100 : null, type: 'alert', detail: psRetard + '/' + projetsStages.length },
-      { label: 'Retard quêtes', value: fmtPct(tauxRetardQuetes), ratio: tauxRetardQuetes !== null ? tauxRetardQuetes/100 : null, type: 'alert', detail: quetesRetard + '/' + quetesActives.length },
-      { label: 'Retard documents', value: fmtPct(tauxRetardDocs), ratio: tauxRetardDocs !== null ? tauxRetardDocs/100 : null, type: 'alert', detail: docsExpires + ' expirés' },
-      { label: 'Retard meetings', value: fmtPct(tauxRetardMeetings), ratio: tauxRetardMeetings !== null ? tauxRetardMeetings/100 : null, type: 'alert', detail: mktRetardMeetings + ' sans CR' },
-    ];
-  }
-
-  /* ─────────── SUIVI CONGÉS ─────────── */
-  function kpiConges() {
-    var now = today();
-    var currentYear = now.getFullYear();
-    var endOfYear = new Date(currentYear, 11, 31, 23, 59, 59);
-    var daysLeft = Math.max(0, Math.ceil((endOfYear.getTime() - now.getTime()) / 86400000));
-
-    /* Données congés : cherche dans plusieurs clés localStorage possibles */
-    var congesData = lsArr('epilot_conges_v1')
-      .concat(lsArr('epilot_conges'))
-      .concat(lsArr('epilot_hr_conges'))
-      .concat(lsArr('hbo_conges'));
-
-    /* Fallback : cherche dans bulletins de paie les jours de congés */
-    var payslips = lsArr('epilot_paie_payslips');
-    var anneePayslips = payslips.filter(function (p) {
-      return String(p.annee) === String(currentYear);
-    });
-
-    /* Retard congés : demandes en attente depuis > 5 jours */
-    var demandesAttente = congesData.filter(function (c) {
-      var s = (c.statut || c.status || c.etat || '').toLowerCase();
-      return s.includes('attente') || s.includes('pending') || s === '';
-    });
-    var demandesRetard = demandesAttente.filter(function (c) {
-      var ag = daysAgo(c.dateCreation || c.dateDemande || c.date || c.createdAt);
-      return ag !== null && ag > 5;
-    }).length;
-    var tauxRetardConges = pct(demandesRetard, demandesAttente.length);
-
-    /* Consommation congés avant fin d'année */
-    /* Méthode : sur les payslips de l'année, somme des joursConges pris */
-    var totalJoursPris = 0;
-    var totalJoursAlloues = 0;
-    var empIds = new Set();
-
-    /* Regrouper par employé */
-    anneePayslips.forEach(function (p) {
-      empIds.add(p.employeeId || p.matricule);
-    });
-
-    empIds.forEach(function (id) {
-      var slips = anneePayslips.filter(function (p) { return (p.employeeId || p.matricule) === id; });
-      /* Congés pris : cherche dans les payslips */
-      slips.forEach(function (p) {
-        totalJoursPris += Number(p.joursConges || p.congesPris || p.joursCongesPris || 0);
-        totalJoursAlloues += Number(p.joursCongesAcquis || p.congesAcquis || 0);
-      });
-    });
-
-    /* Si pas de données payslips, estimer depuis congesData */
-    if (totalJoursAlloues === 0 && congesData.length > 0) {
-      var prisThis = congesData.filter(function (c) {
-        var s = (c.statut || c.status || '').toLowerCase();
-        var yr = c.annee || (c.dateDebut || '').slice(0, 4);
-        return (s.includes('approuv') || s.includes('accept') || s === 'validé') && String(yr) === String(currentYear);
-      });
-      prisThis.forEach(function (c) {
-        totalJoursPris += Number(c.nbrJours || c.nombreJours || c.duree || 0);
-      });
-      totalJoursAlloues = 21 * empIds.size || 21; /* 21 jours standard Cameroun */
-    }
-
-    var tauxConso = totalJoursAlloues > 0 ? pct(totalJoursPris, totalJoursAlloues) : null;
-
-    return [
-      { label: 'Retard validation congés', value: fmtPct(tauxRetardConges), ratio: tauxRetardConges !== null ? tauxRetardConges/100 : null, type: 'alert', detail: demandesRetard + '/' + demandesAttente.length + ' en attente' },
-      { label: 'Consommation congés ' + currentYear, value: fmtPct(tauxConso), ratio: tauxConso !== null ? tauxConso/100 : null, type: 'progress', detail: totalJoursPris + 'j pris / ' + totalJoursAlloues + 'j · ' + daysLeft + 'j restants' },
+      { label: 'Note moyenne personnel', note: n1, weight: 2, detail: (n1 !== null ? (n1 / 10) + '/10' : '—') + ' · ' + avecNote.length + '/' + actifs.length + ' évalués' },
+      { label: 'Présentations / formations', note: null, weight: 0, detail: presentations + ' réalisées', volume: presentations },
+      { label: 'Retard projets & stages', note: n3, weight: 1.5, detail: projRet + '/' + projets.length + ' en retard' },
+      { label: 'Retard quêtes', note: n4, weight: 1, detail: quetesRet + '/' + quetesAct.length + ' en retard' },
+      { label: 'Retard documents', note: n5, weight: 1, detail: docsExp + ' expirés / ' + docs.length },
+      { label: 'Retard meetings', note: n6, weight: 1, detail: mtgRet + '/' + mtgAct.length + ' en retard' },
     ];
   }
 
   /* ══════════════════════════════════════════════════════════════
-     RENDU HTML
+     SUIVI CONGÉS — 2 KPI
   ══════════════════════════════════════════════════════════════ */
+  function kpiConges() {
+    var now = today();
+    var year = now.getFullYear();
+    var endOfYear = new Date(year, 11, 31, 23, 59, 59);
+    var daysLeft = Math.max(0, Math.ceil((endOfYear.getTime() - now.getTime()) / 86400000));
 
-  var CATEGORIES = [
-    { id: 'travaux',   label: 'Travaux',                    icon: '🏗️', color: '#ff8a3d', fn: kpiTravaux   },
-    { id: 'chiffrage', label: 'Chiffrage',                  icon: '📐', color: '#2563eb', fn: kpiChiffrage },
-    { id: 'fourniture',label: 'Fourniture Matériels',       icon: '📦', color: '#dc2626', fn: kpiFourniture },
-    { id: 'pde',       label: 'Perf · Dév · Engagement',   icon: '👤', color: '#7c3aed', fn: kpiPDE       },
-    { id: 'conges',    label: 'Suivi Congés',               icon: '🏖️', color: '#0891b2', fn: kpiConges   },
-  ];
+    var congesData = lsArr('epilot_conges_v1').concat(lsArr('epilot_conges')).concat(lsArr('epilot_hr_conges')).concat(lsArr('hbo_conges'));
+    var payslips = lsArr('epilot_paie_payslips').filter(function (p) { return String(p.annee) === String(year); });
 
-  function chipColor(kpi) {
-    if (kpi.type === 'info') return '#64748b';
-    if (kpi.type === 'progress') return kpi.ratio !== null ? scoreColor(kpi.ratio) : '#94a3b8';
-    if (kpi.type === 'alert') return alertColor(kpi.ratio);
-    return scoreColor(kpi.ratio);
+    /* 1 — Retard validation congés (en attente > 5 j) → note inversée */
+    var attente = congesData.filter(function (c) { var s = low(c.statut || c.status || c.etat); return s.indexOf('attente') >= 0 || s === 'pending' || s === ''; });
+    var attRet = attente.filter(function (c) { var a = daysAgo(c.dateCreation || c.dateDemande || c.date || c.createdAt); return a !== null && a > 5; }).length;
+    var n1 = noteRetard(attRet, attente.length);
+
+    /* 2 — Consommation congés avant fin d'année */
+    var pris = 0, alloues = 0;
+    var empIds = {};
+    payslips.forEach(function (p) { empIds[p.employeeId || p.matricule] = 1; });
+    payslips.forEach(function (p) {
+      pris += Number(p.joursConges || p.congesPris || p.joursCongesPris || 0);
+      alloues += Number(p.joursCongesAcquis || p.congesAcquis || 0);
+    });
+    if (alloues === 0 && congesData.length > 0) {
+      congesData.forEach(function (c) {
+        var s = low(c.statut || c.status); var yr = c.annee || String(c.dateDebut || '').slice(0, 4);
+        if ((s.indexOf('approuv') >= 0 || s.indexOf('accept') >= 0 || s === 'validé') && String(yr) === String(year)) pris += Number(c.nbrJours || c.nombreJours || c.duree || 0);
+      });
+      var nEmp = Object.keys(empIds).length || congesData.length || 1;
+      alloues = 21 * nEmp;  /* 18 j légaux + bonus ≈ 21 j Cameroun */
+    }
+    /* Consommation : on VEUT que les congés soient consommés avant fin d'année.
+       Note = taux de consommation (haut = bon, congés écoulés). */
+    var conso = alloues > 0 ? Math.round(pris / alloues * 100) : null;
+
+    return [
+      { label: 'Retard validation congés', note: n1, weight: 1, detail: attRet + '/' + attente.length + ' en attente > 5 j' },
+      { label: 'Consommation congés ' + year, note: conso, weight: 1, detail: pris + ' j pris / ' + alloues + ' j · reste ' + daysLeft + ' j' },
+    ];
   }
 
-  function renderKpiSection(cat) {
-    var kpis;
-    try { kpis = cat.fn(); } catch (e) {
-      console.warn('[HomeKPI]', cat.id, e);
-      kpis = [];
-    }
+  /* ══════════════════════════════════════════════════════════════
+     CONFIGURATION DES GROUPES (clés = data-key des items existants)
+  ══════════════════════════════════════════════════════════════ */
+  var GROUPS = {
+    travaux:     { label: 'Travaux',                          fn: kpiTravaux   },
+    chiffrage:   { label: 'Chiffrage',                        fn: kpiChiffrage },
+    fournitures: { label: 'Fourniture Matériels',             fn: kpiFourniture },
+    pde:         { label: 'Performance · Dév · Engagement',   fn: kpiPDE       },
+    conges:      { label: 'Suivi Congés',                     fn: kpiConges    },
+  };
 
-    var chipsHTML = kpis.map(function (k) {
-      var col = chipColor(k);
+  /* ══════════════════════════════════════════════════════════════
+     RENDU : badges + drawer au clic
+  ══════════════════════════════════════════════════════════════ */
+  var _open = null;  /* clé du groupe déplié */
+
+  function computeGroup(key) {
+    var g = GROUPS[key]; if (!g) return null;
+    var kpis;
+    try { kpis = g.fn(); } catch (e) { console.warn('[HomeKPI]', key, e); kpis = []; }
+    return { label: g.label, kpis: kpis, note: groupNote(kpis) };
+  }
+
+  function renderDrawer(key) {
+    var data = computeGroup(key);
+    if (!data) return '';
+    var rows = data.kpis.map(function (k) {
+      var col = k.note !== null && k.note !== undefined ? noteColor(k.note) : 'var(--muted)';
+      var val = k.note !== null && k.note !== undefined ? (k.note + '%') : (k.volume !== undefined ? k.volume : '—');
       return [
-        '<div class="hkpi-chip" style="border-left:3px solid ' + col + '" title="' + k.detail + '">',
-        '<span class="hkpi-label">' + k.label + '</span>',
-        '<span class="hkpi-val" style="color:' + col + '">' + k.value + '</span>',
-        k.detail ? '<span class="hkpi-detail">' + k.detail + '</span>' : '',
+        '<div class="hk-row">',
+        '<div class="hk-row-main">',
+        '<span class="hk-row-label">' + k.label + '</span>',
+        (k.sub ? '<span class="hk-row-sub">' + k.sub + '</span>' : ''),
+        '<span class="hk-row-detail">' + (k.detail || '') + '</span>',
+        '</div>',
+        '<span class="hk-row-note" style="color:' + col + '">' + val + '</span>',
         '</div>',
       ].join('');
     }).join('');
-
     return [
-      '<div class="hkpi-cat" id="hkpi-' + cat.id + '">',
-      '<div class="hkpi-cat-head" style="border-bottom:2px solid ' + cat.color + '22">',
-      '<span class="hkpi-icon">' + cat.icon + '</span>',
-      '<span class="hkpi-cat-label" style="color:' + cat.color + '">' + cat.label + '</span>',
-      '</div>',
-      '<div class="hkpi-chips">' + chipsHTML + '</div>',
+      '<div class="hk-drawer" data-for="' + key + '">',
+      '<div class="hk-drawer-head">' + data.label + ' — détail des indicateurs</div>',
+      rows,
       '</div>',
     ].join('');
   }
 
-  function render() {
-    var host = document.getElementById('home-kpi-dashboard');
-    if (!host) return;
+  function updateBadges() {
+    var items = document.querySelectorAll('#items .item[data-key]');
+    if (!items.length) return false;
 
-    var body = CATEGORIES.map(renderKpiSection).join('');
-    host.innerHTML = body;
-  }
+    Array.prototype.forEach.call(items, function (item) {
+      var key = item.getAttribute('data-key');
+      if (!GROUPS[key]) return;
+      var data = computeGroup(key);
+      if (!data) return;
 
-  /* ══════════════════════════════════════════════════════════════
-     CSS
-  ══════════════════════════════════════════════════════════════ */
-  var CSS = [
-    '/* ── Home KPI Dashboard ── */',
-    '#home-kpi-section {',
-    '  margin: 28px 0 0; padding: 0;',
-    '}',
-    '#home-kpi-section .hkpi-title {',
-    '  font-size: 11px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase;',
-    '  color: var(--muted); margin: 0 0 14px; display: flex; align-items: center; gap: 8px;',
-    '}',
-    '#home-kpi-section .hkpi-title::after {',
-    '  content:""; flex:1; height:1px; background:var(--line);',
-    '}',
-    '#home-kpi-dashboard {',
-    '  display: grid;',
-    '  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));',
-    '  gap: 14px;',
-    '}',
-    '.hkpi-cat {',
-    '  background: var(--card);',
-    '  border: 1px solid var(--line);',
-    '  border-radius: 14px;',
-    '  padding: 14px 16px;',
-    '  display: flex; flex-direction: column; gap: 10px;',
-    '  transition: box-shadow .2s;',
-    '}',
-    '.hkpi-cat:hover { box-shadow: 0 4px 16px rgba(0,0,0,.12); }',
-    '.hkpi-cat-head {',
-    '  display: flex; align-items: center; gap: 7px;',
-    '  padding-bottom: 8px;',
-    '}',
-    '.hkpi-icon { font-size: 15px; line-height: 1; }',
-    '.hkpi-cat-label {',
-    '  font-size: 11.5px; font-weight: 700; letter-spacing: .02em;',
-    '}',
-    '.hkpi-chips { display: flex; flex-direction: column; gap: 6px; }',
-    '.hkpi-chip {',
-    '  display: grid;',
-    '  grid-template-columns: 1fr auto;',
-    '  grid-template-rows: auto auto;',
-    '  align-items: baseline;',
-    '  gap: 0 6px;',
-    '  padding: 5px 8px;',
-    '  border-radius: 7px;',
-    '  background: var(--bg-2, var(--card-2));',
-    '  border-left-width: 3px; border-left-style: solid;',
-    '  cursor: default;',
-    '}',
-    '.hkpi-label {',
-    '  font-size: 10.5px; color: var(--muted); line-height: 1.3;',
-    '  grid-column: 1; grid-row: 1;',
-    '}',
-    '.hkpi-val {',
-    '  font-size: 13px; font-weight: 800; line-height: 1.2;',
-    '  grid-column: 2; grid-row: 1 / 3;',
-    '  text-align: right; white-space: nowrap;',
-    '}',
-    '.hkpi-detail {',
-    '  font-size: 9.5px; color: var(--muted-2); grid-column: 1; grid-row: 2;',
-    '  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;',
-    '}',
-    '@media (max-width: 720px) {',
-    '  #home-kpi-dashboard { grid-template-columns: 1fr 1fr; }',
-    '}',
-  ].join('\n');
+      var badge = item.querySelector('.p');
+      if (badge) {
+        if (data.note === null || data.note === undefined) {
+          badge.textContent = '—';
+          badge.className = 'p';
+        } else {
+          badge.textContent = data.note + '%';
+          badge.className = 'p ' + noteClass(data.note);
+        }
+      }
 
-  /* ══════════════════════════════════════════════════════════════
-     INJECTION
-  ══════════════════════════════════════════════════════════════ */
-
-  function inject() {
-    /* Style */
-    if (!document.getElementById('home-kpi-css')) {
-      var style = document.createElement('style');
-      style.id = 'home-kpi-css';
-      style.textContent = CSS;
-      document.head.appendChild(style);
-    }
-
-    /* Cherche la vue accueil (main#view-accueil ou premier .hub-view) */
-    var accueil = document.getElementById('view-accueil') || document.querySelector('main.hub-view');
-    if (!accueil) return false;
-
-    /* Évite la double injection */
-    if (document.getElementById('home-kpi-section')) { render(); return true; }
-
-    /* Injecte la section après le contenu existant */
-    var section = document.createElement('div');
-    section.id = 'home-kpi-section';
-    section.innerHTML = [
-      '<div class="hkpi-title">Tableau de bord KPI</div>',
-      '<div id="home-kpi-dashboard"></div>',
-    ].join('');
-
-    /* Cherche un bon point d'insertion : après .bars-card, ou à la fin de la section principale */
-    var leftSec = accueil.querySelector('section') || accueil.querySelector('.left') || accueil;
-    var barsCard = leftSec.querySelector('.bars-card');
-    if (barsCard) {
-      barsCard.parentNode.insertBefore(section, barsCard.nextSibling);
-    } else {
-      leftSec.appendChild(section);
-    }
-
-    render();
+      /* Curseur cliquable + indicateur */
+      item.style.cursor = 'pointer';
+      if (!item.__hkWired) {
+        item.__hkWired = true;
+        item.addEventListener('click', function () { toggleDrawer(key); });
+      }
+    });
     return true;
   }
 
-  /* Retry tant que la vue n'est pas encore dans le DOM */
-  window.__epKeepApplying(function () {
-    inject();
-  }, { interval: 600, tries: 100 });
+  function toggleDrawer(key) {
+    var itemsBox = document.getElementById('items');
+    if (!itemsBox) return;
+    /* Retire le drawer existant */
+    var existing = itemsBox.parentNode.querySelector('.hk-drawer');
+    var wasOpen = existing && existing.getAttribute('data-for') === key;
+    if (existing) existing.remove();
+    /* Désélectionne tous */
+    Array.prototype.forEach.call(itemsBox.querySelectorAll('.item'), function (it) { it.classList.remove('hk-active'); });
 
-  /* Rafraîchissement sur changement de données */
-  if (window.EPilotBus && window.EPilotBus.on) {
-    window.EPilotBus.on('data:changed', function () {
-      try { render(); } catch (e) {}
-    });
+    if (wasOpen) { _open = null; return; }
+
+    _open = key;
+    var item = itemsBox.querySelector('.item[data-key="' + key + '"]');
+    if (item) item.classList.add('hk-active');
+    /* Insère le drawer juste après l'item cliqué */
+    var html = renderDrawer(key);
+    var tmp = document.createElement('div');
+    tmp.innerHTML = html;
+    var drawer = tmp.firstChild;
+    if (item && item.nextSibling) itemsBox.insertBefore(drawer, item.nextSibling);
+    else itemsBox.appendChild(drawer);
   }
 
-  /* Rafraîchissement quand on revient sur l'accueil */
-  var _origHubShowView = null;
-  function hookHubNav() {
+  function render() {
+    var ok = updateBadges();
+    /* Re-rend le drawer ouvert si données changées */
+    if (ok && _open) {
+      var itemsBox = document.getElementById('items');
+      var existing = itemsBox && itemsBox.parentNode.querySelector('.hk-drawer');
+      if (existing && existing.getAttribute('data-for') === _open) {
+        var tmp = document.createElement('div');
+        tmp.innerHTML = renderDrawer(_open);
+        existing.parentNode.replaceChild(tmp.firstChild, existing);
+      }
+    }
+    return ok;
+  }
+
+  /* ──────────────── CSS ──────────────── */
+  var CSS = [
+    '#items .item.hk-active { border-color: var(--orange) !important; }',
+    '.hk-drawer {',
+    '  margin-top: 8px; margin-bottom: 4px;',
+    '  background: var(--bg-2, var(--card-2));',
+    '  border: 1px solid var(--line); border-left: 3px solid var(--orange);',
+    '  border-radius: 12px; padding: 10px 12px;',
+    '  animation: hkSlide .18s ease;',
+    '}',
+    '@keyframes hkSlide { from { opacity:0; transform: translateY(-4px); } to { opacity:1; transform:none; } }',
+    '.hk-drawer-head {',
+    '  font-size: 10.5px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase;',
+    '  color: var(--muted); margin-bottom: 8px;',
+    '}',
+    '.hk-row {',
+    '  display: flex; align-items: center; justify-content: space-between; gap: 10px;',
+    '  padding: 6px 4px; border-top: 1px solid var(--line);',
+    '}',
+    '.hk-row:first-of-type { border-top: 0; }',
+    '.hk-row-main { display: flex; flex-direction: column; gap: 1px; min-width: 0; flex: 1; }',
+    '.hk-row-label { font-size: 12px; font-weight: 600; color: var(--text); }',
+    '.hk-row-sub { font-size: 9.5px; color: var(--muted-2); }',
+    '.hk-row-detail { font-size: 10px; color: var(--muted); }',
+    '.hk-row-note { font-size: 15px; font-weight: 800; white-space: nowrap; }',
+  ].join('\n');
+
+  function injectCSS() {
+    if (document.getElementById('home-kpi-css')) return;
+    var s = document.createElement('style');
+    s.id = 'home-kpi-css';
+    s.textContent = CSS;
+    document.head.appendChild(s);
+  }
+
+  /* ──────────────── Boot ──────────────── */
+  function boot() {
+    injectCSS();
+    /* Charge les PV (sécurité) puis rend ; re-rend après chargement async */
+    render();
+    loadPVs(function () { render(); });
+  }
+
+  /* Applique tant que #items n'est pas présent */
+  window.__epKeepApplying(function () {
+    if (document.getElementById('items')) { boot(); }
+  }, { interval: 600, tries: 120 });
+
+  /* Rafraîchit sur changement de données */
+  if (window.EPilotBus && window.EPilotBus.on) {
+    window.EPilotBus.on('data:changed', function () { _pvsLoaded = false; loadPVs(function () { render(); }); });
+  }
+
+  /* Rafraîchit au retour sur l'accueil */
+  function hookNav() {
     if (!window.HubViews || !window.HubViews.showView || window.HubViews.__homeKpiHooked) return;
     window.HubViews.__homeKpiHooked = true;
-    _origHubShowView = window.HubViews.showView;
+    var orig = window.HubViews.showView;
     window.HubViews.showView = function (name) {
-      var r = _origHubShowView.apply(this, arguments);
-      if (name === 'accueil' || !name) setTimeout(function () { inject(); render(); }, 150);
+      var r = orig.apply(this, arguments);
+      if (name === 'accueil' || !name) setTimeout(function () { boot(); }, 150);
       return r;
     };
   }
-  if (window.HubViews) hookHubNav(); else setTimeout(hookHubNav, 500);
+  if (window.HubViews) hookNav(); else setTimeout(hookNav, 500);
 
-  /* Export global pour le module EPilotModules */
-  window.HomeKPI = { render: render, inject: inject };
+  window.HomeKPI = { render: render, compute: computeGroup, toggle: toggleDrawer };
   if (window.EPilotModules && window.EPilotModules.register) {
-    window.EPilotModules.register('home-kpi', {
-      refresh: function () { try { render(); } catch (e) {} },
-      viewId: '#home-kpi-section'
-    });
+    window.EPilotModules.register('home-kpi', { refresh: function () { try { render(); } catch (e) {} } });
   }
 
 })();
