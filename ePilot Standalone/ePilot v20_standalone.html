@@ -4685,6 +4685,29 @@ document.addEventListener('DOMContentLoaded', async function() {
   function markAttempt(mat, sid, ok){ if(!mat||!sid) return; var r=loadRes(); r[mat]=r[mat]||{}; var c=r[mat][sid]||{passed:false,attempts:0}; c.attempts=(c.attempts||0)+1; if(ok) c.passed=true; c.lastAt=Date.now(); r[mat][sid]=c; saveRes(r); }
   function progress(d, mat){ var r=(loadRes()[mat])||{}; return (d.paliers||[]).map(function(p){ var subs=(p.sujets||[]).filter(function(s){return s&&s.item;}); var passed=subs.filter(function(s){return r[s.id]&&r[s.id].passed;}).length; return {palier:p.palier||('Niveau '+p.niveau), niveau:p.niveau, total:subs.length, passed:passed, pct:subs.length?Math.round(passed/subs.length*100):0}; }); }
 
+  /* ---------- write-back vers PDE (non destructif) ----------
+     Un sujet réussi monte sa note PDE jusqu'au seuil de passage du palier ;
+     ne baisse jamais une note existante et ne touche pas « validated » (manager). */
+  function sidInfoMap(d){ var m={}; (d.paliers||[]).forEach(function(p){ var np=(typeof p.notePassage==='number')?p.notePassage:(parseFloat(p.notePassage)||3.5); (p.sujets||[]).forEach(function(s){ if(s&&s.id) m[s.id]={niveau:p.niveau, notePassage:np}; }); }); return m; }
+  function pdeWriteback(mat, oks, info){
+    if(!mat) return 0;
+    var empId='EMP'+String(mat).replace(/\s+/g,'');
+    var store; try{ store=JSON.parse(localStorage.getItem('epilot_pde_v1'))||{}; }catch(e){ store={}; }
+    if(!store[empId]) store[empId]={evaluations:{}, dev:{paliers:{}}};
+    if(!store[empId].dev) store[empId].dev={paliers:{}};
+    if(!store[empId].dev.paliers) store[empId].dev.paliers={};
+    var n=0;
+    Object.keys(oks).forEach(function(sid){ if(!oks[sid]) return; var inf=info[sid]; if(!inf) return;
+      var k=String(inf.niveau); var pal=store[empId].dev.paliers[k];
+      if(!pal){ pal={requested:false,requestedAt:null,subjects:{},passed:false,passedAt:null}; store[empId].dev.paliers[k]=pal; }
+      if(!pal.subjects) pal.subjects={};
+      var sd=pal.subjects[sid]||{}; var target=inf.notePassage||3.5; var cur=(typeof sd.note==='number')?sd.note:null;
+      if(cur==null || cur<target){ sd.note=target; sd.source='exercice'; sd.exerciceAt=Date.now(); pal.subjects[sid]=sd; n++; }
+    });
+    if(n){ try{ localStorage.setItem('epilot_pde_v1', JSON.stringify(store)); }catch(e){} }
+    return n;
+  }
+
   /* ---------- génération de questions ---------- */
   function genQuestion(s, all, paliers){
     var palNames=paliers.map(function(p){return p.palier;}).filter(Boolean);
@@ -4767,14 +4790,16 @@ document.addEventListener('DOMContentLoaded', async function() {
       }
       if(t.closest&&t.closest('#ex-submit')){ e.preventDefault();
         if(!CURQS||!CURQS.length) return;
-        var mat=$('#ex-emp',root).value, correct=0, unanswered=0;
-        CURQS.forEach(function(q,i){ var sel=root.querySelector('input[name="exq'+i+'"]:checked'); var ok= sel && Number(sel.value)===q.answer; if(!sel) unanswered++; if(ok) correct++; markAttempt(mat, q.sid, !!ok); });
+        var d2=uniData(), info=sidInfoMap(d2);
+        var mat=$('#ex-emp',root).value, correct=0, unanswered=0, oks={};
+        CURQS.forEach(function(q,i){ var sel=root.querySelector('input[name="exq'+i+'"]:checked'); var ok= sel && Number(sel.value)===q.answer; if(!sel) unanswered++; if(ok) correct++; oks[q.sid]=oks[q.sid]||!!ok; markAttempt(mat, q.sid, !!ok); });
+        var pushed=pdeWriteback(mat, oks, info);
         var pct=Math.round(correct/CURQS.length*100);
         var col=pct>=70?'#16a34a':pct>=50?'#d97706':'#dc2626';
         $('#ex-result',root).innerHTML='<div class="ex-score" style="border-color:'+col+'"><b style="color:'+col+'">'+correct+'/'+CURQS.length+' — '+pct+'%</b>'+
           (unanswered?' <span style="color:#94a3b8">('+unanswered+' sans réponse)</span>':'')+
-          '<div class="ex-rmeta">Les sujets réussis sont marqués « maîtrisés » et la progression est mise à jour.</div></div>';
-        var d2=uniData(); $('#ex-prog',root).innerHTML=renderProgress(d2, mat);
+          '<div class="ex-rmeta">Sujets réussis marqués « maîtrisés ».'+(pushed?' '+pushed+' note(s) reportée(s) dans PDE (au seuil de passage, sans écraser une note manager) — visible au rechargement.':'')+'</div></div>';
+        $('#ex-prog',root).innerHTML=renderProgress(d2, mat);
         return;
       }
     });
