@@ -4432,8 +4432,8 @@ document.addEventListener('DOMContentLoaded', async function() {
 
   /* ---------- modèle ---------- */
   function blankSujet(){ return {id:uid(), role:'', item:'', objectifs:'', duree:'', procedures:[], notePassage:0}; }
-  function blankPalier(n){ return {id:uid(), niveau:n||1, palier:'', groupe:'', qualification:'', notePassage:3.5, dureeVieMois:0, sujets:[], affectations:{matricules:[],fonctions:[]}}; }
-  function blankCertif(){ return {id:uid(), nom:'', categorie:'', dureeVieMois:12, notePassage:0, affectations:{matricules:[],fonctions:[]}}; }
+  function blankPalier(n){ return {id:uid(), niveau:n||1, palier:'', groupe:'', qualification:'', notePassage:3.5, dureeVieMois:0, echeance:'', sujets:[], affectations:{matricules:[],fonctions:[]}}; }
+  function blankCertif(){ return {id:uid(), nom:'', categorie:'', dureeVieMois:12, notePassage:0, echeance:'', affectations:{matricules:[],fonctions:[]}}; }
   function seed(){
     var pal=lsArr(PDEPAL);
     return { paliers: pal.map(function(p){ return {
@@ -4446,7 +4446,8 @@ document.addEventListener('DOMContentLoaded', async function() {
     d.paliers.forEach(function(p){ if(!p.id) p.id=uid(); if(!Array.isArray(p.sujets)) p.sujets=[]; if(!p.affectations) p.affectations={matricules:[],fonctions:[]};
       p.sujets.forEach(function(s){ if(!s.id) s.id=uid(); ['role','item','objectifs','duree'].forEach(function(k){ if(s[k]==null) s[k]=''; });
         s.procedures = Array.isArray(s.procedures) ? s.procedures : ((typeof s.procedures==='string' && s.procedures) ? s.procedures.split(',').map(function(x){return x.trim();}).filter(Boolean) : []); }); });
-    d.certifications.forEach(function(c){ if(!c.id) c.id=uid(); if(!c.affectations) c.affectations={matricules:[],fonctions:[]}; });
+    d.paliers.forEach(function(p){ if(p.echeance==null) p.echeance=''; });
+    d.certifications.forEach(function(c){ if(!c.id) c.id=uid(); if(!c.affectations) c.affectations={matricules:[],fonctions:[]}; if(c.echeance==null) c.echeance=''; });
     return d;
   }
   /* liste partagée et éditable des procédures (la page « Procédures » de l'app est un stub sans données) */
@@ -4545,6 +4546,7 @@ document.addEventListener('DOMContentLoaded', async function() {
         '<div class="uni-fld"><label>Qualification</label><input class="uni-in" data-k="qualification" value="'+esc(p.qualification)+'" placeholder="Opérateur, Référent…"></div>'+
         '<div class="uni-fld" style="flex:0 0 110px"><label>Note passage</label><input class="uni-in" type="number" step="0.1" data-k="notePassage" value="'+esc(p.notePassage)+'"></div>'+
         '<div class="uni-fld" style="flex:0 0 130px"><label>Durée de vie (mois)</label><input class="uni-in" type="number" data-k="dureeVieMois" value="'+esc(p.dureeVieMois)+'" placeholder="0 = illimité"></div>'+
+        '<div class="uni-fld" style="flex:0 0 150px"><label>Échéance (cible)</label><input class="uni-in" type="date" data-k="echeance" value="'+esc(p.echeance)+'"></div>'+
       '</div>'+
       '<div class="uni-block-h">Sujets / compétences <button class="uni-add" data-add-suj>+ Ajouter un sujet</button></div>'+
       '<div data-sujwrap>'+sujTable(p)+'</div>'+
@@ -4565,7 +4567,8 @@ document.addEventListener('DOMContentLoaded', async function() {
       '<div class="uni-row"><div class="uni-fld"><label>Certification / habilitation</label><input class="uni-in" data-k="nom" value="'+esc(c.nom)+'" placeholder="Travail en hauteur…"></div>'+
         '<div class="uni-fld" style="flex:0 0 180px"><label>Catégorie</label><input class="uni-in" data-k="categorie" value="'+esc(c.categorie)+'" placeholder="HSE, Technique…"></div></div>'+
       '<div class="uni-row"><div class="uni-fld" style="flex:0 0 150px"><label>Durée de vie (mois)</label><input class="uni-in" type="number" data-k="dureeVieMois" value="'+esc(c.dureeVieMois)+'"></div>'+
-        '<div class="uni-fld" style="flex:0 0 130px"><label>Note de passage</label><input class="uni-in" type="number" step="0.1" data-k="notePassage" value="'+esc(c.notePassage)+'"></div></div>'+
+        '<div class="uni-fld" style="flex:0 0 130px"><label>Note de passage</label><input class="uni-in" type="number" step="0.1" data-k="notePassage" value="'+esc(c.notePassage)+'"></div>'+
+        '<div class="uni-fld" style="flex:0 0 150px"><label>Échéance (cible)</label><input class="uni-in" type="date" data-k="echeance" value="'+esc(c.echeance)+'"></div></div>'+
       '<div class="uni-block-h">Affectations</div>'+affBlock(c.affectations);
     var m=modal('Certification — '+(c.nom||'nouvelle'), html, {onClose:function(){ persistNow(); renderGrid(); }});
     bind(m.body, c);
@@ -4953,6 +4956,131 @@ document.addEventListener('DOMContentLoaded', async function() {
     ref.parentNode.insertBefore(b, ref.nextSibling);
   }
   function wireNav(){ var nl=document.getElementById('navlinks'); if(!nl||nl.__exNav) return; nl.__exNav=true; nl.addEventListener('click', function(){ setTimeout(injectBtn,60); setTimeout(injectBtn,230); setTimeout(injectBtn,520); }); }
+  function hook(){ ensureView(); wrapShowView(); injectBtn(); wireNav(); }
+  if(window.__epOnBodyMut){ window.__epOnBodyMut(hook); }
+  var tries=0; (function poll(){ try{ hook(); }catch(e){} if(++tries<60) setTimeout(poll, 700); })();
+})();
+</script>
+<script id="__SUIVI_v1__">
+/* __SUIVI_v1__ — Sous-page manager « Suivi » de la page Compétences.
+   Tableau de bord : progression des employés (paliers maîtrisés via Exercices),
+   certifications requises (croisées avec les papiers détenus) et rappels d'échéance.
+   Lecture seule. Sources : epilot_university_v1, epilot_exercices_v1, epilot_papiers, PERSONNEL_DATA. */
+(function(){
+  if(window.__suivi) return; window.__suivi=1;
+  function $(s,r){ return (r||document).querySelector(s); }
+  function esc(s){ return String(s==null?'':s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];}); }
+  function lsArr(k){ try{ var a=JSON.parse(localStorage.getItem(k)); return Array.isArray(a)?a:[]; }catch(e){ return []; } }
+  function lsObj(k){ try{ var o=JSON.parse(localStorage.getItem(k)); return (o&&typeof o==='object')?o:{}; }catch(e){ return {}; } }
+  var ICON='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:15px;height:15px"><path d="M3 3v18h18"/><rect x="7" y="11" width="3" height="6"/><rect x="12" y="7" width="3" height="10"/><rect x="17" y="13" width="3" height="4"/></svg>';
+
+  function emps(){ return (window.PERSONNEL_DATA||[]).filter(function(p){return p&&(p.matricule||p.nom);}).map(function(p){
+    return { mat:String(p.matricule||'').trim(), nom:((p.prenoms||'')+' '+(p.nom||'')).trim()||String(p.matricule||''), fonction:(p.fonction||'').trim() }; }); }
+  function uni(){ var d=lsObj('epilot_university_v1'); if(!Array.isArray(d.paliers)) d.paliers=[]; if(!Array.isArray(d.certifications)) d.certifications=[]; return d; }
+  function res(){ return lsObj('epilot_exercices_v1'); }
+  function isAssigned(aff, mat, fonction){ aff=aff||{}; return (aff.matricules||[]).indexOf(mat)>=0 || (fonction && (aff.fonctions||[]).indexOf(fonction)>=0); }
+  function daysTo(s){ if(!s) return null; var d=new Date(s); if(isNaN(d.getTime())) return null; return Math.round((d-Date.now())/86400000); }
+  function papersOf(mat,name){ var arr=lsArr('epilot_papiers'), nm=(name||'').toLowerCase(), out=[]; arr.forEach(function(p){ if(!p) return; var pe=((p.employe||'')+'').toLowerCase(); if(nm&&pe.indexOf(nm)>=0) out.push({titre:p.titre||p.nom||p.type||'', exp:p.expire||p.expiration||p.dateExpiration||''}); }); return out; }
+  function certStatus(c, mat, name){ var ps=papersOf(mat,name); var held=ps.filter(function(p){ return c.nom && p.titre && p.titre.toLowerCase().indexOf(String(c.nom).toLowerCase())>=0; })[0];
+    if(!held) return {state:'À obtenir', exp:'', ok:false}; if(held.exp){ var dd=daysTo(held.exp); if(dd!=null) return {state: dd<0?'Expiré':(dd<60?'Bientôt':'À jour'), exp:held.exp, ok:dd>=0}; } return {state:'Détenue', exp:held.exp, ok:true}; }
+  function palierMastery(p, mat){ var r=res()[mat]||{}; var subs=(p.sujets||[]).filter(function(s){return s&&s.item;}); var passed=subs.filter(function(s){return r[s.id]&&r[s.id].passed;}).length; return {passed:passed, total:subs.length, done: subs.length>0 && passed===subs.length}; }
+
+  /* ---------- calcul global ---------- */
+  function compute(){
+    var d=uni(), list=emps(), rows=[], reminders=[];
+    var assignedPalCount=0, donePalCount=0, certToGet=0;
+    list.forEach(function(e){
+      var pal=[], cert=[], nextDue=null;
+      d.paliers.forEach(function(p){ if(!isAssigned(p.affectations, e.mat, e.fonction)) return; var m=palierMastery(p, e.mat); pal.push({p:p, m:m}); assignedPalCount++; if(m.done) donePalCount++;
+        var dd=daysTo(p.echeance); if(dd!=null){ if(nextDue==null||dd<nextDue) nextDue=dd; if(!m.done && dd<=30) reminders.push({nom:e.nom, mat:e.mat, type:'Palier', item:(p.palier||('Niv. '+p.niveau)), days:dd, statut:m.passed+'/'+m.total}); } });
+      d.certifications.forEach(function(c){ if(!isAssigned(c.affectations, e.mat, e.fonction)) return; var st=certStatus(c, e.mat, e.nom); cert.push({c:c, st:st}); if(!st.ok) certToGet++;
+        var dd2=daysTo(c.echeance); if(dd2!=null){ if(nextDue==null||dd2<nextDue) nextDue=dd2; if(!st.ok && dd2<=30) reminders.push({nom:e.nom, mat:e.mat, type:'Certif', item:c.nom, days:dd2, statut:st.state}); }
+        else if(st.state==='Expiré'||st.state==='Bientôt') reminders.push({nom:e.nom, mat:e.mat, type:'Certif', item:c.nom, days:null, statut:st.state}); });
+      if(pal.length||cert.length) rows.push({e:e, pal:pal, cert:cert, nextDue:nextDue});
+    });
+    reminders.sort(function(a,b){ var x=a.days==null?9999:a.days, y=b.days==null?9999:b.days; return x-y; });
+    var rate = assignedPalCount? Math.round(donePalCount/assignedPalCount*100):0;
+    return {rows:rows, reminders:reminders, kpi:{employes:rows.length, rate:rate, certToGet:certToGet, late:reminders.filter(function(r){return r.days!=null&&r.days<0;}).length}};
+  }
+
+  /* ---------- rendu ---------- */
+  function badge(txt, col){ return '<span style="background:'+col+'1a;color:'+col+';border-radius:10px;padding:1px 8px;font-size:11px;font-weight:700;white-space:nowrap">'+esc(txt)+'</span>'; }
+  function certCol(st){ return st.state==='Expiré'?'#dc2626':st.state==='Bientôt'?'#d97706':st.state==='À obtenir'?'#b45309':'#16a34a'; }
+  function render(root){
+    var c=compute();
+    var kpi='<div class="sv-kpis">'+
+      '<div class="sv-kpi"><div class="k">Employés suivis</div><div class="v">'+c.kpi.employes+'</div></div>'+
+      '<div class="sv-kpi"><div class="k">Paliers maîtrisés</div><div class="v">'+c.kpi.rate+'%</div></div>'+
+      '<div class="sv-kpi"><div class="k">Certifs à obtenir</div><div class="v" style="color:#b45309">'+c.kpi.certToGet+'</div></div>'+
+      '<div class="sv-kpi"><div class="k">Échéances dépassées</div><div class="v" style="color:#dc2626">'+c.kpi.late+'</div></div>'+
+    '</div>';
+    var rem = c.reminders.length ? '<div class="sv-rem">'+c.reminders.map(function(r){ var col=(r.days!=null&&r.days<0)?'#dc2626':'#d97706';
+        var ech=r.days==null?'':(r.days<0?('en retard de '+(-r.days)+' j'):('dans '+r.days+' j'));
+        return '<div class="sv-remrow"><span class="sv-remtype" style="background:'+col+'">'+r.type+'</span><b>'+esc(r.nom)+'</b> — '+esc(r.item)+' <span style="color:#64748b">('+esc(r.statut)+')</span><span class="sv-remech" style="color:'+col+'">'+ech+'</span></div>';
+      }).join('')+'</div>' : '<div class="sv-empty">Aucune échéance proche ni dépassée. 👍</div>';
+    var rows = c.rows.length ? c.rows.map(function(r){
+      var palTxt = r.pal.length? r.pal.map(function(x){ var col=x.m.done?'#16a34a':(x.m.passed?'#d97706':'#94a3b8'); return badge((x.p.palier||('Niv.'+x.p.niveau))+' '+x.m.passed+'/'+x.m.total, col); }).join(' ') : '<span style="color:#cbd5e1">—</span>';
+      var certTxt = r.cert.length? r.cert.map(function(x){ return badge(x.c.nom+' · '+x.st.state, certCol(x.st)); }).join(' ') : '<span style="color:#cbd5e1">—</span>';
+      var nd = r.nextDue==null?'—':(r.nextDue<0?('<span style="color:#dc2626;font-weight:700">retard '+(-r.nextDue)+'j</span>'):(r.nextDue<=30?('<span style="color:#d97706;font-weight:700">'+r.nextDue+'j</span>'):(r.nextDue+'j')));
+      return '<tr><td><b>'+esc(r.e.nom)+'</b><div class="sv-sub">'+esc(r.e.mat)+'</div></td><td>'+esc(r.e.fonction||'—')+'</td><td>'+palTxt+'</td><td>'+certTxt+'</td><td>'+nd+'</td></tr>';
+    }).join('') : '<tr><td colspan="5" class="sv-empty">Aucun employé n\'a de palier ou certification affecté(e). Faites les affectations dans <b>University</b>.</td></tr>';
+    root.innerHTML='<div class="sv-pane">'+kpi+
+      '<div class="sv-h">🔔 Rappels & échéances</div>'+rem+
+      '<div class="sv-h" style="margin-top:20px">👥 Progression par employé</div>'+
+      '<div class="sv-tablewrap"><table class="sv-table"><thead><tr><th>Employé</th><th>Fonction</th><th>Paliers (maîtrisés)</th><th>Certifications</th><th>Proch. échéance</th></tr></thead><tbody>'+rows+'</tbody></table></div>'+
+      '</div>';
+  }
+
+  /* ---------- CSS ---------- */
+  function css(){ if($('#sv-css')) return; var s=document.createElement('style'); s.id='sv-css'; s.textContent=[
+    '.sv-pane{padding:16px 20px}',
+    '.sv-h{font-size:13px;font-weight:800;color:#0f766e;text-transform:uppercase;letter-spacing:.04em;margin-bottom:12px}',
+    '.sv-empty{color:#64748b;font-size:13px;padding:14px;background:#f8fafc;border-radius:10px}',
+    '.sv-kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-bottom:22px}',
+    '@media(max-width:760px){.sv-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}}',
+    '.sv-kpi{border:1px solid #e5e7eb;border-radius:12px;padding:12px 14px;background:#fff}',
+    '.sv-kpi .k{font-size:11px;color:#64748b;text-transform:uppercase;font-weight:600}',
+    '.sv-kpi .v{font-size:24px;font-weight:800;color:#0f766e;margin-top:4px}',
+    '.sv-rem{display:flex;flex-direction:column;gap:6px;margin-bottom:6px}',
+    '.sv-remrow{display:flex;align-items:center;gap:8px;padding:8px 12px;border:1px solid #fde68a;background:#fffbeb;border-radius:8px;font-size:12.5px}',
+    '.sv-remtype{color:#fff;border-radius:6px;padding:1px 8px;font-size:10px;font-weight:700;text-transform:uppercase}',
+    '.sv-remech{margin-left:auto;font-weight:700;font-size:12px;white-space:nowrap}',
+    '.sv-tablewrap{overflow-x:auto;border:1px solid #e5e7eb;border-radius:12px}',
+    '.sv-table{width:100%;border-collapse:collapse;font-size:12.5px;background:#fff}',
+    '.sv-table th{text-align:left;padding:9px 12px;color:#64748b;font-size:11px;text-transform:uppercase;border-bottom:1px solid #e5e7eb;font-weight:700}',
+    '.sv-table td{padding:9px 12px;border-bottom:1px solid #f1f5f9;vertical-align:top}',
+    '.sv-table tr:last-child td{border-bottom:0}',
+    '.sv-sub{font-size:11px;color:#94a3b8}'
+  ].join('\n'); document.head.appendChild(s); }
+
+  /* ---------- sous-page routée ---------- */
+  function ensureView(){
+    var ex=document.getElementById('view-suivi'); if(ex) return ex;
+    var ref=document.getElementById('view-competences'); if(!ref||!ref.parentNode) return null;
+    css();
+    var sec=document.createElement('section'); sec.className='hub-view'; sec.id='view-suivi';
+    sec.innerHTML='<div class="view-head"><div><div class="crumb">Compétences <span class="sep">/</span> Suivi</div><h1><span class="accent">Suivi</span> des compétences</h1></div></div><div id="sv-root"></div>';
+    ref.parentNode.appendChild(sec);
+    render($('#sv-root',sec));
+    return sec;
+  }
+  function wrapShowView(){
+    if(!window.HubViews || typeof window.HubViews.showView!=='function' || window.HubViews.__svWrapped) return;
+    var orig=window.HubViews.showView;
+    window.HubViews.showView=function(name,opts){ try{ if(name!=='suivi'){ var s=document.getElementById('view-suivi'); if(s) s.classList.remove('active'); } }catch(e){} return orig.apply(this,arguments); };
+    window.HubViews.__svWrapped=true;
+  }
+  function showSv(){ var sec=ensureView(); Array.prototype.forEach.call(document.querySelectorAll('.hub-view'),function(v){ v.classList.remove('active'); }); if(sec){ sec.classList.add('active'); render($('#sv-root',sec)); } }
+  function injectBtn(){
+    var sub=document.getElementById('subnav'); if(!sub) return;
+    var ref=sub.querySelector('[data-sub-ex]')||sub.querySelector('[data-sub-uni]')||sub.querySelector('[data-sub="Mes Compétences"]'); if(!ref) return;
+    if(sub.querySelector('[data-sub-sv]')) return;
+    var b=document.createElement('button'); b.className='item'; b.setAttribute('data-sub-sv','suivi');
+    b.style.cssText='display:inline-flex;align-items:center;gap:5px;'; b.innerHTML=ICON+'Suivi';
+    b.addEventListener('click', function(){ Array.prototype.forEach.call(sub.querySelectorAll('.item'), function(x){ x.classList.remove('active'); }); b.classList.add('active'); showSv(); });
+    ref.parentNode.insertBefore(b, ref.nextSibling);
+  }
+  function wireNav(){ var nl=document.getElementById('navlinks'); if(!nl||nl.__svNav) return; nl.__svNav=true; nl.addEventListener('click', function(){ setTimeout(injectBtn,70); setTimeout(injectBtn,240); setTimeout(injectBtn,540); }); }
   function hook(){ ensureView(); wrapShowView(); injectBtn(); wireNav(); }
   if(window.__epOnBodyMut){ window.__epOnBodyMut(hook); }
   var tries=0; (function poll(){ try{ hook(); }catch(e){} if(++tries<60) setTimeout(poll, 700); })();
