@@ -4592,6 +4592,7 @@ document.addEventListener('DOMContentLoaded', async function() {
   /* ---------- CSS ---------- */
   function css(){ if($('#uni-css')) return; var s=document.createElement('style'); s.id='uni-css'; s.textContent=[
     '.uni-pane{padding:16px 20px}',
+    '#view-university .view-head{background:#bae6fd;border-radius:10px;padding:14px 18px}',
     '.uni-sec{margin-bottom:24px}',
     '.uni-sec-h{font-size:13px;font-weight:800;color:#0f766e;text-transform:uppercase;letter-spacing:.04em;margin-bottom:12px;display:flex;align-items:center;gap:8px}',
     '.uni-count{background:#ccfbf1;color:#0f766e;border-radius:10px;padding:1px 9px;font-size:11px}',
@@ -4609,10 +4610,10 @@ document.addEventListener('DOMContentLoaded', async function() {
     /* modales */
     '.uni-ov{position:fixed;inset:0;z-index:100000;background:rgba(15,23,42,.5);display:flex;align-items:center;justify-content:center;opacity:0;transition:opacity .16s;padding:20px}',
     '.uni-ov.on{opacity:1}.uni-ov.sm{z-index:100010}',
-    '.uni-modal{background:#fff;border-radius:16px;width:760px;max-width:96%;max-height:92vh;display:flex;flex-direction:column;box-shadow:0 24px 70px rgba(0,0,0,.34);transform:scale(.96);transition:transform .16s}',
+    '.uni-modal{background:#fff;border-radius:16px;width:760px;max-width:96%;max-height:92vh;display:flex;flex-direction:column;box-shadow:0 24px 70px rgba(0,0,0,.34);transform:scale(.96);transition:transform .16s;overflow:hidden}',
     '.uni-ov.on .uni-modal{transform:scale(1)}',
     '.uni-ov.sm .uni-modal{width:560px}',
-    '.uni-mh{display:flex;align-items:center;justify-content:space-between;padding:15px 20px;border-bottom:1px solid #eef0f3}',
+    '.uni-mh{display:flex;align-items:center;justify-content:space-between;padding:15px 20px;border-bottom:1px solid #93c5e8;background:#bae6fd}',
     '.uni-mh h3{margin:0;font-size:16px;font-weight:800;color:#0f766e}',
     '.uni-x{border:0;background:#f1f5f9;border-radius:8px;width:30px;height:30px;cursor:pointer;font-size:14px;color:#475569}',
     '.uni-mb{padding:18px 20px;overflow-y:auto}',
