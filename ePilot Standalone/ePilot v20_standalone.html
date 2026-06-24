@@ -4549,11 +4549,9 @@ document.addEventListener('DOMContentLoaded', async function() {
         '<div class="uni-fld" style="flex:0 0 150px"><label>Échéance (cible)</label><input class="uni-in" type="date" data-k="echeance" value="'+esc(p.echeance)+'"></div>'+
       '</div>'+
       '<div class="uni-block-h">Sujets / compétences <button class="uni-add" data-add-suj>+ Ajouter un sujet</button></div>'+
-      '<div data-sujwrap>'+sujTable(p)+'</div>'+
-      '<div class="uni-block-h">Affectations</div>'+affBlock(p.affectations);
+      '<div data-sujwrap>'+sujTable(p)+'</div>';
     var m=modal('Palier — '+(p.palier||'niveau '+p.niveau), html, {onClose:function(){ persistNow(); renderGrid(); }});
     bind(m.body, p);
-    wireAff(m.body, p.affectations);
     function refreshTable(){ var w=$('[data-sujwrap]',m.body); if(w) w.innerHTML=sujTable(p); }
     m.body.addEventListener('click', function(e){ var t=e.target;
       if(t.closest&&t.closest('[data-add-suj]')){ e.preventDefault(); var s=blankSujet(); p.sujets.push(s); refreshTable(); persist(); openSujet(p, s, refreshTable); return; }
@@ -4594,17 +4592,12 @@ document.addEventListener('DOMContentLoaded', async function() {
     root.innerHTML=
       '<div class="uni-sec"><div class="uni-sec-h">📚 Paliers & sujets <span class="uni-count">'+DATA.paliers.length+'</span></div>'+
         '<div class="uni-grid" id="uni-paliers">'+DATA.paliers.map(palierTile).join('')+
-        '<div class="uni-tile add" data-add-p>+ Ajouter un palier</div></div></div>'+
-      '<div class="uni-sec"><div class="uni-sec-h">🎖 Certifications & habilitations <span class="uni-count">'+DATA.certifications.length+'</span></div>'+
-        '<div class="uni-grid" id="uni-certifs">'+DATA.certifications.map(certifTile).join('')+
-        '<div class="uni-tile add" data-add-c>+ Ajouter une certification</div></div></div>';
+        '<div class="uni-tile add" data-add-p>+ Ajouter un palier</div></div></div>';
   }
   function wireRoot(root){
     root.addEventListener('click', function(e){ var t=e.target;
       var ap=t.closest&&t.closest('[data-add-p]'); if(ap){ var p=blankPalier(DATA.paliers.length+1); DATA.paliers.push(p); persist(); renderGrid(); openPalier(p); return; }
-      var ac=t.closest&&t.closest('[data-add-c]'); if(ac){ var c=blankCertif(); DATA.certifications.push(c); persist(); renderGrid(); openCertif(c); return; }
       var op=t.closest&&t.closest('[data-open-p]'); if(op){ var pp=DATA.paliers.filter(function(x){return x.id===op.getAttribute('data-open-p');})[0]; if(pp) openPalier(pp); return; }
-      var oc=t.closest&&t.closest('[data-open-c]'); if(oc){ var cc=DATA.certifications.filter(function(x){return x.id===oc.getAttribute('data-open-c');})[0]; if(cc) openCertif(cc); return; }
     });
   }
 
