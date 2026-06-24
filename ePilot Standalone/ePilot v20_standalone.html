@@ -3958,8 +3958,7 @@ document.addEventListener('DOMContentLoaded', async function() {
           metric('Certificats valides','ecx-m-certs')+
           metric('Alertes','ecx-m-alerts')+
         '</div>'+
-        '<div id="ecx-certs-list" style="margin-top:10px"></div>'+
-        '<div id="ecx-uni-certs" style="margin-top:12px"></div>'
+        '<div id="ecx-certs-list" style="margin-top:10px"></div>'
       ));
       var scores=el(card('Scores & distinctions', 'Saisis par RH / QHSE / managers.',
         '<div class="ec-row cols-2">'+
@@ -4011,17 +4010,6 @@ document.addEventListener('DOMContentLoaded', async function() {
             return '<div style="display:flex;justify-content:space-between;gap:8px;padding:4px 0;border-bottom:1px solid #f1f5f9;font-size:12px"><span>'+x.titre+(x.exp?' <span style="color:#9ca3af">('+x.exp+')</span>':'')+'</span><span style="color:'+col+';font-weight:700">'+x.statut+'</span></div>';
           }).join('');
       } else { cl.innerHTML='<div style="font-size:12px;color:#9ca3af">Aucun certificat/papier lié à cet employé.</div>'; }
-    }
-    /* certifications requises (University) croisées avec les papiers détenus */
-    var ue=$('ecx-uni-certs');
-    if(ue){ var uc=uniCertsFor(mat, curFonction(), name);
-      if(uc.length){ ue.innerHTML='<div style="font-size:11px;font-weight:700;color:#6b7280;text-transform:uppercase;margin-bottom:4px">Certifications requises (University)</div>'+
-        uc.map(function(c){ var st=c.held?c.held.statut:'À obtenir';
-          var col=!c.held?'#b45309':(st==='Expiré'?'#dc2626':st==='Bientôt'?'#d97706':st==='Valide'?'#16a34a':'#6b7280');
-          var txt=c.held?(st+(c.held.exp?' ('+c.held.exp+')':'')):'À obtenir'+(c.dureeVieMois?' · validité '+c.dureeVieMois+' mois':'');
-          return '<div style="display:flex;justify-content:space-between;gap:8px;padding:4px 0;border-bottom:1px solid #f1f5f9;font-size:12px"><span>'+esc(c.nom)+(c.categorie?' <span style="color:#9ca3af">· '+esc(c.categorie)+'</span>':'')+'</span><span style="color:'+col+';font-weight:700">'+esc(txt)+'</span></div>';
-        }).join('');
-      } else { ue.innerHTML=''; }
     }
   }
 
@@ -4981,20 +4969,18 @@ document.addEventListener('DOMContentLoaded', async function() {
 
   /* ---------- calcul global ---------- */
   function compute(){
+    /* modèle universel : tous les employés × tous les paliers (sans ciblage par affectation) */
     var d=uni(), list=emps(), rows=[], reminders=[];
-    var assignedPalCount=0, donePalCount=0, certToGet=0;
+    var totalCells=0, doneCells=0;
     list.forEach(function(e){
-      var pal=[], cert=[], nextDue=null;
-      d.paliers.forEach(function(p){ if(!isAssigned(p.affectations, e.mat, e.fonction)) return; var m=palierMastery(p, e.mat); pal.push({p:p, m:m}); assignedPalCount++; if(m.done) donePalCount++;
+      var pal=[], nextDue=null;
+      d.paliers.forEach(function(p){ var m=palierMastery(p, e.mat); pal.push({p:p, m:m}); totalCells++; if(m.done) doneCells++;
         var dd=daysTo(p.echeance); if(dd!=null){ if(nextDue==null||dd<nextDue) nextDue=dd; if(!m.done && dd<=30) reminders.push({nom:e.nom, mat:e.mat, type:'Palier', item:(p.palier||('Niv. '+p.niveau)), days:dd, statut:m.passed+'/'+m.total}); } });
-      d.certifications.forEach(function(c){ if(!isAssigned(c.affectations, e.mat, e.fonction)) return; var st=certStatus(c, e.mat, e.nom); cert.push({c:c, st:st}); if(!st.ok) certToGet++;
-        var dd2=daysTo(c.echeance); if(dd2!=null){ if(nextDue==null||dd2<nextDue) nextDue=dd2; if(!st.ok && dd2<=30) reminders.push({nom:e.nom, mat:e.mat, type:'Certif', item:c.nom, days:dd2, statut:st.state}); }
-        else if(st.state==='Expiré'||st.state==='Bientôt') reminders.push({nom:e.nom, mat:e.mat, type:'Certif', item:c.nom, days:null, statut:st.state}); });
-      if(pal.length||cert.length) rows.push({e:e, pal:pal, cert:cert, nextDue:nextDue});
+      rows.push({e:e, pal:pal, nextDue:nextDue});
     });
     reminders.sort(function(a,b){ var x=a.days==null?9999:a.days, y=b.days==null?9999:b.days; return x-y; });
-    var rate = assignedPalCount? Math.round(donePalCount/assignedPalCount*100):0;
-    return {rows:rows, reminders:reminders, kpi:{employes:rows.length, rate:rate, certToGet:certToGet, late:reminders.filter(function(r){return r.days!=null&&r.days<0;}).length}};
+    var rate = totalCells? Math.round(doneCells/totalCells*100):0;
+    return {rows:rows, reminders:reminders, kpi:{employes:list.length, rate:rate, paliers:d.paliers.length, late:reminders.filter(function(r){return r.days!=null&&r.days<0;}).length}};
   }
 
   /* ---------- rendu ---------- */
@@ -5005,7 +4991,7 @@ document.addEventListener('DOMContentLoaded', async function() {
     var kpi='<div class="sv-kpis">'+
       '<div class="sv-kpi"><div class="k">Employés suivis</div><div class="v">'+c.kpi.employes+'</div></div>'+
       '<div class="sv-kpi"><div class="k">Paliers maîtrisés</div><div class="v">'+c.kpi.rate+'%</div></div>'+
-      '<div class="sv-kpi"><div class="k">Certifs à obtenir</div><div class="v" style="color:#b45309">'+c.kpi.certToGet+'</div></div>'+
+      '<div class="sv-kpi"><div class="k">Paliers définis</div><div class="v">'+c.kpi.paliers+'</div></div>'+
       '<div class="sv-kpi"><div class="k">Échéances dépassées</div><div class="v" style="color:#dc2626">'+c.kpi.late+'</div></div>'+
     '</div>';
     var rem = c.reminders.length ? '<div class="sv-rem">'+c.reminders.map(function(r){ var col=(r.days!=null&&r.days<0)?'#dc2626':'#d97706';
@@ -5014,21 +5000,20 @@ document.addEventListener('DOMContentLoaded', async function() {
       }).join('')+'</div>' : '<div class="sv-empty">Aucune échéance proche ni dépassée. 👍</div>';
     var rows = c.rows.length ? c.rows.map(function(r){
       var palTxt = r.pal.length? r.pal.map(function(x){ var col=x.m.done?'#16a34a':(x.m.passed?'#d97706':'#94a3b8'); return badge((x.p.palier||('Niv.'+x.p.niveau))+' '+x.m.passed+'/'+x.m.total, col); }).join(' ') : '<span style="color:#cbd5e1">—</span>';
-      var certTxt = r.cert.length? r.cert.map(function(x){ return badge(x.c.nom+' · '+x.st.state, certCol(x.st)); }).join(' ') : '<span style="color:#cbd5e1">—</span>';
       var nd = r.nextDue==null?'—':(r.nextDue<0?('<span style="color:#dc2626;font-weight:700">retard '+(-r.nextDue)+'j</span>'):(r.nextDue<=30?('<span style="color:#d97706;font-weight:700">'+r.nextDue+'j</span>'):(r.nextDue+'j')));
-      return '<tr class="sv-row" data-mat="'+esc(r.e.mat)+'" data-s="'+esc((r.e.nom+' '+r.e.fonction+' '+r.e.mat).toLowerCase())+'" title="Ouvrir la fiche"><td><b>'+esc(r.e.nom)+'</b><div class="sv-sub">'+esc(r.e.mat)+'</div></td><td>'+esc(r.e.fonction||'—')+'</td><td>'+palTxt+'</td><td>'+certTxt+'</td><td>'+nd+'</td></tr>';
-    }).join('') : '<tr><td colspan="5" class="sv-empty">Aucun employé n\'a de palier ou certification affecté(e). Faites les affectations dans <b>University</b>.</td></tr>';
+      return '<tr class="sv-row" data-mat="'+esc(r.e.mat)+'" data-s="'+esc((r.e.nom+' '+r.e.fonction+' '+r.e.mat).toLowerCase())+'" title="Ouvrir la fiche"><td><b>'+esc(r.e.nom)+'</b><div class="sv-sub">'+esc(r.e.mat)+'</div></td><td>'+esc(r.e.fonction||'—')+'</td><td>'+palTxt+'</td><td>'+nd+'</td></tr>';
+    }).join('') : '<tr><td colspan="4" class="sv-empty">Aucun employé. Définissez des paliers dans <b>University</b>.</td></tr>';
     root.innerHTML='<div class="sv-pane">'+kpi+
       '<div class="sv-h">🔔 Rappels & échéances</div>'+rem+
       '<div class="sv-h" style="margin-top:20px">👥 Progression par employé</div>'+
       '<div class="sv-ctrl"><input id="sv-search" class="sv-in" placeholder="Filtrer par nom, fonction, matricule…"><button class="sv-btn" id="sv-export">↓ Exporter CSV</button></div>'+
-      '<div class="sv-tablewrap"><table class="sv-table"><thead><tr><th>Employé</th><th>Fonction</th><th>Paliers (maîtrisés)</th><th>Certifications</th><th>Proch. échéance</th></tr></thead><tbody id="sv-tbody">'+rows+'</tbody></table></div>'+
+      '<div class="sv-tablewrap"><table class="sv-table"><thead><tr><th>Employé</th><th>Fonction</th><th>Paliers (maîtrisés)</th><th>Proch. échéance</th></tr></thead><tbody id="sv-tbody">'+rows+'</tbody></table></div>'+
       '</div>';
   }
   function exportCsv(){ if(!CUR) return;
-    var rows=[['Employé','Matricule','Fonction','Paliers maîtrisés','Certifs à obtenir','Prochaine échéance (j)']];
-    CUR.rows.forEach(function(r){ var palDone=r.pal.filter(function(x){return x.m.done;}).length; var certKo=r.cert.filter(function(x){return !x.st.ok;}).length;
-      rows.push([r.e.nom, r.e.mat, r.e.fonction, palDone+'/'+r.pal.length, certKo, (r.nextDue==null?'':r.nextDue)]); });
+    var rows=[['Employé','Matricule','Fonction','Paliers maîtrisés','Prochaine échéance (j)']];
+    CUR.rows.forEach(function(r){ var palDone=r.pal.filter(function(x){return x.m.done;}).length;
+      rows.push([r.e.nom, r.e.mat, r.e.fonction, palDone+'/'+r.pal.length, (r.nextDue==null?'':r.nextDue)]); });
     var csv=rows.map(function(r){ return r.map(function(c){ return '"'+String(c==null?'':c).replace(/"/g,'""')+'"'; }).join(';'); }).join('\n');
     try{ var blob=new Blob(['﻿'+csv],{type:'text/csv;charset=utf-8'}); var url=URL.createObjectURL(blob); var a=document.createElement('a'); a.href=url; a.download='suivi-competences.csv'; document.body.appendChild(a); a.click(); setTimeout(function(){ try{document.body.removeChild(a);}catch(_){} URL.revokeObjectURL(url); },120); }catch(e){}
   }
