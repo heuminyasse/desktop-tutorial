@@ -3679,32 +3679,46 @@ document.addEventListener('DOMContentLoaded', async function() {
   /* ──────────────── Boot ──────────────── */
   var _booted = false;
   var _renderTimer = null;
+  var _dataRetries = 0;
 
-  function debouncedRender() {
-    clearTimeout(_renderTimer);
-    _renderTimer = setTimeout(render, 400);
+  /* Vérifie si au moins une source ERP principale est chargée */
+  function hasERP() {
+    return !!(
+      (window.JIP_DATA    && window.JIP_DATA.length    > 0) ||
+      (window.QUOTE_DATA  && window.QUOTE_DATA.length  > 0) ||
+      (window.SOURCING_DATA && window.SOURCING_DATA.length > 0)
+    );
+  }
+
+  /* Render différé : attend que les données ERP soient disponibles */
+  function renderWhenReady() {
+    if (hasERP()) {
+      render();
+      loadPVs(function () { render(); });
+    } else if (_dataRetries < 20) {           /* ~10 s de patience maximum */
+      _dataRetries++;
+      setTimeout(renderWhenReady, 500);
+    }
   }
 
   function boot() {
-    if (_booted) { render(); return; }   /* retour sur l'accueil : juste un render, pas de re-init */
+    if (_booted) { render(); return; }        /* retour sur l'accueil : juste un render */
     injectCSS();
     _booted = true;
-    render();
-    loadPVs(function () { render(); });  /* second render après chargement async des PV */
+    renderWhenReady();                        /* attend les données avant le premier render */
   }
 
   /* Init une seule fois : s'arrête dès que #items est présent */
   window.__epKeepApplying(function () {
-    if (_booted) return;                 /* stoppe le MutationObserver côté logique */
+    if (_booted) return;
     if (document.getElementById('items')) { boot(); }
   }, { interval: 600, tries: 60 });
 
   /* Rafraîchit sur changement de données (débounce 400 ms) */
   if (window.EPilotBus && window.EPilotBus.on) {
     window.EPilotBus.on('data:changed', function () {
-      _pvsLoaded = false;
       clearTimeout(_renderTimer);
-      _renderTimer = setTimeout(function () { loadPVs(function () { render(); }); }, 400);
+      _renderTimer = setTimeout(render, 400);  /* render simple, PVs déjà en cache */
     });
   }
 
