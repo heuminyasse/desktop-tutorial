@@ -4593,6 +4593,9 @@ document.addEventListener('DOMContentLoaded', async function() {
   function css(){ if($('#uni-css')) return; var s=document.createElement('style'); s.id='uni-css'; s.textContent=[
     '.uni-pane{padding:16px 20px}',
     '#view-university .view-head{background:#bae6fd;border-radius:10px;padding:14px 18px}',
+    '.uni-ntabs{display:flex;gap:4px;padding:12px 20px 0;border-bottom:1px solid #e5e7eb;margin-bottom:6px}',
+    '.uni-ntab{border:0;background:transparent;padding:9px 20px;font-size:14px;font-weight:700;color:#64748b;cursor:pointer;border-bottom:2px solid transparent}',
+    '.uni-ntab.on{color:#0f766e;border-bottom-color:#0f766e}',
     '.uni-sec{margin-bottom:24px}',
     '.uni-sec-h{font-size:13px;font-weight:800;color:#0f766e;text-transform:uppercase;letter-spacing:.04em;margin-bottom:12px;display:flex;align-items:center;gap:8px}',
     '.uni-count{background:#ccfbf1;color:#0f766e;border-radius:10px;padding:1px 9px;font-size:11px}',
@@ -4636,11 +4639,22 @@ document.addEventListener('DOMContentLoaded', async function() {
     var ref=document.getElementById('view-competences'); if(!ref||!ref.parentNode) return null;
     css();
     var sec=document.createElement('section'); sec.className='hub-view'; sec.id='view-university';
-    sec.innerHTML='<div class="view-head"><div><div class="crumb">Compétences <span class="sep">/</span> University</div><h1><span class="accent">University</span></h1></div></div><div class="uni-pane" id="uni-root"></div>';
+    sec.innerHTML='<div class="view-head"><div><div class="crumb">Compétences <span class="sep">/</span> University</div><h1><span class="accent">University</span></h1></div></div>'+
+      '<div class="uni-ntabs"><button class="uni-ntab on" data-utab="class">Class</button><button class="uni-ntab" data-utab="suivi">Suivi</button></div>'+
+      '<div class="uni-pane" id="uni-root"></div>'+
+      '<div class="uni-pane" id="uni-suivi" style="display:none"></div>';
     ref.parentNode.appendChild(sec);
     if(!DATA) DATA=getData();
     renderGrid();
     wireRoot($('#uni-root',sec));
+    var tabs=sec.querySelector('.uni-ntabs');
+    tabs.addEventListener('click', function(e){ var b=e.target.closest&&e.target.closest('[data-utab]'); if(!b) return;
+      Array.prototype.forEach.call(tabs.children,function(x){ x.classList.remove('on'); }); b.classList.add('on');
+      var suivi=(b.getAttribute('data-utab')==='suivi');
+      $('#uni-root',sec).style.display=suivi?'none':'';
+      var sv=$('#uni-suivi',sec); sv.style.display=suivi?'':'none';
+      if(suivi){ if(window.__epSuivi&&window.__epSuivi.mount) window.__epSuivi.mount(sv); else sv.innerHTML='<div style="padding:20px;color:#64748b">Module Suivi indisponible.</div>'; }
+    });
     return sec;
   }
   function wrapShowView(){
@@ -5047,38 +5061,9 @@ document.addEventListener('DOMContentLoaded', async function() {
     '.sv-sub{font-size:11px;color:#94a3b8}'
   ].join('\n'); document.head.appendChild(s); }
 
-  /* ---------- sous-page routée ---------- */
-  function ensureView(){
-    var ex=document.getElementById('view-suivi'); if(ex) return ex;
-    var ref=document.getElementById('view-competences'); if(!ref||!ref.parentNode) return null;
-    css();
-    var sec=document.createElement('section'); sec.className='hub-view'; sec.id='view-suivi';
-    sec.innerHTML='<div class="view-head"><div><div class="crumb">Compétences <span class="sep">/</span> Suivi</div><h1><span class="accent">Suivi</span> des compétences</h1></div></div><div id="sv-root"></div>';
-    ref.parentNode.appendChild(sec);
-    render($('#sv-root',sec));
-    wire($('#sv-root',sec));
-    return sec;
-  }
-  function wrapShowView(){
-    if(!window.HubViews || typeof window.HubViews.showView!=='function' || window.HubViews.__svWrapped) return;
-    var orig=window.HubViews.showView;
-    window.HubViews.showView=function(name,opts){ try{ if(name!=='suivi'){ var s=document.getElementById('view-suivi'); if(s) s.classList.remove('active'); } }catch(e){} return orig.apply(this,arguments); };
-    window.HubViews.__svWrapped=true;
-  }
-  function showSv(){ var sec=ensureView(); Array.prototype.forEach.call(document.querySelectorAll('.hub-view'),function(v){ v.classList.remove('active'); }); if(sec){ sec.classList.add('active'); render($('#sv-root',sec)); } }
-  function injectBtn(){
-    var sub=document.getElementById('subnav'); if(!sub) return;
-    var ref=sub.querySelector('[data-sub-ex]')||sub.querySelector('[data-sub-uni]')||sub.querySelector('[data-sub="Mes Compétences"]'); if(!ref) return;
-    if(sub.querySelector('[data-sub-sv]')) return;
-    var b=document.createElement('button'); b.className='item'; b.setAttribute('data-sub-sv','suivi');
-    b.style.cssText='display:inline-flex;align-items:center;gap:5px;'; b.innerHTML=ICON+'Suivi';
-    b.addEventListener('click', function(){ Array.prototype.forEach.call(sub.querySelectorAll('.item'), function(x){ x.classList.remove('active'); }); b.classList.add('active'); showSv(); });
-    ref.parentNode.insertBefore(b, ref.nextSibling);
-  }
-  function wireNav(){ var nl=document.getElementById('navlinks'); if(!nl||nl.__svNav) return; nl.__svNav=true; nl.addEventListener('click', function(){ setTimeout(injectBtn,70); setTimeout(injectBtn,240); setTimeout(injectBtn,540); }); }
-  function hook(){ ensureView(); wrapShowView(); injectBtn(); wireNav(); }
-  if(window.__epOnBodyMut){ window.__epOnBodyMut(hook); }
-  var tries=0; (function poll(){ try{ hook(); }catch(e){} if(++tries<60) setTimeout(poll, 700); })();
+  /* ---------- exposé : monté comme onglet « Suivi » dans University ---------- */
+  function mount(root){ if(!root) return; css(); render(root); if(!root.__svWired){ wire(root); root.__svWired=true; } }
+  window.__epSuivi={ mount:mount, render:render };
 })();
 </script>
 <script id="__EMP_ACTIVE_v1__">
