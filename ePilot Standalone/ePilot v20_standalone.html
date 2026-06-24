@@ -3149,8 +3149,11 @@ document.addEventListener('DOMContentLoaded', async function() {
 
   /* Note d'un taux de remplissage / réussite : ratio (0..1) → 0..100 */
   function noteScore(done, total) { return total > 0 ? Math.round(done / total * 100) : null; }
-  /* Note d'un retard : 0 retard = 100 %, tout en retard = 0 % */
-  function noteRetard(retard, total) { return total > 0 ? Math.round((1 - retard / total) * 100) : null; }
+  /* Note d'un retard : 0 retard = 100 % (note maximale), tout en retard = 0 % */
+  function noteRetard(retard, total) {
+    if (retard === 0) return 100;            /* zéro retard → note maximale, même si total=0 */
+    return total > 0 ? Math.round((1 - retard / total) * 100) : null;
+  }
 
   /* Couleur / classe selon la note (plus haut = mieux) */
   function noteClass(note) {
