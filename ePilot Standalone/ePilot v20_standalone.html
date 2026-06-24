@@ -4043,5 +4043,229 @@ document.addEventListener('DOMContentLoaded', async function() {
   if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', init); else init();
 })();
 </script>
+<script id="__RH_CV_BUILDER_v1__">
+/* __RH_CV_BUILDER_v1__ — Personnel/RH : constructeur de CV (onglet "CV" de #emp-cfg)
+   Style FCR (rouge #B5000A). D'après le modèle fourni (Linus TAGNE) :
+   en-tête à bande colorée (nom, titre, contacts) + sections Expérience / Compétences /
+   Formation en timeline (date | contenu). Barre de saisie à gauche, aperçu live à droite.
+   Persistance : epilot_emp_ext_v1[matricule].cv (espace partagé avec __RH_FICHE_ENHANCE_v1__). */
+(function(){
+  if(window.__rhCvBuilder) return; window.__rhCvBuilder=1;
+  var EXT='epilot_emp_ext_v1', RED='#B5000A';
+  function loadAll(){ try{ var o=JSON.parse(localStorage.getItem(EXT)||'{}'); return (o&&typeof o==='object')?o:{}; }catch(e){ return {}; } }
+  function saveAll(o){ try{ localStorage.setItem(EXT, JSON.stringify(o)); }catch(e){} }
+  function $(id){ return document.getElementById(id); }
+  function ov(){ return document.getElementById('emp-cfg'); }
+  function curMat(){ var el=$('ec-f-mat'); return el?((el.value||'').trim()):''; }
+  function val(id){ var e=$(id); return e?(e.value||''):''; }
+  function esc(s){ return String(s==null?'':s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];}); }
+  function nl2br(s){ return esc(s).replace(/\n/g,'<br>'); }
+  function lines(s){ return String(s||'').split('\n').map(function(x){return x.trim();}).filter(Boolean); }
+
+  /* ---------- modèle de données ---------- */
+  function blankCv(){ return { nom:'', titre:'', nationalite:'', situation:'', adresse:'', tel:'', email:'',
+    experiences:[], competences:'', langues:[], formations:[] }; }
+  function getCv(mat){ var all=loadAll(), d=all[mat]||{}; var cv=d.cv; if(!cv||typeof cv!=='object') cv=blankCv();
+    ['experiences','langues','formations'].forEach(function(k){ if(!Array.isArray(cv[k])) cv[k]=[]; });
+    return cv; }
+  function setCv(mat, cv){ var all=loadAll(); all[mat]=all[mat]||{}; all[mat].cv=cv; saveAll(all); }
+  function prefill(cv){
+    if(!cv.nom){ var p=val('ec-f-prenoms'), n=val('ec-f-nom'); cv.nom=(p+' '+n).trim(); }
+    if(!cv.titre) cv.titre=val('ec-f-fonction')||val('ec-f-specialite');
+    if(!cv.tel)   cv.tel=val('ec-phone');
+    if(!cv.email) cv.email=val('ec-f-email');
+    if(!cv.adresse) cv.adresse=val('ec-f-quartier');
+    return cv;
+  }
+
+  /* ---------- CSS (injecté une fois) ---------- */
+  function injectCss(){
+    if($('cvb-css')) return;
+    var s=document.createElement('style'); s.id='cvb-css';
+    s.textContent=[
+      '.cvb-wrap{display:flex;gap:16px;flex-wrap:wrap;align-items:flex-start}',
+      '.cvb-form{flex:1 1 320px;min-width:300px}',
+      '.cvb-prev{flex:1 1 460px;min-width:360px}',
+      '.cvb-form .ec-field{margin-bottom:10px}',
+      '.cvb-grp{border:1px solid #e5e7eb;border-radius:8px;padding:10px;margin-bottom:12px}',
+      '.cvb-grp h4{margin:0 0 8px;font-size:12px;font-weight:800;color:'+RED+';text-transform:uppercase;letter-spacing:.04em}',
+      '.cvb-item{border:1px dashed #d1d5db;border-radius:6px;padding:8px;margin-bottom:8px;position:relative}',
+      '.cvb-del{position:absolute;top:6px;right:6px;border:0;background:#fee2e2;color:'+RED+';border-radius:5px;width:22px;height:22px;cursor:pointer;font-weight:700;line-height:1}',
+      '.cvb-add{border:1px dashed '+RED+';background:#fff;color:'+RED+';border-radius:6px;padding:7px 12px;font-weight:700;cursor:pointer;font-size:12px}',
+      '.cvb-bar{display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap}',
+      '.cvb-btn{border:0;border-radius:8px;padding:9px 14px;font-weight:700;cursor:pointer;font-size:13px}',
+      '.cvb-btn.p{background:'+RED+';color:#fff}.cvb-btn.s{background:#fff;color:'+RED+';border:1px solid '+RED+'}',
+      /* aperçu CV (A4) */
+      '.cv-doc{background:#fff;color:#222;font-family:Calibri,"Segoe UI",sans-serif;width:100%;max-width:520px;margin:auto;box-shadow:0 4px 18px rgba(0,0,0,.12);border-radius:4px;overflow:hidden}',
+      '.cv-head{background:'+RED+';color:#fff;padding:18px 20px;display:flex;justify-content:space-between;gap:14px}',
+      '.cv-head .nm{font-size:22px;font-weight:800;line-height:1.1}',
+      '.cv-head .ti{font-size:13px;margin-top:4px;opacity:.95}',
+      '.cv-head .ct{font-size:11px;text-align:right;line-height:1.7;white-space:nowrap}',
+      '.cv-body{padding:16px 20px}',
+      '.cv-sec{margin-bottom:16px}',
+      '.cv-sec>.h{color:'+RED+';font-weight:800;font-size:13px;text-transform:uppercase;letter-spacing:.05em;border-bottom:2px solid '+RED+';padding-bottom:3px;margin-bottom:10px}',
+      '.cv-row{display:flex;gap:12px;margin-bottom:10px}',
+      '.cv-row .d{flex:0 0 92px;font-size:11px;color:#6b7280;font-weight:700}',
+      '.cv-row .c{flex:1}',
+      '.cv-row .c .ro{font-weight:700;font-size:13px}',
+      '.cv-row .c .co{font-size:11px;color:'+RED+';font-weight:600}',
+      '.cv-row .c ul{margin:4px 0 0;padding-left:16px}.cv-row .c li{font-size:11.5px;margin-bottom:2px}',
+      '.cv-lang{display:flex;flex-wrap:wrap;gap:6px}',
+      '.cv-lang span{background:#f3f4f6;border-radius:12px;padding:2px 10px;font-size:11px}',
+      '.cv-skills{font-size:11.5px;line-height:1.6}'
+    ].join('\n');
+    document.head.appendChild(s);
+  }
+
+  /* ---------- rendu de l'aperçu ---------- */
+  function renderPreview(cv){
+    var ct=[];
+    if(cv.nationalite) ct.push(esc(cv.nationalite));
+    if(cv.situation) ct.push(esc(cv.situation));
+    if(cv.adresse) ct.push('📍 '+esc(cv.adresse));
+    if(cv.tel) ct.push('📞 '+esc(cv.tel));
+    if(cv.email) ct.push('✉ '+esc(cv.email));
+    var exp=(cv.experiences||[]).map(function(e){
+      var miss=lines(e.missions).map(function(m){return '<li>'+esc(m)+'</li>';}).join('');
+      var comp=[e.entreprise,e.lieu,e.contact].filter(Boolean).map(esc).join(' · ');
+      return '<div class="cv-row"><div class="d">'+esc(e.periode||'')+'</div><div class="c">'+
+        '<div class="ro">'+esc(e.poste||'')+'</div>'+(comp?'<div class="co">'+comp+'</div>':'')+
+        (miss?'<ul>'+miss+'</ul>':'')+'</div></div>';
+    }).join('');
+    var fo=(cv.formations||[]).map(function(f){
+      return '<div class="cv-row"><div class="d">'+esc(f.annee||'')+'</div><div class="c">'+
+        '<div class="ro">'+esc(f.diplome||'')+'</div>'+(f.ecole?'<div class="co">'+esc(f.ecole)+'</div>':'')+'</div></div>';
+    }).join('');
+    var langs=(cv.langues||[]).filter(function(l){return l.langue;}).map(function(l){
+      return '<span>'+esc(l.langue)+(l.niveau?' — '+esc(l.niveau):'')+'</span>';
+    }).join('');
+    var skills=cv.competences? '<div class="cv-skills">'+nl2br(cv.competences)+'</div>':'';
+    return '<div class="cv-doc" id="cvb-doc">'+
+      '<div class="cv-head"><div><div class="nm">'+esc(cv.nom||'Nom Prénom')+'</div><div class="ti">'+esc(cv.titre||'Intitulé du poste')+'</div></div>'+
+        '<div class="ct">'+(ct.join('<br>')||'—')+'</div></div>'+
+      '<div class="cv-body">'+
+        (exp?'<div class="cv-sec"><div class="h">Expérience professionnelle</div>'+exp+'</div>':'')+
+        ((skills||langs)?'<div class="cv-sec"><div class="h">Compétences</div>'+skills+(langs?'<div class="cv-lang" style="margin-top:6px">'+langs+'</div>':'')+'</div>':'')+
+        (fo?'<div class="cv-sec"><div class="h">Formation</div>'+fo+'</div>':'')+
+      '</div></div>';
+  }
+
+  /* ---------- rendu du formulaire (barre gauche) ---------- */
+  function expItem(e){ e=e||{};
+    return '<div class="cvb-item" data-exp><button class="cvb-del" data-del="exp" title="Supprimer">×</button>'+
+      '<input class="ec-input" data-f="periode" placeholder="Période (ex: Oct. 2023 – à ce jour)" value="'+esc(e.periode)+'" style="margin-bottom:6px">'+
+      '<input class="ec-input" data-f="poste" placeholder="Poste / rôle" value="'+esc(e.poste)+'" style="margin-bottom:6px">'+
+      '<div style="display:flex;gap:6px;margin-bottom:6px"><input class="ec-input" data-f="entreprise" placeholder="Entreprise" value="'+esc(e.entreprise)+'"><input class="ec-input" data-f="lieu" placeholder="Lieu" value="'+esc(e.lieu)+'"></div>'+
+      '<input class="ec-input" data-f="contact" placeholder="Contact (tél / email)" value="'+esc(e.contact)+'" style="margin-bottom:6px">'+
+      '<textarea class="ec-textarea" data-f="missions" placeholder="Missions — une par ligne">'+esc(e.missions)+'</textarea></div>';
+  }
+  function langItem(l){ l=l||{}; var nivs=['Courant','Bilingue','Natif','Moyen','Débutant'];
+    return '<div class="cvb-item" data-lang><button class="cvb-del" data-del="lang" title="Supprimer">×</button>'+
+      '<div style="display:flex;gap:6px"><input class="ec-input" data-f="langue" placeholder="Langue" value="'+esc(l.langue)+'">'+
+      '<select class="ec-select" data-f="niveau"><option value="">Niveau…</option>'+nivs.map(function(n){return '<option'+(l.niveau===n?' selected':'')+'>'+n+'</option>';}).join('')+'</select></div></div>';
+  }
+  function foItem(f){ f=f||{};
+    return '<div class="cvb-item" data-fo><button class="cvb-del" data-del="fo" title="Supprimer">×</button>'+
+      '<div style="display:flex;gap:6px;margin-bottom:6px"><input class="ec-input" data-f="annee" placeholder="Année" value="'+esc(f.annee)+'" style="flex:0 0 80px"><input class="ec-input" data-f="diplome" placeholder="Diplôme" value="'+esc(f.diplome)+'"></div>'+
+      '<input class="ec-input" data-f="ecole" placeholder="École / établissement" value="'+esc(f.ecole)+'"></div>';
+  }
+  function renderForm(cv){
+    function f(label,key,ph){ return '<div class="ec-field"><label>'+label+'</label><input class="ec-input" data-cv="'+key+'" placeholder="'+(ph||'')+'" value="'+esc(cv[key])+'"></div>'; }
+    return '<div class="cvb-bar">'+
+        '<button class="cvb-btn p" id="cvb-print">🖨 Imprimer / PDF</button>'+
+        '<button class="cvb-btn s" id="cvb-reset">Réinitialiser</button>'+
+      '</div>'+
+      '<div class="cvb-grp"><h4>Identité</h4>'+
+        f('Nom complet','nom')+f('Titre / poste','titre','Ingénieur…')+
+        '<div style="display:flex;gap:6px">'+f('Nationalité','nationalite')+f('Situation','situation','Célibataire…')+'</div>'+
+        f('Adresse','adresse')+'<div style="display:flex;gap:6px">'+f('Téléphone','tel')+f('Email','email')+'</div>'+
+      '</div>'+
+      '<div class="cvb-grp"><h4>Expérience professionnelle</h4><div id="cvb-exp">'+(cv.experiences||[]).map(expItem).join('')+'</div><button class="cvb-add" data-add="exp">+ Ajouter une expérience</button></div>'+
+      '<div class="cvb-grp"><h4>Compétences</h4><div class="ec-field"><textarea class="ec-textarea" data-cv="competences" placeholder="Logiciels / compétences — une par ligne">'+esc(cv.competences)+'</textarea></div>'+
+        '<div id="cvb-lang">'+(cv.langues||[]).map(langItem).join('')+'</div><button class="cvb-add" data-add="lang">+ Ajouter une langue</button></div>'+
+      '<div class="cvb-grp"><h4>Formation</h4><div id="cvb-fo">'+(cv.formations||[]).map(foItem).join('')+'</div><button class="cvb-add" data-add="fo">+ Ajouter une formation</button></div>';
+  }
+
+  /* ---------- collecte depuis le DOM ---------- */
+  function collect(root){
+    var cv=blankCv();
+    Array.prototype.forEach.call(root.querySelectorAll('[data-cv]'), function(e){ cv[e.getAttribute('data-cv')]=e.value; });
+    cv.experiences=Array.prototype.map.call(root.querySelectorAll('[data-exp]'), function(it){ var o={}; Array.prototype.forEach.call(it.querySelectorAll('[data-f]'),function(e){o[e.getAttribute('data-f')]=e.value;}); return o; });
+    cv.langues=Array.prototype.map.call(root.querySelectorAll('[data-lang]'), function(it){ var o={}; Array.prototype.forEach.call(it.querySelectorAll('[data-f]'),function(e){o[e.getAttribute('data-f')]=e.value;}); return o; });
+    cv.formations=Array.prototype.map.call(root.querySelectorAll('[data-fo]'), function(it){ var o={}; Array.prototype.forEach.call(it.querySelectorAll('[data-f]'),function(e){o[e.getAttribute('data-f')]=e.value;}); return o; });
+    return cv;
+  }
+
+  /* ---------- impression ---------- */
+  function printCv(cv){
+    var w=window.open('','_blank','width=820,height=1000'); if(!w) return;
+    var css=$('cvb-css')?$('cvb-css').textContent:'';
+    w.document.write('<!DOCTYPE html><html><head><meta charset="utf-8"><title>CV — '+esc(cv.nom||'')+'</title>'+
+      '<style>'+css+' body{margin:0;padding:20px;background:#fff}.cv-doc{box-shadow:none;max-width:720px}@media print{body{padding:0}}</style></head><body>'+
+      renderPreview(cv)+'<script>setTimeout(function(){window.print();},250);<\/script></body></html>');
+    w.document.close();
+  }
+
+  /* ---------- montage dans l'onglet CV ---------- */
+  var debTimer=0;
+  function build(o, mat){
+    var sec=o.querySelector('.ec-section[data-tab="cv"]'); if(!sec) return;
+    injectCss();
+    var host=sec.querySelector('#cvb-host');
+    var cv=prefill(getCv(mat));
+    if(!host){
+      host=document.createElement('div'); host.id='cvb-host';
+      host.innerHTML='<div class="ec-card"><h3 class="ec-card-title">Générateur de CV (modèle FCR)</h3>'+
+        '<p class="ec-card-sub">Renseignez les détails à gauche ; l\'aperçu se met à jour en direct.</p>'+
+        '<div class="cvb-wrap"><div class="cvb-form" id="cvb-form"></div><div class="cvb-prev" id="cvb-prev"></div></div></div>';
+      sec.insertBefore(host, sec.firstChild);
+      wire(host, mat);
+    }
+    paint(host, cv);
+  }
+  function paint(host, cv){
+    var fEl=host.querySelector('#cvb-form'), pEl=host.querySelector('#cvb-prev');
+    fEl.innerHTML=renderForm(cv);
+    pEl.innerHTML=renderPreview(cv);
+  }
+  function refreshPreviewOnly(host){
+    var cv=collect(host); host.querySelector('#cvb-prev').innerHTML=renderPreview(cv);
+  }
+  function persistDeb(host, mat){
+    if(debTimer) clearTimeout(debTimer);
+    debTimer=setTimeout(function(){ setCv(mat, collect(host)); }, 400);
+  }
+  function wire(host, mat){
+    /* saisie → aperçu live + persistance debouncée */
+    host.addEventListener('input', function(){ refreshPreviewOnly(host); persistDeb(host, mat); });
+    host.addEventListener('change', function(){ refreshPreviewOnly(host); persistDeb(host, mat); });
+    /* boutons ajouter / supprimer / imprimer / reset (délégation) */
+    host.addEventListener('click', function(e){
+      var t=e.target; if(!t) return;
+      var add=t.getAttribute&&t.getAttribute('data-add');
+      if(add){ e.preventDefault();
+        var map={exp:['#cvb-exp',expItem], lang:['#cvb-lang',langItem], fo:['#cvb-fo',foItem]};
+        var m=map[add]; if(m){ var c=host.querySelector(m[0]); c.insertAdjacentHTML('beforeend', m[1]({})); setCv(mat, collect(host)); refreshPreviewOnly(host); }
+        return;
+      }
+      if(t.getAttribute&&t.getAttribute('data-del')){ e.preventDefault(); var it=t.closest('.cvb-item'); if(it){ it.parentNode.removeChild(it); setCv(mat, collect(host)); refreshPreviewOnly(host); } return; }
+      if(t.id==='cvb-print'){ e.preventDefault(); printCv(collect(host)); return; }
+      if(t.id==='cvb-reset'){ e.preventDefault(); if(confirm('Réinitialiser le CV de cet employé ?')){ setCv(mat, blankCv()); paint(host, prefill(blankCv())); } return; }
+    });
+  }
+
+  /* ---------- hook ouverture modale ---------- */
+  function enhance(){ var o=ov(); if(!o) return; if(!(o.classList.contains('open')||o.getAttribute('aria-hidden')==='false')) return; var mat=curMat(); if(!mat) return;
+    /* rebuild host si matricule a changé */
+    var sec=o.querySelector('.ec-section[data-tab="cv"]'); if(sec){ var h=sec.querySelector('#cvb-host'); if(h && h.getAttribute('data-mat')!==mat){ h.parentNode.removeChild(h); h=null; } }
+    try{ build(o, mat); var hh=o.querySelector('#cvb-host'); if(hh) hh.setAttribute('data-mat', mat); }catch(e){ try{console.warn('[CVBuilder]',e);}catch(_){} }
+  }
+  function init(){ var o=ov(); if(!o){ setTimeout(init,500); return; }
+    try{ new MutationObserver(function(){ setTimeout(enhance,80); }).observe(o,{attributes:true,attributeFilter:['class','aria-hidden']}); }catch(e){}
+    enhance();
+  }
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', init); else init();
+})();
+</script>
 </body>
 </html>
