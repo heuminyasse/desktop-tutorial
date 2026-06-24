@@ -3633,31 +3633,45 @@ document.addEventListener('DOMContentLoaded', async function() {
   }
 
   /* ──────────────── Boot ──────────────── */
+  var _booted = false;
+  var _renderTimer = null;
+
+  function debouncedRender() {
+    clearTimeout(_renderTimer);
+    _renderTimer = setTimeout(render, 400);
+  }
+
   function boot() {
+    if (_booted) { render(); return; }   /* retour sur l'accueil : juste un render, pas de re-init */
     injectCSS();
-    /* Charge les PV (sécurité) puis rend ; re-rend après chargement async */
+    _booted = true;
     render();
-    loadPVs(function () { render(); });
+    loadPVs(function () { render(); });  /* second render après chargement async des PV */
   }
 
-  /* Applique tant que #items n'est pas présent */
+  /* Init une seule fois : s'arrête dès que #items est présent */
   window.__epKeepApplying(function () {
+    if (_booted) return;                 /* stoppe le MutationObserver côté logique */
     if (document.getElementById('items')) { boot(); }
-  }, { interval: 600, tries: 120 });
+  }, { interval: 600, tries: 60 });
 
-  /* Rafraîchit sur changement de données */
+  /* Rafraîchit sur changement de données (débounce 400 ms) */
   if (window.EPilotBus && window.EPilotBus.on) {
-    window.EPilotBus.on('data:changed', function () { _pvsLoaded = false; loadPVs(function () { render(); }); });
+    window.EPilotBus.on('data:changed', function () {
+      _pvsLoaded = false;
+      clearTimeout(_renderTimer);
+      _renderTimer = setTimeout(function () { loadPVs(function () { render(); }); }, 400);
+    });
   }
 
-  /* Rafraîchit au retour sur l'accueil */
+  /* Rafraîchit au retour sur l'accueil (simple render, pas de boot) */
   function hookNav() {
     if (!window.HubViews || !window.HubViews.showView || window.HubViews.__homeKpiHooked) return;
     window.HubViews.__homeKpiHooked = true;
     var orig = window.HubViews.showView;
     window.HubViews.showView = function (name) {
       var r = orig.apply(this, arguments);
-      if (name === 'accueil' || !name) setTimeout(function () { boot(); }, 150);
+      if (name === 'accueil' || !name) setTimeout(render, 150);
       return r;
     };
   }
