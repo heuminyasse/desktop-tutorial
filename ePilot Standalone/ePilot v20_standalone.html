@@ -5093,5 +5093,126 @@ document.addEventListener('DOMContentLoaded', async function() {
   var t=0; (function poll(){ try{ capture(); wrap(); }catch(e){} if(++t<120) setTimeout(poll,500); })();
 })();
 </script>
+<script id="__JSA_REPORTS_v1__">
+/* __JSA_REPORTS_v1__ — « Rapports JSA » (page Compétences/HSE) en lecture seule.
+   Remplace le contenu actuel par la LISTE des éléments de sécurité enregistrés depuis Chantier,
+   groupés par PI/chantier : rapports JSA (epilot_jsa_reports) + actions et responsables
+   (epilot_chantier_ops). Branché sur l'onglet natif « Rapports JSA » (interception en capture). */
+(function(){
+  if(window.__jsaReports) return; window.__jsaReports=1;
+  function $(s,r){ return (r||document).querySelector(s); }
+  function esc(s){ return String(s==null?'':s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];}); }
+  function lsArr(k){ try{ var a=JSON.parse(localStorage.getItem(k)); return Array.isArray(a)?a:[]; }catch(e){ return []; } }
+  function daysTo(s){ if(!s) return null; var d=new Date(s); if(isNaN(d.getTime())) return null; return Math.round((d-Date.now())/86400000); }
+
+  /* lecture asynchrone des actions de chantier (IndexedDB epilot_chantier_ops) */
+  function readOps(){ return new Promise(function(res){ try{
+      var rq=indexedDB.open('epilot_chantier_ops');
+      rq.onsuccess=function(e){ var db=e.target.result; if(!db.objectStoreNames.contains('ops')){ try{db.close();}catch(_){} return res({}); }
+        var r=db.transaction('ops','readonly').objectStore('ops').getAll();
+        r.onsuccess=function(){ var m={}; (r.result||[]).forEach(function(o){ if(o&&o.imputation) m[o.imputation]=Array.isArray(o.actions)?o.actions:[]; }); try{db.close();}catch(_){} res(m); };
+        r.onerror=function(){ try{db.close();}catch(_){} res({}); }; };
+      rq.onerror=function(){ res({}); };
+    }catch(e){ res({}); } }); }
+
+  function group(opsMap){
+    var jsa=lsArr('epilot_jsa_reports'), by={};
+    jsa.forEach(function(r){ if(!r) return; var pi=(r.chantier||r.imputation||r.pi||'— (sans chantier)'); (by[pi]=by[pi]||{jsa:[],act:[]}).jsa.push(r); });
+    Object.keys(opsMap||{}).forEach(function(pi){ var acts=(opsMap[pi]||[]); if(acts.length) (by[pi]=by[pi]||{jsa:[],act:[]}).act=acts; });
+    return by;
+  }
+  function actOpen(a){ return !(a&&(a.done||/fait|termin|cl[oô]tur|done/i.test(String(a.status||'')))); }
+  function actLate(a){ if(!actOpen(a)) return false; var d=daysTo(a.deadline||a.echeance); return d!=null&&d<0; }
+
+  function render(root, opsMap){
+    var by=group(opsMap), pis=Object.keys(by).sort();
+    var jsaTot=0, actOpenTot=0, actLateTot=0, jsaActive=0;
+    pis.forEach(function(pi){ var g=by[pi]; jsaTot+=g.jsa.length; jsaActive+=g.jsa.filter(function(r){return /activ/i.test(String(r.statut||''));}).length;
+      (g.act||[]).forEach(function(a){ if(actOpen(a)) actOpenTot++; if(actLate(a)) actLateTot++; }); });
+    var kpi='<div class="jr-kpis">'+
+      '<div class="jr-kpi"><div class="k">Rapports JSA</div><div class="v">'+jsaTot+'</div></div>'+
+      '<div class="jr-kpi"><div class="k">Chantiers concernés</div><div class="v">'+pis.length+'</div></div>'+
+      '<div class="jr-kpi"><div class="k">Actions ouvertes</div><div class="v" style="color:#d97706">'+actOpenTot+'</div></div>'+
+      '<div class="jr-kpi"><div class="k">Actions en retard</div><div class="v" style="color:#dc2626">'+actLateTot+'</div></div>'+
+    '</div>';
+    var body = pis.length ? pis.map(function(pi){ var g=by[pi];
+      var jsaRows = g.jsa.length ? g.jsa.map(function(r){
+        var stc=/activ/i.test(String(r.statut||''))?'#16a34a':'#6b7280';
+        return '<tr><td>'+esc(r.date||'—')+'</td><td><b>'+esc(r.tache||'—')+'</b></td><td>'+esc(r.risques||'—')+'</td><td>'+esc(r.mesures||'—')+'</td><td>'+esc(r.epi||'—')+'</td><td>'+esc(r.demandeur||'—')+'</td><td><span style="color:'+stc+';font-weight:700">'+esc(r.statut||'—')+'</span></td></tr>';
+      }).join('') : '<tr><td colspan="7" style="color:#94a3b8;padding:10px">Aucun rapport JSA.</td></tr>';
+      var actRows = (g.act&&g.act.length) ? g.act.map(function(a){
+        var open=actOpen(a), late=actLate(a), dd=daysTo(a.deadline||a.echeance);
+        var stc=late?'#dc2626':(open?'#d97706':'#16a34a');
+        var ech=(a.deadline||a.echeance||'—')+(dd!=null&&open?(dd<0?(' · retard '+(-dd)+'j'):(' · '+dd+'j')):'');
+        return '<tr><td><b>'+esc(a.title||'—')+'</b></td><td>'+esc(a.owner||a.createdBy||'—')+'</td><td>'+esc(ech)+'</td><td>'+esc(a.priority||'—')+'</td><td><span style="color:'+stc+';font-weight:700">'+esc(a.status||(a.done?'Terminé':'À faire'))+'</span></td></tr>';
+      }).join('') : '';
+      return '<div class="jr-card" data-pi="'+esc(pi.toLowerCase())+'">'+
+        '<div class="jr-pi">📍 '+esc(pi)+' <span class="jr-cnt">'+g.jsa.length+' JSA'+(g.act&&g.act.length?(' · '+g.act.length+' actions'):'')+'</span></div>'+
+        '<div class="jr-sub">Analyses de risques (JSA)</div>'+
+        '<div class="jr-tw"><table class="dt-table"><thead><tr><th style="width:90px">Date</th><th>Tâche</th><th>Risques</th><th>Mesures</th><th style="width:90px">EPI</th><th style="width:120px">Responsable</th><th style="width:90px">Statut</th></tr></thead><tbody>'+jsaRows+'</tbody></table></div>'+
+        (actRows? '<div class="jr-sub" style="margin-top:10px">Actions & responsables</div><div class="jr-tw"><table class="dt-table"><thead><tr><th>Action</th><th style="width:130px">Responsable</th><th style="width:150px">Échéance</th><th style="width:90px">Priorité</th><th style="width:90px">Statut</th></tr></thead><tbody>'+actRows+'</tbody></table></div>' : '')+
+      '</div>';
+    }).join('') : '<div class="jr-empty">Aucun rapport JSA enregistré. Les JSA créés dans les chantiers apparaîtront ici, groupés par PI.</div>';
+    root.innerHTML='<div class="jr-pane">'+kpi+
+      '<div class="jr-ctrl"><input id="jr-search" class="jr-in" placeholder="Filtrer par PI / chantier (ex: PI26043)…"></div>'+
+      '<div id="jr-list">'+body+'</div></div>';
+    var inp=$('#jr-search',root); if(inp) inp.addEventListener('input', function(){ var q=this.value.toLowerCase().trim();
+      Array.prototype.forEach.call(root.querySelectorAll('.jr-card'),function(c){ c.style.display=(!q||(c.getAttribute('data-pi')||'').indexOf(q)>=0)?'':'none'; }); });
+  }
+
+  function css(){ if($('#jr-css')) return; var s=document.createElement('style'); s.id='jr-css'; s.textContent=[
+    '.jr-pane{padding:16px 20px}',
+    '.jr-kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-bottom:18px}',
+    '@media(max-width:760px){.jr-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}}',
+    '.jr-kpi{border:1px solid #e5e7eb;border-radius:12px;padding:12px 14px;background:#fff}',
+    '.jr-kpi .k{font-size:11px;color:#64748b;text-transform:uppercase;font-weight:600}',
+    '.jr-kpi .v{font-size:24px;font-weight:800;color:#ca8a04;margin-top:4px}',
+    '.jr-ctrl{margin-bottom:12px}',
+    '.jr-in{width:100%;max-width:380px;padding:8px 11px;border:1px solid #d1d5db;border-radius:8px;font-size:13px}',
+    '.jr-empty{color:#64748b;font-size:13px;padding:16px;background:#f8fafc;border-radius:10px}',
+    '.jr-card{border:1px solid #e5e7eb;border-radius:12px;padding:14px;margin-bottom:14px;background:#fff}',
+    '.jr-pi{font-size:15px;font-weight:800;color:#1e293b;margin-bottom:8px}',
+    '.jr-cnt{font-size:11px;font-weight:700;color:#ca8a04;background:#fef9c3;border-radius:10px;padding:1px 9px;margin-left:6px}',
+    '.jr-sub{font-size:11px;font-weight:700;color:#64748b;text-transform:uppercase;margin-bottom:4px}',
+    '.jr-tw{overflow-x:auto;border:1px solid #f1f5f9;border-radius:8px}'
+  ].join('\n'); document.head.appendChild(s); }
+
+  /* sous-page routée branchée sur l'onglet natif « Rapports JSA » */
+  function ensureView(){
+    var ex=document.getElementById('view-jsareports'); if(ex) return ex;
+    var ref=document.getElementById('view-competences'); if(!ref||!ref.parentNode) return null;
+    css();
+    var sec=document.createElement('section'); sec.className='hub-view'; sec.id='view-jsareports';
+    sec.innerHTML='<div class="view-head"><div><div class="crumb">Compétences <span class="sep">/</span> Rapports JSA</div><h1><span class="accent">Rapports JSA</span> & sécurité</h1></div></div><div id="jr-root"><div class="jr-pane">Chargement…</div></div>';
+    ref.parentNode.appendChild(sec);
+    return sec;
+  }
+  function showJsa(){
+    var sec=ensureView(); if(!sec) return;
+    Array.prototype.forEach.call(document.querySelectorAll('.hub-view'),function(v){ v.classList.remove('active'); });
+    sec.classList.add('active');
+    var root=$('#jr-root',sec);
+    readOps().then(function(opsMap){ try{ render(root, opsMap); }catch(e){ root.innerHTML='<div class="jr-empty">Erreur d\'affichage des rapports JSA.</div>'; } });
+  }
+  function wrapShowView(){
+    if(!window.HubViews || typeof window.HubViews.showView!=='function' || window.HubViews.__jrWrapped) return;
+    var orig=window.HubViews.showView;
+    window.HubViews.showView=function(name,opts){ try{ if(name!=='jsareports'){ var s=document.getElementById('view-jsareports'); if(s) s.classList.remove('active'); } }catch(e){} return orig.apply(this,arguments); };
+    window.HubViews.__jrWrapped=true;
+  }
+  function hookSub(){
+    var sub=document.getElementById('subnav'); if(!sub || sub.__jrHook) return; sub.__jrHook=true;
+    sub.addEventListener('click', function(e){
+      var b=e.target&&e.target.closest?e.target.closest('[data-sub="Rapports JSA"]'):null; if(!b) return;
+      e.preventDefault(); e.stopImmediatePropagation();
+      Array.prototype.forEach.call(sub.querySelectorAll('.item'), function(x){ x.classList.remove('active'); });
+      b.classList.add('active'); showJsa();
+    }, true);
+  }
+  function hook(){ ensureView(); wrapShowView(); hookSub(); }
+  if(window.__epOnBodyMut){ window.__epOnBodyMut(hook); }
+  var tries=0; (function poll(){ try{ hook(); }catch(e){} if(++tries<80) setTimeout(poll, 700); })();
+})();
+</script>
 </body>
 </html>
