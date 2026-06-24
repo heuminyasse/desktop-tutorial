@@ -3106,9 +3106,9 @@ document.addEventListener('DOMContentLoaded', async function() {
 
 <script>
 /* ════════════════════════════════════════════════════════════════════
-   HOME KPI DASHBOARD v2 — Notes de groupe sur "Mon Tableau de Bord"
+   HOME KPI DASHBOARD v3 — Notes de groupe sur "Mon Tableau de Bord"
    Alimente les badges existants (#items .item[data-key]) avec la note
-   moyenne calculée du groupe, et déplie les KPI détaillés au clic.
+   moyenne calculée du groupe, et ouvre un popup au clic.
 
    Modèle de notation :
      - Chaque KPI produit une note 0–100 (plus haut = mieux)
@@ -3130,7 +3130,7 @@ document.addEventListener('DOMContentLoaded', async function() {
     var d = new Date(typeof v === 'number' ? v : (String(v).length === 10 ? v + 'T00:00:00' : v));
     return isNaN(d.getTime()) ? null : d;
   }
-  function yr(v) { return String(v || '').slice(0, 4); }  /* extrait l'année d'une date string */
+  function yr(v) { return String(v || '').slice(0, 4); }
   function isYear(v) { return yr(v) === YEAR; }
   function daysAgo(v) { var d = parseD(v); return d ? Math.floor((today().getTime() - d.getTime()) / 86400000) : null; }
   function low(s) { return String(s == null ? '' : s).toLowerCase(); }
@@ -3141,7 +3141,6 @@ document.addEventListener('DOMContentLoaded', async function() {
     if (!S.length) return '';
     var keys = Object.keys(S[0]);
     for (var i = 0; i < keys.length; i++) { if (keys[i].indexOf('de debut') >= 0) return keys[i]; }
-    /* fallback : DateOA, DateCommande, Date */
     var fallbacks = ['DateOA', 'DateCommande', 'Date', 'date'];
     for (var j = 0; j < fallbacks.length; j++) { if (S[0][fallbacks[j]] !== undefined) return fallbacks[j]; }
     return '';
@@ -3181,7 +3180,7 @@ document.addEventListener('DOMContentLoaded', async function() {
   }
 
   /* ─────────────── Source PV chantier (sécurité) ─────────────── */
-  var _pvs = null;        /* cache des PV (briefing, EPI, incidents) */
+  var _pvs = null;
   var _pvsLoaded = false;
   function loadPVs(cb) {
     if (_pvsLoaded) { cb && cb(); return; }
@@ -3197,10 +3196,7 @@ document.addEventListener('DOMContentLoaded', async function() {
   }
 
   /* ══════════════════════════════════════════════════════════════
-     INDICE BONNE CONDUITE CHANTIER (sécurité sans accident)
-     Composite : 35 % conformité JSA · 35 % zéro accident
-                 20 % EPI vérifiés · 10 % briefing fait
-     Repli sur epilot_jsa_reports si pas de PV détaillés.
+     INDICE BONNE CONDUITE CHANTIER
   ══════════════════════════════════════════════════════════════ */
   function indiceBonneConduite() {
     var pvs = _pvs || [];
@@ -3210,12 +3206,7 @@ document.addEventListener('DOMContentLoaded', async function() {
       var epi = pvs.filter(function (p) { return p.jsa && p.jsa.epiVerifies; }).length;
       var jsaConf = pvs.filter(function (p) { return p.jsa && ((p.jsa.risques || []).length > 0) && p.jsa.signataire; }).length;
       var incidents = pvs.filter(function (p) { return p.incidents && String(p.incidents).trim() !== ''; }).length;
-
-      var rConf = jsaConf / n;
-      var rZero = 1 - (incidents / n);   /* zéro accident = 1 */
-      var rEpi = epi / n;
-      var rBrief = briefing / n;
-
+      var rConf = jsaConf / n, rZero = 1 - (incidents / n), rEpi = epi / n, rBrief = briefing / n;
       var ibc = Math.round((0.35 * rConf + 0.35 * rZero + 0.20 * rEpi + 0.10 * rBrief) * 100);
       return {
         note: ibc,
@@ -3223,7 +3214,6 @@ document.addEventListener('DOMContentLoaded', async function() {
         sub: 'JSA ' + Math.round(rConf * 100) + '% · EPI ' + Math.round(rEpi * 100) + '% · briefing ' + Math.round(rBrief * 100) + '%'
       };
     }
-    /* Repli : couverture JSA simple via epilot_jsa_reports */
     var jip = window.JIP_DATA || [];
     var actifs = jip.filter(function (r) { return low(r.Status) !== 'terminé' && low(r.Status) !== 'termine' && low(r.Status) !== 'annulé'; });
     var jsaReports = lsArr('epilot_jsa_reports');
@@ -3250,45 +3240,42 @@ document.addEventListener('DOMContentLoaded', async function() {
       return null;
     }
 
-    /* Chantiers de l'année courante (Date de création/ouverture) */
     var jip26 = jip.filter(function (r) { return isYear(r.Date || r['Date de debut'] || r.DateOuverture); });
-    var actifs26 = jip26.filter(isActive);   /* actifs de l'année */
-    var actifsTous = jip.filter(isActive);   /* tous actifs (pour sécurité/retard) */
+    var actifsTous = jip.filter(isActive);
     var total26 = jip26.length;
 
-    /* 1 — Remplissage chantiers (année courante) */
+    /* 1 — Remplissage chantiers */
     var filled = jip26.filter(function (r) { return REQUIRED.every(function (f) { return r[f] && String(r[f]).trim() !== ''; }); }).length;
     var n1 = noteScore(filled, total26);
 
-    /* 2 — Rapport sécurité = Indice Bonne Conduite (sans accident) — tous actifs */
+    /* 2 — Rapport sécurité = Indice Bonne Conduite */
     var ibc = indiceBonneConduite();
 
-    /* 3 — Évaluation chantiers (année courante) */
+    /* 3 — Évaluation chantiers */
     var avecEval = jip26.filter(function (r) {
       for (var k in r) { if (/note|eval|score|avis|qualit/i.test(k) && r[k] && String(r[k]).trim() !== '') return true; }
       return false;
     }).length;
     var n3 = noteScore(avecEval, total26);
 
-    /* 4 — Retard chantiers actifs (fin prévue dépassée) — tous actifs */
+    /* 4 — Retard chantiers actifs */
     var retardCh = actifsTous.filter(function (r) { var fp = finPrevue(r); return fp && fp < now; }).length;
     var n4 = noteRetard(retardCh, actifsTous.length);
 
-    /* 5 — Retard dépenses de l'année (Soumises depuis > 7 j) */
-    var deps26 = (window.EXPENSES_DATA || [])
-      .concat(lsArr('epilot_dep_new_v1'))
+    /* 5 — Retard dépenses */
+    var deps26 = (window.EXPENSES_DATA || []).concat(lsArr('epilot_dep_new_v1'))
       .filter(function (r) { return isYear(r.date || r.Date || r.dateCreation); });
     var depSoumises = deps26.filter(function (r) { var e = low(r.etat || r.statut || r.Statut); return e.indexOf('soumis') >= 0 || e.indexOf('attente') >= 0 || e === 'pending'; });
     var depRetard = depSoumises.filter(function (r) { var a = daysAgo(r.date || r.Date || r.dateCreation); return a !== null && a > 7; }).length;
     var n5 = noteRetard(depRetard, depSoumises.length);
 
-    /* 6 — Retard actions / quêtes de l'année */
+    /* 6 — Retard quêtes */
     var quetes26 = lsArr('epilot_quests_v1').filter(function (r) { return isYear(r.createdAt || r.dateCreation || r.due); });
     var quetesAct = quetes26.filter(function (r) { var s = low(r.statut); return ['clôturée', 'cloturee', 'rejetée', 'rejetee', 'annulée', 'annulee', 'terminée'].indexOf(s) < 0; });
     var quetesRet = quetesAct.filter(function (r) { if (!r.due) return false; var d = parseD(r.due); return d && d < now; }).length;
     var n6 = noteRetard(quetesRet, quetesAct.length);
 
-    /* 7 — Facturation chantiers réceptionnés cette année */
+    /* 7 — Facturation réceptionnés */
     var termines26 = jip26.filter(isTermine);
     var payments = (window.PAYMENT_DATA || []).concat(lsArr('epilot_payment_data_v1'));
     var impPmt = {};
@@ -3314,38 +3301,28 @@ document.addEventListener('DOMContentLoaded', async function() {
     var now = today();
     var ms7 = now.getTime() + 7 * 86400000;
 
-    /* ── Filtrage QUOTE_DATA sur l'année courante ── */
-    var quotes26 = (window.QUOTE_DATA || []).filter(function (r) {
-      return String(r.Year) === YEAR || isYear(r.DateRFQ);
-    });
+    var quotes26 = (window.QUOTE_DATA || []).filter(function (r) { return String(r.Year) === YEAR || isYear(r.DateRFQ); });
     function isOpen(r) { var e = low(r.EtatPI); return e.indexOf('termin') < 0 && e.indexOf('annul') < 0; }
     var ouverts26 = quotes26.filter(isOpen);
 
-    /* ── Filtrage SOURCING_DATA sur l'année courante ── */
     var debKey = sourcingDateKey();
-    var sourcing26 = (window.SOURCING_DATA || []).filter(function (r) {
-      return isYear(debKey ? r[debKey] : null);
-    });
+    var sourcing26 = (window.SOURCING_DATA || []).filter(function (r) { return isYear(debKey ? r[debKey] : null); });
 
-    /* 1 — Taux de réponse : devis de l'année avec une décision */
+    /* 1 — Taux de réponse */
     var avecRep = quotes26.filter(function (r) {
       var e = low(r.EtatPI);
       return e !== '' && e !== 'en cours' && e !== 'soumis' && e !== 'nouveau' && e !== 'ouvert';
     }).length;
     var n1 = noteScore(avecRep, quotes26.length);
 
-    /* 2 — Alertes : devis ouverts cette année dont échéance < 7 j ou dépassée */
-    var alertes = ouverts26.filter(function (r) {
-      if (!r.Echeance) return false;
-      var d = parseD(r.Echeance);
-      return d && d.getTime() <= ms7;
-    }).length;
+    /* 2 — Alertes */
+    var alertes = ouverts26.filter(function (r) { if (!r.Echeance) return false; var d = parseD(r.Echeance); return d && d.getTime() <= ms7; }).length;
     var n2 = noteRetard(alertes, ouverts26.length);
 
-    /* 3 — Rapport OA/RFQ : commandes cette année / devis cette année */
+    /* 3 — Rapport OA/RFQ */
     var ratioOA = quotes26.length > 0 ? Math.min(100, Math.round(sourcing26.length / quotes26.length * 100)) : null;
 
-    /* 4 — Remplissage devis (rapport visite renseigné) — année courante */
+    /* 4 — Remplissage devis */
     var visiteMap = {};
     try {
       var rv = JSON.parse(localStorage.getItem('epilot_rfq_visite_v1') || '{}');
@@ -3357,7 +3334,7 @@ document.addEventListener('DOMContentLoaded', async function() {
     }).length;
     var n4 = noteScore(avecVisite, quotes26.length);
 
-    /* 5 — Retard marketing (RDV de l'année passés non clôturés) → note inversée */
+    /* 5 — Retard marketing */
     var mkt = null; try { mkt = window.MarketingApp && window.MarketingApp._state && window.MarketingApp._state.data; } catch (e) {}
     var meetings = (mkt && mkt.meetings) || [];
     var mktAct26 = meetings.filter(function (m) { return m.status === 'upcoming' && isYear(m.date || m.createdAt); });
@@ -3379,11 +3356,7 @@ document.addEventListener('DOMContentLoaded', async function() {
   function kpiFourniture() {
     var now = today();
     var debKey = sourcingDateKey();
-
-    /* Commandes de l'année courante */
-    var sourcing26 = (window.SOURCING_DATA || []).filter(function (r) {
-      return isYear(debKey ? r[debKey] : null);
-    });
+    var sourcing26 = (window.SOURCING_DATA || []).filter(function (r) { return isYear(debKey ? r[debKey] : null); });
 
     function isLivree(r) { var s = low(r.Status || r.Statut); return /livr|termin|clôt|clot|paid/.test(s); }
     var actives26 = sourcing26.filter(function (r) { return !isLivree(r); });
@@ -3395,12 +3368,12 @@ document.addEventListener('DOMContentLoaded', async function() {
       return null;
     }
 
-    /* 1 — Délai : commandes actives avec date dépassée → note inversée */
+    /* 1 — Délai livraison */
     var avecDate = actives26.filter(dateLivraison);
     var retard = avecDate.filter(function (r) { var d = dateLivraison(r); return d && d < now; }).length;
     var n1 = noteRetard(retard, avecDate.length);
 
-    /* 2 — Remplissage commandes (PO/BR/BL/Facture) */
+    /* 2 — Remplissage commandes */
     var oaDocs = window._oaDocs || {};
     function completude(r) {
       var oa = r.OA || r['N° OA'] || '';
@@ -3431,58 +3404,52 @@ document.addEventListener('DOMContentLoaded', async function() {
     var personnel = window.PERSONNEL_DATA || [];
     var actifs = personnel.filter(function (p) { var s = low(p.statut); return s.indexOf('empl') >= 0 && s.indexOf('arret') < 0 && s.indexOf('demis') < 0; });
 
-    /* 1 — Note moyenne du personnel (PDE v5 : global = moy(Performance, Engagement), /5 → ×20)
-       Structure réelle : store[empId].evaluations["AAAA-Tn"].items[{categorie,note}] */
+    /* 1 — Note moyenne du personnel */
     var store = {};
     try { store = JSON.parse(localStorage.getItem('epilot_pde_v1')) || {}; } catch (e) { store = {}; }
-    var globals = [];          /* notes globales /5 de l'année courante */
-    var nbEvalues = 0;
+    var globals = [], nbEvalues = 0;
     Object.keys(store).forEach(function (empId) {
       var rec = store[empId] || {};
       var evs = rec.evaluations || {};
-      /* dernière évaluation publiée de l'année courante pour cet employé */
       var best = null;
       Object.keys(evs).forEach(function (k) {
         var ev = evs[k];
         if (!ev || !ev.items) return;
-        if (String(ev.year) !== YEAR) return;             /* année courante uniquement */
+        if (String(ev.year) !== YEAR) return;
         if (!best || (ev.quarter || 0) > (best.quarter || 0)) best = ev;
       });
       if (!best) return;
-      /* Moyenne Performance + Engagement (cœur de la note globale) */
       var core = best.items.filter(function (it) {
         return (it.categorie === 'Performance' || it.categorie === 'Engagement') && typeof it.note === 'number';
       });
       if (!core.length) return;
-      var g = core.reduce(function (s, it) { return s + it.note; }, 0) / core.length;
-      globals.push(g);
+      globals.push(core.reduce(function (s, it) { return s + it.note; }, 0) / core.length);
       nbEvalues++;
     });
-    /* note /100 = moyenne des globales /5 × 20 ; null si aucune évaluation */
     var n1 = globals.length ? Math.round(globals.reduce(function (a, b) { return a + b; }, 0) / globals.length * 20) : null;
 
-    /* 2 — Présentations / formations (volume, pas une note de retard) */
+    /* 2 — Présentations / formations */
     var mkt = null; try { mkt = window.MarketingApp && window.MarketingApp._state && window.MarketingApp._state.data; } catch (e) {}
     var meetings = (mkt && mkt.meetings) || [];
     var presentations = meetings.filter(function (m) { var o = low(m.objet || m.type); return /présent|present|formation|séminaire|seminaire/.test(o); }).length;
 
-    /* 3 — Retard projets & stages de l'année → note inversée */
+    /* 3 — Retard projets & stages */
     var quetes26 = lsArr('epilot_quests_v1').filter(function (r) { return isYear(r.createdAt || r.dateCreation || r.due); });
     var projets = quetes26.filter(function (r) { var t = low(r.type || r.titre || r.categorie); return /projet|stage|intern/.test(t); });
     var projRet = projets.filter(function (r) { if (!r.due) return false; var d = parseD(r.due); var s = low(r.statut); return d && d < now && ['clôturée', 'cloturee', 'rejetée', 'terminée'].indexOf(s) < 0; }).length;
     var n3 = noteRetard(projRet, projets.length);
 
-    /* 4 — Retard quêtes de l'année → note inversée */
+    /* 4 — Retard quêtes */
     var quetesAct = quetes26.filter(function (r) { var s = low(r.statut); return ['clôturée', 'cloturee', 'rejetée', 'rejetee', 'annulée', 'annulee', 'terminée'].indexOf(s) < 0; });
     var quetesRet = quetesAct.filter(function (r) { if (!r.due) return false; var d = parseD(r.due); return d && d < now; }).length;
     var n4 = noteRetard(quetesRet, quetesAct.length);
 
-    /* 5 — Retard documents (papiers expirés en cours d'année) → note inversée */
+    /* 5 — Retard documents */
     var docs = lsArr('epilot_papiers').filter(function (d) { return d.expire && String(d.expire).trim() !== ''; });
     var docsExp = docs.filter(function (d) { var dd = parseD(d.expire + 'T00:00:00'); return dd && dd < now; }).length;
     var n5 = noteRetard(docsExp, docs.length);
 
-    /* 6 — Retard meetings de l'année → note inversée */
+    /* 6 — Retard meetings */
     var mtgAct26 = meetings.filter(function (m) { return m.status === 'upcoming' && isYear(m.date || m.createdAt); });
     var mtgRet = mtgAct26.filter(function (m) { var d = parseD(m.date); return d && d < now; }).length;
     var n6 = noteRetard(mtgRet, mtgAct26.length);
@@ -3509,12 +3476,18 @@ document.addEventListener('DOMContentLoaded', async function() {
     var congesData = lsArr('epilot_conges_v1').concat(lsArr('epilot_conges')).concat(lsArr('epilot_hr_conges')).concat(lsArr('hbo_conges'));
     var payslips = lsArr('epilot_paie_payslips').filter(function (p) { return String(p.annee) === String(year); });
 
-    /* 1 — Retard validation congés (en attente > 5 j) → note inversée */
+    /* 1 — Retard validation congés (en attente > 5 j) */
     var attente = congesData.filter(function (c) { var s = low(c.statut || c.status || c.etat); return s.indexOf('attente') >= 0 || s === 'pending' || s === ''; });
     var attRet = attente.filter(function (c) { var a = daysAgo(c.dateCreation || c.dateDemande || c.date || c.createdAt); return a !== null && a > 5; }).length;
     var n1 = noteRetard(attRet, attente.length);
 
-    /* 2 — Consommation congés avant fin d'année */
+    /* 2 — Rythme consommation congés
+       Formule "faisabilité fin d'année" :
+         restRatio = jours restants à prendre / allocation totale
+         timeLeft  = fraction de l'année restante
+       Si restRatio ≤ timeLeft → faisable, pas de risque → 100
+       Sinon → note = timeLeft / restRatio × 100
+       Exemple 16j/191j à mi-année : restRatio=0.92, timeLeft=0.52 → note≈57% */
     var pris = 0, alloues = 0;
     var empIds = {};
     payslips.forEach(function (p) { empIds[p.employeeId || p.matricule] = 1; });
@@ -3524,38 +3497,37 @@ document.addEventListener('DOMContentLoaded', async function() {
     });
     if (alloues === 0 && congesData.length > 0) {
       congesData.forEach(function (c) {
-        var s = low(c.statut || c.status); var yr = c.annee || String(c.dateDebut || '').slice(0, 4);
-        if ((s.indexOf('approuv') >= 0 || s.indexOf('accept') >= 0 || s === 'validé') && String(yr) === String(year)) pris += Number(c.nbrJours || c.nombreJours || c.duree || 0);
+        var s = low(c.statut || c.status); var yr2 = c.annee || String(c.dateDebut || '').slice(0, 4);
+        if ((s.indexOf('approuv') >= 0 || s.indexOf('accept') >= 0 || s === 'validé') && String(yr2) === String(year)) pris += Number(c.nbrJours || c.nombreJours || c.duree || 0);
       });
       var nEmp = Object.keys(empIds).length || congesData.length || 1;
-      alloues = 21 * nEmp;  /* 18 j légaux + bonus ≈ 21 j Cameroun */
+      alloues = 21 * nEmp;
     }
-    /* Consommation : on VEUT que les congés soient consommés AU RYTHME de l'année
-       pour éviter l'accumulation et la perte en fin d'année.
-       Note = avancement réel / avancement attendu à ce stade de l'année.
-         - rythme attendu = fraction de l'année écoulée
-         - 100 % si on consomme au rythme attendu (ou plus)
-         - < 100 % si on est en retard de consommation (risque d'accumulation) */
-    var tauxConso = alloues > 0 ? (pris / alloues) : null;        /* part réellement consommée */
+
     var startYear = new Date(year, 0, 1);
     var fracAnnee = Math.min(1, Math.max(0.001, (now.getTime() - startYear.getTime()) / (endOfYear.getTime() - startYear.getTime())));
     var conso = null, consoPct = null;
-    if (tauxConso !== null) {
-      consoPct = Math.round(tauxConso * 100);                     /* % brut consommé (info) */
-      /* note = consommation rapportée au rythme attendu, plafonnée à 100 */
-      conso = Math.min(100, Math.round((tauxConso / fracAnnee) * 100));
+    if (alloues > 0) {
+      consoPct = Math.round(pris / alloues * 100);
+      var restRatio = Math.max(0, (alloues - pris) / alloues); /* fraction de congés restant à prendre */
+      var timeLeft = 1 - fracAnnee;                             /* fraction d'année restante */
+      if (restRatio <= timeLeft) {
+        conso = 100;   /* faisable : on peut encore tout prendre avant fin d'année */
+      } else {
+        conso = Math.max(0, Math.round(timeLeft / restRatio * 100));
+      }
     }
 
     return [
       { label: 'Retard validation congés', note: n1, weight: 1, detail: attRet + '/' + attente.length + ' en attente > 5 j' },
       { label: 'Rythme consommation congés ' + year, note: conso, weight: 1,
-        detail: pris + '/' + alloues + ' j (' + (consoPct == null ? '—' : consoPct + '%') + ') · attendu ~' + Math.round(fracAnnee * 100) + '% · reste ' + daysLeft + ' j',
-        sub: 'Note = rythme réel vs rythme attendu (évite l\'accumulation en fin d\'année)' },
+        detail: pris + '/' + alloues + ' j consommés (' + (consoPct == null ? '—' : consoPct + '%') + ') · reste ' + daysLeft + ' j à l\'année',
+        sub: 'Note = faisabilité de tout consommer avant fin d\'année' },
     ];
   }
 
   /* ══════════════════════════════════════════════════════════════
-     CONFIGURATION DES GROUPES (clés = data-key des items existants)
+     CONFIGURATION DES GROUPES
   ══════════════════════════════════════════════════════════════ */
   var GROUPS = {
     travaux:     { label: 'Travaux',                          fn: kpiTravaux   },
@@ -3566,10 +3538,8 @@ document.addEventListener('DOMContentLoaded', async function() {
   };
 
   /* ══════════════════════════════════════════════════════════════
-     RENDU : badges + drawer au clic
+     RENDU : badges + popup au clic
   ══════════════════════════════════════════════════════════════ */
-  var _open = null;  /* clé du groupe déplié */
-
   function computeGroup(key) {
     var g = GROUPS[key]; if (!g) return null;
     var kpis;
@@ -3577,9 +3547,29 @@ document.addEventListener('DOMContentLoaded', async function() {
     return { label: g.label, kpis: kpis, note: groupNote(kpis) };
   }
 
-  function renderDrawer(key) {
+  /* ── Popup modal ── */
+  function closeModal() {
+    var bd = document.getElementById('hk-modal-backdrop');
+    if (bd) bd.remove();
+    Array.prototype.forEach.call(
+      document.querySelectorAll('#items .item.hk-active'),
+      function (it) { it.classList.remove('hk-active'); }
+    );
+  }
+
+  function openModal(key) {
+    closeModal();
     var data = computeGroup(key);
-    if (!data) return '';
+    if (!data) return;
+
+    /* Marque l'item actif */
+    var itemsBox = document.getElementById('items');
+    if (itemsBox) {
+      var item = itemsBox.querySelector('.item[data-key="' + key + '"]');
+      if (item) item.classList.add('hk-active');
+    }
+
+    /* Construit les lignes de KPI */
     var rows = data.kpis.map(function (k) {
       var col = k.note !== null && k.note !== undefined ? noteColor(k.note) : 'var(--muted)';
       var val = k.note !== null && k.note !== undefined ? (k.note + '%') : (k.volume !== undefined ? k.volume : '—');
@@ -3594,12 +3584,35 @@ document.addEventListener('DOMContentLoaded', async function() {
         '</div>',
       ].join('');
     }).join('');
-    return [
-      '<div class="hk-drawer" data-for="' + key + '">',
-      '<div class="hk-drawer-head">' + data.label + ' — détail des indicateurs</div>',
+
+    /* Score global dans le header */
+    var scoreHtml = '';
+    if (data.note !== null && data.note !== undefined) {
+      scoreHtml = '<span class="hk-modal-score" style="color:' + noteColor(data.note) + '">' + data.note + '%</span>';
+    }
+
+    var html = [
+      '<div id="hk-modal-backdrop" class="hk-modal-backdrop">',
+      '<div class="hk-modal" role="dialog">',
+      '<div class="hk-modal-head">',
+      '<span class="hk-modal-title">' + data.label + '</span>',
+      scoreHtml,
+      '<button class="hk-modal-close" title="Fermer">✕</button>',
+      '</div>',
       rows,
       '</div>',
+      '</div>',
     ].join('');
+
+    var tmp = document.createElement('div');
+    tmp.innerHTML = html;
+    var backdrop = tmp.firstChild;
+    document.body.appendChild(backdrop);
+
+    /* Fermeture : clic sur le backdrop ou le bouton × */
+    backdrop.addEventListener('click', function (e) {
+      if (e.target === backdrop || e.target.classList.contains('hk-modal-close')) closeModal();
+    });
   }
 
   function updateBadges() {
@@ -3623,80 +3636,75 @@ document.addEventListener('DOMContentLoaded', async function() {
         }
       }
 
-      /* Curseur cliquable + indicateur */
       item.style.cursor = 'pointer';
       if (!item.__hkWired) {
         item.__hkWired = true;
-        item.addEventListener('click', function () { toggleDrawer(key); });
+        item.addEventListener('click', function () { openModal(key); });
       }
     });
     return true;
   }
 
-  function toggleDrawer(key) {
-    var itemsBox = document.getElementById('items');
-    if (!itemsBox) return;
-    /* Retire le drawer existant */
-    var existing = itemsBox.parentNode.querySelector('.hk-drawer');
-    var wasOpen = existing && existing.getAttribute('data-for') === key;
-    if (existing) existing.remove();
-    /* Désélectionne tous */
-    Array.prototype.forEach.call(itemsBox.querySelectorAll('.item'), function (it) { it.classList.remove('hk-active'); });
-
-    if (wasOpen) { _open = null; return; }
-
-    _open = key;
-    var item = itemsBox.querySelector('.item[data-key="' + key + '"]');
-    if (item) item.classList.add('hk-active');
-    /* Insère le drawer juste après l'item cliqué */
-    var html = renderDrawer(key);
-    var tmp = document.createElement('div');
-    tmp.innerHTML = html;
-    var drawer = tmp.firstChild;
-    if (item && item.nextSibling) itemsBox.insertBefore(drawer, item.nextSibling);
-    else itemsBox.appendChild(drawer);
-  }
-
   function render() {
-    var ok = updateBadges();
-    /* Re-rend le drawer ouvert si données changées */
-    if (ok && _open) {
-      var itemsBox = document.getElementById('items');
-      var existing = itemsBox && itemsBox.parentNode.querySelector('.hk-drawer');
-      if (existing && existing.getAttribute('data-for') === _open) {
-        var tmp = document.createElement('div');
-        tmp.innerHTML = renderDrawer(_open);
-        existing.parentNode.replaceChild(tmp.firstChild, existing);
-      }
-    }
-    return ok;
+    return updateBadges();
   }
 
   /* ──────────────── CSS ──────────────── */
   var CSS = [
-    '#items .item.hk-active { border-color: var(--orange) !important; }',
-    '.hk-drawer {',
-    '  margin-top: 8px; margin-bottom: 4px;',
-    '  background: var(--bg-2, var(--card-2));',
-    '  border: 1px solid var(--line); border-left: 3px solid var(--orange);',
-    '  border-radius: 12px; padding: 10px 12px;',
-    '  animation: hkSlide .18s ease;',
+    /* Item actif */
+    '#items .item.hk-active { outline: 2px solid var(--orange); outline-offset: 2px; }',
+
+    /* Backdrop */
+    '.hk-modal-backdrop {',
+    '  position: fixed; inset: 0; z-index: 9990;',
+    '  background: rgba(0,0,0,.45);',
+    '  display: flex; align-items: center; justify-content: center;',
+    '  padding: 16px;',
     '}',
-    '@keyframes hkSlide { from { opacity:0; transform: translateY(-4px); } to { opacity:1; transform:none; } }',
-    '.hk-drawer-head {',
-    '  font-size: 10.5px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase;',
-    '  color: var(--muted); margin-bottom: 8px;',
+
+    /* Panneau modal */
+    '.hk-modal {',
+    '  background: var(--bg-2, #1e1e2e);',
+    '  border: 1px solid var(--line); border-top: 3px solid var(--orange);',
+    '  border-radius: 14px; padding: 14px 16px;',
+    '  width: min(420px, 94vw); max-height: 80vh; overflow-y: auto;',
+    '  box-shadow: 0 24px 64px rgba(0,0,0,.55);',
+    '  animation: hkPop .16s ease;',
     '}',
+    '@keyframes hkPop { from { opacity:0; transform:scale(.93) translateY(6px); } to { opacity:1; transform:none; } }',
+
+    /* En-tête modal */
+    '.hk-modal-head {',
+    '  display: flex; align-items: center; gap: 8px; margin-bottom: 12px;',
+    '}',
+    '.hk-modal-title {',
+    '  flex: 1;',
+    '  font-size: 11px; font-weight: 700; letter-spacing: .05em; text-transform: uppercase;',
+    '  color: var(--muted);',
+    '}',
+    '.hk-modal-score {',
+    '  font-size: 18px; font-weight: 800;',
+    '}',
+    '.hk-modal-close {',
+    '  width: 26px; height: 26px; border-radius: 50%; flex-shrink: 0;',
+    '  border: 1px solid var(--line); background: var(--bg-3, #2a2a3e);',
+    '  color: var(--muted); font-size: 13px; cursor: pointer;',
+    '  display: flex; align-items: center; justify-content: center; padding: 0;',
+    '  line-height: 1;',
+    '}',
+    '.hk-modal-close:hover { color: var(--text); border-color: var(--orange); }',
+
+    /* Lignes KPI */
     '.hk-row {',
     '  display: flex; align-items: center; justify-content: space-between; gap: 10px;',
-    '  padding: 6px 4px; border-top: 1px solid var(--line);',
+    '  padding: 7px 2px; border-top: 1px solid var(--line);',
     '}',
-    '.hk-row:first-of-type { border-top: 0; }',
+    '.hk-row:first-of-type { border-top: none; }',
     '.hk-row-main { display: flex; flex-direction: column; gap: 1px; min-width: 0; flex: 1; }',
     '.hk-row-label { font-size: 12px; font-weight: 600; color: var(--text); }',
-    '.hk-row-sub { font-size: 9.5px; color: var(--muted-2); }',
+    '.hk-row-sub { font-size: 9.5px; color: var(--muted-2, var(--muted)); margin-top: 1px; }',
     '.hk-row-detail { font-size: 10px; color: var(--muted); }',
-    '.hk-row-note { font-size: 15px; font-weight: 800; white-space: nowrap; }',
+    '.hk-row-note { font-size: 15px; font-weight: 800; white-space: nowrap; flex-shrink: 0; }',
   ].join('\n');
 
   function injectCSS() {
@@ -3712,7 +3720,6 @@ document.addEventListener('DOMContentLoaded', async function() {
   var _renderTimer = null;
   var _dataRetries = 0;
 
-  /* Vérifie si au moins une source ERP principale est chargée */
   function hasERP() {
     return !!(
       (window.JIP_DATA    && window.JIP_DATA.length    > 0) ||
@@ -3721,39 +3728,35 @@ document.addEventListener('DOMContentLoaded', async function() {
     );
   }
 
-  /* Render différé : attend que les données ERP soient disponibles */
   function renderWhenReady() {
     if (hasERP()) {
       render();
       loadPVs(function () { render(); });
-    } else if (_dataRetries < 20) {           /* ~10 s de patience maximum */
+    } else if (_dataRetries < 20) {
       _dataRetries++;
       setTimeout(renderWhenReady, 500);
     }
   }
 
   function boot() {
-    if (_booted) { render(); return; }        /* retour sur l'accueil : juste un render */
+    if (_booted) { render(); return; }
     injectCSS();
     _booted = true;
-    renderWhenReady();                        /* attend les données avant le premier render */
+    renderWhenReady();
   }
 
-  /* Init une seule fois : s'arrête dès que #items est présent */
   window.__epKeepApplying(function () {
     if (_booted) return;
     if (document.getElementById('items')) { boot(); }
   }, { interval: 600, tries: 60 });
 
-  /* Rafraîchit sur changement de données (débounce 400 ms) */
   if (window.EPilotBus && window.EPilotBus.on) {
     window.EPilotBus.on('data:changed', function () {
       clearTimeout(_renderTimer);
-      _renderTimer = setTimeout(render, 400);  /* render simple, PVs déjà en cache */
+      _renderTimer = setTimeout(render, 400);
     });
   }
 
-  /* Rafraîchit au retour sur l'accueil (simple render, pas de boot) */
   function hookNav() {
     if (!window.HubViews || !window.HubViews.showView || window.HubViews.__homeKpiHooked) return;
     window.HubViews.__homeKpiHooked = true;
@@ -3766,7 +3769,7 @@ document.addEventListener('DOMContentLoaded', async function() {
   }
   if (window.HubViews) hookNav(); else setTimeout(hookNav, 500);
 
-  window.HomeKPI = { render: render, compute: computeGroup, toggle: toggleDrawer };
+  window.HomeKPI = { render: render, compute: computeGroup, open: openModal, close: closeModal };
   if (window.EPilotModules && window.EPilotModules.register) {
     window.EPilotModules.register('home-kpi', { refresh: function () { try { render(); } catch (e) {} } });
   }
