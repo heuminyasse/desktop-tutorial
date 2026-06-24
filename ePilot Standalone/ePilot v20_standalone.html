@@ -3124,13 +3124,28 @@ document.addEventListener('DOMContentLoaded', async function() {
     try { return JSON.parse(localStorage.getItem(key) || '[]') || []; } catch (e) { return []; }
   }
   function today() { var d = new Date(); d.setHours(0, 0, 0, 0); return d; }
+  var YEAR = String(new Date().getFullYear()); /* "2026" */
   function parseD(v) {
     if (!v) return null;
     var d = new Date(typeof v === 'number' ? v : (String(v).length === 10 ? v + 'T00:00:00' : v));
     return isNaN(d.getTime()) ? null : d;
   }
+  function yr(v) { return String(v || '').slice(0, 4); }  /* extrait l'année d'une date string */
+  function isYear(v) { return yr(v) === YEAR; }
   function daysAgo(v) { var d = parseD(v); return d ? Math.floor((today().getTime() - d.getTime()) / 86400000) : null; }
   function low(s) { return String(s == null ? '' : s).toLowerCase(); }
+
+  /* Trouve dynamiquement le champ date de début dans SOURCING_DATA */
+  function sourcingDateKey() {
+    var S = window.SOURCING_DATA || [];
+    if (!S.length) return '';
+    var keys = Object.keys(S[0]);
+    for (var i = 0; i < keys.length; i++) { if (keys[i].indexOf('de debut') >= 0) return keys[i]; }
+    /* fallback : DateOA, DateCommande, Date */
+    var fallbacks = ['DateOA', 'DateCommande', 'Date', 'date'];
+    for (var j = 0; j < fallbacks.length; j++) { if (S[0][fallbacks[j]] !== undefined) return fallbacks[j]; }
+    return '';
+  }
 
   /* Note d'un taux de remplissage / réussite : ratio (0..1) → 0..100 */
   function noteScore(done, total) { return total > 0 ? Math.round(done / total * 100) : null; }
@@ -3232,55 +3247,60 @@ document.addEventListener('DOMContentLoaded', async function() {
       return null;
     }
 
-    var actifs = jip.filter(isActive);
-    var total = jip.length;
+    /* Chantiers de l'année courante (Date de création/ouverture) */
+    var jip26 = jip.filter(function (r) { return isYear(r.Date || r['Date de debut'] || r.DateOuverture); });
+    var actifs26 = jip26.filter(isActive);   /* actifs de l'année */
+    var actifsTous = jip.filter(isActive);   /* tous actifs (pour sécurité/retard) */
+    var total26 = jip26.length;
 
-    /* 1 — Remplissage chantiers */
-    var filled = jip.filter(function (r) { return REQUIRED.every(function (f) { return r[f] && String(r[f]).trim() !== ''; }); }).length;
-    var n1 = noteScore(filled, total);
+    /* 1 — Remplissage chantiers (année courante) */
+    var filled = jip26.filter(function (r) { return REQUIRED.every(function (f) { return r[f] && String(r[f]).trim() !== ''; }); }).length;
+    var n1 = noteScore(filled, total26);
 
-    /* 2 — Rapport sécurité = Indice Bonne Conduite (sans accident) */
+    /* 2 — Rapport sécurité = Indice Bonne Conduite (sans accident) — tous actifs */
     var ibc = indiceBonneConduite();
 
-    /* 3 — Évaluation chantiers */
-    var avecEval = jip.filter(function (r) {
+    /* 3 — Évaluation chantiers (année courante) */
+    var avecEval = jip26.filter(function (r) {
       for (var k in r) { if (/note|eval|score|avis|qualit/i.test(k) && r[k] && String(r[k]).trim() !== '') return true; }
       return false;
     }).length;
-    var n3 = noteScore(avecEval, total);
+    var n3 = noteScore(avecEval, total26);
 
-    /* 4 — Retard chantiers (fin prévue dépassée) */
-    var retardCh = actifs.filter(function (r) { var fp = finPrevue(r); return fp && fp < now; }).length;
-    var n4 = noteRetard(retardCh, actifs.length);
+    /* 4 — Retard chantiers actifs (fin prévue dépassée) — tous actifs */
+    var retardCh = actifsTous.filter(function (r) { var fp = finPrevue(r); return fp && fp < now; }).length;
+    var n4 = noteRetard(retardCh, actifsTous.length);
 
-    /* 5 — Retard dépenses (Soumises depuis > 7 j) */
-    var deps = (window.EXPENSES_DATA || []).concat(lsArr('epilot_dep_new_v1'));
-    var depSoumises = deps.filter(function (r) { var e = low(r.etat || r.statut || r.Statut); return e.indexOf('soumis') >= 0 || e.indexOf('attente') >= 0 || e === 'pending'; });
+    /* 5 — Retard dépenses de l'année (Soumises depuis > 7 j) */
+    var deps26 = (window.EXPENSES_DATA || [])
+      .concat(lsArr('epilot_dep_new_v1'))
+      .filter(function (r) { return isYear(r.date || r.Date || r.dateCreation); });
+    var depSoumises = deps26.filter(function (r) { var e = low(r.etat || r.statut || r.Statut); return e.indexOf('soumis') >= 0 || e.indexOf('attente') >= 0 || e === 'pending'; });
     var depRetard = depSoumises.filter(function (r) { var a = daysAgo(r.date || r.Date || r.dateCreation); return a !== null && a > 7; }).length;
     var n5 = noteRetard(depRetard, depSoumises.length);
 
-    /* 6 — Retard actions / quêtes */
-    var quetes = lsArr('epilot_quests_v1');
-    var quetesAct = quetes.filter(function (r) { var s = low(r.statut); return ['clôturée', 'cloturee', 'rejetée', 'rejetee', 'annulée', 'annulee', 'terminée'].indexOf(s) < 0; });
+    /* 6 — Retard actions / quêtes de l'année */
+    var quetes26 = lsArr('epilot_quests_v1').filter(function (r) { return isYear(r.createdAt || r.dateCreation || r.due); });
+    var quetesAct = quetes26.filter(function (r) { var s = low(r.statut); return ['clôturée', 'cloturee', 'rejetée', 'rejetee', 'annulée', 'annulee', 'terminée'].indexOf(s) < 0; });
     var quetesRet = quetesAct.filter(function (r) { if (!r.due) return false; var d = parseD(r.due); return d && d < now; }).length;
     var n6 = noteRetard(quetesRet, quetesAct.length);
 
-    /* 7 — Facturation chantiers réceptionnés */
-    var termines = jip.filter(isTermine);
+    /* 7 — Facturation chantiers réceptionnés cette année */
+    var termines26 = jip26.filter(isTermine);
     var payments = (window.PAYMENT_DATA || []).concat(lsArr('epilot_payment_data_v1'));
     var impPmt = {};
     payments.forEach(function (p) { var k = low(p.Imputation || p.imputation || p.chantier || p.ref); if (k) impPmt[k] = 1; });
-    var termFact = termines.filter(function (r) { return impPmt[low(r.Imputation)]; }).length;
-    var n7 = noteScore(termFact, termines.length);
+    var termFact = termines26.filter(function (r) { return impPmt[low(r.Imputation)]; }).length;
+    var n7 = noteScore(termFact, termines26.length);
 
     return [
-      { label: 'Remplissage chantiers', note: n1, weight: 1, detail: filled + '/' + total + ' complets' },
+      { label: 'Remplissage chantiers ' + YEAR, note: n1, weight: 1, detail: filled + '/' + total26 + ' complets' },
       { label: '🛡️ Bonne conduite / Sécurité', note: ibc.note, weight: 2, detail: ibc.detail, sub: ibc.sub },
-      { label: 'Évaluation chantiers', note: n3, weight: 2, detail: avecEval + '/' + total + ' évalués' },
-      { label: 'Retard chantiers', note: n4, weight: 1.5, detail: retardCh + '/' + actifs.length + ' en retard' },
-      { label: 'Retard dépenses', note: n5, weight: 1, detail: depRetard + '/' + depSoumises.length + ' en retard' },
-      { label: 'Retard actions/quêtes', note: n6, weight: 1, detail: quetesRet + '/' + quetesAct.length + ' en retard' },
-      { label: 'Facturation réceptionnés', note: n7, weight: 1, detail: termFact + '/' + termines.length + ' facturés' },
+      { label: 'Évaluation chantiers ' + YEAR, note: n3, weight: 2, detail: avecEval + '/' + total26 + ' évalués' },
+      { label: 'Retard chantiers actifs', note: n4, weight: 1.5, detail: retardCh + '/' + actifsTous.length + ' en retard' },
+      { label: 'Retard dépenses ' + YEAR, note: n5, weight: 1, detail: depRetard + '/' + depSoumises.length + ' en retard' },
+      { label: 'Retard actions/quêtes ' + YEAR, note: n6, weight: 1, detail: quetesRet + '/' + quetesAct.length + ' en retard' },
+      { label: 'Facturation réceptionnés ' + YEAR, note: n7, weight: 1, detail: termFact + '/' + termines26.length + ' facturés' },
     ];
   }
 
@@ -3288,47 +3308,65 @@ document.addEventListener('DOMContentLoaded', async function() {
      CHIFFRAGE — 5 KPI
   ══════════════════════════════════════════════════════════════ */
   function kpiChiffrage() {
-    var quotes = window.QUOTE_DATA || [];
-    var sourcing = window.SOURCING_DATA || [];
     var now = today();
     var ms7 = now.getTime() + 7 * 86400000;
+
+    /* ── Filtrage QUOTE_DATA sur l'année courante ── */
+    var quotes26 = (window.QUOTE_DATA || []).filter(function (r) {
+      return String(r.Year) === YEAR || isYear(r.DateRFQ);
+    });
     function isOpen(r) { var e = low(r.EtatPI); return e.indexOf('termin') < 0 && e.indexOf('annul') < 0; }
-    var ouverts = quotes.filter(isOpen);
+    var ouverts26 = quotes26.filter(isOpen);
 
-    /* 1 — Taux de réponse */
-    var avecRep = quotes.filter(function (r) { var e = low(r.EtatPI); return e !== '' && e !== 'en cours' && e !== 'soumis' && e !== 'nouveau'; }).length;
-    var n1 = noteScore(avecRep, quotes.length);
+    /* ── Filtrage SOURCING_DATA sur l'année courante ── */
+    var debKey = sourcingDateKey();
+    var sourcing26 = (window.SOURCING_DATA || []).filter(function (r) {
+      return isYear(debKey ? r[debKey] : null);
+    });
 
-    /* 2 — Alertes à traiter (échéance < 7 j) → note inversée */
-    var alertes = ouverts.filter(function (r) { if (!r.Echeance) return false; var d = parseD(r.Echeance); return d && d.getTime() <= ms7; }).length;
-    var n2 = noteRetard(alertes, ouverts.length);
-
-    /* 3 — Rapport OA/RFQ (taux de conversion en commande) */
-    var n3 = quotes.length > 0 ? Math.min(100, Math.round(sourcing.length / quotes.length * 100)) : null;
-
-    /* 4 — Remplissage devis (rapport visite renseigné) */
-    var visites = lsArr('epilot_rfq_visite_v1');
-    var visiteByDoss = {};
-    visites.forEach(function (v) { var k = low(v.dossier || v.Dossier || v.ref); if (k) visiteByDoss[k] = 1; });
-    var avecVisite = quotes.filter(function (r) {
-      if (r.DateVisite && String(r.DateVisite).trim() !== '') return true;
-      return visiteByDoss[low(r.Dossier)];
+    /* 1 — Taux de réponse : devis de l'année avec une décision */
+    var avecRep = quotes26.filter(function (r) {
+      var e = low(r.EtatPI);
+      return e !== '' && e !== 'en cours' && e !== 'soumis' && e !== 'nouveau' && e !== 'ouvert';
     }).length;
-    var n4 = noteScore(avecVisite, quotes.length);
+    var n1 = noteScore(avecRep, quotes26.length);
 
-    /* 5 — Retard marketing (RDV passés non clôturés) → note inversée */
+    /* 2 — Alertes : devis ouverts cette année dont échéance < 7 j ou dépassée */
+    var alertes = ouverts26.filter(function (r) {
+      if (!r.Echeance) return false;
+      var d = parseD(r.Echeance);
+      return d && d.getTime() <= ms7;
+    }).length;
+    var n2 = noteRetard(alertes, ouverts26.length);
+
+    /* 3 — Rapport OA/RFQ : commandes cette année / devis cette année */
+    var ratioOA = quotes26.length > 0 ? Math.min(100, Math.round(sourcing26.length / quotes26.length * 100)) : null;
+
+    /* 4 — Remplissage devis (rapport visite renseigné) — année courante */
+    var visiteMap = {};
+    try {
+      var rv = JSON.parse(localStorage.getItem('epilot_rfq_visite_v1') || '{}');
+      Object.keys(rv).forEach(function (dos) { if (rv[dos] && rv[dos].DateVisite) visiteMap[low(dos)] = 1; });
+    } catch (e) {}
+    var avecVisite = quotes26.filter(function (r) {
+      if (r.DateVisite && String(r.DateVisite).trim() !== '') return true;
+      return visiteMap[low(r.Dossier)];
+    }).length;
+    var n4 = noteScore(avecVisite, quotes26.length);
+
+    /* 5 — Retard marketing (RDV de l'année passés non clôturés) → note inversée */
     var mkt = null; try { mkt = window.MarketingApp && window.MarketingApp._state && window.MarketingApp._state.data; } catch (e) {}
     var meetings = (mkt && mkt.meetings) || [];
-    var mktAct = meetings.filter(function (m) { return m.status === 'upcoming'; });
-    var mktRet = mktAct.filter(function (m) { var d = parseD(m.date); return d && d < now; }).length;
-    var n5 = noteRetard(mktRet, mktAct.length);
+    var mktAct26 = meetings.filter(function (m) { return m.status === 'upcoming' && isYear(m.date || m.createdAt); });
+    var mktRet = mktAct26.filter(function (m) { var d = parseD(m.date); return d && d < now; }).length;
+    var n5 = noteRetard(mktRet, mktAct26.length);
 
     return [
-      { label: 'Taux de réponse devis', note: n1, weight: 1.5, detail: avecRep + '/' + quotes.length + ' traités' },
-      { label: 'Alertes à traiter', note: n2, weight: 1, detail: alertes + ' échéances < 7 j' },
-      { label: 'Rapport OA/RFQ', note: n3, weight: 1, detail: sourcing.length + ' OA / ' + quotes.length + ' RFQ' },
-      { label: 'Remplissage devis + visite', note: n4, weight: 1.5, detail: avecVisite + '/' + quotes.length + ' avec visite' },
-      { label: 'Retard marketing', note: n5, weight: 1, detail: mktRet + '/' + mktAct.length + ' RDV en retard' },
+      { label: 'Taux de réponse devis ' + YEAR, note: n1, weight: 1.5, detail: avecRep + '/' + quotes26.length + ' traités' },
+      { label: 'Alertes à traiter', note: n2, weight: 1, detail: alertes + '/' + ouverts26.length + ' devis en alerte' },
+      { label: 'Rapport OA/RFQ ' + YEAR, note: ratioOA, weight: 1, detail: sourcing26.length + ' OA / ' + quotes26.length + ' RFQ' },
+      { label: 'Remplissage devis + visite ' + YEAR, note: n4, weight: 1.5, detail: avecVisite + '/' + quotes26.length + ' avec visite' },
+      { label: 'Retard marketing ' + YEAR, note: n5, weight: 1, detail: mktRet + '/' + mktAct26.length + ' RDV en retard' },
     ];
   }
 
@@ -3336,10 +3374,17 @@ document.addEventListener('DOMContentLoaded', async function() {
      FOURNITURE MATÉRIELS — 2 KPI
   ══════════════════════════════════════════════════════════════ */
   function kpiFourniture() {
-    var sourcing = window.SOURCING_DATA || [];
     var now = today();
+    var debKey = sourcingDateKey();
+
+    /* Commandes de l'année courante */
+    var sourcing26 = (window.SOURCING_DATA || []).filter(function (r) {
+      return isYear(debKey ? r[debKey] : null);
+    });
+
     function isLivree(r) { var s = low(r.Status || r.Statut); return /livr|termin|clôt|clot|paid/.test(s); }
-    var actives = sourcing.filter(function (r) { return !isLivree(r); });
+    var actives26 = sourcing26.filter(function (r) { return !isLivree(r); });
+
     function dateLivraison(r) {
       var keys = ['DateLivraison', 'Date livraison', 'DateEcheance', 'DueDate', 'Echeance'];
       for (var i = 0; i < keys.length; i++) { if (r[keys[i]]) { var d = parseD(r[keys[i]]); if (d) return d; } }
@@ -3347,32 +3392,31 @@ document.addEventListener('DOMContentLoaded', async function() {
       return null;
     }
 
-    /* 1 — Délai : commandes en retard → note inversée */
-    var avecDate = actives.filter(dateLivraison);
+    /* 1 — Délai : commandes actives avec date dépassée → note inversée */
+    var avecDate = actives26.filter(dateLivraison);
     var retard = avecDate.filter(function (r) { var d = dateLivraison(r); return d && d < now; }).length;
     var n1 = noteRetard(retard, avecDate.length);
 
-    /* 2 — Remplissage commandes (PO/BR/BL/Facture/Colis) */
+    /* 2 — Remplissage commandes (PO/BR/BL/Facture) */
     var oaDocs = window._oaDocs || {};
     function completude(r) {
       var oa = r.OA || r['N° OA'] || '';
       var doc = (oa && oaDocs[oa]) ? oaDocs[oa] : {};
       var score = 0;
-      if (oa) score++;                                                       /* PO */
-      if (r.Imputation) score++;                                             /* Contrat lié */
-      if ((doc.brs && doc.brs.length) || r.BR) score++;                      /* BR */
-      if ((doc.bls && doc.bls.length) || r.BL) score++;                      /* BL */
-      if ((doc.facs && doc.facs.length) || r.Facture || r.NomFac) score++;   /* Facture */
+      if (oa) score++;
+      if (r.Imputation) score++;
+      if ((doc.brs && doc.brs.length) || r.BR) score++;
+      if ((doc.bls && doc.bls.length) || r.BL) score++;
+      if ((doc.facs && doc.facs.length) || r.Facture || r.NomFac) score++;
       return score / 5;
     }
-    var total = sourcing.length;
-    var complet = sourcing.filter(function (r) { return completude(r) >= 0.8; }).length;
-    /* Note = % de complétude moyen (plus fin que le seuil) */
-    var avgCompl = total > 0 ? Math.round(sourcing.reduce(function (s, r) { return s + completude(r); }, 0) / total * 100) : null;
+    var total26 = sourcing26.length;
+    var complet = sourcing26.filter(function (r) { return completude(r) >= 0.8; }).length;
+    var avgCompl = total26 > 0 ? Math.round(sourcing26.reduce(function (s, r) { return s + completude(r); }, 0) / total26 * 100) : null;
 
     return [
-      { label: 'Retard délai livraison', note: n1, weight: 1.5, detail: retard + '/' + avecDate.length + ' en retard' },
-      { label: 'Remplissage commandes', note: avgCompl, weight: 1, detail: complet + '/' + total + ' complètes (PO/BR/BL/Fac)' },
+      { label: 'Retard délai livraison ' + YEAR, note: n1, weight: 1.5, detail: retard + '/' + avecDate.length + ' en retard' },
+      { label: 'Remplissage commandes ' + YEAR, note: avgCompl, weight: 1, detail: complet + '/' + total26 + ' complètes (PO/BR/BL/Fac)' },
     ];
   }
 
@@ -3405,34 +3449,34 @@ document.addEventListener('DOMContentLoaded', async function() {
     var meetings = (mkt && mkt.meetings) || [];
     var presentations = meetings.filter(function (m) { var o = low(m.objet || m.type); return /présent|present|formation|séminaire|seminaire/.test(o); }).length;
 
-    /* 3 — Retard projets & stages → note inversée */
-    var quetes = lsArr('epilot_quests_v1');
-    var projets = quetes.filter(function (r) { var t = low(r.type || r.titre || r.categorie); return /projet|stage|intern/.test(t); });
+    /* 3 — Retard projets & stages de l'année → note inversée */
+    var quetes26 = lsArr('epilot_quests_v1').filter(function (r) { return isYear(r.createdAt || r.dateCreation || r.due); });
+    var projets = quetes26.filter(function (r) { var t = low(r.type || r.titre || r.categorie); return /projet|stage|intern/.test(t); });
     var projRet = projets.filter(function (r) { if (!r.due) return false; var d = parseD(r.due); var s = low(r.statut); return d && d < now && ['clôturée', 'cloturee', 'rejetée', 'terminée'].indexOf(s) < 0; }).length;
     var n3 = noteRetard(projRet, projets.length);
 
-    /* 4 — Retard quêtes → note inversée */
-    var quetesAct = quetes.filter(function (r) { var s = low(r.statut); return ['clôturée', 'cloturee', 'rejetée', 'rejetee', 'annulée', 'annulee', 'terminée'].indexOf(s) < 0; });
+    /* 4 — Retard quêtes de l'année → note inversée */
+    var quetesAct = quetes26.filter(function (r) { var s = low(r.statut); return ['clôturée', 'cloturee', 'rejetée', 'rejetee', 'annulée', 'annulee', 'terminée'].indexOf(s) < 0; });
     var quetesRet = quetesAct.filter(function (r) { if (!r.due) return false; var d = parseD(r.due); return d && d < now; }).length;
     var n4 = noteRetard(quetesRet, quetesAct.length);
 
-    /* 5 — Retard documents (papiers expirés) → note inversée */
+    /* 5 — Retard documents (papiers expirés en cours d'année) → note inversée */
     var docs = lsArr('epilot_papiers').filter(function (d) { return d.expire && String(d.expire).trim() !== ''; });
     var docsExp = docs.filter(function (d) { var dd = parseD(d.expire + 'T00:00:00'); return dd && dd < now; }).length;
     var n5 = noteRetard(docsExp, docs.length);
 
-    /* 6 — Retard meetings (réunions passées non clôturées) → note inversée */
-    var mtgAct = meetings.filter(function (m) { return m.status === 'upcoming'; });
-    var mtgRet = mtgAct.filter(function (m) { var d = parseD(m.date); return d && d < now; }).length;
-    var n6 = noteRetard(mtgRet, mtgAct.length);
+    /* 6 — Retard meetings de l'année → note inversée */
+    var mtgAct26 = meetings.filter(function (m) { return m.status === 'upcoming' && isYear(m.date || m.createdAt); });
+    var mtgRet = mtgAct26.filter(function (m) { var d = parseD(m.date); return d && d < now; }).length;
+    var n6 = noteRetard(mtgRet, mtgAct26.length);
 
     return [
-      { label: 'Note moyenne personnel', note: n1, weight: 2, detail: (n1 !== null ? (n1 / 10) + '/10' : '—') + ' · ' + avecNote.length + '/' + actifs.length + ' évalués' },
-      { label: 'Présentations / formations', note: null, weight: 0, detail: presentations + ' réalisées', volume: presentations },
-      { label: 'Retard projets & stages', note: n3, weight: 1.5, detail: projRet + '/' + projets.length + ' en retard' },
-      { label: 'Retard quêtes', note: n4, weight: 1, detail: quetesRet + '/' + quetesAct.length + ' en retard' },
+      { label: 'Note moyenne personnel ' + YEAR, note: n1, weight: 2, detail: (n1 !== null ? (n1 / 10) + '/10' : '—') + ' · ' + avecNote.length + '/' + actifs.length + ' évalués' },
+      { label: 'Présentations / formations ' + YEAR, note: null, weight: 0, detail: presentations + ' réalisées', volume: presentations },
+      { label: 'Retard projets & stages ' + YEAR, note: n3, weight: 1.5, detail: projRet + '/' + projets.length + ' en retard' },
+      { label: 'Retard quêtes ' + YEAR, note: n4, weight: 1, detail: quetesRet + '/' + quetesAct.length + ' en retard' },
       { label: 'Retard documents', note: n5, weight: 1, detail: docsExp + ' expirés / ' + docs.length },
-      { label: 'Retard meetings', note: n6, weight: 1, detail: mtgRet + '/' + mtgAct.length + ' en retard' },
+      { label: 'Retard meetings ' + YEAR, note: n6, weight: 1, detail: mtgRet + '/' + mtgAct26.length + ' en retard' },
     ];
   }
 
