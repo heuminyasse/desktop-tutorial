@@ -4051,7 +4051,7 @@ document.addEventListener('DOMContentLoaded', async function() {
    Persistance : epilot_emp_ext_v1[matricule].cv (espace partagé avec __RH_FICHE_ENHANCE_v1__). */
 (function(){
   if(window.__rhCvBuilder) return; window.__rhCvBuilder=1;
-  var EXT='epilot_emp_ext_v1', RED='#B5000A';
+  var EXT='epilot_emp_ext_v1', RED='#00AEAC', GRN='#8EC02F';
   function loadAll(){ try{ var o=JSON.parse(localStorage.getItem(EXT)||'{}'); return (o&&typeof o==='object')?o:{}; }catch(e){ return {}; } }
   function saveAll(o){ try{ localStorage.setItem(EXT, JSON.stringify(o)); }catch(e){} }
   function $(id){ return document.getElementById(id); }
@@ -4096,14 +4096,14 @@ document.addEventListener('DOMContentLoaded', async function() {
       '.cvb-btn{border:0;border-radius:8px;padding:9px 14px;font-weight:700;cursor:pointer;font-size:13px}',
       '.cvb-btn.p{background:'+RED+';color:#fff}.cvb-btn.s{background:#fff;color:'+RED+';border:1px solid '+RED+'}',
       /* aperçu CV (A4) */
-      '.cv-doc{background:#fff;color:#222;font-family:Calibri,"Segoe UI",sans-serif;width:100%;max-width:520px;margin:auto;box-shadow:0 4px 18px rgba(0,0,0,.12);border-radius:4px;overflow:hidden}',
+      '.cv-doc{background:#fff;color:#222;font-family:"Segoe UI Light","Segoe UI",Calibri,sans-serif;width:100%;max-width:520px;margin:auto;box-shadow:0 4px 18px rgba(0,0,0,.12);border-radius:4px;overflow:hidden}',
       '.cv-head{background:'+RED+';color:#fff;padding:18px 20px;display:flex;justify-content:space-between;gap:14px}',
       '.cv-head .nm{font-size:22px;font-weight:800;line-height:1.1}',
       '.cv-head .ti{font-size:13px;margin-top:4px;opacity:.95}',
       '.cv-head .ct{font-size:11px;text-align:right;line-height:1.7;white-space:nowrap}',
       '.cv-body{padding:16px 20px}',
       '.cv-sec{margin-bottom:16px}',
-      '.cv-sec>.h{color:'+RED+';font-weight:800;font-size:13px;text-transform:uppercase;letter-spacing:.05em;border-bottom:2px solid '+RED+';padding-bottom:3px;margin-bottom:10px}',
+      '.cv-sec>.h{color:#fff;background:'+RED+';font-weight:700;font-size:13px;text-transform:uppercase;letter-spacing:.05em;padding:4px 10px;margin-bottom:10px;border-radius:2px}',
       '.cv-row{display:flex;gap:12px;margin-bottom:10px}',
       '.cv-row .d{flex:0 0 92px;font-size:11px;color:#6b7280;font-weight:700}',
       '.cv-row .c{flex:1}',
