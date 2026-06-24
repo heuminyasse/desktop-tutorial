@@ -3814,5 +3814,234 @@ document.addEventListener('DOMContentLoaded', async function() {
 })();
 
 </script>
+<script id="__RH_FICHE_ENHANCE_v1__">
+/* __RH_FICHE_ENHANCE_v1__ — Personnel/RH : enrichissement de la fiche employé (#emp-cfg)
+   • Onglet "HSE & Habilitations" → "Sécurité & Compétences" (carrière sécurité/pro)
+   • Onglet "CNPS & Sécurité"    → "Social" (famille, contacts, talents) ;
+     les cartes admin CNPS/Accès existantes sont DÉPLACÉES vers "Mes données" (onglet Identité)
+   • Onglet "CV & Diplômes"      → "CV" (modèle détaillé à venir)
+   • Localisation : inchangée
+   Persistance dédiée : epilot_emp_ext_v1[matricule] — indépendante du save interne,
+   donc aucun conflit avec collectAndSave. Les cartes existantes déplacées gardent leurs
+   id (#ec-f-cnps, …) : leur sauvegarde native reste fonctionnelle. */
+(function(){
+  if(window.__rhFicheEnhance) return; window.__rhFicheEnhance=1;
+  var EXT='epilot_emp_ext_v1';
+  function loadAll(){ try{ var o=JSON.parse(localStorage.getItem(EXT)||'{}'); return (o&&typeof o==='object')?o:{}; }catch(e){ return {}; } }
+  function saveAll(o){ try{ localStorage.setItem(EXT, JSON.stringify(o)); }catch(e){} }
+  function lsArr(k){ try{ var a=JSON.parse(localStorage.getItem(k)||'[]'); return Array.isArray(a)?a:[]; }catch(e){ return []; } }
+  function lsObj(k){ try{ var o=JSON.parse(localStorage.getItem(k)||'{}'); return (o&&typeof o==='object')?o:{}; }catch(e){ return {}; } }
+  function $(id){ return document.getElementById(id); }
+  function ov(){ return document.getElementById('emp-cfg'); }
+  function curMat(){ var el=$('ec-f-mat'); return el?((el.value||'').trim()):''; }
+  function curName(){ var p=($('ec-f-prenoms')||{}).value||'', n=($('ec-f-nom')||{}).value||''; return (p+' '+n).trim(); }
+  function empId(mat){ return 'EMP'+String(mat||'').replace(/\s+/g,''); }
+  function yr(){ return (new Date()).getFullYear(); }
+
+  /* ===================== Métriques auto (depuis les données de l'app) ===================== */
+  function chantiersOf(mat){
+    var id=empId(mat), jip=(window.JIP_DATA||[]), chef=0, team=0, list=[];
+    jip.forEach(function(j){ if(!j) return; var role=null;
+      if(j.chefChantierId===id){ role='Chef'; chef++; }
+      else if((j.equipeIds||[]).indexOf(id)>=0){ role='Équipe'; team++; }
+      if(role) list.push({ nom:(j.Designation||j.designation||j.Imputation||j.imputation||'—'), role:role });
+    });
+    return { total:chef+team, chef:chef, team:team, list:list };
+  }
+  function jsaOf(mat, name){
+    var arr=lsArr('epilot_jsa_reports'), nm=(name||'').toLowerCase(), id=empId(mat), y=String(yr()), all=0, year=0;
+    arr.forEach(function(r){ if(!r) return;
+      var who=((r.signataire||r.responsable||r.auteur||r.chef||'')+'').toLowerCase();
+      var hit=(nm && who.indexOf(nm)>=0) || r.empId===id || r.matricule===mat;
+      if(hit){ all++; if(((r.date||'')+'').slice(0,4)===y) year++; }
+    });
+    return { all:all, year:year };
+  }
+  function papiersOf(mat, name){
+    var arr=lsArr('epilot_papiers'), nm=(name||'').toLowerCase(), out=[], now=new Date();
+    arr.forEach(function(p){ if(!p) return; var pe=((p.employe||'')+'').toLowerCase();
+      if(nm && pe.indexOf(nm)>=0){
+        var exp=(p.expire||p.expiration||p.dateExpiration||''), st='—';
+        if(exp){ var d=new Date(exp); if(!isNaN(d.getTime())){ var days=(d-now)/86400000; st= days<0?'Expiré':(days<60?'Bientôt':'Valide'); } }
+        out.push({ titre:(p.titre||p.nom||p.type||'Document'), exp:exp, statut:st });
+      }
+    });
+    return out;
+  }
+  function paliersOf(mat){
+    var id=empId(mat), src=lsObj('epilot_pde_paliers_v1'), rec=(src[id]||src[mat]||null), val=0, tot=0;
+    (function scan(o){ if(!o) return;
+      if(Array.isArray(o)){ o.forEach(function(p){ tot++; if(p && (p.valide||p.validated||p.acquis||p.statut==='Validé'||p.status==='validated')) val++; }); }
+      else if(typeof o==='object'){ Object.keys(o).forEach(function(k){ scan(o[k]); }); }
+    })(rec);
+    return { validated:val, total:tot };
+  }
+
+  /* ===================== Helpers UI ===================== */
+  function el(html){ var d=document.createElement('div'); d.innerHTML=html.trim(); return d.firstElementChild; }
+  function card(title, sub, bodyHtml){
+    return '<div class="ec-card ecx-card">'+
+      '<h3 class="ec-card-title">'+title+'</h3>'+
+      (sub?'<p class="ec-card-sub">'+sub+'</p>':'')+
+      bodyHtml+'</div>';
+  }
+  function field(label, key, kind, ph){
+    var id='ecx-'+key;
+    if(kind==='area') return '<div class="ec-field" style="margin-bottom:12px"><label>'+label+'</label><textarea class="ec-textarea" id="'+id+'" data-ecx="'+key+'" placeholder="'+(ph||'')+'"></textarea></div>';
+    if(kind==='num')  return '<div class="ec-field"><label>'+label+'</label><input class="ec-input" type="number" id="'+id+'" data-ecx="'+key+'" placeholder="'+(ph||'')+'"></div>';
+    return '<div class="ec-field"><label>'+label+'</label><input class="ec-input" id="'+id+'" data-ecx="'+key+'" placeholder="'+(ph||'')+'"></div>';
+  }
+  function metric(label, id){
+    return '<div class="ec-stat"><div class="k">'+label+'</div><div class="v" id="'+id+'">—</div></div>';
+  }
+
+  /* ===================== Construction unique (déplacement + injection) ===================== */
+  function buildOnce(o){
+    /* 1) Renommer les libellés d'onglets */
+    var tabs=o.querySelectorAll('.ec-tabs [data-tab]');
+    Array.prototype.forEach.call(tabs, function(b){
+      var t=b.getAttribute('data-tab');
+      if(t==='hse') b.textContent='Sécurité & Compétences';
+      else if(t==='cnps') b.textContent='Social';
+      else if(t==='cv') b.textContent='CV';
+    });
+
+    /* 2) Déplacer les cartes admin (CNPS + Accès) de l'onglet cnps vers "Mes données" (général) */
+    var cnpsSec=o.querySelector('.ec-section[data-tab="cnps"]');
+    var genGrid=o.querySelector('.ec-section[data-tab="general"] .ec-grid');
+    if(cnpsSec && genGrid){
+      var adminCards=cnpsSec.querySelectorAll('.ec-card');
+      Array.prototype.forEach.call(adminCards, function(c){ c.classList.add('ecx-admin-moved'); genGrid.appendChild(c); });
+    }
+
+    /* 3) Onglet Social (ex-cnps) : familles, contacts, réseaux, talents */
+    if(cnpsSec){
+      cnpsSec.appendChild(el(card('Famille', 'Situation familiale et proches.',
+        '<div class="ec-row cols-2">'+
+          '<div class="ec-field"><label>Situation matrimoniale</label><select class="ec-select" id="ecx-situationMat" data-ecx="situationMat"><option value="">—</option><option>Célibataire</option><option>Marié(e)</option><option>Union libre</option><option>Divorcé(e)</option><option>Veuf(ve)</option></select></div>'+
+          field('Nom du/de la conjoint(e)','conjoint','text','Nom complet')+
+        '</div>'+
+        field('Enfants','enfants','area','Un par ligne : Nom — année de naissance')
+      )));
+      cnpsSec.appendChild(el(card('Personnes à contacter en cas d\'urgence', 'Numéros à appeler en priorité.',
+        field('Contacts d\'urgence','urgence','area','Un par ligne : Nom — lien — téléphone')
+      )));
+      cnpsSec.appendChild(el(card('Réseaux & centres d\'intérêt', 'Présence en ligne et hobbies.',
+        '<div class="ec-row cols-2">'+
+          field('Page Facebook','facebook','text','https://facebook.com/…')+
+          field('Autres réseaux','socials','text','LinkedIn, Instagram…')+
+        '</div>'+
+        field('Centres d\'intérêt','interets','area','Sport, lecture, musique…')+
+        field('Autres talents','talents','area','Compétences hors poste : langues, bricolage, dessin…')
+      )));
+    }
+
+    /* 4) Onglet Sécurité & Compétences (ex-hse) : tableau de bord auto + suivi manuel.
+          On insère AVANT les cartes existantes (Habilitations / Pièce d'identité) qui sont conservées. */
+    var hseSec=o.querySelector('.ec-section[data-tab="hse"]');
+    if(hseSec){
+      var dash=el(card('Tableau de bord — Sécurité & Carrière', 'Indicateurs calculés automatiquement depuis Chantiers, Quêtes/JSA, Papiers et PDE.',
+        '<div class="ec-stat-grid">'+
+          metric('Chantiers','ecx-m-chantiers')+
+          metric('JSA cette année','ecx-m-jsa-year')+
+          metric('JSA (total)','ecx-m-jsa-all')+
+          metric('Paliers validés','ecx-m-paliers')+
+          metric('Certificats valides','ecx-m-certs')+
+          metric('Alertes','ecx-m-alerts')+
+        '</div>'+
+        '<div id="ecx-certs-list" style="margin-top:10px"></div>'
+      ));
+      var scores=el(card('Scores & distinctions', 'Saisis par RH / QHSE / managers.',
+        '<div class="ec-row cols-2">'+
+          field('Score sécurité (/100)','scoreSec','num','0–100')+
+          field('Score professionnel (/100)','scorePro','num','0–100')+
+        '</div>'+
+        field('Distinctions « meilleur employé »','meilleur','area','Un par ligne : période — motif')
+      ));
+      var suivi=el(card('Suivi disciplinaire & professionnel', 'Historique saisi manuellement (RH / managers).',
+        field('Blâmes','blames','area','Un par ligne : date — motif')+
+        field('Demandes d\'explication','demandes','area','Un par ligne : date — motif — réponse')+
+        field('Évaluations / notes obtenues','evaluations','area','Un par ligne : date — note — évaluateur — commentaire')+
+        field('Présentations faites','presentations','area','Un par ligne : date — sujet')+
+        field('Formations & paliers validés','formations','area','Un par ligne : intitulé — date — statut')+
+        field('Actions','actions','area','Un par ligne : date — type — description')+
+        field('Notes diverses','notesRh','area','Observations libres')
+      ));
+      /* insérer en tête de section */
+      hseSec.insertBefore(suivi, hseSec.firstChild);
+      hseSec.insertBefore(scores, hseSec.firstChild);
+      hseSec.insertBefore(dash, hseSec.firstChild);
+    }
+  }
+
+  /* ===================== Rafraîchissement par employé (à chaque ouverture) ===================== */
+  function refresh(o, mat){
+    var name=curName(), all=loadAll(), data=(all[mat]||{});
+    /* champs ext */
+    Array.prototype.forEach.call(o.querySelectorAll('[data-ecx]'), function(f){
+      var k=f.getAttribute('data-ecx'); var v=(data[k]!=null?data[k]:'');
+      if(f.type==='checkbox') f.checked=!!v; else f.value=v;
+    });
+    /* métriques auto */
+    var ch=chantiersOf(mat), js=jsaOf(mat,name), pa=papiersOf(mat,name), pl=paliersOf(mat);
+    var certsValid=pa.filter(function(x){return x.statut==='Valide';}).length;
+    var alerts=pa.filter(function(x){return x.statut==='Expiré'||x.statut==='Bientôt';}).length;
+    function set(id,val){ var e=$(id); if(e) e.textContent=val; }
+    set('ecx-m-chantiers', ch.total+ (ch.total?(' ('+ch.chef+' chef / '+ch.team+' éq.)') :''));
+    set('ecx-m-jsa-year', js.year);
+    set('ecx-m-jsa-all', js.all);
+    set('ecx-m-paliers', pl.total? (pl.validated+'/'+pl.total) : '—');
+    set('ecx-m-certs', certsValid);
+    set('ecx-m-alerts', alerts);
+    var cl=$('ecx-certs-list');
+    if(cl){
+      if(pa.length){
+        cl.innerHTML='<div style="font-size:11px;font-weight:700;color:#6b7280;text-transform:uppercase;margin-bottom:4px">Certificats / papiers</div>'+
+          pa.map(function(x){ var col=x.statut==='Expiré'?'#dc2626':x.statut==='Bientôt'?'#d97706':x.statut==='Valide'?'#16a34a':'#6b7280';
+            return '<div style="display:flex;justify-content:space-between;gap:8px;padding:4px 0;border-bottom:1px solid #f1f5f9;font-size:12px"><span>'+x.titre+(x.exp?' <span style="color:#9ca3af">('+x.exp+')</span>':'')+'</span><span style="color:'+col+';font-weight:700">'+x.statut+'</span></div>';
+          }).join('');
+      } else { cl.innerHTML='<div style="font-size:12px;color:#9ca3af">Aucun certificat/papier lié à cet employé.</div>'; }
+    }
+  }
+
+  /* ===================== Sauvegarde des champs ext ===================== */
+  function persist(o, mat){
+    if(!mat) return;
+    var all=loadAll(), data=(all[mat]||{});
+    Array.prototype.forEach.call(o.querySelectorAll('[data-ecx]'), function(f){
+      var k=f.getAttribute('data-ecx');
+      data[k]= (f.type==='checkbox') ? !!f.checked : (f.value||'');
+    });
+    all[mat]=data; saveAll(all);
+  }
+
+  /* ===================== Hook d'ouverture + sauvegarde ===================== */
+  function enhance(){
+    var o=ov(); if(!o) return;
+    var open=o.classList.contains('open')||o.getAttribute('aria-hidden')==='false';
+    if(!open) return;
+    var mat=curMat(); if(!mat) return;
+    if(!o.__rhBuilt){ try{ buildOnce(o); o.__rhBuilt=true; }catch(e){ try{console.warn('[RHFiche] build',e);}catch(_){} } }
+    try{ refresh(o, mat); }catch(e){ try{console.warn('[RHFiche] refresh',e);}catch(_){} }
+  }
+
+  function init(){
+    var o=ov(); if(!o){ setTimeout(init, 500); return; }
+    /* sauvegarde : avant le handler natif de #ec-save (capture) */
+    document.addEventListener('click', function(e){
+      var t=e.target&&e.target.closest?e.target.closest('#ec-save'):null;
+      if(t){ try{ persist(ov(), curMat()); }catch(err){} }
+    }, true);
+    /* ouverture : observer le passage à .open / aria-hidden=false */
+    try{
+      new MutationObserver(function(){ setTimeout(enhance, 60); })
+        .observe(o, { attributes:true, attributeFilter:['class','aria-hidden'] });
+    }catch(e){}
+    /* si déjà ouvert */
+    enhance();
+  }
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', init); else init();
+})();
+</script>
 </body>
 </html>
