@@ -4695,7 +4695,7 @@ document.addEventListener('DOMContentLoaded', async function() {
   function sample(arr,n,excl){ return shuffle(arr.filter(function(x){return x&&x!==excl;})).slice(0,n); }
   var EXICON='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:15px;height:15px"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>';
 
-  function employees(){ return (window.PERSONNEL_DATA||[]).filter(function(p){return p&&(p.matricule||p.nom);}).map(function(p){
+  function employees(){ return (window.PERSONNEL_DATA||[]).filter(function(p){return p&&(p.matricule||p.nom)&&(!window.__epIsActiveEmp||window.__epIsActiveEmp(p));}).map(function(p){
     return { mat:String(p.matricule||'').trim(), nom:((p.prenoms||'')+' '+(p.nom||'')).trim()||String(p.matricule||'') }; }); }
   function meMat(){ try{ var s=window.EPRBAC&&window.EPRBAC.session; return s?String(s.matricule||'').trim():''; }catch(e){ return ''; } }
 
@@ -4952,7 +4952,7 @@ document.addEventListener('DOMContentLoaded', async function() {
   var ICON='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:15px;height:15px"><path d="M3 3v18h18"/><rect x="7" y="11" width="3" height="6"/><rect x="12" y="7" width="3" height="10"/><rect x="17" y="13" width="3" height="4"/></svg>';
   var CUR=null;
 
-  function emps(){ return (window.PERSONNEL_DATA||[]).filter(function(p){return p&&(p.matricule||p.nom);}).map(function(p){
+  function emps(){ return (window.PERSONNEL_DATA||[]).filter(function(p){return p&&(p.matricule||p.nom)&&(!window.__epIsActiveEmp||window.__epIsActiveEmp(p));}).map(function(p){
     return { mat:String(p.matricule||'').trim(), nom:((p.prenoms||'')+' '+(p.nom||'')).trim()||String(p.matricule||''), fonction:(p.fonction||'').trim() }; }); }
   function uni(){ var d=lsObj('epilot_university_v1'); if(!Array.isArray(d.paliers)) d.paliers=[]; if(!Array.isArray(d.certifications)) d.certifications=[]; return d; }
   function res(){ return lsObj('epilot_exercices_v1'); }
@@ -5079,6 +5079,33 @@ document.addEventListener('DOMContentLoaded', async function() {
   function hook(){ ensureView(); wrapShowView(); injectBtn(); wireNav(); }
   if(window.__epOnBodyMut){ window.__epOnBodyMut(hook); }
   var tries=0; (function poll(){ try{ hook(); }catch(e){} if(++tries<60) setTimeout(poll, 700); })();
+})();
+</script>
+<script id="__EMP_ACTIVE_v1__">
+/* Affiche uniquement les employés ACTIFS partout SAUF la page RH (base de données complète).
+   Mécanisme : à chaque navigation (HubViews.showView), window.PERSONNEL_DATA est réglé sur la
+   liste active — sauf pour la vue 'hr' où la liste complète est rétablie. Les modules lisent
+   PERSONNEL_DATA au rendu et obtiennent donc la bonne liste. Réversible (un seul module). */
+(function(){
+  if(window.__epActiveInit) return; window.__epActiveInit=1;
+  window.__epIsActiveEmp=function(p){ if(!p) return false;
+    var sit=String(p.situation||'').toLowerCase();
+    if(/arr[eê]t|suspend|inactif|d[eé]missio|cess|sorti|licenci|retrait|d[eé]part|d[eé]c[eè]d/.test(sit)) return false;
+    if(p.actif===false||p.active===false) return false;
+    if(p.dateCessation){ var d=new Date(p.dateCessation); if(!isNaN(d.getTime())&&d.getTime()<Date.now()) return false; }
+    return true; };
+  function activeOf(arr){ var o=(arr||[]).filter(window.__epIsActiveEmp); try{ o.__epActive=true; }catch(e){} return o; }
+  window.__epActiveEmployees=function(){ capture(); return activeOf(_full||window.PERSONNEL_DATA||[]); };
+  var _full=null;
+  function capture(){ var cur=window.PERSONNEL_DATA; if(Array.isArray(cur)&&!cur.__epActive) _full=cur; }
+  function applyFor(name){ capture(); if(!Array.isArray(_full)) return;
+    if(name==='hr'){ if(window.PERSONNEL_DATA!==_full) window.PERSONNEL_DATA=_full; }
+    else { window.PERSONNEL_DATA=activeOf(_full); } }
+  function wrap(){ if(!window.HubViews||typeof window.HubViews.showView!=='function'||window.HubViews.__epActiveWrapped) return;
+    var orig=window.HubViews.showView;
+    window.HubViews.showView=function(name){ try{ applyFor(name); }catch(e){} return orig.apply(this,arguments); };
+    window.HubViews.__epActiveWrapped=true; }
+  var t=0; (function poll(){ try{ capture(); wrap(); }catch(e){} if(++t<120) setTimeout(poll,500); })();
 })();
 </script>
 </body>
