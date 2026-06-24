@@ -4111,14 +4111,14 @@ document.addEventListener('DOMContentLoaded', async function() {
       '.cv-2col{display:flex;gap:26px;align-items:flex-start}.cv-2col>.cv-sec{flex:1;min-width:0}',
       /* ruban de section : icône ronde + barre + chevron */
       '.cv-h{display:flex;align-items:center;margin-bottom:12px}',
-      '.cv-h .ic{width:34px;height:34px;border-radius:50%;background:'+TEAL+';color:#fff;display:flex;align-items:center;justify-content:center;font-size:15px;flex:0 0 34px;position:relative;z-index:2}',
-      '.cv-h .bar{position:relative;background:'+TEAL+';color:#fff;font-size:15px;font-weight:600;padding:6px 22px 6px 16px;margin-left:-8px}',
+      '.cv-h .bar{position:relative;background:'+TEAL+';color:#fff;font-size:15px;font-weight:600;padding:6px 24px 6px 16px;z-index:2}',
+      '.cv-h .ic{width:34px;height:34px;border-radius:50%;background:'+TEAL+';color:#fff;display:flex;align-items:center;justify-content:center;font-size:15px;flex:0 0 34px;position:relative;z-index:1;margin-left:-14px}',
       '.cv-h .bar:after{content:"";position:absolute;left:50%;transform:translateX(-50%);bottom:-7px;width:0;height:0;border-left:8px solid transparent;border-right:8px solid transparent;border-top:7px solid '+TEAL+'}',
       /* tableau expérience (un cadre par expérience, espacés) */
       '.cv-xt{width:100%;border-collapse:collapse;table-layout:fixed;margin-bottom:30px}',
       '.cv-xt td{border:1px solid #e3e6ea;padding:8px 10px;vertical-align:top;overflow-wrap:break-word}',
-      '.cv-xt .d{width:92px;font-size:11.5px;color:#333;font-weight:600;vertical-align:middle}',
-      '.cv-xt .co{width:118px;text-align:right;font-size:11px;color:#333;line-height:1.6}',
+      '.cv-xt .d{width:74px;font-size:11.5px;color:#333;font-weight:600;vertical-align:middle}',
+      '.cv-xt .co{width:88px;text-align:right;font-size:11px;color:#333;line-height:1.6}',
       '.cv-xt .c .ro{font-weight:700;font-size:13px;margin-bottom:3px}',
       '.cv-xt .c .mi{font-size:11px;color:#555;margin-bottom:3px}',
       '.cv-xt .c ul{list-style:none;margin:0;padding:0}',
@@ -4137,7 +4137,7 @@ document.addEventListener('DOMContentLoaded', async function() {
   }
 
   /* ---------- rendu de l'aperçu (modèle) ---------- */
-  function ribbon(icon,label){ return '<div class="cv-h"><div class="ic">'+icon+'</div><div class="bar">'+label+'</div></div>'; }
+  function ribbon(icon,label){ return '<div class="cv-h"><div class="bar">'+label+'</div><div class="ic">'+icon+'</div></div>'; }
   function renderPreview(cv){
     var subL=[cv.nationalite,cv.situation].filter(Boolean).map(esc).join('<br>');
     var subR=[cv.adresse,cv.tel,cv.email].filter(Boolean).map(esc).join('<br>');
