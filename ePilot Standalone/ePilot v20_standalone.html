@@ -4649,5 +4649,203 @@ document.addEventListener('DOMContentLoaded', async function() {
   var tries=0; (function poll(){ try{ hook(); }catch(e){} if(++tries<60) setTimeout(poll, 700); })();
 })();
 </script>
+<script id="__EXERCICES_v1__">
+/* __EXERCICES_v1__ — Phase 2 : sous-page « Exercices » de la page Compétences.
+   Génère automatiquement des questions (QCM appartenance / QCM objectif / vrai-faux /
+   texte à trous) à partir des paliers & sujets configurés dans University
+   (epilot_university_v1, repli sur epilot_pde_paliers_v1). L'employé passe le test,
+   auto-correction, et chaque sujet réussi est marqué « maîtrisé » dans
+   epilot_exercices_v1[matricule][sujetId]. Progression affichée par palier. */
+(function(){
+  if(window.__exercices) return; window.__exercices=1;
+  var RES='epilot_exercices_v1';
+  function $(s,r){ return (r||document).querySelector(s); }
+  function esc(s){ return String(s==null?'':s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];}); }
+  function shuffle(a){ a=a.slice(); for(var i=a.length-1;i>0;i--){ var j=Math.floor(Math.random()*(i+1)); var t=a[i];a[i]=a[j];a[j]=t; } return a; }
+  function sample(arr,n,excl){ return shuffle(arr.filter(function(x){return x&&x!==excl;})).slice(0,n); }
+  var EXICON='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:15px;height:15px"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>';
+
+  function employees(){ return (window.PERSONNEL_DATA||[]).filter(function(p){return p&&(p.matricule||p.nom);}).map(function(p){
+    return { mat:String(p.matricule||'').trim(), nom:((p.prenoms||'')+' '+(p.nom||'')).trim()||String(p.matricule||'') }; }); }
+  function meMat(){ try{ var s=window.EPRBAC&&window.EPRBAC.session; return s?String(s.matricule||'').trim():''; }catch(e){ return ''; } }
+
+  /* ---------- source : données University ---------- */
+  function uniData(){
+    try{ var d=JSON.parse(localStorage.getItem('epilot_university_v1')); if(d&&Array.isArray(d.paliers)) return d; }catch(e){}
+    try{ var p=JSON.parse(localStorage.getItem('epilot_pde_paliers_v1'))||[];
+      return { paliers:p.map(function(x,i){ return {id:'p'+i, niveau:x.niveau, palier:x.palier, sujets:(x.competences||[]).map(function(c){return {id:c.id,item:c.item,role:c.role,objectifs:''};})}; }), certifications:[] };
+    }catch(e){ return {paliers:[],certifications:[]}; }
+  }
+  function allSujets(d){ var out=[]; (d.paliers||[]).forEach(function(p){ (p.sujets||[]).forEach(function(s){ if(s&&s.item) out.push({
+    id:s.id, item:s.item, role:s.role||'', objectif:s.objectifs||'', palierName:p.palier||('Niveau '+p.niveau), palierId:p.id, niveau:p.niveau }); }); }); return out; }
+
+  /* ---------- résultats ---------- */
+  function loadRes(){ try{ return JSON.parse(localStorage.getItem(RES))||{}; }catch(e){ return {}; } }
+  function saveRes(o){ try{ localStorage.setItem(RES, JSON.stringify(o)); }catch(e){} }
+  function markAttempt(mat, sid, ok){ if(!mat||!sid) return; var r=loadRes(); r[mat]=r[mat]||{}; var c=r[mat][sid]||{passed:false,attempts:0}; c.attempts=(c.attempts||0)+1; if(ok) c.passed=true; c.lastAt=Date.now(); r[mat][sid]=c; saveRes(r); }
+  function progress(d, mat){ var r=(loadRes()[mat])||{}; return (d.paliers||[]).map(function(p){ var subs=(p.sujets||[]).filter(function(s){return s&&s.item;}); var passed=subs.filter(function(s){return r[s.id]&&r[s.id].passed;}).length; return {palier:p.palier||('Niveau '+p.niveau), niveau:p.niveau, total:subs.length, passed:passed, pct:subs.length?Math.round(passed/subs.length*100):0}; }); }
+
+  /* ---------- génération de questions ---------- */
+  function genQuestion(s, all, paliers){
+    var palNames=paliers.map(function(p){return p.palier;}).filter(Boolean);
+    var objs=all.map(function(x){return x.objectif;}).filter(Boolean);
+    var types=['palier','vf']; if(s.objectif){ types.push('objectif'); types.push('trou'); }
+    var type=types[Math.floor(Math.random()*types.length)];
+    if(type==='objectif'){
+      var od=sample(objs,3,s.objectif); var opts=shuffle([s.objectif].concat(od));
+      return {q:'Quel est l\'objectif du sujet « '+s.item+' » ?', options:opts, answer:opts.indexOf(s.objectif), sid:s.id};
+    }
+    if(type==='trou'){
+      var words=(s.objectif||'').replace(/[.,;:!?()]/g,' ').split(/\s+/).filter(function(w){return w.length>=5;});
+      if(words.length){ var w=words[Math.floor(Math.random()*words.length)];
+        var allWords=all.reduce(function(acc,x){ (x.objectif||'').replace(/[.,;:!?()]/g,' ').split(/\s+/).forEach(function(t){ if(t.length>=5) acc.push(t); }); return acc; },[]);
+        var dis=sample(allWords,3,w); var opts2=shuffle([w].concat(dis));
+        var blanked=s.objectif.replace(w,'_____');
+        return {q:'Complétez (sujet « '+s.item+' ») : « '+blanked+' »', options:opts2, answer:opts2.indexOf(w), sid:s.id};
+      }
+    }
+    if(type==='vf'){
+      var useOwn=Math.random()<0.5;
+      var claim=useOwn? s.palierName : (sample(palNames,1,s.palierName)[0]||s.palierName);
+      return {q:'Vrai ou Faux : le sujet « '+s.item+' » appartient au palier « '+claim+' ».', options:['Vrai','Faux'], answer:(claim===s.palierName)?0:1, sid:s.id};
+    }
+    /* palier (défaut) */
+    var others=sample(palNames,3,s.palierName); var opts3=shuffle([s.palierName].concat(others));
+    return {q:'À quel palier appartient le sujet « '+s.item+' » ?', options:opts3, answer:opts3.indexOf(s.palierName), sid:s.id};
+  }
+  function buildQuiz(d, palierId, n){
+    var all=allSujets(d);
+    var pool = (palierId==='all')? all : all.filter(function(s){return s.palierId===palierId;});
+    return shuffle(pool).slice(0, n||8).map(function(s){ return genQuestion(s, all, d.paliers); });
+  }
+
+  /* ---------- rendu ---------- */
+  var CURQS=null;
+  function renderProgress(d, mat){
+    var pr=progress(d, mat);
+    if(!pr.length) return '<div class="ex-empty">Aucun palier configuré. Allez dans <b>University</b> pour en créer.</div>';
+    return '<div class="ex-prog-grid">'+pr.map(function(x){
+      return '<div class="ex-pcard"><div class="ex-pname">Niv. '+esc(x.niveau)+' — '+esc(x.palier)+'</div>'+
+        '<div class="ex-bar"><span style="width:'+x.pct+'%"></span></div>'+
+        '<div class="ex-pmeta">'+x.passed+'/'+x.total+' sujets maîtrisés · '+x.pct+'%'+(x.total&&x.passed===x.total?' ✅':'')+'</div></div>';
+    }).join('')+'</div>';
+  }
+  function renderControls(d, mat){
+    var emps=employees();
+    var empOpts=emps.map(function(e){ return '<option value="'+esc(e.mat)+'"'+(e.mat===mat?' selected':'')+'>'+esc(e.nom)+'</option>'; }).join('');
+    var palOpts='<option value="all">Tous les paliers</option>'+(d.paliers||[]).map(function(p){ return '<option value="'+esc(p.id)+'">Niv. '+esc(p.niveau)+' — '+esc(p.palier||'')+'</option>'; }).join('');
+    return '<div class="ex-ctrl">'+
+      '<div class="ex-fld"><label>Employé</label><select id="ex-emp">'+(empOpts||'<option value="">—</option>')+'</select></div>'+
+      '<div class="ex-fld"><label>Palier à réviser</label><select id="ex-pal">'+palOpts+'</select></div>'+
+      '<div class="ex-fld" style="flex:0 0 120px"><label>Nb questions</label><select id="ex-n"><option>5</option><option selected>8</option><option>12</option></select></div>'+
+      '<button class="ex-btn p" id="ex-gen">🎯 Générer le test</button>'+
+    '</div>';
+  }
+  function renderQuiz(qs){
+    if(!qs.length) return '<div class="ex-empty">Aucun sujet disponible pour ce palier. Ajoutez des sujets dans University.</div>';
+    return qs.map(function(q,i){ return '<div class="ex-q"><div class="ex-qt">'+(i+1)+'. '+esc(q.q)+'</div><div class="ex-opts">'+
+      q.options.map(function(o,oi){ return '<label class="ex-opt"><input type="radio" name="exq'+i+'" value="'+oi+'"><span>'+esc(o)+'</span></label>'; }).join('')+
+      '</div></div>'; }).join('')+
+      '<div class="ex-actions"><button class="ex-btn p" id="ex-submit">Valider mes réponses</button></div><div id="ex-result"></div>';
+  }
+  function render(root){
+    var d=uniData(), mat=($('#ex-emp')&&$('#ex-emp').value)||meMat()||((employees()[0]||{}).mat)||'';
+    root.innerHTML=
+      '<div class="ex-pane">'+
+        '<div class="ex-sec-h">🎓 Ma progression</div><div id="ex-prog">'+renderProgress(d, mat)+'</div>'+
+        '<div class="ex-sec-h" style="margin-top:18px">📝 Passer un test</div>'+renderControls(d, mat)+
+        '<div id="ex-quiz"></div>'+
+      '</div>';
+  }
+
+  function wire(root){
+    root.addEventListener('change', function(e){ if(e.target&&e.target.id==='ex-emp'){ var d=uniData(); $('#ex-prog',root).innerHTML=renderProgress(d, e.target.value); $('#ex-quiz',root).innerHTML=''; } });
+    root.addEventListener('click', function(e){ var t=e.target; if(!t) return;
+      if(t.closest&&t.closest('#ex-gen')){ e.preventDefault();
+        var d=uniData(), pal=$('#ex-pal',root).value, n=parseInt($('#ex-n',root).value,10)||8;
+        CURQS=buildQuiz(d, pal, n); $('#ex-quiz',root).innerHTML=renderQuiz(CURQS); return;
+      }
+      if(t.closest&&t.closest('#ex-submit')){ e.preventDefault();
+        if(!CURQS||!CURQS.length) return;
+        var mat=$('#ex-emp',root).value, correct=0, unanswered=0;
+        CURQS.forEach(function(q,i){ var sel=root.querySelector('input[name="exq'+i+'"]:checked'); var ok= sel && Number(sel.value)===q.answer; if(!sel) unanswered++; if(ok) correct++; markAttempt(mat, q.sid, !!ok); });
+        var pct=Math.round(correct/CURQS.length*100);
+        var col=pct>=70?'#16a34a':pct>=50?'#d97706':'#dc2626';
+        $('#ex-result',root).innerHTML='<div class="ex-score" style="border-color:'+col+'"><b style="color:'+col+'">'+correct+'/'+CURQS.length+' — '+pct+'%</b>'+
+          (unanswered?' <span style="color:#94a3b8">('+unanswered+' sans réponse)</span>':'')+
+          '<div class="ex-rmeta">Les sujets réussis sont marqués « maîtrisés » et la progression est mise à jour.</div></div>';
+        var d2=uniData(); $('#ex-prog',root).innerHTML=renderProgress(d2, mat);
+        return;
+      }
+    });
+  }
+
+  /* ---------- CSS ---------- */
+  function css(){ if($('#ex-css')) return; var s=document.createElement('style'); s.id='ex-css'; s.textContent=[
+    '.ex-pane{padding:16px 20px}',
+    '.ex-sec-h{font-size:13px;font-weight:800;color:#0f766e;text-transform:uppercase;letter-spacing:.04em;margin-bottom:12px}',
+    '.ex-empty{color:#64748b;font-size:13px;padding:14px;background:#f8fafc;border-radius:10px}',
+    '.ex-prog-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}',
+    '@media(max-width:760px){.ex-prog-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}',
+    '.ex-pcard{border:1px solid #e5e7eb;border-radius:12px;padding:12px;background:#fff}',
+    '.ex-pname{font-size:13px;font-weight:700;color:#1e293b;margin-bottom:8px}',
+    '.ex-bar{height:8px;background:#e5e7eb;border-radius:6px;overflow:hidden}',
+    '.ex-bar span{display:block;height:100%;background:#0f766e;border-radius:6px;transition:width .3s}',
+    '.ex-pmeta{font-size:11.5px;color:#64748b;margin-top:6px}',
+    '.ex-ctrl{display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap;margin-bottom:14px}',
+    '.ex-fld{display:flex;flex-direction:column}',
+    '.ex-fld label{font-size:11px;color:#64748b;margin-bottom:4px;font-weight:600}',
+    '.ex-fld select{padding:8px 10px;border:1px solid #d1d5db;border-radius:8px;font-size:13px;min-width:170px;font-family:inherit}',
+    '.ex-btn{border:0;border-radius:8px;padding:9px 16px;font-weight:700;cursor:pointer;font-size:13px}',
+    '.ex-btn.p{background:#0f766e;color:#fff}',
+    '.ex-q{border:1px solid #e5e7eb;border-radius:12px;padding:14px;margin-bottom:10px;background:#fff}',
+    '.ex-qt{font-size:14px;font-weight:600;color:#1e293b;margin-bottom:10px}',
+    '.ex-opts{display:flex;flex-direction:column;gap:6px}',
+    '.ex-opt{display:flex;align-items:center;gap:9px;padding:8px 10px;border:1px solid #e5e7eb;border-radius:8px;cursor:pointer;font-size:13px;transition:background .12s,border-color .12s}',
+    '.ex-opt:hover{background:#f0fdfa;border-color:#0f766e}',
+    '.ex-actions{margin:6px 0 4px}',
+    '.ex-score{border:2px solid;border-radius:12px;padding:14px;margin-top:10px;font-size:16px;background:#fff}',
+    '.ex-rmeta{font-size:12px;color:#64748b;font-weight:400;margin-top:4px}'
+  ].join('\n'); document.head.appendChild(s); }
+
+  /* ---------- sous-page routée ---------- */
+  function ensureView(){
+    var ex=document.getElementById('view-exercices'); if(ex) return ex;
+    var ref=document.getElementById('view-competences'); if(!ref||!ref.parentNode) return null;
+    css();
+    var sec=document.createElement('section'); sec.className='hub-view'; sec.id='view-exercices';
+    sec.innerHTML='<div class="view-head"><div class="crumb">Compétences <span class="sep">/</span> Exercices</div><h1>Mes <span class="accent">Exercices</span></h1></div><div id="ex-root"></div>';
+    ref.parentNode.appendChild(sec);
+    render($('#ex-root',sec));
+    wire($('#ex-root',sec));
+    return sec;
+  }
+  function wrapShowView(){
+    if(!window.HubViews || typeof window.HubViews.showView!=='function' || window.HubViews.__exWrapped) return;
+    var orig=window.HubViews.showView;
+    window.HubViews.showView=function(name,opts){ var r=orig.apply(this,arguments); try{ var sec=ensureView(); if(sec){ sec.classList.toggle('active', name==='exercices'); if(name==='exercices') render($('#ex-root',sec)); } }catch(e){} return r; };
+    window.HubViews.__exWrapped=true;
+  }
+  function injectBtn(){
+    var sub=document.getElementById('subnav'); if(!sub) return;
+    var refUni=sub.querySelector('[data-sub-uni]'); var refComp=sub.querySelector('[data-sub="Mes Compétences"]');
+    var ref=refUni||refComp; if(!ref) return;
+    if(sub.querySelector('[data-sub-ex]')) return;
+    var b=document.createElement('button'); b.className='item'; b.setAttribute('data-sub-ex','exercices');
+    b.style.cssText='display:inline-flex;align-items:center;gap:5px;';
+    b.innerHTML=EXICON+'Exercices';
+    b.addEventListener('click', function(){
+      Array.prototype.forEach.call(sub.querySelectorAll('.item'), function(x){ x.classList.remove('active'); });
+      b.classList.add('active');
+      if(window.HubViews&&window.HubViews.showView) window.HubViews.showView('exercices');
+      else { ensureView(); Array.prototype.forEach.call(document.querySelectorAll('.hub-view'),function(v){v.classList.remove('active');}); var s=document.getElementById('view-exercices'); if(s) s.classList.add('active'); }
+    });
+    ref.parentNode.insertBefore(b, ref.nextSibling);
+  }
+  function hook(){ ensureView(); wrapShowView(); injectBtn(); }
+  if(window.__epOnBodyMut){ window.__epOnBodyMut(hook); }
+  var tries=0; (function poll(){ try{ hook(); }catch(e){} if(++tries<60) setTimeout(poll, 700); })();
+})();
+</script>
 </body>
 </html>
