@@ -4384,12 +4384,14 @@ document.addEventListener('DOMContentLoaded', async function() {
 })();
 </script>
 <script id="__UNIVERSITY_v1__">
-/* __UNIVERSITY_v1__ — Phase 1 : sous-page « University » de la page Compétences (ex-HSE & PDE).
-   Pair de « Mes Compétences » / « PDE ». Configure paliers/sujets (groupe, qualification,
-   note de passage, durée de vie, affectations) + certifications, et PROJETTE les paliers vers
-   epilot_pde_paliers_v1 (forme attendue par PDE) → PDE les exploite au rechargement.
-   Store riche : epilot_university_v1. Migration depuis epilot_pde_paliers_v1.
-   IMPORTANT : id de sujets préservés (PDE suit la progression par id). */
+/* __UNIVERSITY_v1__ — Sous-page « University » de la page Compétences (ex-HSE & PDE).
+   UI pilotée par état + modales :
+     • paliers en grille 3 colonnes → clic = fenêtre structurée du palier
+     • sujets présentés en table style « Mes Compétences » (.dt-table) → clic = fenêtre détail
+       (titre, objectifs, durée, procédures liées, rôle, note de passage)
+     • certifications en grille → clic = fenêtre détail
+   Store riche epilot_university_v1 ; projection des paliers → epilot_pde_paliers_v1 (PDE).
+   id de paliers ET de sujets stables (PDE suit la progression par id de sujet). */
 (function(){
   if(window.__university) return; window.__university=1;
   var UNI='epilot_university_v1', PDEPAL='epilot_pde_paliers_v1';
@@ -4401,27 +4403,31 @@ document.addEventListener('DOMContentLoaded', async function() {
   function num(v,d){ var n=parseFloat(v); return isNaN(n)?(d||0):n; }
   function $(s,r){ return (r||document).querySelector(s); }
 
-  /* icône monochrome (style subnav : line-svg currentColor) — mortier de diplômé */
   var ICON='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:15px;height:15px"><path d="M22 10L12 5 2 10l10 5 10-5z"/><path d="M6 12.5V17c0 1.4 2.7 2.5 6 2.5s6-1.1 6-2.5v-4.5"/></svg>';
 
-  /* ---------- employés / fonctions ---------- */
   function employees(){ return (window.PERSONNEL_DATA||[]).filter(function(p){return p&&(p.matricule||p.nom);}).map(function(p){
     return { mat:String(p.matricule||'').trim(), nom:((p.prenoms||'')+' '+(p.nom||'')).trim()||String(p.matricule||''), fonction:(p.fonction||'').trim() }; }); }
   function fonctions(){ var set={}; employees().forEach(function(e){ if(e.fonction) set[e.fonction]=1; }); return Object.keys(set).sort(); }
 
   /* ---------- modèle ---------- */
-  function blankSujet(){ return {id:uid(), role:'', item:'', notePassage:0}; }
-  function blankPalier(n){ return {niveau:n||1, palier:'', groupe:'', qualification:'', notePassage:3.5, dureeVieMois:0, sujets:[], affectations:{matricules:[],fonctions:[]}}; }
+  function blankSujet(){ return {id:uid(), role:'', item:'', objectifs:'', duree:'', procedures:'', notePassage:0}; }
+  function blankPalier(n){ return {id:uid(), niveau:n||1, palier:'', groupe:'', qualification:'', notePassage:3.5, dureeVieMois:0, sujets:[], affectations:{matricules:[],fonctions:[]}}; }
   function blankCertif(){ return {id:uid(), nom:'', categorie:'', dureeVieMois:12, notePassage:0, affectations:{matricules:[],fonctions:[]}}; }
   function seed(){
     var pal=lsArr(PDEPAL);
-    var paliers=pal.map(function(p){ return {
-      niveau:p.niveau, palier:p.palier||'', groupe:'', qualification:'', notePassage:num(p.notePassage,3.5), dureeVieMois:0,
-      sujets:(p.competences||[]).map(function(c){ return {id:c.id||uid(), role:c.role||'', item:c.item||'', notePassage:0}; }),
-      affectations:{matricules:[],fonctions:[]} }; });
-    return { paliers:paliers, certifications:[] };
+    return { paliers: pal.map(function(p){ return {
+      id:uid(), niveau:p.niveau, palier:p.palier||'', groupe:'', qualification:'', notePassage:num(p.notePassage,3.5), dureeVieMois:0,
+      sujets:(p.competences||[]).map(function(c){ return {id:c.id||uid(), role:c.role||'', item:c.item||'', objectifs:'', duree:'', procedures:'', notePassage:0}; }),
+      affectations:{matricules:[],fonctions:[]} }; }), certifications:[] };
   }
-  function getData(){ var d=loadUni(); if(!d){ d=seed(); saveUni(d); } if(!Array.isArray(d.paliers)) d.paliers=[]; if(!Array.isArray(d.certifications)) d.certifications=[]; return d; }
+  function normalize(d){
+    if(!Array.isArray(d.paliers)) d.paliers=[]; if(!Array.isArray(d.certifications)) d.certifications=[];
+    d.paliers.forEach(function(p){ if(!p.id) p.id=uid(); if(!Array.isArray(p.sujets)) p.sujets=[]; if(!p.affectations) p.affectations={matricules:[],fonctions:[]};
+      p.sujets.forEach(function(s){ if(!s.id) s.id=uid(); ['role','item','objectifs','duree','procedures'].forEach(function(k){ if(s[k]==null) s[k]=''; }); }); });
+    d.certifications.forEach(function(c){ if(!c.id) c.id=uid(); if(!c.affectations) c.affectations={matricules:[],fonctions:[]}; });
+    return d;
+  }
+  function getData(){ var d=loadUni(); if(!d){ d=seed(); saveUni(d); } return normalize(d); }
   function projectToPDE(d){
     var out=(d.paliers||[]).map(function(p){ return {
       niveau:num(p.niveau,0), palier:p.palier||'', notePassage:num(p.notePassage,3.5),
@@ -4429,147 +4435,182 @@ document.addEventListener('DOMContentLoaded', async function() {
     try{ localStorage.setItem(PDEPAL, JSON.stringify(out)); }catch(e){}
   }
 
-  /* ---------- collecte ---------- */
-  function collectMulti(sel){ if(!sel) return []; return Array.prototype.filter.call(sel.options,function(o){return o.selected;}).map(function(o){return o.value;}); }
-  function collect(pane){
-    var d={paliers:[], certifications:[]};
-    Array.prototype.forEach.call(pane.querySelectorAll('[data-palier]'), function(pc){
-      var p=blankPalier();
-      p.niveau=num($('[data-f="niveau"]',pc).value,1);
-      p.palier=$('[data-f="palier"]',pc).value.trim();
-      p.groupe=$('[data-f="groupe"]',pc).value.trim();
-      p.qualification=$('[data-f="qualification"]',pc).value.trim();
-      p.notePassage=num($('[data-f="notePassage"]',pc).value,3.5);
-      p.dureeVieMois=num($('[data-f="dureeVieMois"]',pc).value,0);
-      p.sujets=Array.prototype.map.call(pc.querySelectorAll('[data-sujet]'), function(sr){
-        return { id:sr.getAttribute('data-id')||uid(), role:$('[data-sf="role"]',sr).value.trim(), item:$('[data-sf="item"]',sr).value.trim(), notePassage:num($('[data-sf="np"]',sr).value,0) };
-      }).filter(function(s){ return s.item; });
-      p.affectations={ matricules:collectMulti($('[data-af="mat"]',pc)), fonctions:collectMulti($('[data-af="fct"]',pc)) };
-      d.paliers.push(p);
-    });
-    Array.prototype.forEach.call(pane.querySelectorAll('[data-certif]'), function(cc){
-      d.certifications.push({ id:cc.getAttribute('data-id')||uid(),
-        nom:$('[data-cf="nom"]',cc).value.trim(), categorie:$('[data-cf="cat"]',cc).value.trim(),
-        dureeVieMois:num($('[data-cf="duree"]',cc).value,12), notePassage:num($('[data-cf="np"]',cc).value,0),
-        affectations:{ matricules:collectMulti($('[data-af="mat"]',cc)), fonctions:collectMulti($('[data-af="fct"]',cc)) } });
-    });
-    return d;
-  }
+  /* ---------- état ---------- */
+  var DATA=null, _pt=0;
+  function persist(){ if(_pt) clearTimeout(_pt); _pt=setTimeout(function(){ saveUni(DATA); projectToPDE(DATA); }, 350); }
+  function persistNow(){ if(_pt) clearTimeout(_pt); saveUni(DATA); projectToPDE(DATA); }
 
-  /* ---------- rendu ---------- */
+  /* ---------- helpers affectations ---------- */
+  function collectMulti(sel){ if(!sel) return []; return Array.prototype.filter.call(sel.options,function(o){return o.selected;}).map(function(o){return o.value;}); }
   function optsEmp(sel){ var s=sel||[]; return employees().map(function(e){ return '<option value="'+esc(e.mat)+'"'+(s.indexOf(e.mat)>=0?' selected':'')+'>'+esc(e.nom)+(e.mat?' ('+esc(e.mat)+')':'')+'</option>'; }).join(''); }
   function optsFct(sel){ var s=sel||[]; return fonctions().map(function(f){ return '<option value="'+esc(f)+'"'+(s.indexOf(f)>=0?' selected':'')+'>'+esc(f)+'</option>'; }).join(''); }
   function affBlock(aff){ aff=aff||{}; return '<div class="uni-aff">'+
-      '<div><label>Employés affectés</label><select multiple size="4" data-af="mat">'+optsEmp(aff.matricules)+'</select></div>'+
-      '<div><label>Fonctions affectées</label><select multiple size="4" data-af="fct">'+optsFct(aff.fonctions)+'</select></div>'+
+      '<div><label>Employés affectés</label><select multiple size="5" data-aff="mat">'+optsEmp(aff.matricules)+'</select></div>'+
+      '<div><label>Fonctions affectées</label><select multiple size="5" data-aff="fct">'+optsFct(aff.fonctions)+'</select></div>'+
     '</div>'; }
-  function sujetRow(s){ s=s||blankSujet(); return '<div class="uni-suj" data-sujet data-id="'+esc(s.id)+'">'+
-      '<input class="uni-in" data-sf="role" placeholder="Rôle / catégorie" value="'+esc(s.role)+'" style="flex:0 0 130px">'+
-      '<input class="uni-in" data-sf="item" placeholder="Sujet / compétence" value="'+esc(s.item)+'">'+
-      '<input class="uni-in" data-sf="np" type="number" step="0.1" placeholder="Note" value="'+(s.notePassage||'')+'" style="flex:0 0 70px" title="Note de passage du sujet">'+
-      '<button class="uni-del" data-del="sujet" title="Supprimer">×</button></div>'; }
-  function palierBody(p){ return ''+
+  function wireAff(scope, aff){
+    var m=$('[data-aff="mat"]',scope), f=$('[data-aff="fct"]',scope);
+    if(m) m.addEventListener('change',function(){ aff.matricules=collectMulti(m); persist(); });
+    if(f) f.addEventListener('change',function(){ aff.fonctions=collectMulti(f); persist(); });
+  }
+  /* lie tous les [data-k] d'un scope à un objet */
+  function bind(scope, obj, after){
+    scope.addEventListener('input', function(e){ var k=e.target.getAttribute&&e.target.getAttribute('data-k'); if(!k) return;
+      obj[k]= (e.target.type==='number') ? e.target.value : e.target.value; persist(); if(after) after(k); });
+  }
+
+  /* ---------- modale générique ---------- */
+  function modal(title, bodyHtml, opts){ opts=opts||{};
+    var ov=document.createElement('div'); ov.className='uni-ov'+(opts.sm?' sm':'');
+    ov.innerHTML='<div class="uni-modal"><div class="uni-mh"><h3>'+esc(title)+'</h3><button class="uni-x" title="Fermer">✕</button></div><div class="uni-mb">'+bodyHtml+'</div></div>';
+    document.body.appendChild(ov);
+    requestAnimationFrame(function(){ ov.classList.add('on'); });
+    function close(){ if(opts.onClose) try{opts.onClose();}catch(e){} ov.classList.remove('on'); setTimeout(function(){ if(ov.parentNode) ov.parentNode.removeChild(ov); }, 160); }
+    $('.uni-x',ov).onclick=close;
+    ov.addEventListener('click', function(e){ if(e.target===ov) close(); });
+    return { ov:ov, body:$('.uni-mb',ov), close:close };
+  }
+
+  /* ---------- table des sujets (style Mes Compétences) ---------- */
+  function sujTable(p){
+    var rows=(p.sujets||[]).map(function(s,i){
+      return '<tr class="clickable" data-sid="'+esc(s.id)+'">'+
+        '<td class="mono">'+(i+1)+'</td>'+
+        '<td><span class="cell-sub">'+esc(s.role||'—')+'</span></td>'+
+        '<td><b>'+esc(s.item||'(sujet sans titre)')+'</b>'+(s.objectifs?'<div class="cell-sub">'+esc(s.objectifs.slice(0,70))+(s.objectifs.length>70?'…':'')+'</div>':'')+'</td>'+
+        '<td>'+esc(s.duree||'—')+'</td>'+
+        '<td class="num">'+(s.notePassage||'—')+'</td>'+
+        '<td style="text-align:right;color:#94a3b8">›</td></tr>';
+    }).join('') || '<tr><td colspan="6" style="color:#94a3b8;padding:14px">Aucun sujet. Cliquez « + Ajouter un sujet ».</td></tr>';
+    return '<table class="dt-table" style="margin-top:6px"><thead><tr><th style="width:42px">#</th><th style="width:130px">Rôle</th><th>Sujet</th><th style="width:90px">Durée</th><th style="width:70px;text-align:right">Note</th><th style="width:24px"></th></tr></thead><tbody data-sujtbody>'+rows+'</tbody></table>';
+  }
+
+  /* ---------- modale détail d'un sujet ---------- */
+  function openSujet(p, s, after){
+    var html=''+
+      '<div class="uni-row"><div class="uni-fld"><label>Titre du sujet</label><input class="uni-in" data-k="item" value="'+esc(s.item)+'" placeholder="Analyse des risques…"></div>'+
+        '<div class="uni-fld" style="flex:0 0 160px"><label>Rôle / catégorie</label><input class="uni-in" data-k="role" value="'+esc(s.role)+'" placeholder="Sécurité…"></div></div>'+
+      '<div class="uni-fld" style="margin-bottom:10px"><label>Objectifs détaillés</label><textarea class="uni-in" data-k="objectifs" rows="4" placeholder="Ce que l\'employé doit maîtriser / démontrer…">'+esc(s.objectifs)+'</textarea></div>'+
+      '<div class="uni-row"><div class="uni-fld" style="flex:0 0 160px"><label>Durée estimée</label><input class="uni-in" data-k="duree" value="'+esc(s.duree)+'" placeholder="ex: 2 h, 3 jours"></div>'+
+        '<div class="uni-fld" style="flex:0 0 140px"><label>Note de passage</label><input class="uni-in" type="number" step="0.1" data-k="notePassage" value="'+(s.notePassage||'')+'"></div></div>'+
+      '<div class="uni-fld"><label>Procédures liées</label><input class="uni-in" data-k="procedures" value="'+esc(s.procedures)+'" placeholder="Codes/titres de procédures, séparés par des virgules"></div>';
+    var m=modal('Sujet — '+(s.item||'nouveau'), html, {sm:true, onClose:function(){ if(after) after(); persistNow(); }});
+    bind(m.body, s);
+  }
+
+  /* ---------- modale d'un palier ---------- */
+  function openPalier(p){
+    var html=''+
       '<div class="uni-row">'+
-        '<div class="uni-fld" style="flex:0 0 80px"><label>Niveau</label><input class="uni-in" data-f="niveau" type="number" value="'+esc(p.niveau)+'"></div>'+
-        '<div class="uni-fld"><label>Palier</label><input class="uni-in" data-f="palier" value="'+esc(p.palier)+'" placeholder="Les basiques, Stage A…"></div>'+
+        '<div class="uni-fld" style="flex:0 0 90px"><label>Niveau</label><input class="uni-in" type="number" data-k="niveau" value="'+esc(p.niveau)+'"></div>'+
+        '<div class="uni-fld"><label>Palier</label><input class="uni-in" data-k="palier" value="'+esc(p.palier)+'" placeholder="Les basiques, Stage A…"></div>'+
       '</div>'+
       '<div class="uni-row">'+
-        '<div class="uni-fld"><label>Groupe</label><input class="uni-in" data-f="groupe" value="'+esc(p.groupe)+'" placeholder="Sécurité, Technique…"></div>'+
-        '<div class="uni-fld"><label>Qualification</label><input class="uni-in" data-f="qualification" value="'+esc(p.qualification)+'" placeholder="Opérateur, Référent…"></div>'+
-        '<div class="uni-fld" style="flex:0 0 120px"><label>Note passage</label><input class="uni-in" data-f="notePassage" type="number" step="0.1" value="'+esc(p.notePassage)+'"></div>'+
-        '<div class="uni-fld" style="flex:0 0 130px"><label>Durée de vie (mois)</label><input class="uni-in" data-f="dureeVieMois" type="number" value="'+esc(p.dureeVieMois)+'" placeholder="0 = illimité"></div>'+
+        '<div class="uni-fld"><label>Groupe</label><input class="uni-in" data-k="groupe" value="'+esc(p.groupe)+'" placeholder="Sécurité, Technique…"></div>'+
+        '<div class="uni-fld"><label>Qualification</label><input class="uni-in" data-k="qualification" value="'+esc(p.qualification)+'" placeholder="Opérateur, Référent…"></div>'+
+        '<div class="uni-fld" style="flex:0 0 110px"><label>Note passage</label><input class="uni-in" type="number" step="0.1" data-k="notePassage" value="'+esc(p.notePassage)+'"></div>'+
+        '<div class="uni-fld" style="flex:0 0 130px"><label>Durée de vie (mois)</label><input class="uni-in" type="number" data-k="dureeVieMois" value="'+esc(p.dureeVieMois)+'" placeholder="0 = illimité"></div>'+
       '</div>'+
-      '<div class="uni-sub"><div class="uni-sub-h">Sujets / compétences du palier</div><div data-sujets>'+(p.sujets||[]).map(function(s){return sujetRow(s);}).join('')+'</div>'+
-        '<button class="uni-add" data-add="sujet">+ Ajouter un sujet</button></div>'+
-      affBlock(p.affectations); }
-  function palierCard(p, open){ p=p||blankPalier();
-    var nm=p.palier||'(palier sans nom)', meta=(p.sujets?p.sujets.length:0)+' sujet(s) · note '+esc(p.notePassage);
-    return '<div class="uni-card" data-palier>'+
-      '<div class="uni-head" data-toggle><span class="uni-chev">'+(open?'▾':'▸')+'</span><b>Niveau '+esc(p.niveau)+' — '+esc(nm)+'</b><span class="uni-meta">'+meta+'</span><button class="uni-del big" data-del="palier" title="Supprimer">🗑</button></div>'+
-      '<div class="uni-body" style="display:'+(open?'block':'none')+'">'+palierBody(p)+'</div>'+
-    '</div>'; }
-  function certifBody(c){ return ''+
-      '<div class="uni-row">'+
-        '<div class="uni-fld"><label>Certification / habilitation</label><input class="uni-in" data-cf="nom" value="'+esc(c.nom)+'" placeholder="Travail en hauteur, Électricité BT…"></div>'+
-        '<div class="uni-fld"><label>Catégorie</label><input class="uni-in" data-cf="cat" value="'+esc(c.categorie)+'" placeholder="HSE, Technique…"></div>'+
-      '</div>'+
-      '<div class="uni-row">'+
-        '<div class="uni-fld" style="flex:0 0 140px"><label>Durée de vie (mois)</label><input class="uni-in" data-cf="duree" type="number" value="'+esc(c.dureeVieMois)+'"></div>'+
-        '<div class="uni-fld" style="flex:0 0 120px"><label>Note passage</label><input class="uni-in" data-cf="np" type="number" step="0.1" value="'+esc(c.notePassage)+'"></div>'+
-      '</div>'+
-      affBlock(c.affectations); }
-  function certifCard(c, open){ c=c||blankCertif();
-    var nm=c.nom||'(certification sans nom)', meta=(c.categorie||'—')+' · '+esc(c.dureeVieMois)+' mois';
-    return '<div class="uni-card" data-certif data-id="'+esc(c.id)+'">'+
-      '<div class="uni-head" data-toggle><span class="uni-chev">'+(open?'▾':'▸')+'</span><b>'+esc(nm)+'</b><span class="uni-meta">'+meta+'</span><button class="uni-del big" data-del="certif" title="Supprimer">🗑</button></div>'+
-      '<div class="uni-body" style="display:'+(open?'block':'none')+'">'+certifBody(c)+'</div>'+
-    '</div>'; }
-  function render(pane, d){
-    pane.innerHTML=
-      '<div class="uni-bar"><button class="uni-btn p" data-act="save">💾 Enregistrer & relier à PDE</button>'+
-        '<span class="uni-hint">Cliquez un cadre pour l\'ouvrir. Les paliers sont exploités par PDE (au rechargement).</span></div>'+
-      '<div class="uni-sec"><div class="uni-sec-h">📚 Paliers & sujets</div><div id="uni-paliers">'+(d.paliers||[]).map(function(p){return palierCard(p,false);}).join('')+'</div>'+
-        '<button class="uni-add big" data-add="palier">+ Ajouter un palier</button></div>'+
-      '<div class="uni-sec"><div class="uni-sec-h">🎖 Certifications & habilitations</div><div id="uni-certifs">'+(d.certifications||[]).map(function(c){return certifCard(c,false);}).join('')+'</div>'+
-        '<button class="uni-add big" data-add="certif">+ Ajouter une certification</button></div>';
+      '<div class="uni-block-h">Sujets / compétences <button class="uni-add" data-add-suj>+ Ajouter un sujet</button></div>'+
+      '<div data-sujwrap>'+sujTable(p)+'</div>'+
+      '<div class="uni-block-h">Affectations</div>'+affBlock(p.affectations);
+    var m=modal('Palier — '+(p.palier||'niveau '+p.niveau), html, {onClose:function(){ persistNow(); renderGrid(); }});
+    bind(m.body, p);
+    wireAff(m.body, p.affectations);
+    function refreshTable(){ var w=$('[data-sujwrap]',m.body); if(w) w.innerHTML=sujTable(p); }
+    m.body.addEventListener('click', function(e){ var t=e.target;
+      if(t.closest&&t.closest('[data-add-suj]')){ e.preventDefault(); var s=blankSujet(); p.sujets.push(s); refreshTable(); persist(); openSujet(p, s, refreshTable); return; }
+      var tr=t.closest&&t.closest('tr[data-sid]'); if(tr){ var s2=(p.sujets||[]).filter(function(x){return x.id===tr.getAttribute('data-sid');})[0]; if(s2) openSujet(p, s2, refreshTable); }
+    });
+  }
+
+  /* ---------- modale d'une certification ---------- */
+  function openCertif(c){
+    var html=''+
+      '<div class="uni-row"><div class="uni-fld"><label>Certification / habilitation</label><input class="uni-in" data-k="nom" value="'+esc(c.nom)+'" placeholder="Travail en hauteur…"></div>'+
+        '<div class="uni-fld" style="flex:0 0 180px"><label>Catégorie</label><input class="uni-in" data-k="categorie" value="'+esc(c.categorie)+'" placeholder="HSE, Technique…"></div></div>'+
+      '<div class="uni-row"><div class="uni-fld" style="flex:0 0 150px"><label>Durée de vie (mois)</label><input class="uni-in" type="number" data-k="dureeVieMois" value="'+esc(c.dureeVieMois)+'"></div>'+
+        '<div class="uni-fld" style="flex:0 0 130px"><label>Note de passage</label><input class="uni-in" type="number" step="0.1" data-k="notePassage" value="'+esc(c.notePassage)+'"></div></div>'+
+      '<div class="uni-block-h">Affectations</div>'+affBlock(c.affectations);
+    var m=modal('Certification — '+(c.nom||'nouvelle'), html, {onClose:function(){ persistNow(); renderGrid(); }});
+    bind(m.body, c);
+    wireAff(m.body, c.affectations);
+  }
+
+  /* ---------- grille principale ---------- */
+  function palierTile(p){
+    return '<div class="uni-tile" data-open-p="'+esc(p.id)+'">'+
+      '<div class="uni-lvl">Niv. '+esc(p.niveau)+'</div>'+
+      '<div class="uni-name">'+esc(p.palier||'(palier sans nom)')+'</div>'+
+      '<div class="uni-tsub">'+esc([p.groupe,p.qualification].filter(Boolean).join(' · ')||'—')+'</div>'+
+      '<div class="uni-tmeta">'+(p.sujets?p.sujets.length:0)+' sujet(s) · note '+esc(p.notePassage)+'</div></div>';
+  }
+  function certifTile(c){
+    return '<div class="uni-tile cert" data-open-c="'+esc(c.id)+'">'+
+      '<div class="uni-name">'+esc(c.nom||'(certification sans nom)')+'</div>'+
+      '<div class="uni-tsub">'+esc(c.categorie||'—')+'</div>'+
+      '<div class="uni-tmeta">'+esc(c.dureeVieMois)+' mois · note '+esc(c.notePassage)+'</div></div>';
+  }
+  function renderGrid(){
+    var root=$('#uni-root'); if(!root) return;
+    root.innerHTML=
+      '<div class="uni-sec"><div class="uni-sec-h">📚 Paliers & sujets <span class="uni-count">'+DATA.paliers.length+'</span></div>'+
+        '<div class="uni-grid" id="uni-paliers">'+DATA.paliers.map(palierTile).join('')+
+        '<div class="uni-tile add" data-add-p>+ Ajouter un palier</div></div></div>'+
+      '<div class="uni-sec"><div class="uni-sec-h">🎖 Certifications & habilitations <span class="uni-count">'+DATA.certifications.length+'</span></div>'+
+        '<div class="uni-grid" id="uni-certifs">'+DATA.certifications.map(certifTile).join('')+
+        '<div class="uni-tile add" data-add-c>+ Ajouter une certification</div></div></div>';
+  }
+  function wireRoot(root){
+    root.addEventListener('click', function(e){ var t=e.target;
+      var ap=t.closest&&t.closest('[data-add-p]'); if(ap){ var p=blankPalier(DATA.paliers.length+1); DATA.paliers.push(p); persist(); renderGrid(); openPalier(p); return; }
+      var ac=t.closest&&t.closest('[data-add-c]'); if(ac){ var c=blankCertif(); DATA.certifications.push(c); persist(); renderGrid(); openCertif(c); return; }
+      var op=t.closest&&t.closest('[data-open-p]'); if(op){ var pp=DATA.paliers.filter(function(x){return x.id===op.getAttribute('data-open-p');})[0]; if(pp) openPalier(pp); return; }
+      var oc=t.closest&&t.closest('[data-open-c]'); if(oc){ var cc=DATA.certifications.filter(function(x){return x.id===oc.getAttribute('data-open-c');})[0]; if(cc) openCertif(cc); return; }
+    });
   }
 
   /* ---------- CSS ---------- */
   function css(){ if($('#uni-css')) return; var s=document.createElement('style'); s.id='uni-css'; s.textContent=[
     '.uni-pane{padding:16px 20px}',
-    '.uni-bar{display:flex;align-items:center;gap:12px;margin-bottom:14px;flex-wrap:wrap}',
-    '.uni-btn{border:0;border-radius:8px;padding:9px 16px;font-weight:700;cursor:pointer;font-size:13px}',
-    '.uni-btn.p{background:#0f766e;color:#fff}',
-    '.uni-hint{font-size:12px;color:#6b7280}',
-    '.uni-sec{margin-bottom:22px}',
-    '.uni-sec-h{font-size:13px;font-weight:800;color:#0f766e;text-transform:uppercase;letter-spacing:.04em;margin-bottom:10px}',
-    '.uni-card{border:1px solid #e5e7eb;border-radius:10px;margin-bottom:10px;background:#fff;overflow:hidden}',
-    '.uni-head{display:flex;align-items:center;gap:10px;padding:10px 12px;cursor:pointer;user-select:none}',
-    '.uni-head:hover{background:#f8fafc}',
-    '.uni-head b{font-size:14px;color:#1e293b}',
-    '.uni-chev{color:#0f766e;font-size:12px;width:12px;flex:0 0 12px}',
-    '.uni-meta{color:#64748b;font-size:12px;margin-left:auto;margin-right:6px;white-space:nowrap}',
-    '.uni-body{padding:0 12px 12px}',
-    '.uni-row{display:flex;gap:10px;align-items:flex-end;margin-bottom:10px;flex-wrap:wrap}',
+    '.uni-sec{margin-bottom:24px}',
+    '.uni-sec-h{font-size:13px;font-weight:800;color:#0f766e;text-transform:uppercase;letter-spacing:.04em;margin-bottom:12px;display:flex;align-items:center;gap:8px}',
+    '.uni-count{background:#ccfbf1;color:#0f766e;border-radius:10px;padding:1px 9px;font-size:11px}',
+    '.uni-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}',
+    '@media(max-width:760px){.uni-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}',
+    '.uni-tile{border:1px solid #e5e7eb;border-radius:12px;padding:14px;background:#fff;cursor:pointer;transition:box-shadow .15s,transform .15s,border-color .15s}',
+    '.uni-tile:hover{box-shadow:0 6px 18px rgba(15,118,110,.12);transform:translateY(-2px);border-color:#0f766e}',
+    '.uni-lvl{display:inline-block;background:#0f766e;color:#fff;font-size:11px;font-weight:700;border-radius:6px;padding:2px 8px;margin-bottom:8px}',
+    '.uni-name{font-size:15px;font-weight:700;color:#1e293b;line-height:1.25}',
+    '.uni-tsub{font-size:12px;color:#64748b;margin-top:3px}',
+    '.uni-tmeta{font-size:11.5px;color:#0f766e;margin-top:8px;font-weight:600}',
+    '.uni-tile.cert{border-left:3px solid #d97706}',
+    '.uni-tile.add{display:flex;align-items:center;justify-content:center;color:#0f766e;font-weight:700;border-style:dashed;background:#f8fafc}',
+    '.uni-tile.add:hover{transform:none;box-shadow:none;background:#f0fdfa}',
+    /* modales */
+    '.uni-ov{position:fixed;inset:0;z-index:100000;background:rgba(15,23,42,.5);display:flex;align-items:center;justify-content:center;opacity:0;transition:opacity .16s;padding:20px}',
+    '.uni-ov.on{opacity:1}.uni-ov.sm{z-index:100010}',
+    '.uni-modal{background:#fff;border-radius:16px;width:760px;max-width:96%;max-height:92vh;display:flex;flex-direction:column;box-shadow:0 24px 70px rgba(0,0,0,.34);transform:scale(.96);transition:transform .16s}',
+    '.uni-ov.on .uni-modal{transform:scale(1)}',
+    '.uni-ov.sm .uni-modal{width:560px}',
+    '.uni-mh{display:flex;align-items:center;justify-content:space-between;padding:15px 20px;border-bottom:1px solid #eef0f3}',
+    '.uni-mh h3{margin:0;font-size:16px;font-weight:800;color:#0f766e}',
+    '.uni-x{border:0;background:#f1f5f9;border-radius:8px;width:30px;height:30px;cursor:pointer;font-size:14px;color:#475569}',
+    '.uni-mb{padding:18px 20px;overflow-y:auto}',
+    '.uni-row{display:flex;gap:12px;align-items:flex-end;margin-bottom:12px;flex-wrap:wrap}',
     '.uni-fld{flex:1;min-width:120px;display:flex;flex-direction:column}',
-    '.uni-fld label{font-size:11px;color:#64748b;margin-bottom:3px}',
-    '.uni-in{padding:7px 9px;border:1px solid #d1d5db;border-radius:6px;font-size:13px;width:100%}',
-    '.uni-sub{border-top:1px dashed #e5e7eb;padding-top:10px;margin-top:4px}',
-    '.uni-sub-h{font-size:11px;font-weight:700;color:#475569;text-transform:uppercase;margin-bottom:6px}',
-    '.uni-suj{display:flex;gap:6px;align-items:center;margin-bottom:6px}',
-    '.uni-aff{display:flex;gap:14px;margin-top:10px;border-top:1px dashed #e5e7eb;padding-top:10px;flex-wrap:wrap}',
-    '.uni-aff>div{flex:1;min-width:180px;display:flex;flex-direction:column}',
-    '.uni-aff label{font-size:11px;color:#64748b;margin-bottom:3px}',
-    '.uni-aff select{border:1px solid #d1d5db;border-radius:6px;font-size:12px;padding:4px}',
-    '.uni-add{border:1px dashed #0f766e;background:#fff;color:#0f766e;border-radius:6px;padding:6px 12px;font-weight:700;cursor:pointer;font-size:12px}',
-    '.uni-add.big{margin-top:4px}',
-    '.uni-del{border:0;background:#fee2e2;color:#b91c1c;border-radius:5px;width:24px;height:24px;cursor:pointer;font-weight:700;flex:0 0 24px}',
-    '.uni-del.big{width:30px;height:30px;font-size:14px}'
+    '.uni-fld label{font-size:11px;color:#64748b;margin-bottom:4px;font-weight:600}',
+    '.uni-in{padding:8px 10px;border:1px solid #d1d5db;border-radius:8px;font-size:13px;width:100%;font-family:inherit}',
+    '.uni-in:focus{outline:none;border-color:#0f766e;box-shadow:0 0 0 3px rgba(15,118,110,.12)}',
+    '.uni-block-h{font-size:12px;font-weight:800;color:#334155;text-transform:uppercase;letter-spacing:.03em;margin:16px 0 6px;display:flex;align-items:center;justify-content:space-between}',
+    '.uni-add{border:1px dashed #0f766e;background:#fff;color:#0f766e;border-radius:7px;padding:5px 11px;font-weight:700;cursor:pointer;font-size:12px}',
+    '.uni-aff{display:flex;gap:14px;flex-wrap:wrap}',
+    '.uni-aff>div{flex:1;min-width:200px;display:flex;flex-direction:column}',
+    '.uni-aff label{font-size:11px;color:#64748b;margin-bottom:4px;font-weight:600}',
+    '.uni-aff select{border:1px solid #d1d5db;border-radius:8px;font-size:12px;padding:5px}'
   ].join('\n'); document.head.appendChild(s); }
 
-  /* ---------- CRUD (délégation sur la racine) ---------- */
-  function wireUni(root){
-    root.addEventListener('click', function(e){ var t=e.target; if(!t||!t.getAttribute) return;
-      var del=t.getAttribute('data-del');
-      if(del==='sujet'){ e.preventDefault(); var sr=t.closest('[data-sujet]'); if(sr) sr.parentNode.removeChild(sr); return; }
-      if(del==='palier'){ e.preventDefault(); var pc=t.closest('[data-palier]'); if(pc&&confirm('Supprimer ce palier ?')) pc.parentNode.removeChild(pc); return; }
-      if(del==='certif'){ e.preventDefault(); var cc=t.closest('[data-certif]'); if(cc&&confirm('Supprimer cette certification ?')) cc.parentNode.removeChild(cc); return; }
-      var add=t.getAttribute('data-add');
-      if(add==='sujet'){ e.preventDefault(); var holder=t.parentNode.querySelector('[data-sujets]'); if(holder){ holder.insertAdjacentHTML('beforeend', sujetRow(blankSujet())); } return; }
-      if(add==='palier'){ e.preventDefault(); var n=$('#uni-paliers',root).querySelectorAll('[data-palier]').length+1; $('#uni-paliers',root).insertAdjacentHTML('beforeend', palierCard(blankPalier(n),true)); return; }
-      if(add==='certif'){ e.preventDefault(); $('#uni-certifs',root).insertAdjacentHTML('beforeend', certifCard(blankCertif(),true)); return; }
-      if(t.getAttribute('data-act')==='save'){ e.preventDefault();
-        var d=collect(root); saveUni(d); projectToPDE(d);
-        t.textContent='✓ Enregistré — rechargez pour mettre à jour PDE'; setTimeout(function(){ t.textContent='💾 Enregistrer & relier à PDE'; }, 2200);
-        return;
-      }
-      /* ouverture/fermeture des cadres */
-      var head=t.closest('[data-toggle]');
-      if(head){ var body=head.parentNode.querySelector('.uni-body'); if(body){ var op=body.style.display!=='none'; body.style.display=op?'none':'block'; var ch=head.querySelector('.uni-chev'); if(ch) ch.textContent=op?'▸':'▾'; } return; }
-    });
-  }
-
-  /* ---------- sous-page routée « University » ---------- */
+  /* ---------- sous-page routée ---------- */
   function ensureView(){
     var ex=document.getElementById('view-university'); if(ex) return ex;
     var ref=document.getElementById('view-competences'); if(!ref||!ref.parentNode) return null;
@@ -4577,12 +4618,11 @@ document.addEventListener('DOMContentLoaded', async function() {
     var sec=document.createElement('section'); sec.className='hub-view'; sec.id='view-university';
     sec.innerHTML='<div class="view-head"><div class="crumb">Compétences <span class="sep">/</span> University</div><h1><span class="accent">University</span></h1></div><div class="uni-pane" id="uni-root"></div>';
     ref.parentNode.appendChild(sec);
-    var root=sec.querySelector('#uni-root');
-    render(root, getData());
-    wireUni(root);
+    if(!DATA) DATA=getData();
+    renderGrid();
+    wireRoot($('#uni-root',sec));
     return sec;
   }
-  /* wrap de showView : la vue ne s'affiche QUE pour name==='university' (corrige l'apparition sur les autres pages) */
   function wrapShowView(){
     if(!window.HubViews || typeof window.HubViews.showView!=='function' || window.HubViews.__uniWrapped) return;
     var orig=window.HubViews.showView;
@@ -4591,7 +4631,7 @@ document.addEventListener('DOMContentLoaded', async function() {
   }
   function injectBtn(){
     var sub=document.getElementById('subnav'); if(!sub) return;
-    var ref=sub.querySelector('[data-sub="Mes Compétences"]'); if(!ref) return; /* seulement page Compétences */
+    var ref=sub.querySelector('[data-sub="Mes Compétences"]'); if(!ref) return;
     if(sub.querySelector('[data-sub-uni]')) return;
     var b=document.createElement('button'); b.className='item'; b.setAttribute('data-sub-uni','university');
     b.style.cssText='display:inline-flex;align-items:center;gap:5px;';
