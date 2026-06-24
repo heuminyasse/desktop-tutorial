@@ -4410,24 +4410,30 @@ document.addEventListener('DOMContentLoaded', async function() {
   function fonctions(){ var set={}; employees().forEach(function(e){ if(e.fonction) set[e.fonction]=1; }); return Object.keys(set).sort(); }
 
   /* ---------- modèle ---------- */
-  function blankSujet(){ return {id:uid(), role:'', item:'', objectifs:'', duree:'', procedures:'', notePassage:0}; }
+  function blankSujet(){ return {id:uid(), role:'', item:'', objectifs:'', duree:'', procedures:[], notePassage:0}; }
   function blankPalier(n){ return {id:uid(), niveau:n||1, palier:'', groupe:'', qualification:'', notePassage:3.5, dureeVieMois:0, sujets:[], affectations:{matricules:[],fonctions:[]}}; }
   function blankCertif(){ return {id:uid(), nom:'', categorie:'', dureeVieMois:12, notePassage:0, affectations:{matricules:[],fonctions:[]}}; }
   function seed(){
     var pal=lsArr(PDEPAL);
     return { paliers: pal.map(function(p){ return {
       id:uid(), niveau:p.niveau, palier:p.palier||'', groupe:'', qualification:'', notePassage:num(p.notePassage,3.5), dureeVieMois:0,
-      sujets:(p.competences||[]).map(function(c){ return {id:c.id||uid(), role:c.role||'', item:c.item||'', objectifs:'', duree:'', procedures:'', notePassage:0}; }),
+      sujets:(p.competences||[]).map(function(c){ return {id:c.id||uid(), role:c.role||'', item:c.item||'', objectifs:'', duree:'', procedures:[], notePassage:0}; }),
       affectations:{matricules:[],fonctions:[]} }; }), certifications:[] };
   }
   function normalize(d){
     if(!Array.isArray(d.paliers)) d.paliers=[]; if(!Array.isArray(d.certifications)) d.certifications=[];
     d.paliers.forEach(function(p){ if(!p.id) p.id=uid(); if(!Array.isArray(p.sujets)) p.sujets=[]; if(!p.affectations) p.affectations={matricules:[],fonctions:[]};
-      p.sujets.forEach(function(s){ if(!s.id) s.id=uid(); ['role','item','objectifs','duree','procedures'].forEach(function(k){ if(s[k]==null) s[k]=''; }); }); });
+      p.sujets.forEach(function(s){ if(!s.id) s.id=uid(); ['role','item','objectifs','duree'].forEach(function(k){ if(s[k]==null) s[k]=''; });
+        s.procedures = Array.isArray(s.procedures) ? s.procedures : ((typeof s.procedures==='string' && s.procedures) ? s.procedures.split(',').map(function(x){return x.trim();}).filter(Boolean) : []); }); });
     d.certifications.forEach(function(c){ if(!c.id) c.id=uid(); if(!c.affectations) c.affectations={matricules:[],fonctions:[]}; });
     return d;
   }
-  function getData(){ var d=loadUni(); if(!d){ d=seed(); saveUni(d); } return normalize(d); }
+  /* liste partagée et éditable des procédures (la page « Procédures » de l'app est un stub sans données) */
+  function loadProcs(){ try{ var a=JSON.parse(localStorage.getItem('epilot_procedures_v1')); return Array.isArray(a)?a:[]; }catch(e){ return []; } }
+  function saveProcs(a){ try{ localStorage.setItem('epilot_procedures_v1', JSON.stringify(a)); }catch(e){} }
+  function addProc(name){ name=String(name||'').trim(); if(!name) return; var a=loadProcs(); if(a.indexOf(name)<0){ a.push(name); a.sort(); saveProcs(a); } }
+  function seedProcs(d){ var set={}; loadProcs().forEach(function(p){set[p]=1;}); var changed=false; (d.paliers||[]).forEach(function(p){ (p.sujets||[]).forEach(function(s){ (s.procedures||[]).forEach(function(pr){ if(pr&&!set[pr]){ set[pr]=1; changed=true; } }); }); }); if(changed) saveProcs(Object.keys(set).sort()); }
+  function getData(){ var d=loadUni(); if(!d){ d=seed(); saveUni(d); } d=normalize(d); seedProcs(d); return d; }
   function projectToPDE(d){
     var out=(d.paliers||[]).map(function(p){ return {
       niveau:num(p.niveau,0), palier:p.palier||'', notePassage:num(p.notePassage,3.5),
@@ -4453,6 +4459,10 @@ document.addEventListener('DOMContentLoaded', async function() {
     if(m) m.addEventListener('change',function(){ aff.matricules=collectMulti(m); persist(); });
     if(f) f.addEventListener('change',function(){ aff.fonctions=collectMulti(f); persist(); });
   }
+  function procOptions(sel){ sel=sel||[]; var a=loadProcs(); if(!a.length) return '<option disabled>(aucune — ajoutez-en ci-dessous)</option>'; return a.map(function(p){ return '<option value="'+esc(p)+'"'+(sel.indexOf(p)>=0?' selected':'')+'>'+esc(p)+'</option>'; }).join(''); }
+  function procField(s){ return '<div class="uni-fld" data-procwrap><label>Procédures liées</label>'+
+    '<select multiple size="4" data-proc>'+procOptions(s.procedures)+'</select>'+
+    '<div style="display:flex;gap:6px;margin-top:6px"><input class="uni-in" data-proc-new placeholder="Nouvelle procédure…"><button type="button" class="uni-add" data-proc-add>+ Ajouter</button></div></div>'; }
   /* lie tous les [data-k] d'un scope à un objet */
   function bind(scope, obj, after){
     scope.addEventListener('input', function(e){ var k=e.target.getAttribute&&e.target.getAttribute('data-k'); if(!k) return;
@@ -4493,9 +4503,13 @@ document.addEventListener('DOMContentLoaded', async function() {
       '<div class="uni-fld" style="margin-bottom:10px"><label>Objectifs détaillés</label><textarea class="uni-in" data-k="objectifs" rows="4" placeholder="Ce que l\'employé doit maîtriser / démontrer…">'+esc(s.objectifs)+'</textarea></div>'+
       '<div class="uni-row"><div class="uni-fld" style="flex:0 0 160px"><label>Durée estimée</label><input class="uni-in" data-k="duree" value="'+esc(s.duree)+'" placeholder="ex: 2 h, 3 jours"></div>'+
         '<div class="uni-fld" style="flex:0 0 140px"><label>Note de passage</label><input class="uni-in" type="number" step="0.1" data-k="notePassage" value="'+(s.notePassage||'')+'"></div></div>'+
-      '<div class="uni-fld"><label>Procédures liées</label><input class="uni-in" data-k="procedures" value="'+esc(s.procedures)+'" placeholder="Codes/titres de procédures, séparés par des virgules"></div>';
+      procField(s);
     var m=modal('Sujet — '+(s.item||'nouveau'), html, {sm:true, onClose:function(){ if(after) after(); persistNow(); }});
     bind(m.body, s);
+    /* procédures liées : multi-sélection + ajout à la volée dans la liste partagée */
+    m.body.addEventListener('change', function(e){ if(e.target&&e.target.hasAttribute&&e.target.hasAttribute('data-proc')){ s.procedures=collectMulti(e.target); persist(); } });
+    m.body.addEventListener('click', function(e){ var t=e.target; if(t&&t.hasAttribute&&t.hasAttribute('data-proc-add')){ e.preventDefault();
+      var inp=m.body.querySelector('[data-proc-new]'); var v=inp&&inp.value.trim(); if(v){ addProc(v); if(s.procedures.indexOf(v)<0) s.procedures.push(v); var w=m.body.querySelector('[data-procwrap]'); if(w) w.outerHTML=procField(s); persist(); } } });
   }
 
   /* ---------- modale d'un palier ---------- */
