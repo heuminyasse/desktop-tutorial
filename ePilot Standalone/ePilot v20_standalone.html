@@ -4616,7 +4616,7 @@ document.addEventListener('DOMContentLoaded', async function() {
     var ref=document.getElementById('view-competences'); if(!ref||!ref.parentNode) return null;
     css();
     var sec=document.createElement('section'); sec.className='hub-view'; sec.id='view-university';
-    sec.innerHTML='<div class="view-head"><div class="crumb">Compétences <span class="sep">/</span> University</div><h1><span class="accent">University</span></h1></div><div class="uni-pane" id="uni-root"></div>';
+    sec.innerHTML='<div class="view-head"><div><div class="crumb">Compétences <span class="sep">/</span> University</div><h1><span class="accent">University</span></h1></div></div><div class="uni-pane" id="uni-root"></div>';
     ref.parentNode.appendChild(sec);
     if(!DATA) DATA=getData();
     renderGrid();
@@ -4845,7 +4845,7 @@ document.addEventListener('DOMContentLoaded', async function() {
     var ref=document.getElementById('view-competences'); if(!ref||!ref.parentNode) return null;
     css();
     var sec=document.createElement('section'); sec.className='hub-view'; sec.id='view-exercices';
-    sec.innerHTML='<div class="view-head"><div class="crumb">Compétences <span class="sep">/</span> Exercices</div><h1>Mes <span class="accent">Exercices</span></h1></div><div id="ex-root"></div>';
+    sec.innerHTML='<div class="view-head"><div><div class="crumb">Compétences <span class="sep">/</span> Exercices</div><h1>Mes <span class="accent">Exercices</span></h1></div></div><div id="ex-root"></div>';
     ref.parentNode.appendChild(sec);
     render($('#ex-root',sec));
     wire($('#ex-root',sec));
