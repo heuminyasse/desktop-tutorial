@@ -4065,6 +4065,99 @@ document.addEventListener('DOMContentLoaded', async function() {
   function esc(s){ return String(s==null?'':s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];}); }
   function nl2br(s){ return esc(s).replace(/\n/g,'<br>'); }
   function lines(s){ return String(s||'').split('\n').map(function(x){return x.trim();}).filter(Boolean); }
+  function deacc(s){ try{ return s.normalize('NFD').replace(/[̀-ͯ]/g,''); }catch(e){ return s; } }
+  function nk(k){ return deacc(String(k||'')).toLowerCase().trim(); }
+  function downloadText(name, text){
+    try{ var blob=new Blob([text],{type:'text/plain;charset=utf-8'}); var url=URL.createObjectURL(blob);
+      var a=document.createElement('a'); a.href=url; a.download=name; document.body.appendChild(a); a.click();
+      setTimeout(function(){ try{document.body.removeChild(a);}catch(_){} URL.revokeObjectURL(url); },120);
+    }catch(e){ alert('Téléchargement impossible.'); }
+  }
+
+  /* ---------- sérialisation texte (export / modèle) ---------- */
+  function cvToText(cv){
+    var L=[];
+    L.push('# ===== MODÈLE CV ePilot — remplis le texte après les « : » =====');
+    L.push('# Listes : une entrée par ligne commençant par « - ».');
+    L.push('# Sépare chaque expérience / formation par une ligne « --- ».');
+    L.push('# Les lignes commençant par # sont des commentaires (ignorées).');
+    L.push('');
+    L.push('[IDENTITE]');
+    L.push('Nom: '+(cv.nom||''));
+    L.push('Titre: '+(cv.titre||''));
+    L.push('Nationalité: '+(cv.nationalite||''));
+    L.push('Situation: '+(cv.situation||''));
+    L.push('Adresse: '+(cv.adresse||''));
+    L.push('Téléphone: '+(cv.tel||''));
+    L.push('Email: '+(cv.email||''));
+    L.push('');
+    L.push('[EXPERIENCE]');
+    var exps=(cv.experiences&&cv.experiences.length)?cv.experiences:[{}];
+    exps.forEach(function(e,i){ if(i) L.push('---');
+      L.push('Période: '+(e.periode||''));
+      L.push('Poste: '+(e.poste||''));
+      L.push('Entreprise: '+(e.entreprise||''));
+      L.push('Lieu: '+(e.lieu||''));
+      L.push('Contact: '+(e.contact||''));
+      L.push('Missions:');
+      var ms=lines(e.missions); if(!ms.length) ms=[''];
+      ms.forEach(function(m){ L.push('- '+m); });
+    });
+    L.push('');
+    L.push('[COMPETENCES]');
+    var cs=lines(cv.competences); if(!cs.length) cs=['']; cs.forEach(function(c){ L.push('- '+c); });
+    L.push('');
+    L.push('[LANGUES]');
+    L.push('# format : Langue | Niveau');
+    var lg=(cv.langues&&cv.langues.length)?cv.langues:[{}];
+    lg.forEach(function(l){ L.push('- '+(l.langue||'')+' | '+(l.niveau||'')); });
+    L.push('');
+    L.push('[FORMATION]');
+    var fos=(cv.formations&&cv.formations.length)?cv.formations:[{}];
+    fos.forEach(function(f,i){ if(i) L.push('---');
+      L.push('Année: '+(f.annee||''));
+      L.push('Diplôme: '+(f.diplome||''));
+      L.push('École: '+(f.ecole||''));
+    });
+    L.push('');
+    return L.join('\n');
+  }
+
+  /* ---------- parsing texte (import) ---------- */
+  function textToCv(txt){
+    var cv=blankCv();
+    var IDMAP={nom:'nom',titre:'titre',nationalite:'nationalite',situation:'situation',adresse:'adresse',telephone:'tel',tel:'tel',email:'email'};
+    var EXMAP={periode:'periode',poste:'poste',entreprise:'entreprise',lieu:'lieu',contact:'contact'};
+    var FOMAP={annee:'annee',diplome:'diplome',ecole:'ecole'};
+    var sec=null, exp=null, fo=null, comp=[], lang=[], missMode=false;
+    function flushExp(){ if(exp){ cv.experiences.push(exp); exp=null; } }
+    function flushFo(){ if(fo){ cv.formations.push(fo); fo=null; } }
+    function kv(line){ var i=line.indexOf(':'); if(i<0) return null; return [line.slice(0,i), line.slice(i+1).trim()]; }
+    String(txt||'').replace(/\r/g,'').split('\n').forEach(function(raw){
+      var line=raw.trim();
+      if(line.charAt(0)==='#') return;
+      var m=line.match(/^\[(.+?)\]$/);
+      if(m){ flushExp(); flushFo(); missMode=false; sec=deacc(m[1]).toUpperCase().trim(); return; }
+      if(sec==='IDENTITE'){ var p=kv(line); if(p){ var t=IDMAP[nk(p[0])]; if(t) cv[t]=p[1]; } return; }
+      if(sec==='EXPERIENCE'){
+        if(line==='---'){ flushExp(); missMode=false; return; }
+        if(/^missions?\s*:?\s*$/i.test(line)){ if(!exp) exp={}; missMode=true; return; }
+        if(missMode && /^-\s?/.test(line)){ if(!exp) exp={}; var mm=line.replace(/^-\s?/,''); if(mm) exp.missions=(exp.missions?exp.missions+'\n':'')+mm; return; }
+        var pe=kv(line); if(pe){ var te=EXMAP[nk(pe[0])]; if(te){ if(!exp) exp={}; exp[te]=pe[1]; missMode=false; } }
+        return;
+      }
+      if(sec==='COMPETENCES'){ var c=line.replace(/^-\s?/,''); if(c) comp.push(c); return; }
+      if(sec==='LANGUES'){ var ll=line.replace(/^-\s?/,''); if(ll){ var parts=ll.split('|'); lang.push({langue:(parts[0]||'').trim(), niveau:(parts[1]||'').trim()}); } return; }
+      if(sec==='FORMATION'){
+        if(line==='---'){ flushFo(); return; }
+        var pf=kv(line); if(pf){ var tf=FOMAP[nk(pf[0])]; if(tf){ if(!fo) fo={}; fo[tf]=pf[1]; } }
+        return;
+      }
+    });
+    flushExp(); flushFo();
+    cv.competences=comp.join('\n'); cv.langues=lang;
+    return cv;
+  }
 
   /* ---------- modèle de données ---------- */
   function blankCv(){ return { nom:'', titre:'', nationalite:'', situation:'', adresse:'', tel:'', email:'',
@@ -4189,7 +4282,10 @@ document.addEventListener('DOMContentLoaded', async function() {
     function f(label,key,ph){ return '<div class="ec-field"><label>'+label+'</label><input class="ec-input" data-cv="'+key+'" placeholder="'+(ph||'')+'" value="'+esc(cv[key])+'"></div>'; }
     return '<div class="cvb-bar">'+
         '<button class="cvb-btn p" id="cvb-print">🖨 Imprimer / PDF</button>'+
+        '<button class="cvb-btn s" id="cvb-tpl">⬇ Modèle texte</button>'+
+        '<button class="cvb-btn s" id="cvb-load">⬆ Charger texte</button>'+
         '<button class="cvb-btn s" id="cvb-reset">Réinitialiser</button>'+
+        '<input type="file" id="cvb-file" accept=".txt,text/plain" style="display:none">'+
       '</div>'+
       '<div class="cvb-grp"><h4>Identité</h4>'+
         f('Nom complet','nom')+f('Titre / poste','titre','Technicien en Métrologie…')+
@@ -4250,7 +4346,15 @@ document.addEventListener('DOMContentLoaded', async function() {
   function persistDeb(host, mat){ if(debTimer) clearTimeout(debTimer); debTimer=setTimeout(function(){ setCv(mat, collect(host)); }, 400); }
   function wire(host, mat){
     host.addEventListener('input', function(){ refreshPreviewOnly(host); persistDeb(host, mat); });
-    host.addEventListener('change', function(){ refreshPreviewOnly(host); persistDeb(host, mat); });
+    host.addEventListener('change', function(e){
+      if(e.target && e.target.id==='cvb-file'){
+        var f=e.target.files&&e.target.files[0]; if(!f){ return; }
+        var rd=new FileReader();
+        rd.onload=function(){ try{ var cv=textToCv(rd.result); setCv(mat, cv); paint(host, cv); }catch(err){ try{console.warn('[CVBuilder] import',err);}catch(_){} alert('Fichier modèle illisible.'); } };
+        rd.readAsText(f); e.target.value=''; return;
+      }
+      refreshPreviewOnly(host); persistDeb(host, mat);
+    });
     host.addEventListener('click', function(e){
       var t=e.target; if(!t) return;
       var add=t.getAttribute&&t.getAttribute('data-add');
@@ -4260,6 +4364,8 @@ document.addEventListener('DOMContentLoaded', async function() {
         return;
       }
       if(t.getAttribute&&t.getAttribute('data-del')){ e.preventDefault(); var it=t.closest('.cvb-item'); if(it){ it.parentNode.removeChild(it); setCv(mat, collect(host)); refreshPreviewOnly(host); } return; }
+      if(t.id==='cvb-tpl'){ e.preventDefault(); downloadText('modele-cv-'+((curMat()||'employe').replace(/\s+/g,'_'))+'.txt', cvToText(collect(host))); return; }
+      if(t.id==='cvb-load'){ e.preventDefault(); var fi=host.querySelector('#cvb-file'); if(fi) fi.click(); return; }
       if(t.id==='cvb-print'){ e.preventDefault(); printCv(collect(host)); return; }
       if(t.id==='cvb-reset'){ e.preventDefault(); if(confirm('Réinitialiser le CV de cet employé ?')){ setCv(mat, blankCv()); paint(host, prefill(blankCv())); } return; }
     });
