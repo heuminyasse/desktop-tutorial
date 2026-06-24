@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html>
-<head><script>window.__epKeepApplying=window.__epKeepApplying||function(fn,o){o=o||{};var i=o.interval||400,tr=(o.tries!=null)?o.tries:400,t=0;(function p(){try{fn();}catch(e){}if(t++>tr)return;setTimeout(p,i);})();try{new MutationObserver(function(){try{fn();}catch(e){}}).observe(document.documentElement||document,{childList:true,subtree:true});}catch(e){}};</script>
+<head><script>window.__epKeepApplying=window.__epKeepApplying||function(fn,o){o=o||{};var i=o.interval||400,tr=(o.tries!=null)?o.tries:400,t=0,busy=false,sched=0;function run(){if(busy)return;busy=true;try{fn();}catch(e){}busy=false;}(function p(){run();if(t++>tr)return;setTimeout(p,i);})();try{new MutationObserver(function(){if(busy||sched)return;sched=setTimeout(function(){sched=0;run();},60);}).observe(document.documentElement||document,{childList:true,subtree:true});}catch(e){}};</script>
   <meta charset="utf-8">
   <title>HBO — Hub</title>
   <style>
@@ -3098,7 +3098,8 @@ document.addEventListener('DOMContentLoaded', async function() {
   setInterval(_qSyncAlerts, 2500); setTimeout(_qSyncAlerts, 1500);
   setInterval(function(){ var navQ=document.querySelector('#navlinks [data-page="quest"]'); if(navQ&&navQ.classList.contains('active')){ var q=document.getElementById('view-quest'); if(!q||!q.classList.contains('active')) _qActivate(); } }, 1000);
 
-  setTimeout(maybeAutoBackup, 8000);
+  /* Sauvegarde auto différée à un moment d'inactivité — hors du chemin critique de démarrage */
+  setTimeout(function(){ (window.requestIdleCallback||function(f){return setTimeout(f,0);})(maybeAutoBackup,{timeout:15000}); }, 8000);
 })();
 </script>
 
