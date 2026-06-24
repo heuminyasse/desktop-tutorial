@@ -4699,7 +4699,11 @@ document.addEventListener('DOMContentLoaded', async function() {
    epilot_exercices_v1[matricule][sujetId]. Progression affichée par palier. */
 (function(){
   if(window.__exercices) return; window.__exercices=1;
-  var RES='epilot_exercices_v1';
+  var RES='epilot_exercices_v1', HIST='epilot_exercices_hist_v1';
+  function loadHist(){ try{ return JSON.parse(localStorage.getItem(HIST))||{}; }catch(e){ return {}; } }
+  function saveHist(o){ try{ localStorage.setItem(HIST, JSON.stringify(o)); }catch(e){} }
+  function pushHist(mat, entry){ if(!mat) return; var h=loadHist(); h[mat]=(h[mat]||[]); h[mat].unshift(entry); h[mat]=h[mat].slice(0,10); saveHist(h); }
+  function fmtDur(ms){ var s=Math.round(ms/1000); var m=Math.floor(s/60); s=s%60; return (m?m+'m ':'')+s+'s'; }
   function $(s,r){ return (r||document).querySelector(s); }
   function esc(s){ return String(s==null?'':s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];}); }
   function shuffle(a){ a=a.slice(); for(var i=a.length-1;i>0;i--){ var j=Math.floor(Math.random()*(i+1)); var t=a[i];a[i]=a[j];a[j]=t; } return a; }
@@ -4753,8 +4757,10 @@ document.addEventListener('DOMContentLoaded', async function() {
   function genQuestion(s, all, paliers){
     var palNames=paliers.map(function(p){return p.palier;}).filter(Boolean);
     var objs=all.map(function(x){return x.objectif;}).filter(Boolean);
-    var types=['palier','vf']; if(s.objectif){ types.push('objectif'); types.push('trou'); }
+    var roles=all.map(function(x){return x.role;}).filter(Boolean); var distinctRoles={}; roles.forEach(function(r){distinctRoles[r]=1;});
+    var types=['vf']; if(palNames.length>=2) types.push('palier'); if(s.objectif){ types.push('objectif'); types.push('trou'); } if(s.role && Object.keys(distinctRoles).length>=2){ types.push('role'); }
     var type=types[Math.floor(Math.random()*types.length)];
+    if(type==='role'){ var rd=sample(roles,3,s.role); var ro=shuffle([s.role].concat(rd)); return {q:'Quel rôle / catégorie correspond au sujet « '+s.item+' » ?', options:ro, answer:ro.indexOf(s.role), sid:s.id}; }
     if(type==='objectif'){
       var od=sample(objs,3,s.objectif); var opts=shuffle([s.objectif].concat(od));
       return {q:'Quel est l\'objectif du sujet « '+s.item+' » ?', options:opts, answer:opts.indexOf(s.objectif), sid:s.id};
@@ -4773,9 +4779,11 @@ document.addEventListener('DOMContentLoaded', async function() {
       var claim=useOwn? s.palierName : (sample(palNames,1,s.palierName)[0]||s.palierName);
       return {q:'Vrai ou Faux : le sujet « '+s.item+' » appartient au palier « '+claim+' ».', options:['Vrai','Faux'], answer:(claim===s.palierName)?0:1, sid:s.id};
     }
-    /* palier (défaut) */
-    var others=sample(palNames,3,s.palierName); var opts3=shuffle([s.palierName].concat(others));
-    return {q:'À quel palier appartient le sujet « '+s.item+' » ?', options:opts3, answer:opts3.indexOf(s.palierName), sid:s.id};
+    if(type==='palier' && palNames.length>=2){ var others=sample(palNames,3,s.palierName); var opts3=shuffle([s.palierName].concat(others));
+      return {q:'À quel palier appartient le sujet « '+s.item+' » ?', options:opts3, answer:opts3.indexOf(s.palierName), sid:s.id}; }
+    /* fallback toujours valide : vrai/faux */
+    var useOwn2=Math.random()<0.5, claim2= useOwn2? s.palierName : (sample(palNames,1,s.palierName)[0]||s.palierName);
+    return {q:'Vrai ou Faux : le sujet « '+s.item+' » appartient au palier « '+claim2+' ».', options:['Vrai','Faux'], answer:(claim2===s.palierName)?0:1, sid:s.id};
   }
   function buildQuiz(d, palierId, n){
     var all=allSujets(d);
@@ -4784,7 +4792,10 @@ document.addEventListener('DOMContentLoaded', async function() {
   }
 
   /* ---------- rendu ---------- */
-  var CURQS=null;
+  var CURQS=null, CURANS=null, CURSTART=0, TIMER=0;
+  function renderHist(mat){ var h=(loadHist()[mat])||[]; if(!h.length) return '<div class="ex-empty">Aucune tentative enregistrée.</div>';
+    return '<div class="ex-hist">'+h.map(function(e){ var col=e.pass?'#16a34a':'#dc2626'; return '<div class="ex-hrow"><span>'+esc(e.palierName||'Tous les paliers')+'</span><span style="color:'+col+';font-weight:700">'+e.score+'%'+(e.pass?' ✓':' ✗')+'</span><span style="color:#94a3b8;font-size:11px">'+esc(e.when||'')+(e.dur?' · '+esc(e.dur):'')+'</span></div>'; }).join('')+'</div>';
+  }
   function renderProgress(d, mat){
     var pr=progress(d, mat);
     if(!pr.length) return '<div class="ex-empty">Aucun palier configuré. Allez dans <b>University</b> pour en créer.</div>';
@@ -4801,7 +4812,8 @@ document.addEventListener('DOMContentLoaded', async function() {
     return '<div class="ex-ctrl">'+
       '<div class="ex-fld"><label>Employé</label><select id="ex-emp">'+(empOpts||'<option value="">—</option>')+'</select></div>'+
       '<div class="ex-fld"><label>Palier à réviser</label><select id="ex-pal">'+palOpts+'</select></div>'+
-      '<div class="ex-fld" style="flex:0 0 120px"><label>Nb questions</label><select id="ex-n"><option>5</option><option selected>8</option><option>12</option></select></div>'+
+      '<div class="ex-fld" style="flex:0 0 110px"><label>Nb questions</label><select id="ex-n"><option>5</option><option selected>8</option><option>12</option></select></div>'+
+      '<div class="ex-fld" style="flex:0 0 130px"><label>Seuil de réussite</label><select id="ex-thr"><option value="50">50 %</option><option value="70" selected>70 %</option><option value="80">80 %</option><option value="90">90 %</option></select></div>'+
       '<button class="ex-btn p" id="ex-gen">🎯 Générer le test</button>'+
     '</div>';
   }
@@ -4810,7 +4822,7 @@ document.addEventListener('DOMContentLoaded', async function() {
     return qs.map(function(q,i){ return '<div class="ex-q"><div class="ex-qt">'+(i+1)+'. '+esc(q.q)+'</div><div class="ex-opts">'+
       q.options.map(function(o,oi){ return '<label class="ex-opt"><input type="radio" name="exq'+i+'" value="'+oi+'"><span>'+esc(o)+'</span></label>'; }).join('')+
       '</div></div>'; }).join('')+
-      '<div class="ex-actions"><button class="ex-btn p" id="ex-submit">Valider mes réponses</button></div><div id="ex-result"></div>';
+      '<div class="ex-actions"><button class="ex-btn p" id="ex-submit">Valider mes réponses</button><span class="ex-timer" id="ex-timer">⏱ 0s</span></div><div id="ex-result"></div>';
   }
   function render(root){
     var d=uniData(), mat=($('#ex-emp')&&$('#ex-emp').value)||meMat()||((employees()[0]||{}).mat)||'';
@@ -4819,28 +4831,46 @@ document.addEventListener('DOMContentLoaded', async function() {
         '<div class="ex-sec-h">🎓 Ma progression</div><div id="ex-prog">'+renderProgress(d, mat)+'</div>'+
         '<div class="ex-sec-h" style="margin-top:18px">📝 Passer un test</div>'+renderControls(d, mat)+
         '<div id="ex-quiz"></div>'+
+        '<div class="ex-sec-h" style="margin-top:20px">🕑 Dernières tentatives</div><div id="ex-hist">'+renderHist(mat)+'</div>'+
       '</div>';
   }
 
+  function nowStr(){ try{ return new Date().toLocaleString('fr-FR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}); }catch(e){ return ''; } }
+  function stopTimer(){ if(TIMER){ clearInterval(TIMER); TIMER=0; } }
+  function startTimer(){ stopTimer(); CURSTART=Date.now(); TIMER=setInterval(function(){ var e=$('#ex-timer'); if(!e){ stopTimer(); return; } e.textContent='⏱ '+fmtDur(Date.now()-CURSTART); },1000); }
+  function reviewHtml(){ var wrong=[]; CURQS.forEach(function(q,i){ var a=CURANS?CURANS[i]:null; var ok=(a!=null)&&Number(a)===q.answer; if(!ok) wrong.push({q:q,a:a}); });
+    if(!wrong.length) return '<div class="ex-rev"><b style="color:#16a34a">Aucune erreur 🎉</b></div>';
+    return '<div class="ex-rev"><div class="ex-rev-h">Révision des erreurs ('+wrong.length+')</div>'+wrong.map(function(w){
+      return '<div class="ex-rev-q"><div class="ex-rev-qt">'+esc(w.q.q)+'</div>'+
+        '<div class="ex-rev-bad">'+(w.a!=null?'Votre réponse : '+esc(w.q.options[w.a]):'Sans réponse')+'</div>'+
+        '<div class="ex-rev-ok">Bonne réponse : '+esc(w.q.options[w.q.answer])+'</div></div>'; }).join('')+'</div>';
+  }
   function wire(root){
-    root.addEventListener('change', function(e){ if(e.target&&e.target.id==='ex-emp'){ var d=uniData(); $('#ex-prog',root).innerHTML=renderProgress(d, e.target.value); $('#ex-quiz',root).innerHTML=''; } });
+    root.addEventListener('change', function(e){ if(e.target&&e.target.id==='ex-emp'){ var d=uniData(); $('#ex-prog',root).innerHTML=renderProgress(d, e.target.value); $('#ex-hist',root).innerHTML=renderHist(e.target.value); $('#ex-quiz',root).innerHTML=''; } });
     root.addEventListener('click', function(e){ var t=e.target; if(!t) return;
       if(t.closest&&t.closest('#ex-gen')){ e.preventDefault();
         var d=uniData(), pal=$('#ex-pal',root).value, n=parseInt($('#ex-n',root).value,10)||8;
-        CURQS=buildQuiz(d, pal, n); $('#ex-quiz',root).innerHTML=renderQuiz(CURQS); return;
+        CURQS=buildQuiz(d, pal, n); CURANS=null; $('#ex-quiz',root).innerHTML=renderQuiz(CURQS); startTimer(); return;
       }
+      if(t.closest&&t.closest('#ex-review')){ e.preventDefault(); var rb=t.closest('#ex-review'); var res=$('#ex-result',root); if(res) res.insertAdjacentHTML('beforeend', reviewHtml()); rb.style.display='none'; return; }
       if(t.closest&&t.closest('#ex-submit')){ e.preventDefault();
         if(!CURQS||!CURQS.length) return;
-        var d2=uniData(), info=sidInfoMap(d2);
-        var mat=$('#ex-emp',root).value, correct=0, unanswered=0, oks={};
-        CURQS.forEach(function(q,i){ var sel=root.querySelector('input[name="exq'+i+'"]:checked'); var ok= sel && Number(sel.value)===q.answer; if(!sel) unanswered++; if(ok) correct++; oks[q.sid]=oks[q.sid]||!!ok; markAttempt(mat, q.sid, !!ok); });
-        var pushed=pdeWriteback(mat, oks, info);
-        var pct=Math.round(correct/CURQS.length*100);
-        var col=pct>=70?'#16a34a':pct>=50?'#d97706':'#dc2626';
-        $('#ex-result',root).innerHTML='<div class="ex-score" style="border-color:'+col+'"><b style="color:'+col+'">'+correct+'/'+CURQS.length+' — '+pct+'%</b>'+
-          (unanswered?' <span style="color:#94a3b8">('+unanswered+' sans réponse)</span>':'')+
-          '<div class="ex-rmeta">Sujets réussis marqués « maîtrisés ».'+(pushed?' '+pushed+' note(s) reportée(s) dans PDE (au seuil de passage, sans écraser une note manager) — visible au rechargement.':'')+'</div></div>';
+        stopTimer(); var dur=fmtDur(Date.now()-CURSTART);
+        var d2=uniData(), info=sidInfoMap(d2), thr=parseInt(($('#ex-thr',root)||{}).value,10)||70;
+        var mat=$('#ex-emp',root).value, correct=0, unanswered=0, oks={}; CURANS=[];
+        CURQS.forEach(function(q,i){ var sel=root.querySelector('input[name="exq'+i+'"]:checked'); CURANS[i]= sel?Number(sel.value):null; var ok= sel && Number(sel.value)===q.answer; if(!sel) unanswered++; if(ok) correct++; oks[q.sid]=oks[q.sid]||!!ok; markAttempt(mat, q.sid, !!ok); });
+        var pct=Math.round(correct/CURQS.length*100), pass=pct>=thr;
+        var pushed= pass ? pdeWriteback(mat, oks, info) : 0;
+        var palName=(function(){ var pv=$('#ex-pal',root).value; if(pv==='all') return 'Tous les paliers'; var p=(d2.paliers||[]).filter(function(x){return x.id===pv;})[0]; return p?('Niv. '+p.niveau+' — '+(p.palier||'')):'—'; })();
+        pushHist(mat, {when:nowStr(), palierName:palName, score:pct, pass:pass, dur:dur});
+        var col=pass?'#16a34a':'#dc2626';
+        $('#ex-result',root).innerHTML='<div class="ex-score" style="border-color:'+col+'"><b style="color:'+col+'">'+correct+'/'+CURQS.length+' — '+pct+'%</b> <span style="color:'+col+';font-weight:700">'+(pass?'RÉUSSI':'ÉCHEC')+'</span> <span style="color:#94a3b8">(seuil '+thr+'% · ⏱ '+dur+')</span>'+
+          (unanswered?' <span style="color:#94a3b8">· '+unanswered+' sans réponse</span>':'')+
+          '<div class="ex-rmeta">Sujets réussis marqués « maîtrisés ».'+(pass?(pushed?' '+pushed+' note(s) reportée(s) dans PDE (visible au rechargement).':' (rien de nouveau à reporter dans PDE).'):' Test sous le seuil : rien reporté dans PDE.')+'</div>'+
+          ((correct<CURQS.length)?'<button class="ex-btn s" id="ex-review" style="margin-top:8px">🔎 Revoir mes erreurs</button>':'')+
+        '</div>';
         $('#ex-prog',root).innerHTML=renderProgress(d2, mat);
+        $('#ex-hist',root).innerHTML=renderHist(mat);
         return;
       }
     });
@@ -4864,6 +4894,16 @@ document.addEventListener('DOMContentLoaded', async function() {
     '.ex-fld select{padding:8px 10px;border:1px solid #d1d5db;border-radius:8px;font-size:13px;min-width:170px;font-family:inherit}',
     '.ex-btn{border:0;border-radius:8px;padding:9px 16px;font-weight:700;cursor:pointer;font-size:13px}',
     '.ex-btn.p{background:#0f766e;color:#fff}',
+    '.ex-btn.s{background:#fff;color:#0f766e;border:1px solid #0f766e}',
+    '.ex-timer{margin-left:12px;font-size:13px;color:#64748b;font-weight:600}',
+    '.ex-rev{margin-top:10px;border-top:1px dashed #e5e7eb;padding-top:10px}',
+    '.ex-rev-h{font-size:12px;font-weight:800;color:#dc2626;text-transform:uppercase;margin-bottom:8px}',
+    '.ex-rev-q{border:1px solid #fee2e2;border-radius:8px;padding:9px 11px;margin-bottom:8px;background:#fff}',
+    '.ex-rev-qt{font-size:13px;font-weight:600;margin-bottom:6px}',
+    '.ex-rev-bad{font-size:12px;color:#dc2626}',
+    '.ex-rev-ok{font-size:12px;color:#16a34a;font-weight:600}',
+    '.ex-hist{display:flex;flex-direction:column;gap:6px}',
+    '.ex-hrow{display:flex;align-items:center;gap:10px;justify-content:space-between;padding:7px 10px;border:1px solid #e5e7eb;border-radius:8px;font-size:12.5px;background:#fff}',
     '.ex-q{border:1px solid #e5e7eb;border-radius:12px;padding:14px;margin-bottom:10px;background:#fff}',
     '.ex-qt{font-size:14px;font-weight:600;color:#1e293b;margin-bottom:10px}',
     '.ex-opts{display:flex;flex-direction:column;gap:6px}',
