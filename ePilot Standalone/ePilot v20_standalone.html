@@ -1184,7 +1184,7 @@ document.addEventListener('DOMContentLoaded', async function() {
       }
       /* [ComptaFactures v1] Onglet Factures Comptabilité ← factures chantiers 2026 */
       var _cfView='liste';var _cfList=[];
-      function cfFactures(recs){var out=[];recs.forEach(function(r){var imp=r.imp,d=r.data||{};var jip=(window.JIP_DATA||[]).find(function(j){return j.Imputation===imp;});var client=jip?(jip.Client||'—'):'—';var unite=jip?(jip.Unite||''):'';(d.facs||[]).forEach(function(f){var fy=String(f.date||'').slice(0,4);if(fy!=='2026')return;out.push({imp:imp,id:f.id,numero:f.numero||f.id,client:client,unite:unite,montant:Number(f.montant)||0,date:f.date||'',statut:f.statut||'À payer'});});});return out;}
+      function cfFactures(recs){var out=[];recs.forEach(function(r){var imp=r.imp,d=r.data||{};var jip=(window.JIP_DATA||[]).find(function(j){return j.Imputation===imp;});var client=jip?(jip.Client||'—'):'—';var unite=jip?(jip.Unite||''):'';(d.facs||[]).forEach(function(f){var fy=String(f.date||'').slice(0,4);if(fy!=='2026')return;var _st=f.statut||'';var _ns=(_st==='Payé'||_st==='Payée')?'Payée':(_st==='Retard'?'Retard':'À payer');out.push({imp:imp,id:f.id,numero:f.numero||f.id,client:client,unite:unite,montant:Number(f.montant)||0,date:f.date||'',statut:_ns});});});return out;}
       function cfBadge(s){var c=s==='Payée'?'#dcfce7;color:#166534':s==='Retard'?'#fee2e2;color:#991b1b':'#fef3c7;color:#92400e';return '<span style="background:'+c+';padding:2px 9px;border-radius:10px;font-size:11px;font-weight:600">'+s+'</span>';}
       function cfCell(t,imp,fac,style){return '<td data-cfcell="'+t+'" data-imp="'+imp+'" data-fac="'+(fac||'')+'" style="'+style+'">';}
       function cfBodyHTML(list){
@@ -1798,8 +1798,8 @@ document.addEventListener('DOMContentLoaded', async function() {
   /* Année d'un chantier d'après son n° d'imputation : PI24xxx -> 2024 */
   function yearOfImp(imp){
     var s = String(imp||'');
+    /* Année fiable uniquement via le motif PInn ; sinon null (jamais purgé par erreur) */
     var m = s.match(/PI\s*[-_]?\s*(\d{2})/i);
-    if(!m){ m = s.replace(/[^0-9]/g,'').match(/^(\d{2})/); }
     if(!m) return null;
     var yy = parseInt(m[1],10);
     if(isNaN(yy)) return null;
@@ -2655,7 +2655,7 @@ document.addEventListener('DOMContentLoaded', async function() {
     "Situation familiale":"Family status","Personne à contacter":"Emergency contact","Nouvelle valeur":"New value",
     "Création":"Creation","Renouvellement":"Renewal","Perte / vol":"Loss / theft","Modification":"Update",
     "Ressource (module / site / local)":"Resource (module / site / room)","Niveau":"Level",
-    "Lecture":"Read","Modification":"Write","Gestion":"Admin",
+    "Lecture":"Read","Écriture":"Write","Gestion":"Admin",
     "Compte / application":"Account / application","Précisions":"Details",
     "Matériel":"Equipment","Ordinateur":"Computer","Écran":"Monitor","Imprimante":"Printer","Accessoire":"Accessory",
     "Personne concernée":"Concerned person","Description des faits":"Description of facts",
@@ -2711,7 +2711,7 @@ document.addEventListener('DOMContentLoaded', async function() {
     {id:'rh_impots', d:'paie', label:'Question impôts / cotisations', icon:'🧮', svc:'RH / Paie', f:[{k:'sujet',l:'Sujet',t:'text',r:1},{k:'description',l:'Question',t:'area',r:1}]},
     {id:'rh_infos', d:'paie', label:'Mise à jour infos personnelles', icon:'✏️', svc:'RH / Paie', f:[{k:'champ',l:'Information',t:'sel',o:['RIB / compte','Adresse','Téléphone','Situation familiale','Personne à contacter','Autre'],r:1},{k:'valeur',l:'Nouvelle valeur',t:'text',r:1}]},
     {id:'acces_badge', d:'acces', label:'Demande de badge', icon:'🪪', svc:'Administration', f:[{k:'type',l:'Type',t:'sel',o:['Création','Renouvellement','Perte / vol','Modification'],r:1},{k:'motif',l:'Motif',t:'area'}]},
-    {id:'acces_demande', d:'acces', label:'Demande d\'accès', icon:'🔑', svc:'Administration', f:[{k:'ressource',l:'Ressource (module / site / local)',t:'text',r:1},{k:'niveau',l:'Niveau',t:'sel',o:['Lecture','Modification','Gestion']},{k:'justification',l:'Justification',t:'area',r:1}]},
+    {id:'acces_demande', d:'acces', label:'Demande d\'accès', icon:'🔑', svc:'Administration', f:[{k:'ressource',l:'Ressource (module / site / local)',t:'text',r:1},{k:'niveau',l:'Niveau',t:'sel',o:['Lecture','Écriture','Gestion']},{k:'justification',l:'Justification',t:'area',r:1}]},
     {id:'acces_password', d:'acces', label:'Réinitialisation mot de passe', icon:'🔓', svc:'Administration', f:[{k:'compte',l:'Compte / application',t:'text',r:1},{k:'description',l:'Précisions',t:'area'}]},
     {id:'acces_materiel', d:'acces', label:'Demande de matériel IT', icon:'💻', svc:'Administration', f:[{k:'materiel',l:'Matériel',t:'sel',o:['Ordinateur','Téléphone','Écran','Imprimante','Accessoire','Autre'],r:1},{k:'justification',l:'Justification',t:'area'}]},
     {id:'social_plainte_collegue', d:'social', label:'Plainte sur un collègue (confidentiel)', icon:'🔒', svc:'RH', conf:1, f:[{k:'concerne',l:'Personne concernée',t:'text'},{k:'description',l:'Description des faits',t:'area',r:1},{k:'confidentiel',l:'Traiter en confidentiel',t:'check',def:1}]},
