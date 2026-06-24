@@ -3894,6 +3894,15 @@ document.addEventListener('DOMContentLoaded', async function() {
   function metric(label, id){
     return '<div class="ec-stat"><div class="k">'+label+'</div><div class="v" id="'+id+'">—</div></div>';
   }
+  function esc(s){ return String(s==null?'':s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];}); }
+  function curFonction(){ var e=$('ec-f-fonction'); return e?(e.value||'').trim():''; }
+  /* certifications University assignées à cet employé (matricule ou fonction), croisées avec ses papiers */
+  function uniCertsFor(mat, fonction, name){
+    var uni=lsObj('epilot_university_v1'); var certs=(uni.certifications||[]).filter(function(c){ var a=c.affectations||{}; return (a.matricules||[]).indexOf(mat)>=0 || (fonction && (a.fonctions||[]).indexOf(fonction)>=0); });
+    var papers=papiersOf(mat, name);
+    return certs.map(function(c){ var held=papers.filter(function(p){ return c.nom && p.titre && p.titre.toLowerCase().indexOf(String(c.nom).toLowerCase())>=0; })[0];
+      return { nom:c.nom, categorie:c.categorie, dureeVieMois:c.dureeVieMois, held:held||null }; });
+  }
 
   /* ===================== Construction unique (déplacement + injection) ===================== */
   function buildOnce(o){
@@ -3949,7 +3958,8 @@ document.addEventListener('DOMContentLoaded', async function() {
           metric('Certificats valides','ecx-m-certs')+
           metric('Alertes','ecx-m-alerts')+
         '</div>'+
-        '<div id="ecx-certs-list" style="margin-top:10px"></div>'
+        '<div id="ecx-certs-list" style="margin-top:10px"></div>'+
+        '<div id="ecx-uni-certs" style="margin-top:12px"></div>'
       ));
       var scores=el(card('Scores & distinctions', 'Saisis par RH / QHSE / managers.',
         '<div class="ec-row cols-2">'+
@@ -4001,6 +4011,17 @@ document.addEventListener('DOMContentLoaded', async function() {
             return '<div style="display:flex;justify-content:space-between;gap:8px;padding:4px 0;border-bottom:1px solid #f1f5f9;font-size:12px"><span>'+x.titre+(x.exp?' <span style="color:#9ca3af">('+x.exp+')</span>':'')+'</span><span style="color:'+col+';font-weight:700">'+x.statut+'</span></div>';
           }).join('');
       } else { cl.innerHTML='<div style="font-size:12px;color:#9ca3af">Aucun certificat/papier lié à cet employé.</div>'; }
+    }
+    /* certifications requises (University) croisées avec les papiers détenus */
+    var ue=$('ecx-uni-certs');
+    if(ue){ var uc=uniCertsFor(mat, curFonction(), name);
+      if(uc.length){ ue.innerHTML='<div style="font-size:11px;font-weight:700;color:#6b7280;text-transform:uppercase;margin-bottom:4px">Certifications requises (University)</div>'+
+        uc.map(function(c){ var st=c.held?c.held.statut:'À obtenir';
+          var col=!c.held?'#b45309':(st==='Expiré'?'#dc2626':st==='Bientôt'?'#d97706':st==='Valide'?'#16a34a':'#6b7280');
+          var txt=c.held?(st+(c.held.exp?' ('+c.held.exp+')':'')):'À obtenir'+(c.dureeVieMois?' · validité '+c.dureeVieMois+' mois':'');
+          return '<div style="display:flex;justify-content:space-between;gap:8px;padding:4px 0;border-bottom:1px solid #f1f5f9;font-size:12px"><span>'+esc(c.nom)+(c.categorie?' <span style="color:#9ca3af">· '+esc(c.categorie)+'</span>':'')+'</span><span style="color:'+col+';font-weight:700">'+esc(txt)+'</span></div>';
+        }).join('');
+      } else { ue.innerHTML=''; }
     }
   }
 
