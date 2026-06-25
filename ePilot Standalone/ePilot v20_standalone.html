@@ -5325,60 +5325,78 @@ document.addEventListener('DOMContentLoaded', async function() {
    Problème corrigé : à chaque import de devis, les codeA étaient recalculés à partir de
    l'état courant de FCR_DB (nextCA), donc ils changeaient et détruisaient la codification.
    Solution : une table maître IndexedDB (epilot_price_catalog, clé = codeA immuable) qui fait
-   autorité. Un produit reconnu (signature référence/désignation/fabricant) réutilise TOUJOURS
-   son codeA ; seul un produit réellement nouveau reçoit un nouveau codeA, inscrit définitivement.
+   autorité. Un produit reconnu (signature TYPÉE référence/désignation/fabricant) réutilise
+   TOUJOURS son codeA ; seul un produit réellement nouveau reçoit un nouveau codeA, inscrit
+   définitivement. Les Articles reçoivent un préfixe A#####, les Services un préfixe S#####,
+   jamais mélangés. Sauvegardes automatiques (instantanés) + restauration.
    Le hook s'installe APRÈS le Smart Import et corrige les codeA des nouvelles lignes.
    100% additif : aucune donnée existante n'est supprimée. */
 (function(){
   if (window.__priceCatalog) return; window.__priceCatalog = true;
 
-  var DB='epilot_price_catalog', STORE='catalog', _db=null;
+  var DB='epilot_price_catalog', _db=null;
   var CATALOG=null;   /* { codeA: record } */
   var SIGMAP=null;    /* { sig: codeA } */
 
   function nowISO(){ try{ return new Date().toISOString().slice(0,10); }catch(e){ return ''; } }
+  function nowStr(){ try{ return new Date().toLocaleString('fr-FR'); }catch(e){ return ''; } }
   function norm(s){ return String(s==null?'':s).toLowerCase().replace(/[^a-z0-9 ]/g,' ').replace(/\s+/g,' ').trim(); }
-  function isSvc(a){ return /service|prestation|main.?d.?oeuvre|forfait/i.test(String((a&&a.section)||'')+' '+String((a&&a.type)||'')+' '+String((a&&(a.desc||a.designation))||'')); }
+  function isSvc(a){ return /service|prestation|main.?d.?oeuvre|forfait/i.test(String((a&&a.section)||'')+' '+String((a&&a.type)||'')+' '+String((a&&(a.desc||a.designation))||'')) || /^S\d/i.test(String((a&&a.codeA)||'')); }
+  /* signature TYPÉE : un Service et un Article de même désignation ne se confondent jamais */
   function sigOf(a){
+    var t=isSvc(a)?'s':'a';
     var ref=norm(a.reference||a.code);
-    if (ref) return 'r:'+ref;
+    if (ref) return t+'|r:'+ref;
     var d=norm(a.desc||a.designation), f=norm(a.fabricant);
     if (!d) return '';
-    return 'd:'+d+'|'+f;
+    return t+'|d:'+d+'|'+f;
   }
 
-  /* ---------- IndexedDB (store dédié, clé = codeA) ---------- */
+  /* ---------- IndexedDB (stores : catalog [clé codeA] + backups [clé ts]) ---------- */
   function dbOpen(){
     return new Promise(function(res,rej){
       if (_db){ res(_db); return; }
-      var p=indexedDB.open(DB, 1);
-      p.onupgradeneeded=function(e){ var db=e.target.result; if(!db.objectStoreNames.contains(STORE)) db.createObjectStore(STORE,{keyPath:'codeA'}); };
-      p.onsuccess=function(e){ _db=e.target.result; res(_db); };
+      var p=indexedDB.open(DB);
+      p.onsuccess=function(e){ var db=e.target.result;
+        var need=[]; if(!db.objectStoreNames.contains('catalog')) need.push('catalog'); if(!db.objectStoreNames.contains('backups')) need.push('backups');
+        if(!need.length){ _db=db; res(db); return; }
+        var v=db.version; db.close(); var u=indexedDB.open(DB, v+1);
+        u.onupgradeneeded=function(e2){ var d2=e2.target.result;
+          if(!d2.objectStoreNames.contains('catalog')) d2.createObjectStore('catalog',{keyPath:'codeA'});
+          if(!d2.objectStoreNames.contains('backups')) d2.createObjectStore('backups',{keyPath:'ts'}); };
+        u.onsuccess=function(e2){ _db=e2.target.result; res(_db); };
+        u.onerror=function(e2){ rej(e2.target.error); };
+      };
       p.onerror=function(e){ rej(e.target.error); };
     });
   }
-  function getAll(){ return dbOpen().then(function(db){ return new Promise(function(res){ var r=db.transaction(STORE,'readonly').objectStore(STORE).getAll(); r.onsuccess=function(){ res(r.result||[]); }; r.onerror=function(){ res([]); }; }); }); }
-  function putMany(arr){ return dbOpen().then(function(db){ return new Promise(function(res){ var tx=db.transaction(STORE,'readwrite'); var st=tx.objectStore(STORE); arr.forEach(function(r){ if(r&&r.codeA) st.put(r); }); tx.oncomplete=function(){ res(); }; tx.onerror=function(){ res(); }; }); }); }
+  function getAll(store){ return dbOpen().then(function(db){ return new Promise(function(res){ var r=db.transaction(store,'readonly').objectStore(store).getAll(); r.onsuccess=function(){ res(r.result||[]); }; r.onerror=function(){ res([]); }; }); }); }
+  function putMany(store,arr){ return dbOpen().then(function(db){ return new Promise(function(res){ var tx=db.transaction(store,'readwrite'); var st=tx.objectStore(store); arr.forEach(function(r){ if(r) st.put(r); }); tx.oncomplete=function(){ res(); }; tx.onerror=function(){ res(); }; }); }); }
+  function delKey(store,key){ return dbOpen().then(function(db){ return new Promise(function(res){ var tx=db.transaction(store,'readwrite'); tx.objectStore(store).delete(key); tx.oncomplete=function(){ res(); }; tx.onerror=function(){ res(); }; }); }); }
 
   /* ---------- chargement + amorçage depuis FCR_DB (additif) ---------- */
   function load(){
-    return getAll().then(function(recs){
+    return getAll('catalog').then(function(recs){
       CATALOG={}; SIGMAP={};
       recs.forEach(function(r){ if(r&&r.codeA){ CATALOG[r.codeA]=r; if(r.sig && SIGMAP[r.sig]==null) SIGMAP[r.sig]=r.codeA; } });
     });
   }
-  /* enregistre les codeA actuels de FCR_DB comme autorité (premier arrivé = gardé) */
+  /* enregistre les codeA actuels de FCR_DB comme autorité ; ne verrouille la signature que si
+     le préfixe correspond au type (un service en A### ne sera pas figé tel quel — il sera
+     reclassé en S### à l'import suivant ou via « Reclasser A/S »). */
   function seedFromFCR(){
     var fcr=window.FCR_DB||[]; var add=[];
     fcr.forEach(function(a){
       if (!a || !a.codeA || !/^[AS]\d+$/i.test(String(a.codeA))) return;
+      var typeOk=(isSvc(a) ? /^S/i : /^A/i).test(String(a.codeA));
       if (!CATALOG[a.codeA]){
         var sig=sigOf(a);
-        var rec={ codeA:a.codeA, sig:sig, reference:a.reference||a.code||'', designation:a.desc||a.designation||'', fabricant:a.fabricant||'', unite:a.unite||'u', pu:Number(a.pu)||0, vendeur:a.vendeur||'', section:a.section||'', fige:false, dateMaj:nowISO() };
-        CATALOG[a.codeA]=rec; if (sig && SIGMAP[sig]==null) SIGMAP[sig]=a.codeA; add.push(rec);
+        var rec={ codeA:a.codeA, sig:sig, reference:a.reference||a.code||'', designation:a.desc||a.designation||'', fabricant:a.fabricant||'', unite:a.unite||'u', pu:Number(a.pu)||0, vendeur:a.vendeur||'', section:a.section||'', type:(isSvc(a)?'Service':'Article'), fige:false, dateMaj:nowISO() };
+        CATALOG[a.codeA]=rec; add.push(rec);
+        if (sig && typeOk && SIGMAP[sig]==null) SIGMAP[sig]=a.codeA;
       }
     });
-    return add.length ? putMany(add) : Promise.resolve();
+    return add.length ? putMany('catalog',add) : Promise.resolve();
   }
 
   /* ---------- résolution stable du codeA ---------- */
@@ -5399,30 +5417,33 @@ document.addEventListener('DOMContentLoaded', async function() {
     rec.pu=Number(a.pu)||rec.pu||0;
     rec.vendeur=a.vendeur||rec.vendeur||'';
     rec.section=a.section||rec.section||'';
+    rec.type=isSvc(a)?'Service':'Article';
     if (rec.fige==null) rec.fige=false;
     rec.dateMaj=nowISO();
     CATALOG[code]=rec; if (rec.sig) SIGMAP[rec.sig]=code;
-    putMany([rec]);
+    putMany('catalog',[rec]);
     return rec;
   }
-  /* renvoie le codeA stable d'un article (réutilise si connu, sinon enregistre) */
+  /* renvoie le codeA stable d'un article : réutilise si connu, sinon impose le bon préfixe
+     selon le type (Article→A, Service→S) et enregistre. */
   function resolve(a){
     if (!a) return '';
     if (!CATALOG) return a.codeA||'';
     var sig=sigOf(a);
     if (sig && SIGMAP[sig]) return SIGMAP[sig];
-    var code=(a.codeA && /^[AS]\d+$/i.test(String(a.codeA))) ? a.codeA : mintCodeA(a);
+    var want=isSvc(a)?'S':'A';
+    var re=new RegExp('^'+want+'\\d+$','i');
+    var code=(a.codeA && re.test(String(a.codeA))) ? a.codeA : mintCodeA(a);
     register(a, code, sig);
     return code;
   }
 
-  /* ---------- hook import : APRÈS le Smart Import, on fige les codeA ---------- */
+  /* ---------- hook import : APRÈS le Smart Import, on fige/typifie les codeA ---------- */
   function hookImport(){
     var tries=0;
     (function wait(){
       var fn=window.handleDevisFilesBatch;
       if (typeof fn!=='function'){ if(++tries<120) return setTimeout(wait,600); return; }
-      /* on attend que le Smart Import ait posé son wrapper (__si) pour s'exécuter APRÈS lui */
       if (!fn.__si && tries<60){ tries++; return setTimeout(wait,600); }
       if (fn.__pc) return;
       var orig=fn;
@@ -5436,17 +5457,18 @@ document.addEventListener('DOMContentLoaded', async function() {
             var dirty=false;
             ne.forEach(function(x){ if(!x) return; var stable=resolve(x); if(stable && x.codeA!==stable){ x.codeA=stable; dirty=true; } });
             if (dirty && typeof window.idbSaveAll==='function'){ try{ window.idbSaveAll(fcr); }catch(_){} }
+            snapshot('Après import');
             try{ window.HubViews&&window.HubViews.refresh&&window.HubViews.refresh(); }catch(_){}
           }catch(e){ console.warn('[PriceCatalog] post-import', e); }
           return res;
         });
       };
       window.handleDevisFilesBatch.__pc=true;
-      window.handleDevisFilesBatch.__si=orig.__si;   /* préserve le marqueur Smart Import */
+      window.handleDevisFilesBatch.__si=orig.__si;
     })();
   }
 
-  /* ---------- maintenance : compactage (réécriture clés stables) ---------- */
+  /* ---------- maintenance ---------- */
   function fcrClearAndWrite(fcr){
     return new Promise(function(res,rej){
       var p=indexedDB.open('fcr_db');
@@ -5468,14 +5490,28 @@ document.addEventListener('DOMContentLoaded', async function() {
     seedFromFCR()
       .then(function(){ return fcrClearAndWrite(fcr); })
       .then(function(){ try{ if(typeof window.idbSaveAll==='function') window.idbSaveAll(fcr); }catch(_){} try{ window.HubViews&&window.HubViews.refresh&&window.HubViews.refresh(); }catch(_){}
-        alert('✓ Base compactée\n• '+fcr.length+' articles\n• '+Object.keys(CATALOG||{}).length+' codeA au catalogue'); })
+        return snapshot('Après compactage'); })
+      .then(function(){ alert('✓ Base compactée\n• '+fcr.length+' articles\n• '+Object.keys(CATALOG||{}).length+' codeA au catalogue'); refreshPanel(); })
       .catch(function(e){ alert('⛔ Compactage : '+(e&&e.message||e)); });
+  }
+  /* Reclasser : redonne le bon préfixe (A=Article, S=Service) à chaque ligne, puis fige tout */
+  function reclassify(){
+    if (!confirm('Reclasser Articles (A#####) et Services (S#####) ?\n\nChaque ligne reçoit le bon préfixe selon son type, puis l\'ensemble est figé. À lancer après l\'import de vos devis.')) return;
+    var fcr=window.FCR_DB||[]; var changed=0, svc=0, art=0;
+    fcr.forEach(function(a){ if(!a) return; var before=a.codeA; var s=resolve(a); if(s){ if(s!==before){ a.codeA=s; changed++; } if(isSvc(a)) svc++; else art++; } });
+    var all=Object.keys(CATALOG).map(function(k){ CATALOG[k].fige=true; return CATALOG[k]; });
+    putMany('catalog',all)
+      .then(function(){ return fcrClearAndWrite(fcr); })
+      .then(function(){ try{ if(typeof window.idbSaveAll==='function') window.idbSaveAll(fcr); }catch(_){} try{ window.HubViews&&window.HubViews.refresh&&window.HubViews.refresh(); }catch(_){}
+        return snapshot('Après reclassement'); })
+      .then(function(){ alert('✓ Reclassement\n• '+changed+' codeA ajustés\n• '+art+' articles (A) · '+svc+' services (S)\n• '+all.length+' figés'); refreshPanel(); })
+      .catch(function(e){ alert('⛔ Reclassement : '+(e&&e.message||e)); });
   }
   function freezeAll(){
     if (!confirm('Geler TOUS les codeA actuels ?\n\nIls deviendront l\'autorité : aucun import ne pourra plus les réattribuer.')) return;
     seedFromFCR().then(function(){
       var all=Object.keys(CATALOG).map(function(k){ CATALOG[k].fige=true; return CATALOG[k]; });
-      return putMany(all).then(function(){ alert('✓ '+all.length+' codeA gelés.'); refreshPanel(); });
+      return putMany('catalog',all).then(function(){ return snapshot('Après gel manuel'); }).then(function(){ alert('✓ '+all.length+' codeA gelés.'); refreshPanel(); });
     });
   }
   function exportCatalog(){
@@ -5488,32 +5524,75 @@ document.addEventListener('DOMContentLoaded', async function() {
     if (!codeA) return Promise.resolve();
     var a=(window.FCR_DB||[]).filter(function(x){ return x && x.codeA===codeA; })[0];
     if (a && !CATALOG[codeA]) register(a, codeA, sigOf(a));
-    if (CATALOG[codeA]){ CATALOG[codeA].fige=true; return putMany([CATALOG[codeA]]); }
+    if (CATALOG[codeA]){ CATALOG[codeA].fige=true; return putMany('catalog',[CATALOG[codeA]]); }
     return Promise.resolve();
   }
-  window.PriceCatalog={ resolve:resolve, freezeOne:freezeOne, freezeAll:freezeAll, compact:compact, exportCatalog:exportCatalog,
-    stats:function(){ return { codeA:Object.keys(CATALOG||{}).length, figes:Object.keys(CATALOG||{}).filter(function(k){return CATALOG[k].fige;}).length }; } };
 
-  /* ---------- petit panneau dans la vue Articles ---------- */
+  /* ---------- sauvegardes automatiques (instantanés du catalogue) ---------- */
+  var MAXSNAP=8, lastHash='';
+  function snapshot(label){
+    if (!CATALOG) return Promise.resolve();
+    var ts=Date.now();
+    var rec={ ts:ts, label:label||('Auto '+nowStr()), dateStr:nowStr(),
+      catalog:Object.keys(CATALOG).map(function(k){ return CATALOG[k]; }), fcrCount:(window.FCR_DB||[]).length };
+    return putMany('backups',[rec]).then(function(){ return getAll('backups'); }).then(function(all){
+      all.sort(function(a,b){ return (b.ts||0)-(a.ts||0); });
+      return Promise.all(all.slice(MAXSNAP).map(function(s){ return delKey('backups', s.ts); }));
+    }).then(function(){ refreshBackupList(); }).catch(function(){});
+  }
+  function autoSnap(){
+    try{ var s=window.PriceCatalog.stats(); var h=s.codeA+'/'+s.figes+'/'+(window.FCR_DB||[]).length; if(h!==lastHash && s.codeA>0){ lastHash=h; snapshot(); } }catch(e){}
+  }
+  function listBackups(){ return getAll('backups').then(function(all){ all.sort(function(a,b){ return (b.ts||0)-(a.ts||0); }); return all; }); }
+  function restoreBackup(ts){
+    return getAll('backups').then(function(all){
+      var s=all.filter(function(x){ return String(x.ts)===String(ts); })[0]; if(!s) return;
+      if (!confirm('Restaurer la sauvegarde du '+(s.dateStr||'')+' ?\n\n'+(s.catalog||[]).length+' codeA seront rétablis dans le catalogue (autorité des prix).')) return;
+      CATALOG={}; SIGMAP={};
+      (s.catalog||[]).forEach(function(r){ if(r&&r.codeA){ CATALOG[r.codeA]=r; if(r.sig) SIGMAP[r.sig]=r.codeA; } });
+      return putMany('catalog', s.catalog||[]).then(function(){ alert('✓ Catalogue restauré ('+(s.catalog||[]).length+' codeA).'); refreshPanel(); refreshBackupList(); });
+    });
+  }
+
+  window.PriceCatalog={ resolve:resolve, freezeOne:freezeOne, freezeAll:freezeAll, compact:compact, reclassify:reclassify,
+    exportCatalog:exportCatalog, snapshot:snapshot, listBackups:listBackups, restoreBackup:restoreBackup,
+    stats:function(){ var ks=Object.keys(CATALOG||{}); return { codeA:ks.length, figes:ks.filter(function(k){return CATALOG[k].fige;}).length,
+      articles:ks.filter(function(k){return !/^S/i.test(k);}).length, services:ks.filter(function(k){return /^S/i.test(k);}).length }; } };
+
+  /* ---------- panneau dans la vue Articles ---------- */
   function refreshPanel(){
     var box=document.getElementById('pc-stats'); if(!box) return;
     var s=window.PriceCatalog.stats();
-    box.innerHTML='<b>'+s.codeA+'</b> codeA au catalogue · <b>'+s.figes+'</b> gelés';
+    box.innerHTML='<b>'+s.codeA+'</b> codeA · <b>'+s.articles+'</b> articles (A) · <b>'+s.services+'</b> services (S) · <b>'+s.figes+'</b> gelés';
+  }
+  function refreshBackupList(){
+    var box=document.getElementById('pc-backups'); if(!box) return;
+    listBackups().then(function(all){
+      if(!all.length){ box.innerHTML='<div style="color:#94a3b8;font-size:11px">Aucune sauvegarde encore.</div>'; return; }
+      box.innerHTML=all.map(function(s){ return '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;padding:6px 8px;background:#fafbfc;border:1px solid #eef2f7;border-radius:7px;margin-bottom:5px;font-size:11.5px"><div style="min-width:0"><div style="font-weight:600;color:#0f172a;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+(s.label||'—')+'</div><div style="color:#94a3b8;font-size:10px">'+(s.dateStr||'')+' · '+((s.catalog||[]).length)+' codeA</div></div><button data-pc-restore="'+s.ts+'" style="padding:4px 9px;background:#2563eb;color:#fff;border:0;border-radius:6px;cursor:pointer;font-size:10.5px;font-weight:700">Restaurer</button></div>'; }).join('');
+      Array.prototype.forEach.call(box.querySelectorAll('[data-pc-restore]'), function(b){ b.onclick=function(){ restoreBackup(b.getAttribute('data-pc-restore')); }; });
+    });
   }
   function openPanel(){
     if (document.getElementById('pc-panel')) { document.getElementById('pc-panel').remove(); return; }
-    var html='<div id="pc-panel" style="position:fixed;right:18px;bottom:78px;z-index:99700;width:340px;background:#fff;border:1px solid #e5e7eb;border-radius:14px;box-shadow:0 20px 60px rgba(0,0,0,.22);font-family:-apple-system,sans-serif;overflow:hidden">'
+    var html='<div id="pc-panel" style="position:fixed;right:18px;bottom:78px;z-index:99700;width:360px;max-height:80vh;display:flex;flex-direction:column;background:#fff;border:1px solid #e5e7eb;border-radius:14px;box-shadow:0 20px 60px rgba(0,0,0,.22);font-family:-apple-system,sans-serif;overflow:hidden">'
       + '<div style="padding:13px 16px;background:linear-gradient(135deg,#0f172a,#1e293b);color:#fff;display:flex;justify-content:space-between;align-items:center"><div><div style="font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:#7dd3fc;font-weight:700">ePilot</div><div style="font-size:15px;font-weight:800;margin-top:2px">🔒 Base de prix</div></div><button onclick="document.getElementById(\'pc-panel\').remove()" style="background:rgba(255,255,255,.15);border:0;color:#fff;width:28px;height:28px;border-radius:7px;cursor:pointer">✕</button></div>'
-      + '<div style="padding:14px 16px"><div id="pc-stats" style="font-size:12.5px;color:#334155;margin-bottom:12px">…</div>'
+      + '<div style="padding:14px 16px;overflow-y:auto">'
+      + '<div id="pc-stats" style="font-size:12px;color:#334155;margin-bottom:12px;line-height:1.5">…</div>'
+      + '<button id="pc-reclass" style="width:100%;padding:9px;margin-bottom:7px;background:#7c3aed;color:#fff;border:0;border-radius:8px;cursor:pointer;font-weight:700;font-size:12.5px">🔀 Reclasser A / S &amp; figer</button>'
       + '<button id="pc-freeze" style="width:100%;padding:9px;margin-bottom:7px;background:#2563eb;color:#fff;border:0;border-radius:8px;cursor:pointer;font-weight:700;font-size:12.5px">🔒 Geler tous les codeA actuels</button>'
       + '<button id="pc-compact" style="width:100%;padding:9px;margin-bottom:7px;background:#0d9488;color:#fff;border:0;border-radius:8px;cursor:pointer;font-weight:700;font-size:12.5px">🧹 Compacter la base (clés stables)</button>'
       + '<button id="pc-export" style="width:100%;padding:9px;background:#fff;color:#334155;border:1px solid #d1d5db;border-radius:8px;cursor:pointer;font-weight:600;font-size:12.5px">⬇ Exporter la base de prix (.json)</button>'
-      + '<div style="font-size:10.5px;color:#94a3b8;margin-top:10px;line-height:1.5">Le catalogue fait autorité : un produit reconnu réutilise toujours son codeA. Exportez avant toute opération de masse.</div></div></div>';
+      + '<div style="margin-top:14px;border-top:1px solid #f1f5f9;padding-top:12px"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px"><span style="font-size:11px;font-weight:700;color:#475569;text-transform:uppercase;letter-spacing:.04em">💾 Sauvegardes auto</span><button id="pc-snap" style="padding:4px 9px;background:#fff;border:1px solid #d1d5db;border-radius:6px;cursor:pointer;font-size:10.5px;font-weight:600">+ Maintenant</button></div><div id="pc-backups"></div></div>'
+      + '<div style="font-size:10.5px;color:#94a3b8;margin-top:10px;line-height:1.5">Le catalogue fait autorité (codeA figés). Sauvegarde auto toutes les 5 min si changement et après chaque opération.</div>'
+      + '</div></div>';
     document.body.insertAdjacentHTML('beforeend', html);
+    document.getElementById('pc-reclass').onclick=reclassify;
     document.getElementById('pc-freeze').onclick=freezeAll;
     document.getElementById('pc-compact').onclick=compact;
     document.getElementById('pc-export').onclick=exportCatalog;
-    refreshPanel();
+    document.getElementById('pc-snap').onclick=function(){ snapshot('Manuel '+nowStr()); };
+    refreshPanel(); refreshBackupList();
   }
   function injectButton(){
     var v=document.getElementById('view-articles'); if(!v) return;
@@ -5529,13 +5608,12 @@ document.addEventListener('DOMContentLoaded', async function() {
 
   /* ---------- amorçage ---------- */
   function boot(){
-    load().then(function(){
-      return seedFromFCR();
-    }).then(function(){
+    load().then(function(){ return seedFromFCR(); }).then(function(){
       hookImport();
+      autoSnap();                              /* première sauvegarde si catalogue non vide */
+      setInterval(autoSnap, 5*60*1000);
     }).catch(function(e){ console.warn('[PriceCatalog] boot', e); hookImport(); });
   }
-  /* FCR_DB est restauré de façon asynchrone : on (re)amorce quelques fois */
   var bt=0; (function bootPoll(){ if((window.FCR_DB||[]).length || bt>20){ boot(); } else { bt++; setTimeout(bootPoll,800); } })();
   if (window.__epOnBodyMut){ window.__epOnBodyMut(injectButton); }
   var it=0; (function ip(){ try{ injectButton(); }catch(e){} if(++it<200) setTimeout(ip,800); })();
@@ -5598,10 +5676,10 @@ document.addEventListener('DOMContentLoaded', async function() {
     if ($('#cdc-css')) return; var s=document.createElement('style'); s.id='cdc-css';
     s.textContent=[
       '.cdc-card{border:1px solid var(--border,#e5e7eb);border-radius:12px;background:var(--surface,#fff);margin-bottom:16px;overflow:hidden}',
-      '.cdc-h{display:flex;align-items:center;gap:10px;padding:11px 15px;background:#0f172a;color:#fff;flex-wrap:wrap}',
-      '.cdc-h .t{font-size:13.5px;font-weight:800}',
+      '.cdc-h{display:flex;align-items:center;gap:10px;padding:11px 15px;background:var(--s2,#f8fafc);color:var(--text,#0f172a);border-bottom:1px solid var(--border,#e5e7eb);flex-wrap:wrap}',
+      '.cdc-h .t{font-size:13.5px;font-weight:800;color:var(--text,#0f172a)}',
       '.cdc-oa{font-size:10.5px;font-weight:700;padding:2px 9px;border-radius:100px}',
-      '.cdc-oa.ok{background:#065f46;color:#d1fae5}.cdc-oa.no{background:#7c2d12;color:#fed7aa}',
+      '.cdc-oa.ok{background:#d1fae5;color:#065f46}.cdc-oa.no{background:#fed7aa;color:#9a3412}',
       '.cdc-b{padding:10px 14px;overflow-x:auto}',
       '.cdc-tbl{width:100%;border-collapse:collapse;font-size:12px}',
       '.cdc-tbl th{text-align:left;padding:6px 8px;font-size:9.5px;color:#6b7280;text-transform:uppercase;font-weight:700;background:#f9fafb;border-bottom:1px solid #e5e7eb;white-space:nowrap}',
@@ -5681,12 +5759,19 @@ document.addEventListener('DOMContentLoaded', async function() {
 
   function fillCard(card, pi){
     var items=cotationItems(pi);
+    /* rendu IMMÉDIAT depuis FCR_DB (déjà en mémoire) — pas d'attente IndexedDB */
+    var body=$('[data-cdc-body]', card);
+    if (body) body.innerHTML=tableHtml(items, {});
+    recalc(card); wireRows(card, pi); wireSend(card, pi);
+    /* puis application asynchrone des éléments retenus (cochés / prix négociés) */
     getCh(pi).then(function(d){
-      var state=d||emptyState();
-      var ret=(state.cdc&&state.cdc.retenus)||{};
-      var body=$('[data-cdc-body]', card); if (body) body.innerHTML=tableHtml(items, ret);
+      var ret=(d&&d.cdc&&d.cdc.retenus)||{};
+      if (!Object.keys(ret).length) return;
+      $all('tr[data-id]', card).forEach(function(tr){
+        var r=ret[tr.getAttribute('data-id')]; var cb=$('[data-on]',tr); if(!cb) return;
+        if (r){ cb.checked=true; var rq=$('[data-rq]',tr), rpu=$('[data-rpu]',tr); rq.disabled=false; rpu.disabled=false; rq.value=r.qte; rpu.value=r.pu; }
+      });
       recalc(card);
-      wireRows(card, pi);
     });
   }
 
