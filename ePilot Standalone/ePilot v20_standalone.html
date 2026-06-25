@@ -5991,5 +5991,50 @@ document.addEventListener('DOMContentLoaded', async function() {
 })();
 
 </script>
+<script id="__RFQ_YEAR_FILTER_v1__">
+/* __RFQ_YEAR_FILTER_v1__ — onglet RFQ, sous-onglet « RFQ » (tableau #rfq-tbody).
+   Restreint l'affichage des devis ouverts à 2026 et 2025 (les années ≤ 2024 sont masquées).
+   Comme le tableau ne liste déjà que les devis ouverts (EtatPI ≠ Terminé/Annulé), on obtient :
+   tous les devis 2026 ouverts + les devis 2025 encore en cours. Filtrage d'affichage (DOM),
+   non invasif : on ne touche pas le module RFQ, on masque simplement les lignes hors période
+   après chaque rendu, et on met à jour le compteur. */
+(function(){
+  if (window.__rfqYearFilter) return; window.__rfqYearFilter = true;
+  var MIN_YEAR = 2025;   /* on garde >= 2025 (2025 + 2026 + futurs), on masque <= 2024 */
+
+  function yearOf(r){
+    if (!r) return 0;
+    var y=parseInt(r.Year,10); if (y>2000) return y;
+    var m=String(r.Dossier||'').match(/^PI(\d{2})/); if (m){ var n=parseInt(m[1],10); return (n<70?2000:1900)+n; }
+    var dm=String(r.DateRFQ||r.Echeance||'').match(/(20\d{2})/); if (dm) return parseInt(dm[1],10);
+    return 0;   /* année inconnue → on n'ose pas masquer */
+  }
+  function lookup(){
+    var by={}; (window.QUOTE_DATA||[]).forEach(function(r){ if (r&&r.Dossier) by[String(r.Dossier).trim()]=r; }); return by;
+  }
+  function apply(){
+    var tb=document.getElementById('rfq-tbody'); if (!tb) return;
+    var by=lookup(); var visible=0, hidden=0;
+    Array.prototype.forEach.call(tb.querySelectorAll('tr[data-dossier]'), function(tr){
+      var d=(tr.getAttribute('data-dossier')||'').trim();
+      var y=yearOf(by[d]||{Dossier:d});
+      var hide=(y && y<MIN_YEAR);
+      tr.style.display = hide ? 'none' : '';
+      if (hide) hidden++; else visible++;
+    });
+    var c=document.getElementById('rfq-count');
+    if (c) c.textContent = visible+' RFQ ouvert'+(visible>1?'s':'')+(hidden?(' · '+hidden+' masqué'+(hidden>1?'s':'')+' (≤'+(MIN_YEAR-1)+')'):'');
+    var pi=document.getElementById('rfq-pageinfo'); if (pi && visible) pi.textContent='1–'+visible+' / '+visible;
+  }
+  function hook(){
+    var tb=document.getElementById('rfq-tbody'); if (!tb || tb.__yfHook) return; tb.__yfHook=true;
+    try{ new MutationObserver(function(){ apply(); }).observe(tb,{childList:true}); }catch(e){}
+    apply();
+  }
+  if (window.__epOnBodyMut){ window.__epOnBodyMut(function(){ try{ hook(); }catch(e){} }); }
+  var t=0; (function poll(){ try{ hook(); }catch(e){} if(++t<300) setTimeout(poll, 800); })();
+})();
+
+</script>
 </body>
 </html>
