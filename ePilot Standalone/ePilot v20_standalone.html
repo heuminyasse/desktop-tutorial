@@ -1241,7 +1241,7 @@ document.addEventListener('DOMContentLoaded', async function() {
     (function clickablePI(){
       function cwToast(msg){var t=document.createElement('div');t.textContent=msg;t.style.cssText='position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#B5000A;color:#fff;padding:12px 22px;border-radius:10px;font-size:14px;font-weight:600;z-index:200000;box-shadow:0 6px 20px rgba(0,0,0,.3)';document.body.appendChild(t);setTimeout(function(){t.remove();},2600);}
       window.__cwToast=cwToast;
-      function openCh(imp){var exists=(window.JIP_DATA||[]).some(function(j){return j.Imputation===imp;});if(!exists){cwToast('Chantier inexistant : '+imp);return;}try{if(window.HubViews)window.HubViews.showView('chantiers');setTimeout(function(){if(window.__chantiersEmbedOpen)window.__chantiersEmbedOpen(imp);},400);}catch(e){}}
+      function openCh(imp){var exists=(window.JIP_DATA||[]).some(function(j){return j.Imputation===imp;});if(exists){try{if(window.HubViews)window.HubViews.showView('chantiers');setTimeout(function(){if(window.__chantiersEmbedOpen)window.__chantiersEmbedOpen(imp);},400);}catch(e){}return;}var inQuote=(window.QUOTE_DATA||[]).some(function(q){return String(q.Dossier)===String(imp);})||(window.SOURCING_DATA||[]).some(function(s){return String(s.Imputation)===String(imp);});if(inQuote&&window.openQuote){window.openQuote(imp);return;}cwToast('Chantier inexistant : '+imp);}
       window.__openCh=openCh;
       function go(){
         [].forEach.call(document.querySelectorAll('td,span,a'),function(el){
