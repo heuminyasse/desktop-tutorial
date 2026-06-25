@@ -5214,5 +5214,42 @@ document.addEventListener('DOMContentLoaded', async function() {
   var tries=0; (function poll(){ try{ hook(); }catch(e){} if(++tries<80) setTimeout(poll, 700); })();
 })();
 </script>
+<script id="__HOME_CHIPS_v1__">
+/* __HOME_CHIPS_v1__ — branche les chips de l'Accueil sur les pages/actions existantes,
+   en simulant la navigation de l'app (clic navlinks → subnav → sous-onglet, avec retry).
+   jip → Projets/Chantiers/En cours · quest → Quêtes/Nouvelle requête ·
+   facturation → Projets/Finances/Facturation · hse → Projets/Chantiers (Nouveau PV se crée
+   par chantier) · calendar → Projets/Marketing/Meeting (vue calendrier). */
+(function(){
+  if(window.__homeChips) return; window.__homeChips=1;
+  function clk(sel){ try{ var e=document.querySelector(sel); if(e&&e.click){ e.click(); return true; } }catch(_){} return false; }
+  function clkText(sel,txt){ try{ var els=document.querySelectorAll(sel); txt=txt.toLowerCase(); for(var i=0;i<els.length;i++){ if(((els[i].textContent||'').trim().toLowerCase()).indexOf(txt)>=0){ if(els[i].click) els[i].click(); return true; } } }catch(_){} return false; }
+  function step(fn,tries,delay){ (function go(n){ var ok=false; try{ ok=fn(); }catch(e){} if(ok) return; if(n>0) setTimeout(function(){ go(n-1); }, delay||150); })(tries||14); }
+  function goPage(p){ return clk('#navlinks [data-page="'+p+'"]'); }
+  function goSub(s){ return clk('#subnav [data-sub="'+s+'"]'); }
+
+  var ROUTES={
+    jip:function(){ goPage('projects');
+      step(function(){ return goSub('Chantiers'); },16,120);
+      step(function(){ return clk('#view-chantiers [data-f="open"]')||clkText('#view-chantiers button','en cours'); },24,200); },
+    quest:function(){ goPage('quest');
+      step(function(){ return clkText('#view-quest button','nouvelle requ')||clkText('#view-quest button','+ nouvelle')||clkText('button','nouvelle requ'); },20,220); },
+    facturation:function(){ goPage('projects');
+      step(function(){ return goSub('Finances'); },16,120);
+      step(function(){ return clk('#subnav [data-inv-tab="fac"]')||clkText('#subnav [data-inv-tab]','facture'); },26,200); },
+    hse:function(){ goPage('projects');
+      step(function(){ return goSub('Chantiers'); },16,120);
+      step(function(){ return clk('#view-chantiers [data-f="open"]'); },20,200); },
+    calendar:function(){ goPage('projects');
+      step(function(){ return goSub('Marketing'); },16,120);
+      step(function(){ return clk('.mkt-tab[data-tab="meeting"]')||clkText('.mkt-tab','meeting'); },24,200);
+      step(function(){ return clkText('#view-marketing button','calendrier')||clkText('#view-marketing [data-seg]','calendrier'); },28,260); }
+  };
+  document.addEventListener('click', function(e){
+    var b=e.target&&e.target.closest?e.target.closest('.chip[data-action]'):null; if(!b) return;
+    var a=b.getAttribute('data-action'); if(ROUTES[a]){ try{ ROUTES[a](); }catch(err){} }
+  }, false);
+})();
+</script>
 </body>
 </html>
