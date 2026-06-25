@@ -5379,8 +5379,10 @@ document.addEventListener('DOMContentLoaded', async function() {
     return getAll('catalog').then(function(recs){
       CATALOG={}; SIGMAP={};
       recs.forEach(function(r){ if(r&&r.codeA){ CATALOG[r.codeA]=r; if(r.sig && SIGMAP[r.sig]==null) SIGMAP[r.sig]=r.codeA; } });
-    });
+    }).catch(function(e){ console.warn('[PriceCatalog] load', e); if(!CATALOG)CATALOG={}; if(!SIGMAP)SIGMAP={}; });
   }
+  /* garantit que le catalogue est chargé avant toute opération (évite CATALOG null) */
+  function ready(){ if (CATALOG) return Promise.resolve(); return load().then(function(){ return seedFromFCR(); }); }
   /* enregistre les codeA actuels de FCR_DB comme autorité ; ne verrouille la signature que si
      le préfixe correspond au type (un service en A### ne sera pas figé tel quel — il sera
      reclassé en S### à l'import suivant ou via « Reclasser A/S »). */
@@ -5486,8 +5488,8 @@ document.addEventListener('DOMContentLoaded', async function() {
   function compact(){
     if (!confirm('Compacter la base d\'articles ?\n\nLes codeA seront alignés sur le catalogue figé et le stockage réécrit avec des clés stables (codeA|PI). Action sûre et recommandée après import.')) return;
     var fcr=window.FCR_DB||[];
-    fcr.forEach(function(a){ if(a){ var s=resolve(a); if(s) a.codeA=s; } });
-    seedFromFCR()
+    ready()
+      .then(function(){ fcr.forEach(function(a){ if(a){ var s=resolve(a); if(s) a.codeA=s; } }); return seedFromFCR(); })
       .then(function(){ return fcrClearAndWrite(fcr); })
       .then(function(){ try{ if(typeof window.idbSaveAll==='function') window.idbSaveAll(fcr); }catch(_){} try{ window.HubViews&&window.HubViews.refresh&&window.HubViews.refresh(); }catch(_){}
         return snapshot('Après compactage'); })
@@ -5498,21 +5500,24 @@ document.addEventListener('DOMContentLoaded', async function() {
   function reclassify(){
     if (!confirm('Reclasser Articles (A#####) et Services (S#####) ?\n\nChaque ligne reçoit le bon préfixe selon son type, puis l\'ensemble est figé. À lancer après l\'import de vos devis.')) return;
     var fcr=window.FCR_DB||[]; var changed=0, svc=0, art=0;
-    fcr.forEach(function(a){ if(!a) return; var before=a.codeA; var s=resolve(a); if(s){ if(s!==before){ a.codeA=s; changed++; } if(isSvc(a)) svc++; else art++; } });
-    var all=Object.keys(CATALOG).map(function(k){ CATALOG[k].fige=true; return CATALOG[k]; });
-    putMany('catalog',all)
-      .then(function(){ return fcrClearAndWrite(fcr); })
-      .then(function(){ try{ if(typeof window.idbSaveAll==='function') window.idbSaveAll(fcr); }catch(_){} try{ window.HubViews&&window.HubViews.refresh&&window.HubViews.refresh(); }catch(_){}
-        return snapshot('Après reclassement'); })
-      .then(function(){ alert('✓ Reclassement\n• '+changed+' codeA ajustés\n• '+art+' articles (A) · '+svc+' services (S)\n• '+all.length+' figés'); refreshPanel(); })
+    ready()
+      .then(function(){
+        fcr.forEach(function(a){ if(!a) return; var before=a.codeA; var s=resolve(a); if(s){ if(s!==before){ a.codeA=s; changed++; } if(isSvc(a)) svc++; else art++; } });
+        var all=Object.keys(CATALOG||{}).map(function(k){ CATALOG[k].fige=true; return CATALOG[k]; });
+        return putMany('catalog',all).then(function(){ return all.length; });
+      })
+      .then(function(nFiges){ return fcrClearAndWrite(fcr).then(function(){ return nFiges; }); })
+      .then(function(nFiges){ try{ if(typeof window.idbSaveAll==='function') window.idbSaveAll(fcr); }catch(_){} try{ window.HubViews&&window.HubViews.refresh&&window.HubViews.refresh(); }catch(_){}
+        return snapshot('Après reclassement').then(function(){ return nFiges; }); })
+      .then(function(nFiges){ alert('✓ Reclassement\n• '+changed+' codeA ajustés\n• '+art+' articles (A) · '+svc+' services (S)\n• '+nFiges+' figés'); refreshPanel(); })
       .catch(function(e){ alert('⛔ Reclassement : '+(e&&e.message||e)); });
   }
   function freezeAll(){
     if (!confirm('Geler TOUS les codeA actuels ?\n\nIls deviendront l\'autorité : aucun import ne pourra plus les réattribuer.')) return;
-    seedFromFCR().then(function(){
-      var all=Object.keys(CATALOG).map(function(k){ CATALOG[k].fige=true; return CATALOG[k]; });
+    ready().then(function(){ return seedFromFCR(); }).then(function(){
+      var all=Object.keys(CATALOG||{}).map(function(k){ CATALOG[k].fige=true; return CATALOG[k]; });
       return putMany('catalog',all).then(function(){ return snapshot('Après gel manuel'); }).then(function(){ alert('✓ '+all.length+' codeA gelés.'); refreshPanel(); });
-    });
+    }).catch(function(e){ alert('⛔ Gel : '+(e&&e.message||e)); });
   }
   function exportCatalog(){
     var data={ version:'epilot_price_catalog_v1', exportedAt:nowISO(), catalog:Object.keys(CATALOG||{}).map(function(k){ return CATALOG[k]; }), fcr:(window.FCR_DB||[]) };
@@ -5591,8 +5596,9 @@ document.addEventListener('DOMContentLoaded', async function() {
     document.getElementById('pc-freeze').onclick=freezeAll;
     document.getElementById('pc-compact').onclick=compact;
     document.getElementById('pc-export').onclick=exportCatalog;
-    document.getElementById('pc-snap').onclick=function(){ snapshot('Manuel '+nowStr()); };
+    document.getElementById('pc-snap').onclick=function(){ ready().then(function(){ snapshot('Manuel '+nowStr()); }); };
     refreshPanel(); refreshBackupList();
+    ready().then(function(){ refreshPanel(); refreshBackupList(); });
   }
   function injectButton(){
     var v=document.getElementById('view-articles'); if(!v) return;
