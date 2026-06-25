@@ -5295,5 +5295,30 @@ document.addEventListener('DOMContentLoaded', async function() {
 #view-vacation .vac-stats, #view-marketing .mkt-kpis{ margin-left:auto !important; justify-content:flex-end !important; }
 #view-jsareports .jr-kpis{ display:flex !important; grid-template-columns:none !important; gap:6px !important; justify-content:flex-end !important; }
 </style>
+<script id="__CREDIT_DELETE_v1__">
+/* Personnel/Paie/Crédits — ajoute un bouton « supprimer » par ligne de crédit.
+   Passe par la suppression native du module (ouvre le tiroir détail et clique son bouton
+   Supprimer .crd-del), qui met à jour le tableau en mémoire + sauvegarde + re-rend. */
+(function(){
+  if(window.__creditDelete) return; window.__creditDelete=1;
+  function enhance(){
+    var rows=document.querySelectorAll('.crd-table tbody tr[data-id]');
+    Array.prototype.forEach.call(rows, function(tr){
+      var cell=tr.querySelector('.crd-actions'); if(!cell || cell.querySelector('[data-del-credit]')) return;
+      var b=document.createElement('button'); b.className='crd-mini'; b.setAttribute('data-del-credit','1');
+      b.title='Supprimer ce crédit'; b.innerHTML='🗑';
+      b.style.cssText='margin-left:6px;color:#b91c1c;border:1px solid #fecaca;background:#fff;border-radius:6px;cursor:pointer;padding:2px 8px;font-size:12px;line-height:1';
+      b.addEventListener('click', function(e){ e.stopPropagation(); e.preventDefault();
+        var openBtn=cell.querySelector('[data-open]'); if(!openBtn){ return; }
+        openBtn.click(); /* ouvre le tiroir détail du crédit */
+        var n=0; (function go(){ var del=document.querySelector('.crd-del'); if(del){ del.click(); return; } if(n++<30) setTimeout(go,50); })();
+      });
+      cell.appendChild(b);
+    });
+  }
+  if(window.__epOnBodyMut){ window.__epOnBodyMut(enhance); }
+  var t=0; (function poll(){ try{ enhance(); }catch(e){} if(++t<120) setTimeout(poll, 700); })();
+})();
+</script>
 </body>
 </html>
