@@ -5265,5 +5265,35 @@ document.addEventListener('DOMContentLoaded', async function() {
   }, false);
 })();
 </script>
+<style id="__KPI_UNIFORM_v1__">
+/* Uniformisation des KPI au style « Paie » (13px/700 valeur, 9px muted libellé, carte neutre,
+   Calibri Light), aligné à droite. Chargé après le bundle → surcharge l'harmonisation existante. */
+#view-vacation .vac-stat, #view-marketing .mkt-kpi, #view-papiers [data-fst],
+#view-orders .ep-dep-kpis > div, #view-orders .ep-det-kpis > div, #view-achats .ep-ach-kpis > div,
+#view-expenses .exp-kpi, #view-jsareports .jr-kpi{
+  background:var(--card-2) !important; border:1px solid var(--line) !important;
+  border-radius:5px !important; padding:4px 10px !important; box-shadow:none !important;
+  font-family:'Calibri Light','Calibri','Inter',sans-serif !important; min-width:auto !important;
+}
+/* valeurs (le nombre) */
+#view-vacation .vac-stat .v, #view-marketing .mkt-kpi-v, #view-papiers [data-fst] > div:first-child,
+#view-orders .ep-dep-kpis > div > div:last-child, #view-orders .ep-det-kpis > div > div:nth-child(2),
+#view-achats .ep-ach-kpis > div > div:nth-child(2), #view-expenses .exp-kpi strong,
+#view-jsareports .jr-kpi .v{
+  font-size:13px !important; font-weight:700 !important; line-height:1.1 !important;
+  font-family:'Calibri Light','Calibri','Inter',sans-serif !important;
+}
+/* libellés */
+#view-vacation .vac-stat .l, #view-marketing .mkt-kpi-l, #view-papiers [data-fst] > div:not(:first-child),
+#view-orders .ep-dep-kpis > div > div:first-child, #view-orders .ep-det-kpis > div > div:first-child,
+#view-achats .ep-ach-kpis > div > div:first-child, #view-expenses .exp-kpi span,
+#view-jsareports .jr-kpi .k{
+  font-size:9px !important; font-weight:400 !important; color:var(--muted) !important;
+  line-height:1.2 !important; text-transform:none !important; letter-spacing:0 !important;
+}
+/* rangées alignées à droite (et la mienne JSA en flex au lieu de grille) */
+#view-vacation .vac-stats, #view-marketing .mkt-kpis{ margin-left:auto !important; justify-content:flex-end !important; }
+#view-jsareports .jr-kpis{ display:flex !important; grid-template-columns:none !important; gap:6px !important; justify-content:flex-end !important; }
+</style>
 </body>
 </html>
