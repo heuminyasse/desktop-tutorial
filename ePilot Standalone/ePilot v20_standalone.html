@@ -5878,5 +5878,86 @@ document.addEventListener('DOMContentLoaded', async function() {
 })();
 
 </script>
+<script id="__ARTICLES_TABS_v1__">
+/* __ARTICLES_TABS_v1__ — deux onglets « 📦 Articles » et « 🔧 Services » dans la vue Articles.
+   S'appuie sur le filtre natif déjà présent (radios name="art-type" : fourniture / service) :
+   un clic d'onglet pilote ce filtre (aucune réécriture du rendu). Le bouton « + Nouveau
+   produit » s'ouvre dans le bon type selon l'onglet actif (clic sur l'onglet Service/Article
+   du modal). Les onglets sont (ré)appliqués à chaque entrée dans la vue. */
+(function(){
+  if (window.__articlesTabs) return; window.__articlesTabs = true;
+  if (!window.__artTab) window.__artTab = 'fourniture';   /* 'fourniture' = Articles · 'service' = Services */
+
+  function $(s,r){ return (r||document).querySelector(s); }
+  var TABS=[ ['fourniture','📦 Articles'], ['service','🔧 Services'] ];
+
+  function css(){
+    if ($('#art-tabs-css')) return; var s=document.createElement('style'); s.id='art-tabs-css';
+    s.textContent=[
+      '#art-tabs{display:flex;gap:4px;padding:8px 16px 0;background:var(--card,#fff);border-bottom:1px solid var(--line,#e5e7eb);flex-shrink:0}',
+      '#art-tabs .at-tab{display:inline-flex;align-items:center;gap:6px;padding:9px 18px;border:0;border-bottom:3px solid transparent;background:transparent;cursor:pointer;font-family:inherit;font-size:13px;font-weight:600;color:var(--muted,#6b7280);border-radius:8px 8px 0 0}',
+      '#art-tabs .at-tab:hover{background:var(--card-2,#f5f5f7)}',
+      '#art-tabs .at-tab.on{color:var(--accent,#B5000A);border-bottom-color:var(--accent,#B5000A);font-weight:800}'
+    ].join('\n'); document.head.appendChild(s);
+  }
+
+  /* pilote le filtre natif art-type (mime un clic utilisateur) */
+  function driveRadio(val){
+    var r=$('#view-articles input[name="art-type"][value="'+val+'"]');
+    if (!r){ r=$('input[name="art-type"][value="'+val+'"]'); }
+    if (!r) return false;
+    if (!r.checked){ r.click(); }
+    else { r.dispatchEvent(new Event('change',{bubbles:true})); }
+    return true;
+  }
+  function paint(){
+    var bar=$('#art-tabs'); if(!bar) return;
+    Array.prototype.forEach.call(bar.querySelectorAll('.at-tab'), function(b){
+      b.classList.toggle('on', b.getAttribute('data-v')===window.__artTab);
+    });
+  }
+  function setTab(val){ window.__artTab=val; driveRadio(val); paint(); }
+
+  function build(){
+    var v=document.getElementById('view-articles'); if(!v) return;
+    var countBar=document.getElementById('art-count'); if(!countBar) return;
+    var bar=countBar.parentElement; if(!bar || !bar.parentElement) return;
+    if (document.getElementById('art-tabs')) return;
+    css();
+    var tabs=document.createElement('div'); tabs.id='art-tabs';
+    tabs.innerHTML=TABS.map(function(t){ return '<button class="at-tab" data-v="'+t[0]+'">'+t[1]+'</button>'; }).join('');
+    bar.parentElement.insertBefore(tabs, bar);
+    Array.prototype.forEach.call(tabs.querySelectorAll('.at-tab'), function(b){
+      b.addEventListener('click', function(){ setTab(b.getAttribute('data-v')); });
+    });
+    setTab(window.__artTab);   /* applique le filtre par défaut (Articles) */
+  }
+
+  /* « + Nouveau produit » : pré-règle le type selon l'onglet actif */
+  document.addEventListener('click', function(e){
+    var b=e.target&&e.target.closest&&e.target.closest('.np-btn'); if(!b) return;
+    /* sur l'onglet Services, on bascule le modal en mode Service (idempotent) */
+    if (window.__artTab!=='service') return;
+    var tries=0;
+    (function w(){
+      var modal=document.getElementById('np-modal'); if(!modal){ if(++tries<25) setTimeout(w,60); return; }
+      var tab=modal.querySelector('.np-tab[data-t="Service"]'); if(tab) tab.click();
+    })();
+  }, false);
+
+  /* (ré)applique l'onglet à chaque entrée dans la vue Articles */
+  var wasActive=false;
+  function tick(){
+    try{ build(); }catch(e){}
+    var v=document.getElementById('view-articles');
+    var act=!!(v && v.classList.contains('active'));
+    if (act && !wasActive){ try{ setTab(window.__artTab); }catch(e){} }
+    wasActive=act;
+  }
+  if (window.__epOnBodyMut){ window.__epOnBodyMut(tick); }
+  var t=0; (function poll(){ try{ tick(); }catch(e){} if(++t<300) setTimeout(poll, 700); })();
+})();
+
+</script>
 </body>
 </html>
