@@ -5320,5 +5320,472 @@ document.addEventListener('DOMContentLoaded', async function() {
   var t=0; (function poll(){ try{ enhance(); }catch(e){} if(++t<120) setTimeout(poll, 700); })();
 })();
 </script>
+<script id="__PRICE_CATALOG_v1__">
+/* __PRICE_CATALOG_v1__ — Base de prix solide (mémoire non-volatile, codeA figés).
+   Problème corrigé : à chaque import de devis, les codeA étaient recalculés à partir de
+   l'état courant de FCR_DB (nextCA), donc ils changeaient et détruisaient la codification.
+   Solution : une table maître IndexedDB (epilot_price_catalog, clé = codeA immuable) qui fait
+   autorité. Un produit reconnu (signature référence/désignation/fabricant) réutilise TOUJOURS
+   son codeA ; seul un produit réellement nouveau reçoit un nouveau codeA, inscrit définitivement.
+   Le hook s'installe APRÈS le Smart Import et corrige les codeA des nouvelles lignes.
+   100% additif : aucune donnée existante n'est supprimée. */
+(function(){
+  if (window.__priceCatalog) return; window.__priceCatalog = true;
+
+  var DB='epilot_price_catalog', STORE='catalog', _db=null;
+  var CATALOG=null;   /* { codeA: record } */
+  var SIGMAP=null;    /* { sig: codeA } */
+
+  function nowISO(){ try{ return new Date().toISOString().slice(0,10); }catch(e){ return ''; } }
+  function norm(s){ return String(s==null?'':s).toLowerCase().replace(/[^a-z0-9 ]/g,' ').replace(/\s+/g,' ').trim(); }
+  function isSvc(a){ return /service|prestation|main.?d.?oeuvre|forfait/i.test(String((a&&a.section)||'')+' '+String((a&&a.type)||'')+' '+String((a&&(a.desc||a.designation))||'')); }
+  function sigOf(a){
+    var ref=norm(a.reference||a.code);
+    if (ref) return 'r:'+ref;
+    var d=norm(a.desc||a.designation), f=norm(a.fabricant);
+    if (!d) return '';
+    return 'd:'+d+'|'+f;
+  }
+
+  /* ---------- IndexedDB (store dédié, clé = codeA) ---------- */
+  function dbOpen(){
+    return new Promise(function(res,rej){
+      if (_db){ res(_db); return; }
+      var p=indexedDB.open(DB, 1);
+      p.onupgradeneeded=function(e){ var db=e.target.result; if(!db.objectStoreNames.contains(STORE)) db.createObjectStore(STORE,{keyPath:'codeA'}); };
+      p.onsuccess=function(e){ _db=e.target.result; res(_db); };
+      p.onerror=function(e){ rej(e.target.error); };
+    });
+  }
+  function getAll(){ return dbOpen().then(function(db){ return new Promise(function(res){ var r=db.transaction(STORE,'readonly').objectStore(STORE).getAll(); r.onsuccess=function(){ res(r.result||[]); }; r.onerror=function(){ res([]); }; }); }); }
+  function putMany(arr){ return dbOpen().then(function(db){ return new Promise(function(res){ var tx=db.transaction(STORE,'readwrite'); var st=tx.objectStore(STORE); arr.forEach(function(r){ if(r&&r.codeA) st.put(r); }); tx.oncomplete=function(){ res(); }; tx.onerror=function(){ res(); }; }); }); }
+
+  /* ---------- chargement + amorçage depuis FCR_DB (additif) ---------- */
+  function load(){
+    return getAll().then(function(recs){
+      CATALOG={}; SIGMAP={};
+      recs.forEach(function(r){ if(r&&r.codeA){ CATALOG[r.codeA]=r; if(r.sig && SIGMAP[r.sig]==null) SIGMAP[r.sig]=r.codeA; } });
+    });
+  }
+  /* enregistre les codeA actuels de FCR_DB comme autorité (premier arrivé = gardé) */
+  function seedFromFCR(){
+    var fcr=window.FCR_DB||[]; var add=[];
+    fcr.forEach(function(a){
+      if (!a || !a.codeA || !/^[AS]\d+$/i.test(String(a.codeA))) return;
+      if (!CATALOG[a.codeA]){
+        var sig=sigOf(a);
+        var rec={ codeA:a.codeA, sig:sig, reference:a.reference||a.code||'', designation:a.desc||a.designation||'', fabricant:a.fabricant||'', unite:a.unite||'u', pu:Number(a.pu)||0, vendeur:a.vendeur||'', section:a.section||'', fige:false, dateMaj:nowISO() };
+        CATALOG[a.codeA]=rec; if (sig && SIGMAP[sig]==null) SIGMAP[sig]=a.codeA; add.push(rec);
+      }
+    });
+    return add.length ? putMany(add) : Promise.resolve();
+  }
+
+  /* ---------- résolution stable du codeA ---------- */
+  function mintCodeA(a){
+    var prefix=isSvc(a)?'S':'A', max=0;
+    function scan(c){ if(!c) return; var m=/^([AS])(\d+)$/i.exec(String(c)); if(m && m[1].toUpperCase()===prefix){ var n=parseInt(m[2],10); if(n>max) max=n; } }
+    Object.keys(CATALOG||{}).forEach(scan);
+    (window.FCR_DB||[]).forEach(function(x){ if(x) scan(x.codeA); });
+    return prefix+String(max+1).padStart(5,'0');
+  }
+  function register(a, code, sig){
+    var rec=CATALOG[code]||{ codeA:code };
+    rec.sig=sig||rec.sig||sigOf(a);
+    rec.reference=a.reference||a.code||rec.reference||'';
+    rec.designation=a.desc||a.designation||rec.designation||'';
+    rec.fabricant=a.fabricant||rec.fabricant||'';
+    rec.unite=a.unite||rec.unite||'u';
+    rec.pu=Number(a.pu)||rec.pu||0;
+    rec.vendeur=a.vendeur||rec.vendeur||'';
+    rec.section=a.section||rec.section||'';
+    if (rec.fige==null) rec.fige=false;
+    rec.dateMaj=nowISO();
+    CATALOG[code]=rec; if (rec.sig) SIGMAP[rec.sig]=code;
+    putMany([rec]);
+    return rec;
+  }
+  /* renvoie le codeA stable d'un article (réutilise si connu, sinon enregistre) */
+  function resolve(a){
+    if (!a) return '';
+    if (!CATALOG) return a.codeA||'';
+    var sig=sigOf(a);
+    if (sig && SIGMAP[sig]) return SIGMAP[sig];
+    var code=(a.codeA && /^[AS]\d+$/i.test(String(a.codeA))) ? a.codeA : mintCodeA(a);
+    register(a, code, sig);
+    return code;
+  }
+
+  /* ---------- hook import : APRÈS le Smart Import, on fige les codeA ---------- */
+  function hookImport(){
+    var tries=0;
+    (function wait(){
+      var fn=window.handleDevisFilesBatch;
+      if (typeof fn!=='function'){ if(++tries<120) return setTimeout(wait,600); return; }
+      /* on attend que le Smart Import ait posé son wrapper (__si) pour s'exécuter APRÈS lui */
+      if (!fn.__si && tries<60){ tries++; return setTimeout(wait,600); }
+      if (fn.__pc) return;
+      var orig=fn;
+      window.handleDevisFilesBatch=function(){
+        var args=arguments, self=this;
+        var before=(window.FCR_DB||[]).length;
+        return Promise.resolve(orig.apply(self,args)).then(function(res){
+          try{
+            var fcr=window.FCR_DB||[];
+            var ne=fcr.slice(before);
+            var dirty=false;
+            ne.forEach(function(x){ if(!x) return; var stable=resolve(x); if(stable && x.codeA!==stable){ x.codeA=stable; dirty=true; } });
+            if (dirty && typeof window.idbSaveAll==='function'){ try{ window.idbSaveAll(fcr); }catch(_){} }
+            try{ window.HubViews&&window.HubViews.refresh&&window.HubViews.refresh(); }catch(_){}
+          }catch(e){ console.warn('[PriceCatalog] post-import', e); }
+          return res;
+        });
+      };
+      window.handleDevisFilesBatch.__pc=true;
+      window.handleDevisFilesBatch.__si=orig.__si;   /* préserve le marqueur Smart Import */
+    })();
+  }
+
+  /* ---------- maintenance : compactage (réécriture clés stables) ---------- */
+  function fcrClearAndWrite(fcr){
+    return new Promise(function(res,rej){
+      var p=indexedDB.open('fcr_db');
+      p.onsuccess=function(e){ var db=e.target.result;
+        if (!db.objectStoreNames.contains('articles')){ try{db.close();}catch(_){} res(); return; }
+        var tx=db.transaction('articles','readwrite'); var st=tx.objectStore('articles');
+        st.clear();
+        fcr.forEach(function(a,i){ if(!a) return; var k=(a.codeA||a.code||('art'+i))+'|'+(a['ref-pi']||''); var rec=Object.assign({},a,{_k:k}); st.put(rec); });
+        tx.oncomplete=function(){ try{db.close();}catch(_){} res(); };
+        tx.onerror=function(){ try{db.close();}catch(_){} rej(tx.error); };
+      };
+      p.onerror=function(e){ rej(e.target.error); };
+    });
+  }
+  function compact(){
+    if (!confirm('Compacter la base d\'articles ?\n\nLes codeA seront alignés sur le catalogue figé et le stockage réécrit avec des clés stables (codeA|PI). Action sûre et recommandée après import.')) return;
+    var fcr=window.FCR_DB||[];
+    fcr.forEach(function(a){ if(a){ var s=resolve(a); if(s) a.codeA=s; } });
+    seedFromFCR()
+      .then(function(){ return fcrClearAndWrite(fcr); })
+      .then(function(){ try{ if(typeof window.idbSaveAll==='function') window.idbSaveAll(fcr); }catch(_){} try{ window.HubViews&&window.HubViews.refresh&&window.HubViews.refresh(); }catch(_){}
+        alert('✓ Base compactée\n• '+fcr.length+' articles\n• '+Object.keys(CATALOG||{}).length+' codeA au catalogue'); })
+      .catch(function(e){ alert('⛔ Compactage : '+(e&&e.message||e)); });
+  }
+  function freezeAll(){
+    if (!confirm('Geler TOUS les codeA actuels ?\n\nIls deviendront l\'autorité : aucun import ne pourra plus les réattribuer.')) return;
+    seedFromFCR().then(function(){
+      var all=Object.keys(CATALOG).map(function(k){ CATALOG[k].fige=true; return CATALOG[k]; });
+      return putMany(all).then(function(){ alert('✓ '+all.length+' codeA gelés.'); refreshPanel(); });
+    });
+  }
+  function exportCatalog(){
+    var data={ version:'epilot_price_catalog_v1', exportedAt:nowISO(), catalog:Object.keys(CATALOG||{}).map(function(k){ return CATALOG[k]; }), fcr:(window.FCR_DB||[]) };
+    var b=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
+    var u=URL.createObjectURL(b); var a=document.createElement('a'); a.href=u; a.download='epilot_base_prix_'+nowISO()+'.json';
+    document.body.appendChild(a); a.click(); document.body.removeChild(a); setTimeout(function(){ URL.revokeObjectURL(u); },1000);
+  }
+  function freezeOne(codeA){
+    if (!codeA) return Promise.resolve();
+    var a=(window.FCR_DB||[]).filter(function(x){ return x && x.codeA===codeA; })[0];
+    if (a && !CATALOG[codeA]) register(a, codeA, sigOf(a));
+    if (CATALOG[codeA]){ CATALOG[codeA].fige=true; return putMany([CATALOG[codeA]]); }
+    return Promise.resolve();
+  }
+  window.PriceCatalog={ resolve:resolve, freezeOne:freezeOne, freezeAll:freezeAll, compact:compact, exportCatalog:exportCatalog,
+    stats:function(){ return { codeA:Object.keys(CATALOG||{}).length, figes:Object.keys(CATALOG||{}).filter(function(k){return CATALOG[k].fige;}).length }; } };
+
+  /* ---------- petit panneau dans la vue Articles ---------- */
+  function refreshPanel(){
+    var box=document.getElementById('pc-stats'); if(!box) return;
+    var s=window.PriceCatalog.stats();
+    box.innerHTML='<b>'+s.codeA+'</b> codeA au catalogue · <b>'+s.figes+'</b> gelés';
+  }
+  function openPanel(){
+    if (document.getElementById('pc-panel')) { document.getElementById('pc-panel').remove(); return; }
+    var html='<div id="pc-panel" style="position:fixed;right:18px;bottom:78px;z-index:99700;width:340px;background:#fff;border:1px solid #e5e7eb;border-radius:14px;box-shadow:0 20px 60px rgba(0,0,0,.22);font-family:-apple-system,sans-serif;overflow:hidden">'
+      + '<div style="padding:13px 16px;background:linear-gradient(135deg,#0f172a,#1e293b);color:#fff;display:flex;justify-content:space-between;align-items:center"><div><div style="font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:#7dd3fc;font-weight:700">ePilot</div><div style="font-size:15px;font-weight:800;margin-top:2px">🔒 Base de prix</div></div><button onclick="document.getElementById(\'pc-panel\').remove()" style="background:rgba(255,255,255,.15);border:0;color:#fff;width:28px;height:28px;border-radius:7px;cursor:pointer">✕</button></div>'
+      + '<div style="padding:14px 16px"><div id="pc-stats" style="font-size:12.5px;color:#334155;margin-bottom:12px">…</div>'
+      + '<button id="pc-freeze" style="width:100%;padding:9px;margin-bottom:7px;background:#2563eb;color:#fff;border:0;border-radius:8px;cursor:pointer;font-weight:700;font-size:12.5px">🔒 Geler tous les codeA actuels</button>'
+      + '<button id="pc-compact" style="width:100%;padding:9px;margin-bottom:7px;background:#0d9488;color:#fff;border:0;border-radius:8px;cursor:pointer;font-weight:700;font-size:12.5px">🧹 Compacter la base (clés stables)</button>'
+      + '<button id="pc-export" style="width:100%;padding:9px;background:#fff;color:#334155;border:1px solid #d1d5db;border-radius:8px;cursor:pointer;font-weight:600;font-size:12.5px">⬇ Exporter la base de prix (.json)</button>'
+      + '<div style="font-size:10.5px;color:#94a3b8;margin-top:10px;line-height:1.5">Le catalogue fait autorité : un produit reconnu réutilise toujours son codeA. Exportez avant toute opération de masse.</div></div></div>';
+    document.body.insertAdjacentHTML('beforeend', html);
+    document.getElementById('pc-freeze').onclick=freezeAll;
+    document.getElementById('pc-compact').onclick=compact;
+    document.getElementById('pc-export').onclick=exportCatalog;
+    refreshPanel();
+  }
+  function injectButton(){
+    var v=document.getElementById('view-articles'); if(!v) return;
+    if (v.querySelector('.pc-btn')) return;
+    var head=v.querySelector('.view-head')||v.firstElementChild; if(!head) return;
+    var btn=document.createElement('button'); btn.className='pc-btn'; btn.innerHTML='🔒 Base de prix';
+    btn.style.cssText='padding:8px 14px;border-radius:8px;background:#0f172a;color:#fff;border:0;cursor:pointer;font-family:inherit;font-size:13px;font-weight:700;margin-left:8px';
+    btn.onclick=openPanel;
+    var actions=head.querySelector('.actions');
+    if (actions) actions.appendChild(btn);
+    else { btn.style.position='absolute'; btn.style.top='14px'; btn.style.right='150px'; head.style.position='relative'; head.appendChild(btn); }
+  }
+
+  /* ---------- amorçage ---------- */
+  function boot(){
+    load().then(function(){
+      return seedFromFCR();
+    }).then(function(){
+      hookImport();
+    }).catch(function(e){ console.warn('[PriceCatalog] boot', e); hookImport(); });
+  }
+  /* FCR_DB est restauré de façon asynchrone : on (re)amorce quelques fois */
+  var bt=0; (function bootPoll(){ if((window.FCR_DB||[]).length || bt>20){ boot(); } else { bt++; setTimeout(bootPoll,800); } })();
+  if (window.__epOnBodyMut){ window.__epOnBodyMut(injectButton); }
+  var it=0; (function ip(){ try{ injectButton(); }catch(e){} if(++it<200) setTimeout(ip,800); })();
+})();
+
+</script>
+<script id="__CDC_COTATION_v1__">
+/* __CDC_COTATION_v1__ — Onglet « Cahier des charges » (Devis ET Chantier).
+   Ajoute en haut de l'onglet un bloc qui affiche :
+     1) la DEMANDE DE COTATION : articles & services du devis (FCR_DB filtrés par ref-pi) =
+        PU et quantités envoyés au client (FCR est le générateur de devis) ;
+     2) les ÉLÉMENTS RETENUS : sélection cochable avec PU/qté retenus (négociés) éditables ;
+     3) un bouton « → Envoyer dans Commandes\Contrat », actif uniquement quand le N° OA est saisi,
+        qui pousse les retenus dans le store du Contrat (epilot_chantier_v2) :
+        pu_oa = prix envoyé client · pu_vendeur = prix retenu · qte = qté retenue.
+   On garde ainsi la trace prix/qté initiaux (client) vs contrat (OA).
+   L'onglet étant un composant React, le bloc est (ré)injecté via MutationObserver. */
+(function(){
+  if (window.__cdcCotation) return; window.__cdcCotation = true;
+
+  function $(s,r){ return (r||document).querySelector(s); }
+  function $all(s,r){ return Array.prototype.slice.call((r||document).querySelectorAll(s)); }
+  function num(v){ var n=parseFloat(v); return isNaN(n)?0:n; }
+  function fmt(n){ return (Math.round(num(n))).toLocaleString('fr-FR'); }
+  function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];}); }
+  function norm(s){ return String(s==null?'':s).toLowerCase().replace(/\s+/g,' ').trim(); }
+
+  /* ---------- store du Contrat (réutilisé) ---------- */
+  var DB='epilot_chantier_v2', _db=null;
+  function dbOpen(){
+    return new Promise(function(res,rej){
+      if (_db){ res(_db); return; }
+      var p=indexedDB.open(DB);
+      p.onsuccess=function(e){ var db=e.target.result;
+        if (db.objectStoreNames.contains('chantiers')){ _db=db; res(db); return; }
+        var v=db.version; db.close(); var u=indexedDB.open(DB, v+1);
+        u.onupgradeneeded=function(e2){ e2.target.result.createObjectStore('chantiers'); };
+        u.onsuccess=function(e2){ _db=e2.target.result; res(_db); };
+        u.onerror=function(e2){ rej(e2.target.error); };
+      };
+      p.onerror=function(e){ rej(e.target.error); };
+    });
+  }
+  function getCh(imp){ return dbOpen().then(function(db){ return new Promise(function(res){ var r=db.transaction('chantiers').objectStore('chantiers').get(imp); r.onsuccess=function(){ res(r.result||null); }; r.onerror=function(){ res(null); }; }); }); }
+  function putCh(imp,data){ return dbOpen().then(function(db){ return new Promise(function(res){ var r=db.transaction('chantiers','readwrite').objectStore('chantiers').put(data,imp); r.onsuccess=function(){ res(); }; r.onerror=function(){ res(); }; }); }); }
+  function emptyState(){ return { contrat:[], pos:[], bls:[], facs:[], colis:[], cdc:{ retenus:{} } }; }
+
+  /* ---------- données ---------- */
+  function f_pi(a){ return (a&&(a['ref-pi']||a.refPi||a.Dossier)||'').toString(); }
+  function cotationItems(pi){
+    if (!pi) return [];
+    var p=pi.toLowerCase();
+    return (window.FCR_DB||[]).filter(function(a){ return a && f_pi(a).toLowerCase()===p && (a.desc||a.designation); });
+  }
+  function lineId(a, i){ return (a.codeA||a.code||('L'+i)).toString()+'§'+norm(a.desc||a.designation).slice(0,40); }
+  function isSvc(a){ return /service|prestation|forfait|main.?d.?oeuvre/i.test(String(a.section||'')+' '+String(a.desc||a.designation||'')) || /^S\d/i.test(String(a.codeA||'')); }
+
+  /* ---------- styles ---------- */
+  function css(){
+    if ($('#cdc-css')) return; var s=document.createElement('style'); s.id='cdc-css';
+    s.textContent=[
+      '.cdc-card{border:1px solid var(--border,#e5e7eb);border-radius:12px;background:var(--surface,#fff);margin-bottom:16px;overflow:hidden}',
+      '.cdc-h{display:flex;align-items:center;gap:10px;padding:11px 15px;background:#0f172a;color:#fff;flex-wrap:wrap}',
+      '.cdc-h .t{font-size:13.5px;font-weight:800}',
+      '.cdc-oa{font-size:10.5px;font-weight:700;padding:2px 9px;border-radius:100px}',
+      '.cdc-oa.ok{background:#065f46;color:#d1fae5}.cdc-oa.no{background:#7c2d12;color:#fed7aa}',
+      '.cdc-b{padding:10px 14px;overflow-x:auto}',
+      '.cdc-tbl{width:100%;border-collapse:collapse;font-size:12px}',
+      '.cdc-tbl th{text-align:left;padding:6px 8px;font-size:9.5px;color:#6b7280;text-transform:uppercase;font-weight:700;background:#f9fafb;border-bottom:1px solid #e5e7eb;white-space:nowrap}',
+      '.cdc-tbl th.r,.cdc-tbl td.r{text-align:right}.cdc-tbl th.c,.cdc-tbl td.c{text-align:center}',
+      '.cdc-tbl td{padding:6px 8px;border-bottom:1px solid #f3f4f6;vertical-align:middle}',
+      '.cdc-grp{font-size:10.5px;font-weight:800;color:#0f172a;background:#eef2ff;padding:5px 8px}',
+      '.cdc-code{font-family:ui-monospace,monospace;color:#2563eb;font-weight:700;font-size:11px}',
+      '.cdc-in{width:74px;box-sizing:border-box;padding:4px 6px;border:1px solid #e5e7eb;border-radius:6px;font:inherit;font-size:12px;text-align:right}',
+      '.cdc-in:disabled{background:#f3f4f6;color:#9ca3af}',
+      '.cdc-sep{color:#cbd5e1;text-align:center}',
+      '.cdc-foot{display:flex;align-items:center;gap:14px;padding:11px 15px;border-top:1px solid var(--border,#e5e7eb);flex-wrap:wrap;background:#fafbfc}',
+      '.cdc-send{padding:8px 16px;border:0;border-radius:8px;cursor:pointer;font-weight:700;font-size:12.5px;background:#2563eb;color:#fff}',
+      '.cdc-send:disabled{background:#e5e7eb;color:#9ca3af;cursor:not-allowed}',
+      '.cdc-empty{padding:18px;text-align:center;color:#9ca3af;font-size:12.5px}',
+      '.cdc-tot{font-weight:800;color:#0f172a}'
+    ].join('\n'); document.head.appendChild(s);
+  }
+
+  /* ---------- rendu du tableau ---------- */
+  function rowHtml(a, i, ret){
+    var id=lineId(a,i); var on=!!(ret && ret[id]);
+    var envQ=num(a.qty!=null?a.qty:a.qte), envPU=num(a.pu!=null?a.pu:a.prixUnit);
+    var rQ=on?num(ret[id].qte):envQ, rPU=on?num(ret[id].pu):envPU;
+    return '<tr data-id="'+esc(id)+'">'
+      + '<td class="c"><input type="checkbox" data-on '+(on?'checked':'')+' style="cursor:pointer;width:15px;height:15px"></td>'
+      + '<td><span class="cdc-code">'+esc(a.codeA||'—')+'</span></td>'
+      + '<td><div style="font-weight:600;color:#0f172a">'+esc(a.desc||a.designation||'—')+'</div>'
+        + '<div style="font-size:10px;color:#9ca3af">'+(isSvc(a)?'🔧 Service':'📦 Article')+' · '+esc(a.unite||a.unit||'u')+(a.section?(' · '+esc(a.section)):'')+'</div></td>'
+      + '<td class="r" data-envq>'+esc(envQ)+'</td>'
+      + '<td class="r" data-envpu>'+fmt(envPU)+'</td>'
+      + '<td class="r">'+fmt(envQ*envPU)+'</td>'
+      + '<td class="cdc-sep">→</td>'
+      + '<td class="r"><input class="cdc-in" data-rq type="number" value="'+esc(rQ)+'" '+(on?'':'disabled')+'></td>'
+      + '<td class="r"><input class="cdc-in" data-rpu type="number" value="'+esc(rPU)+'" '+(on?'':'disabled')+'></td>'
+      + '<td class="r cdc-tot" data-rtot>'+fmt(rQ*rPU)+'</td>'
+      + '</tr>';
+  }
+  function tableHtml(items, ret){
+    if (!items.length) return '<div class="cdc-empty">Aucun article ni service rattaché à ce devis (FCR_DB sans ce PI). Les lignes du devis généré dans FCR apparaîtront ici.</div>';
+    var arts=[], svcs=[];
+    items.forEach(function(a,i){ (isSvc(a)?svcs:arts).push([a,i]); });
+    function sect(title,list){ if(!list.length) return ''; return '<tr><td class="cdc-grp" colspan="10">'+title+' · '+list.length+'</td></tr>'+list.map(function(p){ return rowHtml(p[0],p[1],ret); }).join(''); }
+    return '<table class="cdc-tbl"><thead><tr>'
+      + '<th class="c">Ret.</th><th>CodeA</th><th>Désignation</th>'
+      + '<th class="r">Qté env.</th><th class="r">PU env.</th><th class="r">Total env.</th>'
+      + '<th></th><th class="r">Qté ret.</th><th class="r">PU ret.</th><th class="r">Total ret.</th>'
+      + '</tr></thead><tbody>'+sect('📦 Articles',arts)+sect('🔧 Services',svcs)+'</tbody></table>';
+  }
+
+  /* ---------- contexte (PI + OA) depuis l'en-tête du détail ---------- */
+  function detailCtx(node){
+    var root=node;
+    while (root && !(root.querySelector && root.querySelector('.tabbar'))) root=root.parentElement;
+    if (!root) return null;
+    var tabbar=root.querySelector('.tabbar'); var header=tabbar?tabbar.parentElement:null; if (!header) return null;
+    var monos=header.querySelectorAll('.mono');
+    var pi=monos[0]?(monos[0].textContent||'').trim():'';
+    var oa=(monos[2] && (monos[2].textContent||'').trim()!=='—') ? (monos[2].textContent||'').trim() : '';
+    return { pi:pi, oa:oa };
+  }
+
+  /* ---------- carte ---------- */
+  function buildCard(pi, oa){
+    css();
+    var card=document.createElement('div'); card.className='cdc-card'; card.setAttribute('data-cdc-card','1'); card.setAttribute('data-pi', pi); card.setAttribute('data-oa', oa||'');
+    card.innerHTML=''
+      + '<div class="cdc-h"><span class="t">Demande de cotation &amp; éléments retenus</span>'
+      +   '<span class="cdc-oa '+(oa?'ok':'no')+'">'+(oa?('OA '+esc(oa)):'OA non saisi')+'</span>'
+      +   '<span style="margin-left:auto;font-size:10.5px;color:#94a3b8">PU/qté envoyés client → retenus contrat</span></div>'
+      + '<div class="cdc-b" data-cdc-body><div class="cdc-empty">Chargement…</div></div>'
+      + '<div class="cdc-foot">'
+      +   '<span style="font-size:11.5px;color:#475569">Total envoyé : <b data-tenv class="cdc-tot">0</b> · Total retenu : <b data-tret class="cdc-tot">0</b></span>'
+      +   '<button class="cdc-send" data-send style="margin-left:auto"'+(oa?'':' disabled title="Saisir le N° OA dans le chantier pour activer l\'envoi"')+'>→ Envoyer dans Commandes\\Contrat</button>'
+      + '</div>';
+    return card;
+  }
+
+  function fillCard(card, pi){
+    var items=cotationItems(pi);
+    getCh(pi).then(function(d){
+      var state=d||emptyState();
+      var ret=(state.cdc&&state.cdc.retenus)||{};
+      var body=$('[data-cdc-body]', card); if (body) body.innerHTML=tableHtml(items, ret);
+      recalc(card);
+      wireRows(card, pi);
+    });
+  }
+
+  function recalc(card){
+    var tenv=0, tret=0;
+    $all('tr[data-id]', card).forEach(function(tr){
+      var envq=num(($('[data-envq]',tr)||{}).textContent), envpu=num((($('[data-envpu]',tr)||{}).textContent||'').replace(/\s/g,''));
+      tenv+=envq*envpu;
+      var cb=$('[data-on]',tr); if (cb && cb.checked){ var rq=num($('[data-rq]',tr).value), rpu=num($('[data-rpu]',tr).value); var rtot=rq*rpu; tret+=rtot; var c=$('[data-rtot]',tr); if(c) c.textContent=fmt(rtot); }
+    });
+    var te=$('[data-tenv]',card); if(te) te.textContent=fmt(tenv);
+    var tr2=$('[data-tret]',card); if(tr2) tr2.textContent=fmt(tret);
+  }
+
+  function persistRetenus(card, pi){
+    getCh(pi).then(function(d){
+      var state=d||emptyState(); if(!state.cdc) state.cdc={retenus:{}}; if(!state.cdc.retenus) state.cdc.retenus={};
+      var ret={};
+      $all('tr[data-id]', card).forEach(function(tr){
+        var cb=$('[data-on]',tr); if (cb && cb.checked){ ret[tr.getAttribute('data-id')]={ qte:num($('[data-rq]',tr).value), pu:num($('[data-rpu]',tr).value) }; }
+      });
+      state.cdc.retenus=ret;
+      putCh(pi, state);
+    });
+  }
+
+  var persistTimer=null;
+  function wireRows(card, pi){
+    $all('tr[data-id]', card).forEach(function(tr){
+      var cb=$('[data-on]',tr);
+      if (cb && !cb.__w){ cb.__w=1; cb.addEventListener('change', function(){
+        var en=cb.checked; $('[data-rq]',tr).disabled=!en; $('[data-rpu]',tr).disabled=!en;
+        recalc(card); persistRetenus(card, pi);
+      }); }
+      ['[data-rq]','[data-rpu]'].forEach(function(sel){ var inp=$(sel,tr); if(inp && !inp.__w){ inp.__w=1; inp.addEventListener('input', function(){ recalc(card); if(persistTimer) clearTimeout(persistTimer); persistTimer=setTimeout(function(){ persistRetenus(card, pi); }, 400); }); } });
+    });
+  }
+
+  function wireSend(card, pi){
+    var btn=$('[data-send]', card); if (!btn || btn.__w) return; btn.__w=1;
+    btn.addEventListener('click', function(){
+      if (btn.disabled) return;
+      var items=cotationItems(pi);
+      var byId={}; items.forEach(function(a,i){ byId[lineId(a,i)]=a; });
+      getCh(pi).then(function(d){
+        var state=d||emptyState(); if(!state.contrat) state.contrat=[];
+        var ret=(state.cdc&&state.cdc.retenus)||{};
+        var ids=Object.keys(ret); if(!ids.length){ alert('Aucun élément retenu. Cochez les lignes à envoyer.'); return; }
+        if (!confirm('Envoyer '+ids.length+' élément(s) retenu(s) dans Commandes\\Contrat ?\n\nPrix envoyé client conservé en PU OA, prix retenu en PU Vendeur.')) return;
+        var added=0, updated=0;
+        ids.forEach(function(id){
+          var a=byId[id]; if(!a) return; var r=ret[id];
+          var envPU=num(a.pu!=null?a.pu:a.prixUnit);
+          var line={ codeA:a.codeA||'', designation:a.desc||a.designation||'—', unite:a.unite||a.unit||'u',
+            qte:num(r.qte), type:isSvc(a)?'service':'article', devise:'XAF',
+            pu_oa:envPU, pu_vendeur:num(r.pu), vendeur:a.vendeur||'', from_cotation:true };
+          var ex=state.contrat.filter(function(c){ return c.codeA && a.codeA && c.codeA===a.codeA && norm(c.designation)===norm(line.designation); })[0];
+          if (ex){ ex.qte=line.qte; ex.pu_oa=line.pu_oa; ex.pu_vendeur=line.pu_vendeur; ex.unite=line.unite; ex.from_cotation=true; updated++; }
+          else { state.contrat.push(line); added++; }
+        });
+        putCh(pi, state).then(function(){
+          btn.textContent='✓ Envoyé ('+added+' ajout'+(added>1?'s':'')+(updated?(' · '+updated+' MAJ'):'')+')';
+          try{ if(window.HubViews&&window.HubViews.refresh) window.HubViews.refresh(); }catch(_){}
+          setTimeout(function(){ btn.textContent='→ Envoyer dans Commandes\\Contrat'; }, 2200);
+        });
+      });
+    });
+  }
+
+  /* ---------- injection dans l'onglet Cahier des charges ---------- */
+  function findCahierAnchor(){
+    var btns=$all('button');
+    for (var i=0;i<btns.length;i++){
+      if ((btns[i].textContent||'').trim()==='+ Ajouter une exigence'){
+        var flex=btns[i].parentElement; if(!flex) continue;
+        var root=flex.parentElement; if(!root) continue;
+        return { root:root, flex:flex, btn:btns[i] };
+      }
+    }
+    return null;
+  }
+  function inject(){
+    var anc=findCahierAnchor(); if (!anc) return;
+    var ctx=detailCtx(anc.btn); if (!ctx || !ctx.pi) return;
+    var existing=$('[data-cdc-card]', anc.root);
+    if (existing){
+      if (existing.getAttribute('data-pi')===ctx.pi && existing.getAttribute('data-oa')===(ctx.oa||'')) return;
+      existing.parentElement.removeChild(existing);
+    }
+    var card=buildCard(ctx.pi, ctx.oa);
+    anc.root.insertBefore(card, anc.flex);
+    wireSend(card, ctx.pi);
+    fillCard(card, ctx.pi);
+  }
+
+  if (window.__epOnBodyMut){ window.__epOnBodyMut(function(){ try{ inject(); }catch(e){} }); }
+  var t=0; (function poll(){ try{ inject(); }catch(e){} if(++t<300) setTimeout(poll, 700); })();
+})();
+
+</script>
 </body>
 </html>
