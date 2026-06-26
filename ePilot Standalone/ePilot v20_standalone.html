@@ -6269,11 +6269,20 @@ document.addEventListener('DOMContentLoaded', async function() {
     b.className='btn btn-p btn-sm cdcd-btn'; b.textContent='+ Cahier des charges';
     b.onclick=function(){ openEditor(ctx.pi); };
     flex.insertBefore(b, native);
+    /* masque l'ancien système exigences/conformité (remplacé par le document structuré) */
+    try{
+      var conf=flex.firstElementChild;                 /* bloc « Conformité globale » (ou div vide) */
+      if (conf && conf!==b && conf!==native) conf.style.display='none';
+      var list=flex.nextElementSibling;                /* liste des cartes d'exigences */
+      if (list && !list.querySelector('.tabbar') && !list.querySelector('.overlay')) list.style.display='none';
+    }catch(e){}
   }
   if (window.__epOnBodyMut){ window.__epOnBodyMut(function(){ try{ inject(); }catch(e){} }); }
   var t=0; (function poll(){ try{ inject(); }catch(e){} if(++t<300) setTimeout(poll, 700); })();
 })();
 
 </script>
+<style id="__CONGES_NAME_v1__">/* retirer le gras des noms dans le planning Congés */
+.gantt td.emp .nm{font-weight:400 !important;}</style>
 </body>
 </html>
