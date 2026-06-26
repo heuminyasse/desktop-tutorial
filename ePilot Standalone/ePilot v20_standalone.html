@@ -5959,38 +5959,7 @@ document.addEventListener('DOMContentLoaded', async function() {
 })();
 
 </script>
-<script id="__RFQ_DEVIS_OPEN_v1__">
-/* __RFQ_DEVIS_OPEN_v1__ — clic sur le PI d'un devis (onglet RFQ, tableau #rfq-tbody).
-   Avant : le lien PI appelait window.openChantierDrawer(dossier) → ouvrait un chantier VIDE
-   quand le devis n'avait pas encore de chantier (JIP) → « chantier inexistant ».
-   Après : si un chantier (JIP) existe pour ce PI, on garde le comportement natif (ouverture
-   chantier) ; sinon on ouvre la VUE DEVIS (l'éditeur de la même ligne, lien RFQ).
-   Interception en capture, avant le handler natif. */
-(function(){
-  if (window.__rfqDevisOpen) return; window.__rfqDevisOpen = true;
 
-  function hasJip(pi){
-    if (!pi) return false;
-    var p=String(pi).trim().toLowerCase();
-    return (window.JIP_DATA||window.JIPS||[]).some(function(j){
-      return j && String(j.Imputation||j.imputation||'').trim().toLowerCase()===p;
-    });
-  }
-
-  document.addEventListener('click', function(e){
-    var a=e.target&&e.target.closest&&e.target.closest('#view-rfq .rfqd-pi[data-dossierpi]');
-    if (!a) return;
-    var pi=(a.getAttribute('data-dossierpi')||'').trim();
-    if (hasJip(pi)) return;                 /* chantier existe → comportement natif (drawer chantier) */
-    /* pas de chantier → ouvrir la vue devis (éditeur) de la même ligne */
-    e.preventDefault(); e.stopImmediatePropagation();
-    var tr=a.closest('tr');
-    var ed=tr && tr.querySelector('.rfqd-link[data-edit]');
-    if (ed) ed.click();                     /* déclenche openEditor (drawer devis) */
-  }, true);
-})();
-
-</script>
 <script id="__RFQ_YEAR_FILTER_v1__">
 /* __RFQ_YEAR_FILTER_v1__ — onglet RFQ, sous-onglet « RFQ » (tableau #rfq-tbody).
    Restreint l'affichage des devis ouverts à 2026 et 2025 (les années ≤ 2024 sont masquées).
