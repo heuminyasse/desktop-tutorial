@@ -2675,6 +2675,11 @@ document.addEventListener('DOMContentLoaded', async function() {
     {id:'dep',      label:'Dépenses', icon:'<svg '+_QSVG+'><rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>'}
   ];
   function _qChantierOpts(){ try{ return (window.JIP_DATA||[]).map(function(j){return j.Imputation;}).filter(Boolean); }catch(e){ return []; } }
+  /* Chantiers EN COURS uniquement, avec libellé riche (PI · description · client · unité) pour recherche intelligente */
+  function _qChantierRich(){ try{
+      return (window.JIP_DATA||[]).filter(function(j){ if(!j||!j.Imputation) return false; var st=String(j.Status||j.statut||j.EtatPI||'').toLowerCase(); return st.indexOf('termin')<0 && st.indexOf('clôtur')<0 && st.indexOf('clotur')<0 && st.indexOf('annul')<0; })
+        .map(function(j){ var desc=j.Description||j.description||j.nom||j.Objet||j['Description of Work']||''; var ctx=[j.Client||j.client,j.Unite||j.unite].filter(Boolean).join(' · '); var label=String(j.Imputation)+(desc?(' — '+desc):'')+(ctx?(' · '+ctx):''); return { imp:String(j.Imputation), label:label }; });
+    }catch(e){ return (_qChantierOpts()||[]).map(function(o){ return {imp:o,label:o}; }); } }
   function _qImpOpts(){ try{ var a=(window.JIP_DATA||[]).map(function(j){return j.Imputation;}); var b=(window.QUOTE_DATA||[]).map(function(q){return q.Dossier;}); var s={}, out=[]; a.concat(b).forEach(function(x){ if(x&&!s[x]){ s[x]=1; out.push(x); } }); return out.sort(); }catch(e){ return _qChantierOpts(); } }
   function _qDepCatOpts(){ try{ var cnt={}; (window.EXPENSES_DATA||[]).forEach(function(r){ var c=(r.categorie||'').trim(); if(c) cnt[c]=(cnt[c]||0)+1; }); var ks=Object.keys(cnt); if(!ks.length) return ['Transport','Douane','CNPS','Impots','Maintenance','Frais g\u00e9n\u00e9raux','Nutrition','Autre']; return ks.sort(function(a,b){return cnt[b]-cnt[a];}); }catch(e){ return ['Transport','Douane','CNPS','Autre']; } }
   var _Q_TYPES=[
@@ -2924,7 +2929,7 @@ document.addEventListener('DOMContentLoaded', async function() {
     var id='qf_'+f.k; var base='width:100%;padding:8px 10px;border:1px solid #d1d5db;border-radius:8px;font-size:13px;font-family:inherit;box-sizing:border-box'; var ctl;
     if(f.t==='area') ctl='<textarea id="'+id+'" rows="3" style="'+base+'"></textarea>';
     else if(f.t==='sel') ctl='<select id="'+id+'" style="'+base+'"><option value="">—</option>'+(f.o||[]).map(function(o){return '<option>'+_qEsc(o)+'</option>';}).join('')+'</select>';
-    else if(f.t==='chantier'){ var ch=_qChantierOpts(); ctl='<select id="'+id+'" style="'+base+'"><option value="">—</option>'+ch.map(function(o){return '<option>'+_qEsc(o)+'</option>';}).join('')+'</select>'; }
+    else if(f.t==='chantier'){ var chr=_qChantierRich(); ctl='<input list="'+id+'_dl" id="'+id+'" autocomplete="off" style="'+base+'" placeholder="🔍 Chercher un chantier en cours (PI, description, client, unité)…"><datalist id="'+id+'_dl">'+chr.map(function(o){return '<option value="'+_qEsc(o.imp)+'">'+_qEsc(o.label)+'</option>';}).join('')+'</datalist>'; }
     else if(f.t==='imp'){ var ci=_qImpOpts(); ctl='<input list="'+id+'_dl" id="'+id+'" autocomplete="off" style="'+base+'" placeholder="N\u00b0 Chantier / Devis (saisie libre)"><datalist id="'+id+'_dl">'+ci.map(function(o){return '<option value="'+_qEsc(o)+'">';}).join('')+'</datalist>'; }
     else if(f.t==='depcat'){ var cc=_qDepCatOpts(); ctl='<input list="'+id+'_dl" id="'+id+'" autocomplete="off" style="'+base+'" placeholder="Transport, Douane, CNPS\u2026"><datalist id="'+id+'_dl">'+cc.map(function(o){return '<option value="'+_qEsc(o)+'">';}).join('')+'</datalist>'; }
     else if(f.t==='desg'){ var _dg=_qDepDesignations(); ctl='<input list="'+id+'_dl" id="'+id+'" autocomplete="off" style="'+base+'" placeholder="Saisir ou choisir une désignation…"><datalist id="'+id+'_dl">'+_dg.map(function(d){return '<option value="'+_qEsc(d)+'">';}).join('')+'</datalist>'; }
