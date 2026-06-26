@@ -5473,12 +5473,16 @@ document.addEventListener('DOMContentLoaded', async function() {
   /* ---------- maintenance ---------- */
   function fcrClearAndWrite(fcr){
     return new Promise(function(res,rej){
+      /* garde-fou : ne JAMAIS vider si la liste en mémoire est vide (évite toute perte) */
+      if (!fcr || !fcr.length){ rej(new Error('FCR_DB vide — compactage annulé (aucune donnée à réécrire).')); return; }
       var p=indexedDB.open('fcr_db');
       p.onsuccess=function(e){ var db=e.target.result;
         if (!db.objectStoreNames.contains('articles')){ try{db.close();}catch(_){} res(); return; }
         var tx=db.transaction('articles','readwrite'); var st=tx.objectStore('articles');
         st.clear();
-        fcr.forEach(function(a,i){ if(!a) return; var k=(a.codeA||a.code||('art'+i))+'|'+(a['ref-pi']||''); var rec=Object.assign({},a,{_k:k}); st.put(rec); });
+        /* clé UNIQUE par ligne (préfixe index) : deux articles distincts de même
+           codeA+PI ne peuvent plus s'écraser mutuellement (corrige une perte possible). */
+        fcr.forEach(function(a,i){ if(!a) return; var k=i+'|'+(a.codeA||a.code||'')+'|'+(a['ref-pi']||''); var rec=Object.assign({},a,{_k:k}); st.put(rec); });
         tx.oncomplete=function(){ try{db.close();}catch(_){} res(); };
         tx.onerror=function(){ try{db.close();}catch(_){} rej(tx.error); };
       };
@@ -5525,6 +5529,35 @@ document.addEventListener('DOMContentLoaded', async function() {
     var u=URL.createObjectURL(b); var a=document.createElement('a'); a.href=u; a.download='epilot_base_prix_'+nowISO()+'.json';
     document.body.appendChild(a); a.click(); document.body.removeChild(a); setTimeout(function(){ URL.revokeObjectURL(u); },1000);
   }
+  /* RESTAURATION : recharge les articles + le catalogue depuis un export .json */
+  function importBackup(file){
+    var r=new FileReader();
+    r.onload=function(e){
+      try{
+        var data=JSON.parse(e.target.result);
+        if (!data || (!Array.isArray(data.fcr) && !Array.isArray(data.catalog))){ alert('⛔ Fichier invalide (ni articles ni catalogue).'); return; }
+        var nf=(data.fcr||[]).length, nc=(data.catalog||[]).length;
+        if (!confirm('Restaurer la base de prix depuis ce fichier ?\n\n• '+nf+' articles\n• '+nc+' codeA au catalogue\n\nLes articles actuels seront remplacés par ceux du fichier.')) return;
+        var chain=Promise.resolve();
+        if (Array.isArray(data.fcr) && data.fcr.length){
+          window.FCR_DB=data.fcr;
+          chain=fcrClearAndWrite(window.FCR_DB);
+        }
+        chain.then(function(){
+          if (Array.isArray(data.catalog)){
+            CATALOG=CATALOG||{}; SIGMAP=SIGMAP||{};
+            data.catalog.forEach(function(rc){ if(rc&&rc.codeA){ CATALOG[rc.codeA]=rc; if(rc.sig) SIGMAP[rc.sig]=rc.codeA; } });
+            return putMany('catalog', data.catalog);
+          }
+        }).then(function(){
+          try{ window.HubViews&&window.HubViews.refresh&&window.HubViews.refresh(); }catch(_){}
+          alert('✓ Base restaurée : '+nf+' articles, '+nc+' codeA.\nRechargez la page si l\'affichage ne se met pas à jour.');
+          refreshPanel();
+        }).catch(function(err){ alert('⛔ Restauration : '+(err&&err.message||err)); });
+      }catch(err){ alert('⛔ JSON invalide : '+(err&&err.message||err)); }
+    };
+    r.readAsText(file);
+  }
   function freezeOne(codeA){
     if (!codeA) return Promise.resolve();
     var a=(window.FCR_DB||[]).filter(function(x){ return x && x.codeA===codeA; })[0];
@@ -5560,7 +5593,7 @@ document.addEventListener('DOMContentLoaded', async function() {
   }
 
   window.PriceCatalog={ resolve:resolve, freezeOne:freezeOne, freezeAll:freezeAll, compact:compact, reclassify:reclassify,
-    exportCatalog:exportCatalog, snapshot:snapshot, listBackups:listBackups, restoreBackup:restoreBackup,
+    exportCatalog:exportCatalog, importBackup:importBackup, snapshot:snapshot, listBackups:listBackups, restoreBackup:restoreBackup,
     stats:function(){ var ks=Object.keys(CATALOG||{}); return { codeA:ks.length, figes:ks.filter(function(k){return CATALOG[k].fige;}).length,
       articles:ks.filter(function(k){return !/^S/i.test(k);}).length, services:ks.filter(function(k){return /^S/i.test(k);}).length }; } };
 
@@ -5587,7 +5620,8 @@ document.addEventListener('DOMContentLoaded', async function() {
       + '<button id="pc-reclass" style="width:100%;padding:9px;margin-bottom:7px;background:#7c3aed;color:#fff;border:0;border-radius:8px;cursor:pointer;font-weight:700;font-size:12.5px">🔀 Reclasser A / S &amp; figer</button>'
       + '<button id="pc-freeze" style="width:100%;padding:9px;margin-bottom:7px;background:#2563eb;color:#fff;border:0;border-radius:8px;cursor:pointer;font-weight:700;font-size:12.5px">🔒 Geler tous les codeA actuels</button>'
       + '<button id="pc-compact" style="width:100%;padding:9px;margin-bottom:7px;background:#0d9488;color:#fff;border:0;border-radius:8px;cursor:pointer;font-weight:700;font-size:12.5px">🧹 Compacter la base (clés stables)</button>'
-      + '<button id="pc-export" style="width:100%;padding:9px;background:#fff;color:#334155;border:1px solid #d1d5db;border-radius:8px;cursor:pointer;font-weight:600;font-size:12.5px">⬇ Exporter la base de prix (.json)</button>'
+      + '<button id="pc-export" style="width:100%;padding:9px;margin-bottom:7px;background:#fff;color:#334155;border:1px solid #d1d5db;border-radius:8px;cursor:pointer;font-weight:600;font-size:12.5px">⬇ Exporter la base de prix (.json)</button>'
+      + '<label style="display:block;width:100%;padding:9px;background:#fff;color:#15803d;border:1px solid #86efac;border-radius:8px;cursor:pointer;font-weight:700;font-size:12.5px;text-align:center;box-sizing:border-box">⬆ Restaurer depuis un export (.json)<input type="file" id="pc-import" accept=".json,application/json" style="display:none"></label>'
       + '<div style="margin-top:14px;border-top:1px solid #f1f5f9;padding-top:12px"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px"><span style="font-size:11px;font-weight:700;color:#475569;text-transform:uppercase;letter-spacing:.04em">💾 Sauvegardes auto</span><button id="pc-snap" style="padding:4px 9px;background:#fff;border:1px solid #d1d5db;border-radius:6px;cursor:pointer;font-size:10.5px;font-weight:600">+ Maintenant</button></div><div id="pc-backups"></div></div>'
       + '<div style="font-size:10.5px;color:#94a3b8;margin-top:10px;line-height:1.5">Le catalogue fait autorité (codeA figés). Sauvegarde auto toutes les 5 min si changement et après chaque opération.</div>'
       + '</div></div>';
@@ -5596,6 +5630,7 @@ document.addEventListener('DOMContentLoaded', async function() {
     document.getElementById('pc-freeze').onclick=freezeAll;
     document.getElementById('pc-compact').onclick=compact;
     document.getElementById('pc-export').onclick=exportCatalog;
+    var imp=document.getElementById('pc-import'); if(imp) imp.onchange=function(e){ var fl=e.target.files&&e.target.files[0]; if(fl) importBackup(fl); };
     document.getElementById('pc-snap').onclick=function(){ ready().then(function(){ snapshot('Manuel '+nowStr()); }); };
     refreshPanel(); refreshBackupList();
     ready().then(function(){ refreshPanel(); refreshBackupList(); });
@@ -5886,7 +5921,7 @@ document.addEventListener('DOMContentLoaded', async function() {
    du modal). Les onglets sont (ré)appliqués à chaque entrée dans la vue. */
 (function(){
   if (window.__articlesTabs) return; window.__articlesTabs = true;
-  if (!window.__artTab) window.__artTab = 'fourniture';   /* 'fourniture' = Articles · 'service' = Services */
+  if (window.__artTab==null) window.__artTab = '';   /* '' = aucun filtre (tout visible) · 'fourniture' = Articles · 'service' = Services */
 
   function $(s,r){ return (r||document).querySelector(s); }
   var TABS=[ ['fourniture','📦 Articles'], ['service','🔧 Services'] ];
@@ -5916,7 +5951,8 @@ document.addEventListener('DOMContentLoaded', async function() {
       b.classList.toggle('on', b.getAttribute('data-v')===window.__artTab);
     });
   }
-  function setTab(val){ window.__artTab=val; driveRadio(val); paint(); }
+  /* val '' → on remet le filtre natif sur « Tous » (toutes les données visibles) */
+  function setTab(val){ window.__artTab=val; driveRadio(val||'all'); paint(); }
 
   function build(){
     var v=document.getElementById('view-articles'); if(!v) return;
@@ -5928,9 +5964,12 @@ document.addEventListener('DOMContentLoaded', async function() {
     tabs.innerHTML=TABS.map(function(t){ return '<button class="at-tab" data-v="'+t[0]+'">'+t[1]+'</button>'; }).join('');
     bar.parentElement.insertBefore(tabs, bar);
     Array.prototype.forEach.call(tabs.querySelectorAll('.at-tab'), function(b){
-      b.addEventListener('click', function(){ setTab(b.getAttribute('data-v')); });
+      b.addEventListener('click', function(){
+        /* re-cliquer l'onglet actif le désactive → retour à « tout visible » */
+        setTab(window.__artTab===b.getAttribute('data-v') ? '' : b.getAttribute('data-v'));
+      });
     });
-    setTab(window.__artTab);   /* applique le filtre par défaut (Articles) */
+    paint();   /* aucun filtre appliqué par défaut : toutes les données restent visibles */
   }
 
   /* « + Nouveau produit » : pré-règle le type selon l'onglet actif */
@@ -5945,15 +5984,8 @@ document.addEventListener('DOMContentLoaded', async function() {
     })();
   }, false);
 
-  /* (ré)applique l'onglet à chaque entrée dans la vue Articles */
-  var wasActive=false;
-  function tick(){
-    try{ build(); }catch(e){}
-    var v=document.getElementById('view-articles');
-    var act=!!(v && v.classList.contains('active'));
-    if (act && !wasActive){ try{ setTab(window.__artTab); }catch(e){} }
-    wasActive=act;
-  }
+  /* on n'applique AUCUN filtre automatiquement (les données restent toujours visibles) */
+  function tick(){ try{ build(); }catch(e){} }
   if (window.__epOnBodyMut){ window.__epOnBodyMut(tick); }
   var t=0; (function poll(){ try{ tick(); }catch(e){} if(++t<300) setTimeout(poll, 700); })();
 })();
