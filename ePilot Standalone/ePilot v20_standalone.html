@@ -6287,7 +6287,8 @@ document.addEventListener('DOMContentLoaded', async function() {
 })();
 
 </script>
-<style id="__CONGES_NAME_v1__">/* retirer le gras des noms dans le planning Congés */
-.gantt td.emp .nm{font-weight:400 !important;}</style>
+<style id="__CONGES_NAME_v1__">/* Congés : noms non gras (poids léger comme en Paie). Double-ID pour battre #vac-gantt + !important */
+html body[class] #view-vacation #vac-gantt td.emp .nm,
+html body[class] #vac-gantt td.emp .nm{font-weight:500 !important;}</style>
 </body>
 </html>
