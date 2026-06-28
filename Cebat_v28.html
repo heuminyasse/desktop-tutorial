@@ -2261,7 +2261,7 @@ class Component extends DCLogic {
   setState(update,cb){super.setState(update,cb);this._saveState();}
   componentDidMount(){
     try{
-      if(!this._pristine){this._pristine={};for(const k of this._PERSIST_KEYS)this._pristine[k]=JSON.parse(JSON.stringify(this.state[k]));}try{if(typeof document!=='undefined'&&!document.getElementById('cebat-print-css')){const st=document.createElement('style');st.id='cebat-print-css';st.textContent='@media print{@page{margin:14mm;}body *{visibility:hidden !important;}[data-print="main"],[data-print="main"] *{visibility:visible !important;}[data-print="main"]{position:absolute !important;left:0;top:0;width:100%;height:auto !important;overflow:visible !important;background:#fff !important;}[data-print="main"] *{overflow:visible !important;max-height:none !important;box-shadow:none !important;}html,body{height:auto !important;overflow:visible !important;background:#fff !important;}[data-print="hide"]{display:none !important;}}';document.head.appendChild(st);}}catch(e){}
+      if(!this._pristine){this._pristine={};for(const k of this._PERSIST_KEYS)this._pristine[k]=JSON.parse(JSON.stringify(this.state[k]));}try{if(typeof document!=='undefined'&&!document.getElementById('cebat-print-css')){const st=document.createElement('style');st.id='cebat-print-css';st.textContent='@media print{@page{margin:14mm;}body *{visibility:hidden !important;}[data-print="main"],[data-print="main"] *{visibility:visible !important;}[data-print="main"]{position:absolute !important;left:0;top:0;width:100%;height:auto !important;overflow:visible !important;background:#fff !important;}[data-print="main"] *{overflow:visible !important;max-height:none !important;box-shadow:none !important;}html,body{height:auto !important;overflow:visible !important;background:#fff !important;}[data-print="hide"]{display:none !important;}}@media (max-width:1024px){.cbt-auto{grid-template-columns:repeat(3,1fr) !important;}.cbt-2to1{grid-template-columns:1fr !important;}.cbt-sidebar{width:184px !important;}}@media (max-width:680px){.cbt-auto{grid-template-columns:repeat(2,1fr) !important;}.cbt-sidebar{width:152px !important;}}';document.head.appendChild(st);}}catch(e){}
       let idx=this._loadIndex();let cur=null;try{cur=localStorage.getItem(this._PROJ_CUR);}catch(e){}
       if(idx.length===0){
         const id=this._genProjId();let legacy=null;try{legacy=localStorage.getItem(this._STORE_KEY);}catch(e){}
@@ -2962,7 +2962,7 @@ class Component extends DCLogic {
     const elemTotal=tableauxElec.length+boitesDeriv.length+interrupteurs.length+zonesCommande.length;
     const bdgMap={appartements:appartements.length,pieces:pieces.length,circuits:circuits.length+elemTotal};
     const red='#0277BD';
-    return r('aside',{'data-print':'hide',style:{width:220,background:'#FFFFFF',borderRight:`1px solid ${c.bdr}`,display:'flex',flexDirection:'column',flexShrink:0,overflow:'hidden'}},
+    return r('aside',{'data-print':'hide',className:'cbt-sidebar',style:{width:220,background:'#FFFFFF',borderRight:`1px solid ${c.bdr}`,display:'flex',flexDirection:'column',flexShrink:0,overflow:'hidden'}},
       // Project card
       r('div',{style:{padding:'14px 16px',borderBottom:`1px solid ${c.bdr}`}},
         r('div',{style:{fontSize:9,color:c.muted,fontWeight:700,textTransform:'uppercase',letterSpacing:'.08em',marginBottom:4}},'PROJET ACTIF'),
@@ -5190,11 +5190,11 @@ class Component extends DCLogic {
         r('div',{style:{height:6,background:c.bdr2,borderRadius:3,overflow:'hidden',marginBottom:12}},r('div',{style:{height:'100%',width:comp+'%',background:'linear-gradient(90deg,#0277BD,#0EA5E9)',borderRadius:3,transition:'width .6s'}})),
         r('div',{style:{display:'flex',gap:0}},...milestones.map((m,i)=>r('div',{key:m.l,style:{flex:1,display:'flex',flexDirection:'column',alignItems:'center',gap:3}},r('div',{style:{width:18,height:18,borderRadius:'50%',background:m.done?c.success:c.bdr2,border:`2px solid ${m.done?c.success:c.bdr3}`,display:'flex',alignItems:'center',justifyContent:'center',fontSize:9,color:'#fff',fontWeight:700}},m.done?'✓':String(i+1)),r('div',{style:{fontSize:9,color:m.done?c.success:c.muted,fontWeight:m.done?600:400,textAlign:'center'}},m.l))))
       ),
-      r('div',{style:{display:'grid',gridTemplateColumns:'repeat(6,1fr)',gap:8,marginBottom:16}},
+      r('div',{className:'cbt-auto',style:{display:'grid',gridTemplateColumns:'repeat(6,1fr)',gap:8,marginBottom:16}},
         this.Stat(niveaux.length,'Niveaux',c.acBlue),this.Stat(appartements.length,'Appartements',c.purple),
         this.Stat(pieces.length,'Pièces',c.acBlue,'configurées'),this.Stat(circuits.length,'Circuits','#22c55e','NF C 15-100'),
         this.Stat((totalW/1000).toFixed(1)+' kW','Charge totale',c.warn),this.Stat(costs.ttc.toLocaleString('fr-FR')+'€','Devis TTC',c.success,'TVA 10%')),
-      r('div',{style:{display:'grid',gridTemplateColumns:'1fr 1fr',gap:14}},
+      r('div',{className:'cbt-2to1',style:{display:'grid',gridTemplateColumns:'1fr 1fr',gap:14}},
         this.Card('Structure',r('div',null,
           ...[...niveaux].sort((a,b)=>b.etage-a.etage).map(niv=>r('div',{key:niv.id,style:{marginBottom:10,paddingBottom:10,borderBottom:`1px solid ${c.bdr}`}},
             r('div',{style:{display:'flex',alignItems:'center',gap:8,marginBottom:5}},r('span',{style:{fontSize:13,fontWeight:700,color:c.text}},niv.nom),this.Bdg(niv.etage<0?`SS${Math.abs(niv.etage)}`:'E'+niv.etage,c.muted)),
