@@ -1,0 +1,741 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>FCR Processor — HBO Cameroon</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Segoe UI',system-ui,sans-serif;font-size:13px;background:#f3f4f6;color:#111;min-height:100vh}
+header{background:#B5000A;color:#fff;padding:16px 24px;display:flex;align-items:center;gap:14px}
+header h1{font-size:18px;font-weight:700}
+header p{font-size:12px;opacity:.85}
+.container{max-width:1400px;margin:0 auto;padding:20px}
+
+/* Drop zone */
+#drop-zone{border:2.5px dashed #d1d5db;border-radius:12px;padding:40px 24px;text-align:center;background:#fff;cursor:pointer;transition:.15s;margin-bottom:18px}
+#drop-zone.over{border-color:#B5000A;background:#fff5f5}
+#drop-zone h2{font-size:16px;font-weight:600;margin-bottom:8px;color:#374151}
+#drop-zone p{color:#6b7280;font-size:12px;margin-bottom:12px}
+#file-input{display:none}
+.btn-pick{display:inline-block;padding:8px 20px;background:#B5000A;color:#fff;border-radius:8px;cursor:pointer;font-weight:600;font-size:13px;border:none}
+.btn-pick:hover{background:#900008}
+
+/* Status */
+#status-bar{background:#fff;border:1px solid #e5e7eb;border-radius:8px;padding:10px 16px;margin-bottom:14px;display:none;font-size:12px;color:#374151}
+.status-ok{color:#16a34a;font-weight:600}
+.status-err{color:#dc2626;font-weight:600}
+
+/* Controls */
+#controls{background:#fff;border:1px solid #e5e7eb;border-radius:10px;padding:12px 16px;margin-bottom:14px;display:none;gap:10px;flex-wrap:wrap;align-items:center}
+#controls label{font-size:11px;font-weight:600;color:#6b7280;text-transform:uppercase;letter-spacing:.04em}
+.ctrl-group{display:flex;align-items:center;gap:6px}
+.ctrl-group input[type=checkbox]{width:15px;height:15px;accent-color:#B5000A;cursor:pointer}
+.btn{padding:7px 16px;border-radius:7px;border:1.5px solid transparent;cursor:pointer;font-size:12px;font-weight:600;transition:.12s}
+.btn-primary{background:#B5000A;color:#fff;border-color:#B5000A}
+.btn-primary:hover{background:#900008}
+.btn-outline{background:#fff;border-color:#d1d5db;color:#374151}
+.btn-outline:hover{border-color:#B5000A;color:#B5000A}
+.btn-green{background:#16a34a;color:#fff;border-color:#16a34a}
+.btn-green:hover{background:#15803d}
+.ml-auto{margin-left:auto}
+
+/* Tabs */
+.tabs{display:flex;gap:4px;margin-bottom:0;border-bottom:2px solid #e5e7eb}
+.tab{padding:9px 18px;border:none;border-bottom:3px solid transparent;background:transparent;cursor:pointer;font-size:12px;font-weight:600;color:#6b7280;border-radius:6px 6px 0 0;transition:.12s;margin-bottom:-2px}
+.tab:hover{background:#f9fafb}
+.tab.on{color:#B5000A;border-bottom-color:#B5000A;font-weight:800}
+.tab-badge{display:inline-block;padding:1px 7px;border-radius:999px;font-size:10px;margin-left:4px;background:#e5e7eb;color:#374151}
+.tab.on .tab-badge{background:#fef2f2;color:#B5000A}
+
+/* Panel */
+.panel{display:none;background:#fff;border:1px solid #e5e7eb;border-top:none;border-radius:0 0 10px 10px;overflow:hidden}
+.panel.active{display:block}
+
+/* Table */
+.tbl-wrap{overflow-x:auto;max-height:480px;overflow-y:auto}
+table{width:100%;border-collapse:collapse;font-size:12px}
+thead{position:sticky;top:0;z-index:2}
+thead th{background:#f8fafc;border-bottom:2px solid #e5e7eb;padding:8px 10px;text-align:left;font-weight:700;font-size:11px;color:#374151;white-space:nowrap}
+tbody tr{border-bottom:1px solid #f1f5f9;transition:background .1s}
+tbody tr:hover{background:#f8fafc}
+tbody tr.excluded{opacity:.4}
+tbody tr.service-row .desig-cell{border-left:3px solid #2563eb}
+tbody tr.fourniture-row .desig-cell{border-left:3px solid #16a34a}
+tbody td{padding:6px 10px;vertical-align:middle}
+.td-prix{text-align:right;font-weight:700;font-family:'Calibri',monospace}
+.td-prix-four{text-align:right;color:#6b7280;font-family:'Calibri',monospace}
+.td-unite{text-align:center;font-size:11px;color:#6b7280}
+.td-num{text-align:center;color:#9ca3af;font-size:11px;width:40px}
+.td-src{font-size:10px;color:#9ca3af;white-space:nowrap}
+.tag{display:inline-flex;align-items:center;padding:2px 7px;border-radius:4px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.04em}
+.tag-fourniture{background:#dcfce7;color:#15803d}
+.tag-service{background:#dbeafe;color:#1d4ed8}
+.tag-rejet{background:#f1f5f9;color:#6b7280}
+.reason{font-size:10px;color:#9ca3af;max-width:220px}
+
+/* Action bar */
+#action-bar{display:none;background:#fff;border:1px solid #e5e7eb;border-radius:10px;padding:12px 16px;margin-top:14px;display:none;gap:10px;flex-wrap:wrap;align-items:center}
+
+/* Summary chips */
+.summary{display:flex;gap:8px;flex-wrap:wrap;padding:12px 14px;background:#f8fafc;border-bottom:1px solid #e5e7eb}
+.chip{padding:5px 12px;border-radius:6px;font-size:11px;font-weight:700;display:inline-flex;align-items:center;gap:5px}
+.chip-a{background:#dcfce7;color:#15803d}
+.chip-s{background:#dbeafe;color:#1d4ed8}
+.chip-r{background:#fee2e2;color:#b91c1c}
+.chip-f{background:#fef9c3;color:#854d0e}
+
+/* Toast */
+#toast{position:fixed;bottom:24px;right:24px;background:#111;color:#fff;padding:10px 18px;border-radius:8px;font-size:13px;z-index:9999;display:none;box-shadow:0 4px 16px rgba(0,0,0,.3)}
+</style>
+</head>
+<body>
+
+<header>
+  <div>
+    <h1>📋 FCR Processor — HBO Cameroon</h1>
+    <p>Traitement intelligent des fichiers FCR (.xlsm / .xlsx) · Séparation articles / services · Nettoyage automatique</p>
+  </div>
+</header>
+
+<div class="container">
+
+  <!-- Drop zone -->
+  <div id="drop-zone">
+    <h2>📂 Déposez vos fichiers FCR ici</h2>
+    <p>Accepte les fichiers <strong>.xlsm</strong> et <strong>.xlsx</strong> — plusieurs fichiers à la fois<br>
+       Chaque fichier doit avoir une feuille <strong>PI</strong> (prix vendus) et/ou <strong>Data</strong> (prix fournisseurs)</p>
+    <label class="btn-pick">Sélectionner des fichiers
+      <input type="file" id="file-input" multiple accept=".xlsm,.xlsx,.xls">
+    </label>
+  </div>
+
+  <!-- Status -->
+  <div id="status-bar"></div>
+
+  <!-- Controls -->
+  <div id="controls" style="display:none">
+    <label>Options de nettoyage :</label>
+    <div class="ctrl-group">
+      <input type="checkbox" id="opt-no-price" checked>
+      <label for="opt-no-price">Exclure si prix = 0</label>
+    </div>
+    <div class="ctrl-group">
+      <input type="checkbox" id="opt-no-qty" checked>
+      <label for="opt-no-qty">Exclure si qté = 0</label>
+    </div>
+    <div class="ctrl-group">
+      <input type="checkbox" id="opt-titles" checked>
+      <label for="opt-titles">Exclure les titres / en-têtes</label>
+    </div>
+    <button class="btn btn-outline" id="btn-reprocess">🔄 Retraiter</button>
+    <div style="margin-left:auto;display:flex;gap:8px">
+      <button class="btn btn-outline" id="btn-export-json">💾 Exporter JSON</button>
+      <button class="btn btn-outline" id="btn-export-csv">📊 Exporter CSV</button>
+      <button class="btn btn-green" id="btn-load-idb">🚀 Charger dans ePilot</button>
+    </div>
+  </div>
+
+  <!-- Tabs + panels -->
+  <div id="results" style="display:none">
+    <div class="tabs">
+      <button class="tab on" data-tab="articles">📦 Articles <span class="tab-badge" id="cnt-a">0</span></button>
+      <button class="tab" data-tab="services">🔧 Services <span class="tab-badge" id="cnt-s">0</span></button>
+      <button class="tab" data-tab="rejets">⛔ Rejetés <span class="tab-badge" id="cnt-r">0</span></button>
+    </div>
+
+    <div class="panel active" id="panel-articles">
+      <div class="summary" id="sum-articles"></div>
+      <div class="tbl-wrap"><table id="t-articles"><thead></thead><tbody></tbody></table></div>
+    </div>
+    <div class="panel" id="panel-services">
+      <div class="summary" id="sum-services"></div>
+      <div class="tbl-wrap"><table id="t-services"><thead></thead><tbody></tbody></table></div>
+    </div>
+    <div class="panel" id="panel-rejets">
+      <div class="tbl-wrap"><table id="t-rejets"><thead></thead><tbody></tbody></table></div>
+    </div>
+  </div>
+
+</div>
+
+<div id="toast"></div>
+
+<!-- SheetJS via CDN -->
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<script>
+'use strict';
+
+/* ══════════════════════════════════════════════════════
+   DONNÉES GLOBALES
+══════════════════════════════════════════════════════ */
+var allItems = [];      /* tous les articles/services acceptés */
+var rejectedItems = []; /* rejetés */
+var _fileCount = 0;
+
+/* ══════════════════════════════════════════════════════
+   UTILITAIRES
+══════════════════════════════════════════════════════ */
+function nn(s){
+  /* normalise : minuscule, sans accent, sans ponctuation → espaces */
+  return String(s||'').normalize('NFD').replace(/[̀-ͯ]/g,'')
+    .toLowerCase().replace(/[^a-z0-9]/g,' ').replace(/\s+/g,' ').trim();
+}
+function fmt(n){
+  var v=Number(n)||0;
+  if(!v) return '—';
+  return v.toLocaleString('fr-FR',{maximumFractionDigits:0});
+}
+function esc(s){
+  return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;');
+}
+function toast(msg, ms){
+  var el=document.getElementById('toast');
+  el.textContent=msg; el.style.display='block';
+  clearTimeout(toast._t); toast._t=setTimeout(function(){el.style.display='none';}, ms||2800);
+}
+
+/* ══════════════════════════════════════════════════════
+   LECTURE FICHIER EXCEL
+══════════════════════════════════════════════════════ */
+function readFile(file){
+  return new Promise(function(res, rej){
+    var reader = new FileReader();
+    reader.onload = function(e){
+      try{
+        var wb = XLSX.read(e.target.result, {type:'array', cellText:true, cellDates:true});
+        /* Feuilles */
+        var sheetNames = wb.SheetNames.map(function(n){return n.trim();});
+
+        function getSheet(names){
+          for(var i=0;i<names.length;i++){
+            for(var j=0;j<sheetNames.length;j++){
+              if(sheetNames[j].toLowerCase()===names[i].toLowerCase()||
+                 sheetNames[j].toLowerCase().indexOf(names[i].toLowerCase())>=0)
+                return XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[j]],{header:1,defval:'',raw:false});
+            }
+          }
+          return null;
+        }
+
+        var piRows   = getSheet(['PI','Prix vente','Prix vendu','Vente','Offer','Offre']);
+        var dataRows = getSheet(['Data','DATA','Fournisseur','Prix achat','Achat','Purchase']);
+
+        /* Si on n'a que 1 feuille → PI par défaut */
+        if(!piRows && wb.SheetNames.length>=1)
+          piRows = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]],{header:1,defval:'',raw:false});
+        if(!dataRows && wb.SheetNames.length>=2)
+          dataRows = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[1]],{header:1,defval:'',raw:false});
+
+        res({filename: file.name, pi: piRows||[], data: dataRows||[]});
+      }catch(err){ rej(err); }
+    };
+    reader.onerror = function(){ rej(new Error('Lecture impossible: '+file.name)); };
+    reader.readAsArrayBuffer(file);
+  });
+}
+
+/* ══════════════════════════════════════════════════════
+   DÉTECTION EN-TÊTES
+══════════════════════════════════════════════════════ */
+function detectHeader(rows){
+  /* Cherche la première ligne avec un champ désignation ET un champ prix */
+  for(var i=0;i<Math.min(20,rows.length);i++){
+    var row=rows[i];
+    var s=row.map(function(c){return nn(c);}).join(' ');
+    var hasDesig=/desig|libel|descr|designat|article|prestat|denomination|objet/.test(s);
+    var hasPrix=/prix|pu\b|p\.?u\.?|tarif|cout|co[uû]t|unit/.test(s);
+    if(hasDesig && hasPrix) return i;
+    if(hasDesig && row.length>=3) return i; /* moins stricte si beaucoup de colonnes */
+  }
+  return -1;
+}
+
+function mapCols(headerRow){
+  var m={desig:-1,unite:-1,qte:-1,pu:-1,ref:-1,section:-1,fab:-1,total:-1};
+  headerRow.forEach(function(h,i){
+    var s=nn(h);
+    if(s.length<1) return;
+    if(/desig|libel|descr|denominat|d[eé]sign|article|prestat/.test(s) && m.desig<0) m.desig=i;
+    else if(/^(u\.?m\.?|unit[eé]|unt|unites?)$/.test(s) && m.unite<0) m.unite=i;
+    else if(/^(qt[eé]|q(?:uan)?t[eé]|quantit)/.test(s) && m.qte<0) m.qte=i;
+    else if(/^(p\.?u\.?|prix.{0,6}unit|unit.{0,6}prix|pu\b|tarif.{0,6}unit|co[uû]t.{0,6}unit)/.test(s) && m.pu<0) m.pu=i;
+    else if(/r[eé]f[eé]r|^r[eé]f\.?$|^code$|^c[oô]d/.test(s) && m.ref<0) m.ref=i;
+    else if(/^(lot|section|chapitre|rubrique|poste|categ)/.test(s) && m.section<0) m.section=i;
+    else if(/fabricant|marque|brand|fourniss/.test(s) && m.fab<0) m.fab=i;
+    else if(/^(total|montant|ht)/.test(s) && m.total<0) m.total=i;
+  });
+  return m;
+}
+
+/* ══════════════════════════════════════════════════════
+   RÈGLES DE NETTOYAGE
+══════════════════════════════════════════════════════ */
+/* Patterns de titres / en-têtes de lot à rejeter */
+var TITLE_RE=/^[-=_*#\s\.]+$|^(LOT\s|CHAPITRE\s|SECTION\s|SOUS[-\s]LOT\s|TITRE\s|TOTAL|MONTANT|R[ÉE]CAP|SOUS[-\s]TOTAL|BORDEREAU|FOURNITURES?\s*:?$|TRAVAUX\s*:?$|PRESTATION|IMPORT[ÉE]|DIVERS|OPTIONS?$)/i;
+var ROMAN_RE=/^(?:I{1,3}|IV|VI{0,3}|IX|XI{0,2}|XIV|X?[IVX]+)[\s\.\-\)]/i;
+var NUM_SECTION_RE=/^(\d{1,2}|\d{1,2}\.\d{1,2}|\d{1,2}\.\d{1,2}\.\d{1,2})\s*[-\.\)]\s*/;
+
+function rejectReason(row, m, opts){
+  var desig=String(row[m.desig]||'').trim();
+  var pu=Number(String(row[m.pu]||'').replace(/\s/g,'').replace(',','.'))||0;
+  var qte=Number(String(row[m.qte]||'').replace(/\s/g,'').replace(',','.'))||0;
+  var total=m.total>=0?(Number(String(row[m.total]||'').replace(/\s/g,'').replace(',','.'))||0):null;
+
+  if(!desig || desig.length<2) return 'Désignation vide';
+  if(opts.titles){
+    if(TITLE_RE.test(desig)) return 'Titre/section : '+desig.slice(0,30);
+    if(ROMAN_RE.test(desig)) return 'Numérotation romaine : '+desig.slice(0,30);
+    if(NUM_SECTION_RE.test(desig) && pu<=0) return 'Section numérotée sans prix';
+    if(/^[A-Z\s\-\.]{4,}$/.test(desig) && pu<=0) return 'Titre tout en majuscules';
+    if(desig.replace(/[-=\s\.\d]/g,'').length<2) return 'Ligne vide / séparateur';
+  }
+  if(opts.noPrice && pu<=0 && (total===null||total<=0)) return 'Prix = 0';
+  if(opts.noQty && qte<=0 && m.qte>=0) return 'Quantité = 0';
+  return null; /* pas rejeté */
+}
+
+/* ══════════════════════════════════════════════════════
+   CLASSIFICATION SERVICE vs FOURNITURE
+══════════════════════════════════════════════════════ */
+var SVC_KW=/\b(m\.?[oô]\.?|main[- ]?d['’ ]?[oœ]euvre|m\.?d?o\.?|travaux|installation|montage|pose\b|mise en [oœ]uvre|m\.?e\.?o\.?|supervision|management|ing[eé]nieur|essai[sx]?|v[eé]rification|contr[oô]le|inspection|formation|assistance|audit|r[eé]ception|d[eé]molition|terrassement|excavation|fondation|ma[cç]onnerie|enduit|cr[eé]pit|ravalement|peinture|toiture|charpente|plomberie|[eé]lectricit[eé]|canalisation|assainissement|levage|soudage|soudure|calorifuge|gros.*[oœ]euvre|second.*[oœ]euvre|vrd|commission|honoraire[sx]?|coordination|pilotage|encadrement|gardiennage|nettoyage|entretien|maintenance|r[eé]paration|forage|bouchonnage|joints?|[eé]tanchéit[eé]|isolation|menuiserie|serrurerie|quincaillerie.*pose|transport|livraison|manutention|d[eé]chargement|chargement|stockage)\b/i;
+
+function classify(row, m){
+  var desig=nn(String(row[m.desig]||''));
+  var section=m.section>=0?nn(String(row[m.section]||'')):'';
+  var unite=m.unite>=0?String(row[m.unite]||'').trim().toUpperCase():'';
+
+  if(SVC_KW.test(desig)||SVC_KW.test(section)) return 'service';
+  /* Unité forfait / ensemble → souvent service */
+  if(/^(FF|FORFAIT|ENS|ENSEMBLE|FT)$/.test(unite)) return 'service';
+  return 'fourniture';
+}
+
+/* ══════════════════════════════════════════════════════
+   EXTRACTION D'UNE FEUILLE
+══════════════════════════════════════════════════════ */
+function extractRows(rows, filename, sheet){
+  if(!rows||!rows.length) return {items:[], rejected:[]};
+  var hIdx=detectHeader(rows);
+  if(hIdx<0){ /* essai sans en-tête détecté : suppose row 0 = header */
+    hIdx=0;
+  }
+  var m=mapCols(rows[hIdx]);
+  if(m.desig<0) return {items:[], rejected:[], noHeader:true};
+
+  /* Contexte de section courant (pour les lignes qui héritent d'une section) */
+  var curSection='';
+  var items=[], rejected=[];
+  var opts={
+    noPrice: document.getElementById('opt-no-price').checked,
+    noQty:   document.getElementById('opt-no-qty').checked,
+    titles:  document.getElementById('opt-titles').checked
+  };
+
+  for(var i=hIdx+1;i<rows.length;i++){
+    var row=rows[i];
+    if(!row||row.every(function(c){return !String(c||'').trim();})) continue; /* ligne vide */
+
+    var desig=String(row[m.desig]||'').trim();
+    var pu=Number(String(row[m.pu]>=0?row[m.pu]:'').replace(/[\s ]/g,'').replace(',','.'))||0;
+    var qte=Number(String(m.qte>=0?row[m.qte]:'').replace(/[\s ]/g,'').replace(',','.'))||0;
+    var unite=m.unite>=0?String(row[m.unite]||'').trim():'U';
+    var ref=m.ref>=0?String(row[m.ref]||'').trim():'';
+    var fab=m.fab>=0?String(row[m.fab]||'').trim():'';
+    var section=m.section>=0?String(row[m.section]||'').trim():'';
+
+    /* Met à jour la section courante si ligne de section */
+    if(!section&&desig&&pu<=0&&opts.titles){
+      if(TITLE_RE.test(desig)||ROMAN_RE.test(desig)||NUM_SECTION_RE.test(desig)){
+        curSection=desig.replace(NUM_SECTION_RE,'').replace(ROMAN_RE,'').trim();
+        rejected.push({desig:desig,pu:0,unite:'',section:'',ref:'',reason:'Section/Titre',src:filename+'·'+sheet});
+        continue;
+      }
+    }
+
+    var reason=rejectReason(row,m,opts);
+    if(reason){
+      rejected.push({desig:desig,pu:pu,unite:unite,section:section||curSection,ref:ref,reason:reason,src:filename+'·'+sheet});
+      continue;
+    }
+
+    var type=classify(row,m);
+    items.push({
+      desig:desig,
+      pu:pu,
+      qte:qte,
+      unite:unite||'U',
+      ref:ref,
+      fab:fab,
+      section:section||curSection,
+      type:type,
+      src:filename+'·'+sheet,
+      excluded:false,
+      _sheet:sheet  /* PI ou Data */
+    });
+  }
+  return {items:items, rejected:rejected};
+}
+
+/* ══════════════════════════════════════════════════════
+   FUSION PI + DATA (cross-référence par désignation)
+══════════════════════════════════════════════════════ */
+function mergeSheets(piItems, dataItems){
+  /* Index Data par désignation normalisée */
+  var dataIdx={};
+  dataItems.forEach(function(d){ var k=nn(d.desig); if(!dataIdx[k]) dataIdx[k]=d; });
+
+  return piItems.map(function(item){
+    var merged=Object.assign({},item);
+    var k=nn(item.desig);
+    var match=dataIdx[k];
+    if(match) merged.puFour=match.pu;
+    else merged.puFour=0;
+    return merged;
+  });
+}
+
+/* ══════════════════════════════════════════════════════
+   TRAITEMENT COMPLET D'UN FICHIER
+══════════════════════════════════════════════════════ */
+function processWorkbook(wb){
+  var piResult   = extractRows(wb.pi,   wb.filename, 'PI');
+  var dataResult = extractRows(wb.data, wb.filename, 'Data');
+
+  var merged=mergeSheets(piResult.items, dataResult.items);
+  var rejected=piResult.rejected.concat(dataResult.rejected);
+
+  return {items:merged, rejected:rejected};
+}
+
+/* ══════════════════════════════════════════════════════
+   RENDU DES TABLEAUX
+══════════════════════════════════════════════════════ */
+function renderItems(items, tableId, summaryId, type){
+  var tbl=document.getElementById(tableId);
+  var thead=tbl.querySelector('thead');
+  var tbody=tbl.querySelector('tbody');
+
+  thead.innerHTML='<tr>'
+    +'<th>#</th><th>Désignation</th><th>Référence</th>'
+    +'<th>Unité</th><th>PU vendu (FCFA)</th><th>PU fournisseur (FCFA)</th>'
+    +'<th>Type</th><th>Section</th><th>Source</th><th>Action</th>'
+    +'</tr>';
+
+  var rows=items.filter(function(it){return it.type===type;});
+  var html='';
+  rows.forEach(function(it,i){
+    var rowCls=(it.excluded?'excluded ':'')+(it.type==='service'?'service-row':'fourniture-row');
+    html+='<tr class="'+rowCls+'" data-idx="'+it._globalIdx+'">'
+      +'<td class="td-num">'+(i+1)+'</td>'
+      +'<td class="desig-cell" style="max-width:300px">'+esc(it.desig)+'</td>'
+      +'<td style="font-size:11px;color:#6b7280">'+esc(it.ref)+'</td>'
+      +'<td class="td-unite">'+esc(it.unite)+'</td>'
+      +'<td class="td-prix">'+fmt(it.pu)+'</td>'
+      +'<td class="td-prix-four">'+fmt(it.puFour)+'</td>'
+      +'<td>'+(it.type==='service'?'<span class="tag tag-service">Service</span>':'<span class="tag tag-fourniture">Article</span>')+'</td>'
+      +'<td style="font-size:11px;max-width:150px;color:#6b7280">'+esc(it.section)+'</td>'
+      +'<td class="td-src">'+esc(it.src)+'</td>'
+      +'<td><button class="btn btn-outline" style="padding:3px 8px;font-size:10px" onclick="toggleItem('+it._globalIdx+')">'+
+        (it.excluded?'✅ Réintégrer':'⛔ Exclure')+'</button>'
+      +' <button class="btn btn-outline" style="padding:3px 8px;font-size:10px" onclick="switchType('+it._globalIdx+')">⇄ Changer</button></td>'
+      +'</tr>';
+  });
+  tbody.innerHTML=html||'<tr><td colspan="10" style="text-align:center;color:#9ca3af;padding:20px">Aucun élément</td></tr>';
+
+  /* Summary chips */
+  var sum=document.getElementById(summaryId);
+  var total=rows.length;
+  var ok=rows.filter(function(it){return !it.excluded;}).length;
+  var moy=ok>0?(rows.filter(function(it){return !it.excluded&&it.pu>0;}).reduce(function(a,it){return a+it.pu;},0)/ok):0;
+  sum.innerHTML='<span class="chip '+(type==='service'?'chip-s':'chip-a')+'">'+ok+' '+
+    (type==='service'?'services':'articles')+' retenus</span>'
+    +(total>ok?'<span class="chip chip-r">'+(total-ok)+' exclus</span>':'')
+    +(moy>0?'<span class="chip chip-f">PU moyen : '+fmt(moy)+' FCFA</span>':'');
+}
+
+function renderRejets(rejected){
+  var tbl=document.getElementById('t-rejets');
+  var thead=tbl.querySelector('thead');
+  var tbody=tbl.querySelector('tbody');
+  thead.innerHTML='<tr><th>#</th><th>Désignation</th><th>PU</th><th>Raison du rejet</th><th>Source</th></tr>';
+  var html='';
+  rejected.forEach(function(r,i){
+    html+='<tr><td class="td-num">'+(i+1)+'</td>'
+      +'<td>'+esc(r.desig)+'</td>'
+      +'<td class="td-prix">'+fmt(r.pu)+'</td>'
+      +'<td class="reason">'+esc(r.reason)+'</td>'
+      +'<td class="td-src">'+esc(r.src)+'</td></tr>';
+  });
+  tbody.innerHTML=html||'<tr><td colspan="5" style="text-align:center;color:#9ca3af;padding:20px">Aucun rejet</td></tr>';
+}
+
+function renderAll(){
+  var articles=allItems.filter(function(it){return it.type==='fourniture';});
+  var services=allItems.filter(function(it){return it.type==='service';});
+  document.getElementById('cnt-a').textContent=articles.length;
+  document.getElementById('cnt-s').textContent=services.length;
+  document.getElementById('cnt-r').textContent=rejectedItems.length;
+  renderItems(allItems,'t-articles','sum-articles','fourniture');
+  renderItems(allItems,'t-services','sum-services','service');
+  renderRejets(rejectedItems);
+}
+
+/* ══════════════════════════════════════════════════════
+   INTERACTIONS TABLE
+══════════════════════════════════════════════════════ */
+function toggleItem(idx){
+  if(allItems[idx]) allItems[idx].excluded=!allItems[idx].excluded;
+  renderAll();
+}
+function switchType(idx){
+  if(allItems[idx]) allItems[idx].type=(allItems[idx].type==='service'?'fourniture':'service');
+  renderAll();
+}
+window.toggleItem=toggleItem; window.switchType=switchType;
+
+/* ══════════════════════════════════════════════════════
+   GÉNÉRATION CODE A (CATALOGUE)
+══════════════════════════════════════════════════════ */
+function assignCodes(items){
+  /* Essaie de trouver le prochain code disponible depuis IDB, sinon part de 1 */
+  var nextA=1, nextS=1;
+  return items.map(function(it,i){
+    var pfx=it.type==='service'?'S':'A';
+    var num=(it.type==='service')?(nextS++):(nextA++);
+    return Object.assign({},it,{
+      codeA: pfx+String(100000+num).slice(1), /* A00001 … */
+      designation: it.desig,
+      reference: it.ref,
+      fabricant: it.fab||''
+    });
+  });
+}
+
+/* ══════════════════════════════════════════════════════
+   EXPORT JSON
+══════════════════════════════════════════════════════ */
+document.getElementById('btn-export-json').addEventListener('click',function(){
+  var kept=allItems.filter(function(it){return !it.excluded;});
+  var coded=assignCodes(kept);
+  var blob=new Blob([JSON.stringify(coded,null,2)],{type:'application/json'});
+  var a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  a.download='FCR_catalog_'+new Date().toISOString().slice(0,10)+'.json';
+  a.click();
+  toast('JSON exporté — '+kept.length+' articles/services');
+});
+
+/* ══════════════════════════════════════════════════════
+   EXPORT CSV
+══════════════════════════════════════════════════════ */
+document.getElementById('btn-export-csv').addEventListener('click',function(){
+  var kept=allItems.filter(function(it){return !it.excluded;});
+  var header=['Type','Désignation','Référence','Unité','PU Vendu (FCFA)','PU Fournisseur (FCFA)','Section','Source'];
+  var rows=[header].concat(kept.map(function(it){
+    return [it.type,it.desig,it.ref,it.unite,it.pu||'',it.puFour||'',it.section,it.src];
+  }));
+  var csv=rows.map(function(r){
+    return r.map(function(c){return '"'+String(c||'').replace(/"/g,'""')+'"';}).join(';');
+  }).join('\n');
+  var blob=new Blob(['﻿'+csv],{type:'text/csv;charset=utf-8'});
+  var a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  a.download='FCR_catalog_'+new Date().toISOString().slice(0,10)+'.csv';
+  a.click();
+  toast('CSV exporté — '+kept.length+' lignes');
+});
+
+/* ══════════════════════════════════════════════════════
+   CHARGEMENT DANS ePilot (IndexedDB)
+══════════════════════════════════════════════════════ */
+document.getElementById('btn-load-idb').addEventListener('click',function(){
+  var kept=allItems.filter(function(it){return !it.excluded;});
+  if(!kept.length){ toast('Aucun élément à charger.'); return; }
+
+  /* Essaie d'accéder à epilot_price_catalog (même origine file://) */
+  try{
+    var req=indexedDB.open('epilot_price_catalog');
+    req.onsuccess=function(e){
+      var db=e.target.result;
+      var stores=Array.from(db.objectStoreNames);
+      db.close();
+      if(stores.indexOf('catalog')>=0||stores.indexOf('backups')>=0){
+        loadIntoCatalog(kept, db.name);
+      } else {
+        downloadLoadScript(kept);
+      }
+    };
+    req.onerror=function(){ downloadLoadScript(kept); };
+  }catch(ex){ downloadLoadScript(kept); }
+});
+
+function loadIntoCatalog(kept, dbName){
+  /* Lit le catalogue existant pour trouver le prochain codeA */
+  var openReq=indexedDB.open(dbName);
+  openReq.onsuccess=function(e){
+    var db=e.target.result;
+    var tx=db.transaction(['catalog'],'readwrite');
+    var store=tx.objectStore('catalog');
+
+    /* Lire tous les codes existants pour déduire le prochain N° */
+    var nextA=1, nextS=1;
+    var getAll=store.getAll ? store.getAll() : null;
+    function doWrite(existingRecords){
+      var existing=existingRecords||[];
+      existing.forEach(function(r){
+        var code=String(r.codeA||'');
+        if(/^A(\d+)/.test(code)) nextA=Math.max(nextA,parseInt(code.slice(1))+1);
+        if(/^S(\d+)/.test(code)) nextS=Math.max(nextS,parseInt(code.slice(1))+1);
+      });
+      /* Signature pour déduplication */
+      var sigMap={};
+      existing.forEach(function(r){
+        var sig=nn(r.designation||r.desig||'')+'|'+(r.type==='service'?'s':'a');
+        sigMap[sig]=r.codeA;
+      });
+
+      var tx2=db.transaction(['catalog'],'readwrite');
+      var s2=tx2.objectStore('catalog');
+      var added=0, skipped=0;
+      kept.forEach(function(it){
+        var sig=nn(it.desig)+'|'+(it.type==='service'?'s':'a');
+        if(sigMap[sig]){ skipped++; return; } /* déjà présent → skip */
+        var num=(it.type==='service')?(nextS++):(nextA++);
+        var pfx=it.type==='service'?'S':'A';
+        var codeA=pfx+String(100000+num).slice(1);
+        var record={
+          codeA:codeA,
+          designation:it.desig,
+          reference:it.ref||'',
+          fabricant:it.fab||'',
+          unite:it.unite||'U',
+          section:it.section||'',
+          type:it.type,
+          pu:it.pu||0,
+          puFour:it.puFour||0
+        };
+        s2.put(record);
+        sigMap[sig]=codeA;
+        added++;
+      });
+      tx2.oncomplete=function(){
+        db.close();
+        toast('✅ '+added+' enregistrements chargés ('+skipped+' doublons ignorés) dans epilot_price_catalog');
+        document.getElementById('btn-load-idb').textContent='✅ Chargé ('+added+' nouveaux)';
+      };
+      tx2.onerror=function(){ toast('Erreur IDB : '+tx2.error); };
+    }
+
+    if(getAll){ getAll.onsuccess=function(e){ doWrite(e.target.result); }; getAll.onerror=function(){ doWrite([]); }; }
+    else {
+      /* fallback cursor */
+      var all=[]; var cur=store.openCursor();
+      cur.onsuccess=function(e){ var c=e.target.result; if(c){all.push(c.value);c.continue();}else doWrite(all); };
+      cur.onerror=function(){ doWrite([]); };
+    }
+  };
+  openReq.onerror=function(){ downloadLoadScript(kept); };
+}
+
+function downloadLoadScript(kept){
+  /* Génère un .js à coller dans la console du navigateur sur ePilot */
+  var coded=assignCodes(kept);
+  var data=JSON.stringify(coded);
+  var script=
+'/* Coller ce script dans la console du navigateur sur la page ePilot */\n'+
+'(function(){\n'+
+'  var items='+data+';\n'+
+'  var req=indexedDB.open("epilot_price_catalog");\n'+
+'  req.onsuccess=function(e){\n'+
+'    var db=e.target.result;\n'+
+'    var tx=db.transaction(["catalog"],"readwrite");\n'+
+'    var s=tx.objectStore("catalog");\n'+
+'    items.forEach(function(it){ s.put({codeA:it.codeA,designation:it.designation||it.desig,reference:it.reference||it.ref||"",fabricant:it.fabricant||it.fab||"",unite:it.unite||"U",section:it.section||"",type:it.type,pu:it.pu||0,puFour:it.puFour||0}); });\n'+
+'    tx.oncomplete=function(){ db.close(); console.log("✅ "+items.length+" articles chargés dans epilot_price_catalog"); };\n'+
+'  };\n'+
+'})();\n';
+  var blob=new Blob([script],{type:'text/javascript'});
+  var a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  a.download='load_catalog_ePilot.js';
+  a.click();
+  toast('Script de chargement téléchargé — collez-le dans la console du navigateur sur ePilot');
+}
+
+/* ══════════════════════════════════════════════════════
+   TRAITEMENT PRINCIPAL
+══════════════════════════════════════════════════════ */
+function processFiles(files){
+  if(!files||!files.length) return;
+  _fileCount=0;
+  allItems=[]; rejectedItems=[];
+
+  var statusBar=document.getElementById('status-bar');
+  statusBar.style.display='block';
+  statusBar.innerHTML='⏳ Traitement de '+files.length+' fichier(s)…';
+
+  var promises=Array.from(files).map(function(f){return readFile(f);});
+  Promise.all(promises).then(function(workbooks){
+    workbooks.forEach(function(wb){
+      var res=processWorkbook(wb);
+      res.items.forEach(function(it){ it._globalIdx=allItems.length; allItems.push(it); });
+      rejectedItems=rejectedItems.concat(res.rejected);
+    });
+
+    statusBar.innerHTML='<span class="status-ok">✅ '+files.length+' fichier(s) traité(s)</span>'
+      +' · <b>'+allItems.filter(function(it){return it.type==='fourniture';}).length+'</b> articles'
+      +' · <b>'+allItems.filter(function(it){return it.type==='service';}).length+'</b> services'
+      +' · <b>'+rejectedItems.length+'</b> lignes rejetées';
+
+    document.getElementById('results').style.display='block';
+    document.getElementById('controls').style.display='flex';
+    renderAll();
+  }).catch(function(err){
+    statusBar.innerHTML='<span class="status-err">❌ Erreur : '+esc(err.message)+'</span>';
+  });
+}
+
+/* ── Retraitement avec options ── */
+document.getElementById('btn-reprocess').addEventListener('click',function(){
+  document.getElementById('file-input').dispatchEvent(new Event('change-reprocess'));
+});
+
+/* ══════════════════════════════════════════════════════
+   DRAG & DROP / FILE INPUT
+══════════════════════════════════════════════════════ */
+var dz=document.getElementById('drop-zone');
+dz.addEventListener('dragover',function(e){ e.preventDefault(); dz.classList.add('over'); });
+dz.addEventListener('dragleave',function(){ dz.classList.remove('over'); });
+dz.addEventListener('drop',function(e){ e.preventDefault(); dz.classList.remove('over'); processFiles(e.dataTransfer.files); });
+dz.addEventListener('click',function(){ document.getElementById('file-input').click(); });
+
+document.getElementById('file-input').addEventListener('change',function(){
+  if(this.files&&this.files.length) processFiles(this.files);
+});
+
+/* ══════════════════════════════════════════════════════
+   ONGLETS
+══════════════════════════════════════════════════════ */
+Array.from(document.querySelectorAll('.tab')).forEach(function(btn){
+  btn.addEventListener('click',function(){
+    Array.from(document.querySelectorAll('.tab')).forEach(function(b){b.classList.remove('on');});
+    Array.from(document.querySelectorAll('.panel')).forEach(function(p){p.classList.remove('active');});
+    btn.classList.add('on');
+    document.getElementById('panel-'+btn.getAttribute('data-tab')).classList.add('active');
+  });
+});
+
+/* SheetJS fallback si CDN indisponible */
+window.addEventListener('load',function(){
+  if(typeof XLSX==='undefined'){
+    document.getElementById('status-bar').style.display='block';
+    document.getElementById('status-bar').innerHTML=
+      '<span class="status-err">⚠️ La bibliothèque SheetJS n\'a pas pu être chargée (vérifier la connexion internet).<br>'
+      +'Alternative : téléchargez <a href="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js" target="_blank">xlsx.full.min.js</a> '
+      +'et placez-le dans le même dossier que ce fichier, puis remplacez le script CDN par <code>&lt;script src="xlsx.full.min.js"&gt;</code></span>';
+  }
+});
+</script>
+</body>
+</html>
