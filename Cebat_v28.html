@@ -2824,7 +2824,7 @@ class Component extends DCLogic {
       const idM=k>0?(maxP>2?4:2):0;const brM=brs.reduce((sm,d)=>sm+this._poles(d),0);
       return{ddr:k,brs,idModules:idM,modules:idM+brM};
     });
-    const ROW=13,teteModules=2;
+    const ROW=((this.state.project&&this.state.project.modulesParRangee)||13),teteModules=2;
     const usedModules=teteModules+rows.reduce((sm,rw)=>sm+rw.modules,0);
     const capacity=Math.max(usedModules,Math.ceil(usedModules/0.8));
     const nbRangees=Math.max(rows.length,Math.ceil(capacity/ROW));
@@ -5915,7 +5915,7 @@ class Component extends DCLogic {
     });
   }
   vRangees(circuits){
-    const s=this.state;const c=this.C;const r=this.r;const{tableauxElec,disjoncteurs}=s;const ROW=13;
+    const s=this.state;const c=this.C;const r=this.r;const{tableauxElec,disjoncteurs}=s;const ROW=((s.project&&s.project.modulesParRangee)||13);
     const teId=s.rangeeTeId||(tableauxElec[0]&&tableauxElec[0].id)||null;
     const rows=teId?this.rangeesOf(teId):[];
     const cardW=p=>Math.max(36,p*24);
@@ -5946,7 +5946,7 @@ class Component extends DCLogic {
     };
     const maxR=rows.reduce((m,r2)=>Math.max(m,r2.rangee),0);
     return r('div',{style:{padding:'24px 28px',animation:'fadeIn .3s ease',overflowY:'auto',height:'100%'}},
-      this.SH('Composition du tableau','Glisser-deposer les disjoncteurs entre rangees (1 rangee = '+ROW+' modules, ID compris)',teId?this.Btn('Compacter les rangees',()=>this.compactRangees(teId),'sec','sm'):null),
+      this.SH('Composition du tableau','Glisser-deposer les disjoncteurs entre rangees (1 rangee = '+ROW+' modules, ID compris)',r('div',{style:{display:'flex',alignItems:'center',gap:8}},r('div',{style:{display:'flex',alignItems:'center',gap:5}},r('span',{style:{fontSize:10,color:c.muted}},'Modules/rangee'),r('select',{value:String(ROW),onChange:e=>this.setState(st=>({project:{...st.project,modulesParRangee:+e.target.value}})),style:{background:c.surf3,border:'1px solid '+c.bdr2,borderRadius:6,padding:'4px 7px',fontSize:11,color:c.text,outline:'none'}},...[12,13,18,24].map(n=>r('option',{key:n,value:String(n)},n)))),teId?this.Btn('Compacter',()=>this.compactRangees(teId),'sec','sm'):null)),
       tableauxElec.length>1?r('div',{style:{display:'flex',gap:6,marginBottom:14,flexWrap:'wrap'}},...tableauxElec.map(t=>r('button',{key:t.id,onClick:()=>this.setState({rangeeTeId:t.id}),style:{padding:'5px 12px',borderRadius:7,fontSize:11,fontWeight:t.id===teId?700:400,border:'1px solid '+(t.id===teId?c.accent:c.bdr2),background:t.id===teId?'rgba(2,119,189,.1)':'transparent',color:t.id===teId?c.accent:c.text2,cursor:'pointer'}},t.code||t.nom))):null,
       rows.length===0?r('div',{style:{fontSize:12,color:c.muted,padding:'16px 0'}},'Aucun disjoncteur dans ce tableau.'):r('div',null,...rows.map(rowEl)),
       r('div',{onDragOver:e=>e.preventDefault(),onDrop:e=>{e.preventDefault();const dc=this.state.dragCb;if(dc)this.dropCb(dc,maxR+1,null);this.setState({dragCb:null,dragOverCb:null});},
