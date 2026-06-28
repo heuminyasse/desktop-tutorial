@@ -6438,14 +6438,15 @@ html body[class] #vac-gantt td.emp .nm{font-weight:500 !important;}</style>
     if(document.getElementById(INPUT_ID)) return;
     if(anchor.__pcsInjected) return; anchor.__pcsInjected=true;
 
-    var wrap=document.createElement('span');
-    wrap.style.cssText='display:inline-flex;align-items:center;gap:6px;margin-left:10px;vertical-align:middle';
-    wrap.innerHTML='<input id="'+INPUT_ID+'" type="search" placeholder="🔍 Rechercher un employé…" autocomplete="off" '
-      +'style="padding:5px 10px;border:1.5px solid #d1d5db;border-radius:8px;font-size:12px;font-family:inherit;width:200px;outline:none;transition:border-color .15s" '
-      +'title="Filtrer par nom d\'employé">';
-    anchor.parentNode.insertBefore(wrap, anchor.nextSibling);
-
-    var inp=document.getElementById(INPUT_ID);
+    /* Insérer à l'intérieur du th (pas comme sibling) pour rester dans la colonne */
+    var inp=document.createElement('input');
+    inp.id=INPUT_ID; inp.type='search'; inp.autocomplete='off';
+    inp.placeholder='🔍 Rechercher…';
+    inp.title="Filtrer par nom d'employé";
+    inp.style.cssText='display:block;width:100%;box-sizing:border-box;margin-top:5px;'
+      +'padding:4px 8px;border:1.5px solid #d1d5db;border-radius:6px;'
+      +'font-size:11px;font-family:inherit;outline:none;background:#fff;transition:border-color .15s';
+    anchor.appendChild(inp);
     inp.addEventListener('focus',function(){ inp.style.borderColor='var(--accent,#B5000A)'; });
     inp.addEventListener('blur', function(){ inp.style.borderColor='#d1d5db'; });
     inp.addEventListener('input',function(){ filterRows(nearestRows(tbl), inp.value); });
