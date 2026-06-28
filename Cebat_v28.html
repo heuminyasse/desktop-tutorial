@@ -2730,6 +2730,24 @@ class Component extends DCLogic {
       if(pw>lim.maxW)add('warn','Disjoncteur '+code+' : '+pw+'W > '+lim.maxW+'W ('+lim.label+').');
     });
     pcs.forEach(p=>{if(!(p.fonctions||[]).some(fn=>fn.type==='eclairage'))add('warn','Piece « '+p.nom+' » sans point d\'eclairage.');});
+    const SPEC=['four','lave_vaisselle','lave_linge','seche_linge','chauffe_eau','climatisation','borne_ve','piscine'];
+    const assigned=new Set();djs.forEach(d=>(d.recepteurs||[]).forEach(rf=>assigned.add(rf)));
+    pcs.forEach(p=>(p.fonctions||[]).forEach(fn=>{if(fn.ref&&!assigned.has(fn.ref))add('warn','Recepteur '+fn.ref+' (« '+p.nom+' ») non protege par un disjoncteur.');}));
+    djs.forEach(d=>{
+      const code=d.code||('CB'+d.id);const refs=d.recepteurs||[];if(refs.length===0)return;
+      const types=refs.map(rf=>refType[rf]);const specs=types.filter(t=>SPEC.includes(t));
+      if(specs.length>0&&refs.length>1)add('error','Disjoncteur '+code+' : circuit specialise ('+specs[0]+') doit etre dedie (1 seul recepteur).');
+      const isEcl=types.length>0&&types.every(t=>t==='eclairage');const isPr=types.length>0&&types.every(t=>t==='prises'||t==='prises_sdb');
+      if(isEcl&&d.calibre>16)add('warn','Disjoncteur '+code+' : eclairage en '+d.calibre+'A (max conseille 16A).');
+      if(isPr&&d.calibre>20)add('warn','Disjoncteur '+code+' : prises en '+d.calibre+'A (max conseille 20A).');
+      if(d.ddr&&d.ddr>30)add('warn','Disjoncteur '+code+' : circuit terminal devrait etre en 30 mA (actuel '+d.ddr+' mA).');
+    });
+    tes.forEach(t=>{
+      const td=djs.filter(d=>d.tableauId===t.id);if(td.length===0)return;
+      const byDdr={};td.forEach(d=>{const k=(+d.ddr||0);(byDdr[k]=byDdr[k]||[]).push(d);});
+      Object.keys(byDdr).forEach(k=>{if(byDdr[k].length>8)add('warn','Tableau « '+(t.nom||t.code)+' » : '+byDdr[k].length+' circuits sous le differentiel '+(+k>0?k+' mA':'sans DDR')+' (max 8 conseille).');});
+      if(!td.some(d=>(+d.ddr||0)>0&&(+d.ddr)<=30))add('warn','Tableau « '+(t.nom||t.code)+' » : aucun differentiel 30 mA (obligatoire pour circuits terminaux).');
+    });
     return issues;
   }
   renderConfCard(){
