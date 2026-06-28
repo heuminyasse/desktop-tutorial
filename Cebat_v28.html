@@ -2875,21 +2875,25 @@ class Component extends DCLogic {
     return issues;
   }
   _fnPowerW(fn){const q=fn.quantite||1;if(fn.type==='eclairage')return (fn.puissance||10)*q;if(fn.type==='prises'||fn.type==='prises_sdb')return 460*q;return ({four:6000,lave_vaisselle:2200,lave_linge:2500,seche_linge:2400,chauffe_eau:3000,climatisation:2500,borne_ve:7400,hotte:300,vmc:200,portail:500,piscine:1500}[fn.type]||500)*q;}
-  bilanPuissance(){
+  bilanPuissance(appId){
     const FAM=[{label:'Eclairage',types:['eclairage'],coef:1},{label:'Prises',types:['prises','prises_sdb'],coef:0.2},{label:'Cuisson',types:['four','hotte'],coef:0.7},{label:'Lavage',types:['lave_vaisselle','lave_linge','seche_linge'],coef:0.75},{label:'Eau chaude (ECS)',types:['chauffe_eau'],coef:1},{label:'Chauffage / Clim',types:['climatisation','vmc'],coef:1},{label:'Autres',types:['borne_ve','portail','piscine','camera','tv','rj45','sono','alarme_intrusion','detecteur_fumee','detecteur_co','visiophone','domotique','solaire','inverseur_source','controleur_tension','afficheur'],coef:0.6}];
-    const byType={};(this.state.pieces||[]).forEach(p=>(p.fonctions||[]).forEach(fn=>{byType[fn.type]=(byType[fn.type]||0)+this._fnPowerW(fn);}));
+    const pcs=(this.state.pieces||[]).filter(p=>appId==null||p.appId===appId);
+    const byType={};pcs.forEach(p=>(p.fonctions||[]).forEach(fn=>{byType[fn.type]=(byType[fn.type]||0)+this._fnPowerW(fn);}));
     const fams=FAM.map(f=>{const installedW=f.types.reduce((s,t)=>s+(byType[t]||0),0);return{label:f.label,coef:f.coef,installedW,foisonneW:Math.round(installedW*f.coef)};}).filter(f=>f.installedW>0);
     const totalInstalledW=fams.reduce((s,f)=>s+f.installedW,0);
     const totalFoisonneW=fams.reduce((s,f)=>s+f.foisonneW,0);
     const kvaFoisonne=Math.round(totalFoisonneW/1000*10)/10;
+    const ks=((this.state.project&&this.state.project.coefSimul)||1);
+    const kvaAjuste=Math.round(totalFoisonneW*ks/1000*10)/10;
     const souscriteKva=(this.state.project&&this.state.project.puissanceSouscrite)||0;
-    return{fams,totalInstalledW,totalFoisonneW,kvaFoisonne,souscriteKva};
+    return{fams,totalInstalledW,totalFoisonneW,kvaFoisonne,ks,kvaAjuste,souscriteKva};
   }
   renderBilanCard(){
     const c=this.C;const r=this.r;const b=this.bilanPuissance();
     if(b.fams.length===0)return null;
-    const over=b.souscriteKva>0&&b.kvaFoisonne>b.souscriteKva;
-    const pct=b.souscriteKva>0?Math.round(b.kvaFoisonne/b.souscriteKva*100):0;
+    const apps=this.state.appartements||[];
+    const over=b.souscriteKva>0&&b.kvaAjuste>b.souscriteKva;
+    const pct=b.souscriteKva>0?Math.round(b.kvaAjuste/b.souscriteKva*100):0;
     const rowsEl=b.fams.map((f,k)=>r('div',{key:k,style:{display:'flex',alignItems:'center',fontSize:11,padding:'4px 0',borderBottom:'1px solid '+c.bdr}},
       r('span',{style:{flex:1,color:c.text}},f.label),
       r('span',{style:{width:78,textAlign:'right',color:c.muted,fontFamily:c.mono}},(f.installedW/1000).toFixed(1)+'kW'),
@@ -2901,14 +2905,23 @@ class Component extends DCLogic {
         r('div',{style:{display:'flex',fontSize:9,fontWeight:700,color:c.muted,textTransform:'uppercase',letterSpacing:'.05em',paddingBottom:4,borderBottom:'2px solid '+c.bdr2}},
           r('span',{style:{flex:1}},'Famille'),r('span',{style:{width:78,textAlign:'right'}},'Installe'),r('span',{style:{width:50,textAlign:'right'}},'Coef'),r('span',{style:{width:80,textAlign:'right'}},'Foisonne')),
         ...rowsEl,
-        r('div',{style:{display:'flex',marginTop:8,fontSize:13,fontWeight:800}},
-          r('span',{style:{flex:1,color:c.text}},'Total foisonne'),
-          r('span',{style:{color:c.accent,fontFamily:c.mono}},b.kvaFoisonne.toFixed(1)+' kVA')),
+        r('div',{style:{display:'flex',marginTop:8,fontSize:12,fontWeight:700}},
+          r('span',{style:{flex:1,color:c.text2}},'Total foisonne'),
+          r('span',{style:{color:c.text2,fontFamily:c.mono}},b.kvaFoisonne.toFixed(1)+' kVA')),
+        r('div',{style:{display:'flex',alignItems:'center',gap:8,margin:'8px 0 6px'}},
+          r('span',{style:{fontSize:11,color:c.text2,flex:1}},'Coefficient de simultaneite (ks)'),
+          r('input',{type:'number',min:0.1,max:1,step:0.05,value:b.ks,onChange:e=>{const v=+e.target.value;this.setState(st=>({project:{...st.project,coefSimul:(Number.isFinite(v)&&v>0)?v:1}}));},style:{width:74,background:c.surf3,border:'1px solid '+c.bdr2,borderRadius:6,padding:'4px 8px',color:c.text,fontSize:12,fontFamily:c.mono,textAlign:'right'}})),
+        r('div',{style:{display:'flex',fontSize:14,fontWeight:800}},
+          r('span',{style:{flex:1,color:c.text}},'Total ajuste (× '+b.ks+')'),
+          r('span',{style:{color:c.accent,fontFamily:c.mono}},b.kvaAjuste.toFixed(1)+' kVA')),
         b.souscriteKva>0?r('div',null,
           r('div',{style:{display:'flex',justifyContent:'space-between',fontSize:11,color:c.muted,margin:'8px 0 4px'}},
             r('span',null,'Puissance souscrite : '+b.souscriteKva+' kVA'),
             r('span',{style:{fontWeight:700,color:over?c.danger:c.success}},over?'Depassement !':pct+'% utilises')),
-          r('div',{style:{height:7,background:c.bdr2,borderRadius:4,overflow:'hidden'}},r('div',{style:{height:'100%',width:Math.min(100,pct)+'%',background:over?c.danger:'linear-gradient(90deg,#0277BD,#0EA5E9)',borderRadius:4}}))):null)));
+          r('div',{style:{height:7,background:c.bdr2,borderRadius:4,overflow:'hidden'}},r('div',{style:{height:'100%',width:Math.min(100,pct)+'%',background:over?c.danger:'linear-gradient(90deg,#0277BD,#0EA5E9)',borderRadius:4}}))):null,
+        apps.length>1?r('div',{style:{marginTop:12}},
+          r('div',{style:{fontSize:9,fontWeight:700,color:c.muted,textTransform:'uppercase',letterSpacing:'.06em',marginBottom:5}},'Repartition par appartement'),
+          ...apps.map(ap=>{const ba=this.bilanPuissance(ap.id);return r('div',{key:ap.id,style:{display:'flex',fontSize:11,padding:'3px 0',borderBottom:'1px solid '+c.bdr}},r('span',{style:{flex:1,color:c.text2}},ap.nom),r('span',{style:{fontFamily:c.mono,color:c.accent,fontWeight:700}},ba.kvaFoisonne.toFixed(1)+' kVA'))})):null)));
   }
   renderConfCard(){
     const c=this.C;const r=this.r;
