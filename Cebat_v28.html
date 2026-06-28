@@ -2319,20 +2319,20 @@ class Component extends DCLogic {
       window.print();
     }catch(e){try{window.print();}catch(_){}}
   }
-  schemaSVG(teId){
+  _schemaPrims(teId){
     const s=this.state;const{departs,tableauxElec,disjoncteurs,pieces}=s;
     const refPiece={},refType={};
     pieces.forEach(p=>(p.fonctions||[]).forEach(fn=>{refPiece[fn.ref]=p.nom;refType[fn.ref]=fn.type;}));
     const TYPEA=new Set(['prises_sdb','lave_linge','four','borne_ve','climatisation','chauffe_eau']);
-    const esc=t=>String(t==null?'':t).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-    const R=(x,y,w,h,f,st,rx)=>'<rect x="'+x+'" y="'+y+'" width="'+w+'" height="'+h+'" rx="'+(rx||6)+'" fill="'+f+'" stroke="'+st+'" stroke-width="1.5"/>';
-    const T=(x,y,t,sz,f,w)=>'<text x="'+x+'" y="'+y+'" font-family="monospace" font-size="'+(sz||11)+'" fill="'+(f||'#111827')+'" font-weight="'+(w||400)+'">'+esc(t)+'</text>';
-    const L=(x1,y1,x2,y2,col,sw)=>'<line x1="'+x1+'" y1="'+y1+'" x2="'+x2+'" y2="'+y2+'" stroke="'+(col||'#9CA3AF')+'" stroke-width="'+(sw||2)+'"/>';
-    const W=1180;const P=[];let y=24;
-    P.push(T(20,y,'Schema unifilaire — '+((s.project&&s.project.nom)||''),16,'#0f172a',700));y+=16;
-    P.push(T(20,y,'Source -> AGCP -> Tete -> Differentiel -> Divisionnaire -> Recepteur',10,'#6B7280',400));y+=22;
+    const prims=[];
+    const RC=(x,y,w,h,f,st,rx)=>prims.push({k:'r',x,y,w,h,f,s:st,rx:rx||6});
+    const TX=(x,y,t,sz,f,w)=>prims.push({k:'t',x,y,t,z:sz||11,f:f||'#111827',w:w||400});
+    const LN=(x1,y1,x2,y2,col)=>prims.push({k:'l',x1,y1,x2,y2,c:col||'#9CA3AF'});
+    const W=1180;let y=24;
+    TX(20,y,'Schema unifilaire — '+((s.project&&s.project.nom)||''),16,'#0f172a',700);y+=16;
+    TX(20,y,'Source -> AGCP -> Tete -> Differentiel -> Divisionnaire -> Recepteur',10,'#6B7280',400);y+=22;
     let x=20;
-    (departs||[]).forEach(d=>{P.push(R(x,y,160,48,'#E6F0F7','#0277BD',8));P.push(T(x+10,y+18,d.code||'SRC',11,'#0277BD',700));P.push(T(x+10,y+32,(d.calibre||'?')+'A '+(d.poles||'')+'P',9,'#6B7280'));P.push(T(x+10,y+44,'AGCP '+(d.dbCode||'DB')+(d.ddr?' '+d.ddr+'mA':''),9,'#6B7280'));x+=180;});
+    (departs||[]).forEach(d=>{RC(x,y,160,48,'#E6F0F7','#0277BD',8);TX(x+10,y+18,d.code||'SRC',11,'#0277BD',700);TX(x+10,y+32,(d.calibre||'?')+'A '+(d.poles||'')+'P',9,'#6B7280');TX(x+10,y+44,'AGCP '+(d.dbCode||'DB')+(d.ddr?' '+d.ddr+'mA':''),9,'#6B7280');x+=180;});
     y+=48+26;
     const rowH=30,brkX=320,recX=452,diffX=170,teteX=20;
     (teId?(tableauxElec||[]).filter(t=>t.id===teId):(tableauxElec||[])).forEach(te=>{
@@ -2340,29 +2340,62 @@ class Component extends DCLogic {
       const gmap={};djs.forEach(d=>{const k=(+d.ddr||0);(gmap[k]=gmap[k]||[]).push(d);});
       const groups=Object.keys(gmap).map(k=>+k).sort((a,b)=>(a||9999)-(b||9999)).map(k=>({ddr:k,brs:gmap[k]}));
       const totalRows=Math.max(1,djs.length);const teH=totalRows*rowH+24;
-      const br=this._boardRows(te);P.push(T(20,y,(te.code||'TE')+' — '+(te.nom||'')+'   ['+br.usedModules+' mod / '+br.nbRangees+' rg]',12,'#0277BD',700));
+      const br=this._boardRows(te);TX(20,y,(te.code||'TE')+' — '+(te.nom||'')+'   ['+br.usedModules+' mod / '+br.nbRangees+' rg]',12,'#0277BD',700);
       const startY=y+10;const teteY=startY+(teH-44)/2;
-      P.push(R(teteX,teteY,96,42,'#E6F0F7','#0277BD',6));P.push(T(teteX+8,teteY+17,'TETE',8,'#0277BD',700));P.push(T(teteX+8,teteY+33,te.cb0Code||'CB0',12,'#0277BD',700));
+      RC(teteX,teteY,96,42,'#E6F0F7','#0277BD',6);TX(teteX+8,teteY+17,'TETE',8,'#0277BD',700);TX(teteX+8,teteY+33,te.cb0Code||'CB0',12,'#0277BD',700);
       const teteCx=teteX+96,teteCy=teteY+21;let ry=startY+6;
       groups.forEach((g,gi)=>{
         const gRows=g.brs.length;const gTop=ry,gBottom=ry+gRows*rowH;const diffCy=(gTop+gBottom)/2;
         const typeA=g.brs.some(d=>(d.recepteurs||[]).some(rf=>TYPEA.has(refType[rf])));
-        P.push(L(teteCx,teteCy,diffX-12,teteCy));P.push(L(diffX-12,teteCy,diffX-12,diffCy));P.push(L(diffX-12,diffCy,diffX,diffCy));
-        P.push(R(diffX,diffCy-17,128,34,'#E0F7FA','#06b6d4',6));P.push(T(diffX+8,diffCy-3,'R'+(gi+1)+' ID '+(g.ddr>0?g.ddr+'mA':'—'),9,'#0e7490',700));P.push(T(diffX+8,diffCy+11,g.ddr>0?(typeA?'Type A':'Type AC'):'sans DDR',8,'#6B7280'));
+        LN(teteCx,teteCy,diffX-12,teteCy);LN(diffX-12,teteCy,diffX-12,diffCy);LN(diffX-12,diffCy,diffX,diffCy);
+        RC(diffX,diffCy-17,128,34,'#E0F7FA','#06b6d4',6);TX(diffX+8,diffCy-3,'R'+(gi+1)+' ID '+(g.ddr>0?g.ddr+'mA':'—'),9,'#0e7490',700);TX(diffX+8,diffCy+11,g.ddr>0?(typeA?'Type A':'Type AC'):'sans DDR',8,'#6B7280');
         g.brs.forEach((d,bi)=>{
           const bcy=ry+bi*rowH+rowH/2;
-          P.push(L(diffX+128,diffCy,brkX-12,diffCy,'#CBD5E1'));P.push(L(brkX-12,diffCy,brkX-12,bcy,'#CBD5E1'));P.push(L(brkX-12,bcy,brkX,bcy,'#CBD5E1'));
+          LN(diffX+128,diffCy,brkX-12,diffCy,'#CBD5E1');LN(brkX-12,diffCy,brkX-12,bcy,'#CBD5E1');LN(brkX-12,bcy,brkX,bcy,'#CBD5E1');
           const okSec=this.sectionOkForCalibre(d.section,d.calibre);const col=okSec?'#16a34a':'#dc2626';
-          P.push(R(brkX,bcy-12,118,24,okSec?'#E8F5E9':'#FDECEA',col,5));P.push(T(brkX+6,bcy-1,d.code||'CB',10,col,700));P.push(T(brkX+6,bcy+10,(d.calibre||'?')+'A'+(d.courbe||'')+' '+(d.section||'?')+'mm2',8,'#6B7280'));
+          RC(brkX,bcy-12,118,24,okSec?'#E8F5E9':'#FDECEA',col,5);TX(brkX+6,bcy-1,d.code||'CB',10,col,700);TX(brkX+6,bcy+10,(d.calibre||'?')+'A'+(d.courbe||'')+' '+(d.section||'?')+'mm2',8,'#6B7280');
           const refs=(d.recepteurs||[]);const shown=refs.slice(0,7).map(rf=>rf+(refPiece[rf]?'('+refPiece[rf]+')':'')).join('  ')+(refs.length>7?'  +'+(refs.length-7):'');
-          P.push(L(brkX+118,bcy,recX-6,bcy,'#CBD5E1'));P.push(T(recX,bcy+4,refs.length?shown:'(aucun)',9,'#374151'));
+          LN(brkX+118,bcy,recX-6,bcy,'#CBD5E1');TX(recX,bcy+4,refs.length?shown:'(aucun)',9,'#374151');
         });
         ry=gBottom+6;
       });
       y=startY+teH+18;
     });
-    const H=y+20;
-    return '<svg xmlns="http://www.w3.org/2000/svg" width="'+W+'" height="'+H+'" viewBox="0 0 '+W+' '+H+'"><rect width="'+W+'" height="'+H+'" fill="#ffffff"/>'+P.join('')+'</svg>';
+    const contentH=y+10;const cartH=74,fm=10;const H=contentH+cartH;
+    RC(fm,fm,W-2*fm,H-2*fm,'none','#94a3b8',2);
+    const cbW=430,cbH=60,cbX=W-fm-cbW,cbY=H-fm-cbH;
+    RC(cbX,cbY,cbW,cbH,'#F8FAFC','#64748B',2);LN(cbX+250,cbY,cbX+250,cbY+cbH,'#64748B');
+    let dateStr='';try{dateStr=new Date().toLocaleDateString('fr-FR');}catch(e){}
+    const proj=s.project||{};
+    TX(cbX+10,cbY+18,'PROJET : '+(proj.nom||'—'),11,'#0f172a',700);TX(cbX+10,cbY+34,'Client : '+(proj.client||'—'),9,'#374151');TX(cbX+10,cbY+50,'Adr. : '+(proj.adresse||'—'),9,'#374151');
+    TX(cbX+260,cbY+18,'SCHEMA UNIFILAIRE',10,'#0277BD',700);TX(cbX+260,cbY+34,'Date : '+dateStr,9,'#374151');TX(cbX+260,cbY+50,'Feuille : 1/1   NF C 15-100',9,'#374151');
+    return{W,H,prims};
+  }
+  schemaSVG(teId){
+    const o=this._schemaPrims(teId);
+    const esc=t=>String(t==null?'':t).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    const P=o.prims.map(p=>p.k==='r'?'<rect x="'+p.x+'" y="'+p.y+'" width="'+p.w+'" height="'+p.h+'" rx="'+(p.rx||0)+'" fill="'+(p.f==='none'?'none':p.f)+'" stroke="'+p.s+'" stroke-width="1.5"/>':p.k==='l'?'<line x1="'+p.x1+'" y1="'+p.y1+'" x2="'+p.x2+'" y2="'+p.y2+'" stroke="'+p.c+'" stroke-width="2"/>':'<text x="'+p.x+'" y="'+p.y+'" font-family="monospace" font-size="'+p.z+'" fill="'+p.f+'" font-weight="'+p.w+'">'+esc(p.t)+'</text>');
+    return '<svg xmlns="http://www.w3.org/2000/svg" width="'+o.W+'" height="'+o.H+'" viewBox="0 0 '+o.W+' '+o.H+'"><rect width="'+o.W+'" height="'+o.H+'" fill="#ffffff"/>'+P.join('')+'</svg>';
+  }
+  schemaDXF(teId){
+    const o=this._schemaPrims(teId);const H=o.H;const out=['0','SECTION','2','ENTITIES'];
+    const yf=v=>(H-v).toFixed(2);
+    const line=(x1,y1,x2,y2)=>{out.push('0','LINE','8','SCHEMA','10',(+x1).toFixed(2),'20',yf(y1),'11',(+x2).toFixed(2),'21',yf(y2));};
+    const text=(x,y,t,h)=>{out.push('0','TEXT','8','SCHEMA','10',(+x).toFixed(2),'20',yf(y),'40',((+h)||10).toFixed(2),'1',String(t==null?'':t).replace(/\n/g,' '));};
+    o.prims.forEach(p=>{
+      if(p.k==='r'){line(p.x,p.y,p.x+p.w,p.y);line(p.x+p.w,p.y,p.x+p.w,p.y+p.h);line(p.x+p.w,p.y+p.h,p.x,p.y+p.h);line(p.x,p.y+p.h,p.x,p.y);}
+      else if(p.k==='l'){line(p.x1,p.y1,p.x2,p.y2);}
+      else{text(p.x,p.y,p.t,p.z);}
+    });
+    out.push('0','ENDSEC','0','EOF');return out.join('\n');
+  }
+  exportSchemaDXF(teId){
+    try{
+      const dxf=this.schemaDXF(teId);const blob=new Blob([dxf],{type:'application/dxf'});const url=URL.createObjectURL(blob);
+      const a=document.createElement('a');const slug=(((this.state.project||{}).nom)||'projet').replace(/[^a-z0-9]+/gi,'_').replace(/^_+|_+$/g,'').toLowerCase()||'projet';
+      a.href=url;a.download='cebat_schema_'+slug+(teId?'_t'+teId:'')+'.dxf';document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);
+      this.showToast('Schema DXF exporte');
+    }catch(e){this.showToast('Echec export DXF');}
   }
   exportSchemaSVG(teId){
     try{
@@ -5900,7 +5933,7 @@ class Component extends DCLogic {
               r('div',{style:{display:'flex',alignItems:'center',gap:10,padding:'10px 14px',background:c.surf3,borderBottom:'1px solid '+c.bdr}},
                 r('span',{style:{fontSize:12,fontWeight:800,color:c.accent,fontFamily:c.mono}},teCode),
                 r('span',{style:{fontSize:12,color:c.text,fontWeight:600}},te.nom||''),
-                r('div',{style:{marginLeft:'auto',display:'flex',alignItems:'center',gap:8}},r('span',{style:{fontSize:9,color:c.muted}},br.usedModules+' mod · '+br.nbRangees+' rangée'+(br.nbRangees>1?'s':'')+' · '+djs.length+' dép.'),r('button',{onClick:()=>this.exportSchemaSVG(te.id),title:'Exporter ce tableau en SVG',style:{fontSize:9,fontWeight:700,color:c.accent,background:'transparent',border:'1px solid '+c.bdr2,borderRadius:5,padding:'2px 7px',cursor:'pointer'}},'SVG'),r('button',{onClick:()=>this.exportSchemaPNG(te.id),title:'Exporter ce tableau en PNG',style:{fontSize:9,fontWeight:700,color:c.accent,background:'transparent',border:'1px solid '+c.bdr2,borderRadius:5,padding:'2px 7px',cursor:'pointer'}},'PNG'))),
+                r('div',{style:{marginLeft:'auto',display:'flex',alignItems:'center',gap:8}},r('span',{style:{fontSize:9,color:c.muted}},br.usedModules+' mod · '+br.nbRangees+' rangée'+(br.nbRangees>1?'s':'')+' · '+djs.length+' dép.'),r('button',{onClick:()=>this.exportSchemaSVG(te.id),title:'Exporter ce tableau en SVG',style:{fontSize:9,fontWeight:700,color:c.accent,background:'transparent',border:'1px solid '+c.bdr2,borderRadius:5,padding:'2px 7px',cursor:'pointer'}},'SVG'),r('button',{onClick:()=>this.exportSchemaDXF(te.id),title:'Exporter ce tableau en DXF',style:{fontSize:9,fontWeight:700,color:c.accent,background:'transparent',border:'1px solid '+c.bdr2,borderRadius:5,padding:'2px 7px',cursor:'pointer'}},'DXF'),r('button',{onClick:()=>this.exportSchemaPNG(te.id),title:'Exporter ce tableau en PNG',style:{fontSize:9,fontWeight:700,color:c.accent,background:'transparent',border:'1px solid '+c.bdr2,borderRadius:5,padding:'2px 7px',cursor:'pointer'}},'PNG'))),
               r('div',{style:{padding:'14px 16px',overflowX:'auto'}},
                 r('div',{style:{display:'inline-flex',alignItems:'flex-start',gap:0}},
                   r('div',{style:{display:'flex',flexDirection:'column',alignItems:'center',paddingTop:6}},
@@ -5930,7 +5963,7 @@ class Component extends DCLogic {
           r('div',{style:{fontSize:9,color:c.muted}},(i.type||'')+(i.circuitRef?' → '+i.circuitRef:'')+(pc?' · '+pc:'')+(zn?' · '+zn:'')));
       })))):null;
     return r('div',{style:{padding:'24px 28px',animation:'fadeIn .3s ease',overflowY:'auto',height:'100%'}},
-      this.SH('Schéma unifilaire','Source → AGCP → Tête → Différentiel → Disjoncteur divisionnaire → Récepteur',r('div',{style:{display:'flex',gap:8}},this.Btn('SVG',()=>this.exportSchemaSVG(),'sec','md'),this.Btn('PNG',()=>this.exportSchemaPNG(),'sec','md'),this.Btn(r('span',{style:{display:'inline-flex',alignItems:'center',gap:5}},this.ico('print_ico',13),'PDF paysage'),()=>this.printLandscape(),'ghost','md'))),
+      this.SH('Schéma unifilaire','Source → AGCP → Tête → Différentiel → Disjoncteur divisionnaire → Récepteur',r('div',{style:{display:'flex',gap:8}},this.Btn('DXF',()=>this.exportSchemaDXF(),'sec','md'),this.Btn('SVG',()=>this.exportSchemaSVG(),'sec','md'),this.Btn('PNG',()=>this.exportSchemaPNG(),'sec','md'),this.Btn(r('span',{style:{display:'inline-flex',alignItems:'center',gap:5}},this.ico('print_ico',13),'PDF paysage'),()=>this.printLandscape(),'ghost','md'))),
       legend,
       r('div',{style:{background:c.surf2,border:'1px solid '+c.bdr,borderRadius:12,padding:'16px 18px',marginBottom:16}},
         r('div',{style:{fontSize:10,fontWeight:700,color:c.muted,textTransform:'uppercase',letterSpacing:'.08em',marginBottom:10}},'Alimentation générale'),
