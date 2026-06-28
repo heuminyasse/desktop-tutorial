@@ -2684,6 +2684,35 @@ class Component extends DCLogic {
   ModalShell(title,onClose,children,footer){const c=this.C;return this.r('div',null,this.r('div',{style:{padding:'22px 26px 0'}},this.r('div',{style:{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:20}},this.r('h2',{style:{fontSize:16,fontWeight:700,color:c.text}},title),this.r('button',{onClick:onClose,style:{background:'transparent',border:'none',color:c.muted,fontSize:22,cursor:'pointer',lineHeight:1}},'×')),children),this.r('div',{style:{padding:'14px 26px 22px',borderTop:`1px solid ${c.bdr}`,display:'flex',gap:8,justifyContent:'flex-end'}},footer));}
   deleteItem(arr,id){this.setState(s=>({[arr]:s[arr].filter(x=>x.id!==id)}))}
   openEdit(type,obj,formKey,formData){this.setState({showModal:true,modalType:type,editId:obj.id,[formKey]:{...formData}});}
+  duplicateAppart(appId){
+    this.setState(s=>{
+      const app=s.appartements.find(a=>a.id===appId);if(!app)return{};
+      const newAppId=s.nextAppId;const appIdx=s.appartements.length+1;
+      const sameNiv=s.appartements.filter(a=>a.niveauId===app.niveauId).length;
+      const niv=s.niveaux.find(n=>n.id===app.niveauId);const et=niv?niv.etage:0;
+      const prefix=et<0?'SS'+Math.abs(et):et===0?'RDC':'E'+et;
+      const newApp={...app,id:newAppId,nom:app.nom+' (copie)',code:prefix+'-'+String.fromCharCode(65+sameNiv),appCode:'APP'+String(s.appartements.length+1).padStart(2,'0')};
+      const srcPieces=s.pieces.filter(p=>p.appId===appId);let pid=s.nextPieceId,fid=s.nextFonctionId;const tc={};
+      const newPieces=srcPieces.map((p,i)=>{
+        const newFns=(p.fonctions||[]).map(fn=>{const code=this.FN_CODES[fn.type]||'X';tc[fn.type]=(tc[fn.type]||0)+1;return{...fn,id:fid++,ref:appIdx+code+tc[fn.type]};});
+        return{...p,id:pid++,appId:newAppId,pieceCode:'PC'+String(s.pieces.length+1+i).padStart(3,'0'),fonctions:newFns};
+      });
+      return{appartements:[...s.appartements,newApp],pieces:[...s.pieces,...newPieces],nextAppId:newAppId+1,nextPieceId:pid,nextFonctionId:fid,selectedLogAppId:newAppId,selectedLogPieceId:null};
+    });
+    this.showToast('Appartement dupliqué ✓');
+  }
+  duplicatePiece(pieceId){
+    this.setState(s=>{
+      const p=s.pieces.find(x=>x.id===pieceId);if(!p)return{};
+      const appIdx=s.appartements.findIndex(a=>a.id===p.appId)+1;const tc={};
+      s.pieces.filter(x=>x.appId===p.appId).forEach(x=>(x.fonctions||[]).forEach(fn=>{tc[fn.type]=(tc[fn.type]||0)+1;}));
+      let fid=s.nextFonctionId;
+      const newFns=(p.fonctions||[]).map(fn=>{const code=this.FN_CODES[fn.type]||'X';tc[fn.type]=(tc[fn.type]||0)+1;return{...fn,id:fid++,ref:appIdx+code+tc[fn.type]};});
+      const newPiece={...p,id:s.nextPieceId,nom:p.nom+' (copie)',pieceCode:'PC'+String(s.pieces.length+1).padStart(3,'0'),fonctions:newFns};
+      return{pieces:[...s.pieces,newPiece],nextPieceId:s.nextPieceId+1,nextFonctionId:fid,selectedLogPieceId:newPiece.id};
+    });
+    this.showToast('Pièce dupliquée ✓');
+  }
 
   // ═══ ICON LIBRARY ═══
   ico(id,sz=14){
@@ -5040,6 +5069,7 @@ class Component extends DCLogic {
         r('span',{style:{fontSize:12,color:c.muted}},project.adresse),
         this.Bdg((this.TC[project.typeConstruction]||{label:project.typeConstruction||'Projet'}).label,c.purple)
       ),
+      niveaux.length===0&&r('div',{style:{background:'rgba(2,119,189,.06)',border:'1px dashed '+c.acBlue,borderRadius:10,padding:'14px 18px',marginBottom:16,display:'flex',alignItems:'center',justifyContent:'space-between',gap:12}},r('div',null,r('div',{style:{fontSize:13,fontWeight:700,color:c.text,marginBottom:2}},'Bienvenue 👋 Commencez votre installation'),r('div',{style:{fontSize:11,color:c.muted}},'Ajoutez un niveau et un appartement pour démarrer.')),this.Btn('Configurer le projet →',()=>this.setState({view:'projet'}),'primary','sm')),
       r('div',{style:{background:c.surf2,border:`1px solid ${c.bdr}`,borderRadius:12,padding:'14px 20px',marginBottom:16}},
         r('div',{style:{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:10}},r('span',{style:{fontSize:12,fontWeight:600,color:c.text}},'Progression du projet'),r('span',{style:{fontSize:13,fontWeight:800,color:c.accent,fontFamily:c.mono}},comp+'%')),
         r('div',{style:{height:6,background:c.bdr2,borderRadius:3,overflow:'hidden',marginBottom:12}},r('div',{style:{height:'100%',width:comp+'%',background:'linear-gradient(90deg,#0277BD,#0EA5E9)',borderRadius:3,transition:'width .6s'}})),
@@ -5062,7 +5092,8 @@ class Component extends DCLogic {
             r('div',{style:{display:'flex',justifyContent:'space-between',marginBottom:4}},r('span',{style:{fontSize:12,color:c.text}},s.label),r('span',{style:{fontSize:12,fontWeight:700,color:s.color,fontFamily:c.mono}},circuits.filter(ci=>ci.type===s.type).length)),
             r('div',{style:{height:5,background:c.bdr2,borderRadius:3}},r('div',{style:{height:'100%',width:(circuits.length?circuits.filter(ci=>ci.type===s.type).length/circuits.length*100:0)+'%',background:s.color,borderRadius:3}}))))
         ))
-      )
+      ),
+      r('div',{style:{marginTop:14}},this.Card('Charge par appartement',r('div',{style:{paddingTop:4}},appartements.length===0?r('div',{style:{fontSize:12,color:c.muted,padding:'8px 0'}},'Aucun appartement'):(()=>{const ap=appartements.map(a=>({a,w:pieces.filter(p=>p.appId===a.id).reduce((s,p)=>s+(p.fonctions||[]).reduce((ss,fn)=>{const q=fn.quantite||1;return ss+(fn.type==='eclairage'?(fn.puissance||10)*q:fn.type==='prises'||fn.type==='prises_sdb'?460*q:({four:6000,lave_vaisselle:2200,lave_linge:2500,seche_linge:2400,chauffe_eau:3000,climatisation:2500,borne_ve:7400,hotte:300,vmc:200,portail:500}[fn.type]||0));},0),0)}));const max=Math.max(1,...ap.map(x=>x.w));return ap.map(({a,w})=>r('div',{key:a.id,style:{marginBottom:10}},r('div',{style:{display:'flex',justifyContent:'space-between',marginBottom:4}},r('span',{style:{fontSize:12,color:c.text,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}},a.nom),r('span',{style:{fontSize:12,fontWeight:700,color:c.accent,fontFamily:c.mono}},w>=1000?(w/1000).toFixed(1)+' kW':w+' W')),r('div',{style:{height:6,background:c.bdr2,borderRadius:3}},r('div',{style:{height:'100%',width:(w/max*100)+'%',background:'linear-gradient(90deg,#0277BD,#0EA5E9)',borderRadius:3}}))));})())))
     );
   }
 
@@ -5180,7 +5211,7 @@ class Component extends DCLogic {
           ),
           r('span',{style:{fontSize:10,fontWeight:700,color:!selAppId?sky:c.muted,fontFamily:c.mono}},fmtW(appartements.reduce((s,a)=>s+getAppPow(a),0)))
         ),
-        appartements.length===0&&r('div',{style:{padding:'20px 12px',textAlign:'center',fontSize:12,color:c.muted}},'Aucun appartement'),
+        appartements.length===0&&r('div',{style:{padding:'24px 12px',textAlign:'center'}},r('div',{style:{fontSize:12,color:c.muted,marginBottom:10}},'Aucun appartement pour le moment'),r('button',{onClick:openAddApp,style:{background:sky,color:'#fff',border:'none',borderRadius:6,padding:'6px 12px',fontSize:11,fontWeight:700,cursor:'pointer'}},'+ Ajouter un appartement')),
         ...appartements.map(app=>{
           const pcount=pieces.filter(p=>p.appId===app.id).length;
           const niv=niveaux.find(n=>n.id===app.niveauId);
@@ -5199,7 +5230,7 @@ class Component extends DCLogic {
             ),
             active&&r('div',{style:{display:'flex',gap:3,marginTop:3}},
               r('button',{onClick:e=>{e.stopPropagation();this.openEdit('addAppart',app,'appForm',{nom:app.nom,type:app.type,surface:app.surface,niveauId:app.niveauId,code:app.code||''});},style:{background:'transparent',border:`1px solid ${c.bdr2}`,borderRadius:5,padding:'2px 5px',cursor:'pointer',color:c.muted,display:'inline-flex',alignItems:'center'}},this.ico('pencil',10)),
-              r('button',{onClick:e=>{e.stopPropagation();this.setState({showModal:true,modalType:'deleteApp',editId:app.id,deleteAppTargetId:null});},style:{background:'transparent',border:'1px solid rgba(239,68,68,.35)',borderRadius:5,padding:'2px 5px',cursor:'pointer',color:c.danger,display:'inline-flex',alignItems:'center'}},this.ico('trash',10))
+              r('button',{onClick:e=>{e.stopPropagation();this.duplicateAppart(app.id);},title:'Dupliquer',style:{background:'transparent',border:'1px solid '+c.bdr2,borderRadius:5,padding:'2px 6px',cursor:'pointer',color:c.muted,display:'inline-flex',alignItems:'center',fontSize:11,lineHeight:1}},'⧉'),r('button',{onClick:e=>{e.stopPropagation();this.setState({showModal:true,modalType:'deleteApp',editId:app.id,deleteAppTargetId:null});},style:{background:'transparent',border:'1px solid rgba(239,68,68,.35)',borderRadius:5,padding:'2px 5px',cursor:'pointer',color:c.danger,display:'inline-flex',alignItems:'center'}},this.ico('trash',10))
             )
           );
         })
@@ -5230,7 +5261,7 @@ class Component extends DCLogic {
               ),
               active&&r('div',{style:{display:'flex',gap:3,flexShrink:0}},
                 r('button',{onClick:e=>{e.stopPropagation();this.openEdit('addPiece',p,'pieceForm',{nom:p.nom,type:p.type,surface:p.surface,niveau:p.niveau,appId:p.appId,couleur:p.couleur||'#FFFFFF',typePlafond:p.typePlafond||'standard',typeMur:p.typeMur||'enduit',typeSol:p.typeSol||'carrelage'});},style:{background:'transparent',border:`1px solid ${c.bdr2}`,borderRadius:5,padding:'2px 5px',cursor:'pointer',display:'inline-flex',alignItems:'center',color:c.muted}},this.ico('pencil',11)),
-                r('button',{onClick:e=>{e.stopPropagation();this.setState({showModal:true,modalType:'deletePiece',editId:p.id,deletePieceTargetId:null});},style:{background:'transparent',border:'1px solid rgba(239,68,68,.35)',borderRadius:5,padding:'2px 5px',cursor:'pointer',display:'inline-flex',alignItems:'center',color:c.danger}},this.ico('trash',11))
+                r('button',{onClick:e=>{e.stopPropagation();this.duplicatePiece(p.id);},title:'Dupliquer',style:{background:'transparent',border:'1px solid '+c.bdr2,borderRadius:5,padding:'2px 6px',cursor:'pointer',color:c.muted,display:'inline-flex',alignItems:'center',fontSize:11,lineHeight:1}},'⧉'),r('button',{onClick:e=>{e.stopPropagation();this.setState({showModal:true,modalType:'deletePiece',editId:p.id,deletePieceTargetId:null});},style:{background:'transparent',border:'1px solid rgba(239,68,68,.35)',borderRadius:5,padding:'2px 5px',cursor:'pointer',display:'inline-flex',alignItems:'center',color:c.danger}},this.ico('trash',11))
               )
             )
           );
