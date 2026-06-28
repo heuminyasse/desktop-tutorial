@@ -2389,6 +2389,20 @@ class Component extends DCLogic {
     });
     out.push('0','ENDSEC','0','EOF');return out.join('\n');
   }
+  printSchemaSheets(){
+    try{
+      const boards=this.state.tableauxElec||[];
+      if(boards.length===0){this.showToast('Aucun tableau');return;}
+      const sheets=boards.map((te,i)=>'<div style="page-break-after:'+(i<boards.length-1?'always':'auto')+';text-align:center;">'+this.schemaSVG(te.id)+'</div>').join('');
+      const cont=document.createElement('div');cont.id='cebat-sheets';cont.setAttribute('data-print','main');cont.style.position='absolute';cont.style.left='-99999px';cont.style.top='0';cont.innerHTML=sheets;
+      document.body.appendChild(cont);
+      const main=document.querySelector('main');const prev=main?main.getAttribute('data-print'):null;if(main)main.setAttribute('data-print','hide');
+      if(!document.getElementById('cebat-land')){const st=document.createElement('style');st.id='cebat-land';st.textContent='@media print{@page{size:A4 landscape;margin:8mm;}#cebat-sheets svg{max-width:100% !important;height:auto !important;}}';document.head.appendChild(st);}
+      const cleanup=()=>{const e=document.getElementById('cebat-land');if(e)e.remove();cont.remove();if(main){if(prev)main.setAttribute('data-print',prev);else main.removeAttribute('data-print');}window.removeEventListener('afterprint',cleanup);};
+      window.addEventListener('afterprint',cleanup);
+      window.print();
+    }catch(e){this.showToast('Echec impression feuilles');}
+  }
   exportSchemaDXF(teId){
     try{
       const dxf=this.schemaDXF(teId);const blob=new Blob([dxf],{type:'application/dxf'});const url=URL.createObjectURL(blob);
@@ -6048,7 +6062,7 @@ class Component extends DCLogic {
           r('div',{style:{fontSize:9,color:c.muted}},(i.type||'')+(i.circuitRef?' → '+i.circuitRef:'')+(pc?' · '+pc:'')+(zn?' · '+zn:'')));
       })))):null;
     return r('div',{style:{padding:'24px 28px',animation:'fadeIn .3s ease',overflowY:'auto',height:'100%'}},
-      this.SH('Schéma unifilaire','Source → AGCP → Tête → Différentiel → Disjoncteur divisionnaire → Récepteur',r('div',{style:{display:'flex',gap:8}},this.Btn('DXF',()=>this.exportSchemaDXF(),'sec','md'),this.Btn('SVG',()=>this.exportSchemaSVG(),'sec','md'),this.Btn('PNG',()=>this.exportSchemaPNG(),'sec','md'),this.Btn(r('span',{style:{display:'inline-flex',alignItems:'center',gap:5}},this.ico('print_ico',13),'PDF paysage'),()=>this.printLandscape(),'ghost','md'))),
+      this.SH('Schéma unifilaire','Source → AGCP → Tête → Différentiel → Disjoncteur divisionnaire → Récepteur',r('div',{style:{display:'flex',gap:8}},this.Btn('DXF',()=>this.exportSchemaDXF(),'sec','md'),this.Btn('SVG',()=>this.exportSchemaSVG(),'sec','md'),this.Btn('PNG',()=>this.exportSchemaPNG(),'sec','md'),this.Btn('PDF feuilles',()=>this.printSchemaSheets(),'sec','md'),this.Btn(r('span',{style:{display:'inline-flex',alignItems:'center',gap:5}},this.ico('print_ico',13),'PDF paysage'),()=>this.printLandscape(),'ghost','md'))),
       legend,
       r('div',{style:{background:c.surf2,border:'1px solid '+c.bdr,borderRadius:12,padding:'16px 18px',marginBottom:16}},
         r('div',{style:{fontSize:10,fontWeight:700,color:c.muted,textTransform:'uppercase',letterSpacing:'.08em',marginBottom:10}},'Alimentation générale'),
