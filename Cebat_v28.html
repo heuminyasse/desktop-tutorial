@@ -2761,6 +2761,7 @@ class Component extends DCLogic {
     {id:'logements',label:'Appartements & Pièces',cat:'Structure'},
     {id:'circuits',label:'Circuits',cat:'Dimensionnement'},
     {id:'schema',label:'Schéma unifilaire',cat:'Dimensionnement'},
+    {id:'rangees',label:'Composition tableau',cat:'Dimensionnement'},
     
     {id:'realisation',label:'Réalisation & Contrôle',cat:'Processus'},
     {id:'cablage',label:'Câblage',cat:'Processus'},
@@ -5867,6 +5868,71 @@ class Component extends DCLogic {
     return r('div',{className:'cbt-logements',style:{display:'flex',height:'100%',overflow:'hidden'}},col1,col2,col3,col4);
   }
 
+  rangeesOf(teId){
+    const djs=(this.state.disjoncteurs||[]).filter(d=>d.tableauId===teId).map(d=>({...d}));
+    if(!djs.some(d=>d.rangee!=null)){
+      const gmap={};djs.forEach(d=>{const k=(+d.ddr||0);(gmap[k]=gmap[k]||[]).push(d);});
+      Object.keys(gmap).map(k=>+k).sort((a,b)=>(a||9999)-(b||9999)).forEach((k,gi)=>gmap[k].forEach((d,oi)=>{d.rangee=gi+1;d.ordre=oi;}));
+    }
+    const byR={};djs.forEach(d=>{const rr=d.rangee||1;(byR[rr]=byR[rr]||[]).push(d);});
+    return Object.keys(byR).map(k=>+k).sort((a,b)=>a-b).map(rr=>({rangee:rr,brs:byR[rr].sort((a,b)=>(a.ordre||0)-(b.ordre||0))}));
+  }
+  dropCb(cbId,targetRangee,beforeCbId){
+    if(!cbId)return;
+    this.setState(s=>{
+      const src=(s.disjoncteurs||[]).find(d=>d.id===cbId);if(!src)return{};
+      const teId=src.tableauId;
+      const djs=s.disjoncteurs.map(d=>d.tableauId===teId?{...d}:d);
+      const tdjs=djs.filter(d=>d.tableauId===teId);
+      if(!tdjs.some(d=>d.rangee!=null)){
+        const gmap={};tdjs.forEach(d=>{const k=(+d.ddr||0);(gmap[k]=gmap[k]||[]).push(d);});
+        Object.keys(gmap).map(k=>+k).sort((a,b)=>(a||9999)-(b||9999)).forEach((k,gi)=>gmap[k].forEach((d,oi)=>{d.rangee=gi+1;d.ordre=oi;}));
+      }
+      const moved=djs.find(d=>d.id===cbId);moved.rangee=targetRangee;
+      const row=tdjs.filter(d=>d.rangee===targetRangee&&d.id!==cbId).sort((a,b)=>(a.ordre||0)-(b.ordre||0));
+      const idx=beforeCbId?row.findIndex(d=>d.id===beforeCbId):row.length;
+      row.splice(idx<0?row.length:idx,0,moved);
+      row.forEach((d,i)=>{d.ordre=i;});
+      return{disjoncteurs:djs};
+    });
+  }
+  vRangees(circuits){
+    const s=this.state;const c=this.C;const r=this.r;const{tableauxElec,disjoncteurs}=s;const ROW=13;
+    const teId=s.rangeeTeId||(tableauxElec[0]&&tableauxElec[0].id)||null;
+    const rows=teId?this.rangeesOf(teId):[];
+    const cardW=p=>Math.max(36,p*24);
+    const card=(d,rangee)=>{
+      const okSec=this.sectionOkForCalibre(d.section,d.calibre);const col=okSec?'#16a34a':'#dc2626';const p=this._poles(d);
+      return r('div',{key:d.id,draggable:true,
+        onDragStart:()=>this.setState({dragCb:d.id}),
+        onDragOver:e=>e.preventDefault(),
+        onDrop:e=>{e.preventDefault();e.stopPropagation();const dc=this.state.dragCb;if(dc&&dc!==d.id)this.dropCb(dc,rangee,d.id);this.setState({dragCb:null});},
+        title:'Glisser pour deplacer',
+        style:{width:cardW(p),height:56,background:col+'14',border:'1px solid '+col,borderRadius:6,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',cursor:'grab',flexShrink:0,padding:'2px'}},
+        r('div',{style:{fontSize:9,fontWeight:800,color:col,fontFamily:c.mono,textAlign:'center'}},d.code||('CB'+d.id)),
+        r('div',{style:{fontSize:7,color:c.muted,fontFamily:c.mono}},(d.calibre||'?')+'A'+(d.courbe||'')),
+        r('div',{style:{fontSize:7,color:c.muted}},p+'M'));
+    };
+    const rowEl=(row)=>{
+      const used=row.brs.reduce((a,d)=>a+this._poles(d),0)+2;const over=used>ROW;
+      return r('div',{key:row.rangee,onDragOver:e=>e.preventDefault(),onDrop:e=>{e.preventDefault();const dc=this.state.dragCb;if(dc)this.dropCb(dc,row.rangee,null);this.setState({dragCb:null});},
+        style:{border:'1px solid '+(over?c.danger:c.bdr2),borderRadius:9,padding:'8px 10px',marginBottom:10,background:c.surf}},
+        r('div',{style:{display:'flex',alignItems:'center',gap:8,marginBottom:6}},
+          r('span',{style:{fontSize:11,fontWeight:800,color:c.accent}},'Rangee '+row.rangee),
+          r('span',{style:{fontSize:9,fontFamily:c.mono,color:over?c.danger:c.muted}},used+'/'+ROW+' modules'+(over?' — surcharge':''))),
+        r('div',{style:{display:'flex',gap:6,flexWrap:'wrap',minHeight:56,alignItems:'center'}},
+          r('div',{style:{width:30,height:56,borderRadius:6,background:'#06b6d414',border:'1px solid #06b6d4',display:'flex',alignItems:'center',justifyContent:'center',fontSize:8,fontWeight:700,color:'#0e7490',flexShrink:0}},'ID'),
+          ...row.brs.map(d=>card(d,row.rangee)),
+          row.brs.length===0?r('span',{style:{fontSize:10,color:c.muted,fontStyle:'italic'}},'(deposer ici)'):null));
+    };
+    const maxR=rows.reduce((m,r2)=>Math.max(m,r2.rangee),0);
+    return r('div',{style:{padding:'24px 28px',animation:'fadeIn .3s ease',overflowY:'auto',height:'100%'}},
+      this.SH('Composition du tableau','Glisser-deposer les disjoncteurs entre rangees (1 rangee = '+ROW+' modules, ID compris)'),
+      tableauxElec.length>1?r('div',{style:{display:'flex',gap:6,marginBottom:14,flexWrap:'wrap'}},...tableauxElec.map(t=>r('button',{key:t.id,onClick:()=>this.setState({rangeeTeId:t.id}),style:{padding:'5px 12px',borderRadius:7,fontSize:11,fontWeight:t.id===teId?700:400,border:'1px solid '+(t.id===teId?c.accent:c.bdr2),background:t.id===teId?'rgba(2,119,189,.1)':'transparent',color:t.id===teId?c.accent:c.text2,cursor:'pointer'}},t.code||t.nom))):null,
+      rows.length===0?r('div',{style:{fontSize:12,color:c.muted,padding:'16px 0'}},'Aucun disjoncteur dans ce tableau.'):r('div',null,...rows.map(rowEl)),
+      r('div',{onDragOver:e=>e.preventDefault(),onDrop:e=>{e.preventDefault();const dc=this.state.dragCb;if(dc)this.dropCb(dc,maxR+1,null);this.setState({dragCb:null});},
+        style:{border:'2px dashed '+c.bdr3,borderRadius:9,padding:'14px',textAlign:'center',fontSize:11,color:c.muted,cursor:'copy',marginTop:4}},'+ Deposer ici pour creer une nouvelle rangee'));
+  }
   vSchema(circuits){
     const s=this.state;const c=this.C;const r=this.r;
     const{departs,tableauxElec,disjoncteurs,inverseurs,boitesDeriv,interrupteurs,zonesCommande,pieces}=s;
@@ -6972,6 +7038,7 @@ class Component extends DCLogic {
       logements:()=>this.vLogements(circuits),
       circuits:()=>this.vCircuits(circuits),
       schema:()=>this.vSchema(circuits),
+      rangees:()=>this.vRangees(circuits),
       realisation:()=>this.vRealisation(circuits),cablage:()=>this.vCablage(circuits),
       domotique:()=>this.vDomotique(),devis:()=>this.vDevis(circuits),
     };
