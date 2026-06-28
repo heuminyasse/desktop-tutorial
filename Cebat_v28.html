@@ -2261,7 +2261,7 @@ class Component extends DCLogic {
   setState(update,cb){super.setState(update,cb);this._saveState();}
   componentDidMount(){
     try{
-      if(!this._pristine){this._pristine={};for(const k of this._PERSIST_KEYS)this._pristine[k]=JSON.parse(JSON.stringify(this.state[k]));}try{if(typeof document!=='undefined'&&!document.getElementById('cebat-print-css')){const st=document.createElement('style');st.id='cebat-print-css';st.textContent='@media print{@page{margin:14mm;}body *{visibility:hidden !important;}[data-print="main"],[data-print="main"] *{visibility:visible !important;}[data-print="main"]{position:absolute !important;left:0;top:0;width:100%;height:auto !important;overflow:visible !important;background:#fff !important;}[data-print="main"] *{overflow:visible !important;max-height:none !important;box-shadow:none !important;}html,body{height:auto !important;overflow:visible !important;background:#fff !important;}[data-print="hide"]{display:none !important;}}@media (max-width:1024px){.cbt-auto{grid-template-columns:repeat(3,1fr) !important;}.cbt-2to1{grid-template-columns:1fr !important;}.cbt-sidebar{width:184px !important;}}@media (max-width:680px){.cbt-auto{grid-template-columns:repeat(2,1fr) !important;}.cbt-sidebar{width:152px !important;}}';document.head.appendChild(st);}}catch(e){}
+      if(!this._pristine){this._pristine={};for(const k of this._PERSIST_KEYS)this._pristine[k]=JSON.parse(JSON.stringify(this.state[k]));}try{if(typeof document!=='undefined'&&!document.getElementById('cebat-print-css')){const st=document.createElement('style');st.id='cebat-print-css';st.textContent='@media print{@page{margin:14mm;}body *{visibility:hidden !important;}[data-print="main"],[data-print="main"] *{visibility:visible !important;}[data-print="main"]{position:absolute !important;left:0;top:0;width:100%;height:auto !important;overflow:visible !important;background:#fff !important;}[data-print="main"] *{overflow:visible !important;max-height:none !important;box-shadow:none !important;}html,body{height:auto !important;overflow:visible !important;background:#fff !important;}[data-print="hide"]{display:none !important;}}@media (max-width:1024px){.cbt-auto{grid-template-columns:repeat(3,1fr) !important;}.cbt-2to1{grid-template-columns:1fr !important;}.cbt-sidebar{width:184px !important;}}@media (max-width:680px){.cbt-auto{grid-template-columns:repeat(2,1fr) !important;}.cbt-sidebar{width:152px !important;}}@media (max-width:680px){.cbt-burger{display:inline-flex !important;}.cbt-sidebar{position:fixed !important;left:0;top:52px;bottom:0;width:210px !important;z-index:250;transform:translateX(-110%);transition:transform .2s ease;box-shadow:0 10px 40px rgba(0,0,0,.3);}.cbt-sidebar.cbt-sb-open{transform:translateX(0);}.cbt-logements{flex-direction:column !important;height:auto !important;overflow:visible !important;}.cbt-logements>div{width:100% !important;flex:0 0 auto !important;border-right:none !important;border-bottom:1px solid rgba(120,120,120,.25) !important;min-height:220px;}}';document.head.appendChild(st);}}catch(e){}
       let idx=this._loadIndex();let cur=null;try{cur=localStorage.getItem(this._PROJ_CUR);}catch(e){}
       if(idx.length===0){
         const id=this._genProjId();let legacy=null;try{legacy=localStorage.getItem(this._STORE_KEY);}catch(e){}
@@ -2962,7 +2962,7 @@ class Component extends DCLogic {
     const elemTotal=tableauxElec.length+boitesDeriv.length+interrupteurs.length+zonesCommande.length;
     const bdgMap={appartements:appartements.length,pieces:pieces.length,circuits:circuits.length+elemTotal};
     const red='#0277BD';
-    return r('aside',{'data-print':'hide',className:'cbt-sidebar',style:{width:220,background:'#FFFFFF',borderRight:`1px solid ${c.bdr}`,display:'flex',flexDirection:'column',flexShrink:0,overflow:'hidden'}},
+    return r('aside',{'data-print':'hide',className:'cbt-sidebar'+(this.state.sidebarOpen?' cbt-sb-open':''),style:{width:220,background:'#FFFFFF',borderRight:`1px solid ${c.bdr}`,display:'flex',flexDirection:'column',flexShrink:0,overflow:'hidden'}},
       // Project card
       r('div',{style:{padding:'14px 16px',borderBottom:`1px solid ${c.bdr}`}},
         r('div',{style:{fontSize:9,color:c.muted,fontWeight:700,textTransform:'uppercase',letterSpacing:'.08em',marginBottom:4}},'PROJET ACTIF'),
@@ -2983,7 +2983,7 @@ class Component extends DCLogic {
           g.label&&r('div',{style:{fontSize:8,fontWeight:700,color:c.bdr3,textTransform:'uppercase',letterSpacing:'.1em',padding:'10px 16px 2px'}},g.label),
           ...g.items.map(item=>{
             const active=view===item.id;const bdg=bdgMap[item.id]??null;
-            return r('button',{key:item.id,onClick:()=>this.setState({view:item.id}),style:{display:'flex',alignItems:'center',gap:10,width:'100%',padding:'8px 16px',border:'none',cursor:'pointer',textAlign:'left',background:'transparent',borderLeft:`3px solid ${active?red:'transparent'}`,color:active?red:c.text2,fontSize:12,fontFamily:c.font,fontWeight:active?600:400,transition:'all .12s'}},
+            return r('button',{key:item.id,onClick:()=>this.setState({view:item.id,sidebarOpen:false}),style:{display:'flex',alignItems:'center',gap:10,width:'100%',padding:'8px 16px',border:'none',cursor:'pointer',textAlign:'left',background:'transparent',borderLeft:`3px solid ${active?red:'transparent'}`,color:active?red:c.text2,fontSize:12,fontFamily:c.font,fontWeight:active?600:400,transition:'all .12s'}},
               r('span',{style:{width:16,height:16,display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0,color:active?red:c.muted}},this.getNavIcon(item.id)),
               r('span',{style:{flex:1}},item.label),
               bdg!==null&&r('span',{style:{fontSize:9,background:active?'#FFEBEE':c.surf3,color:active?red:c.muted,padding:'1px 6px',borderRadius:10,fontFamily:c.mono,fontWeight:600}},bdg)
@@ -3002,6 +3002,7 @@ class Component extends DCLogic {
     const red='#0277BD';
     return r('header',{'data-print':'hide',style:{height:52,background:red,display:'flex',alignItems:'center',justifyContent:'space-between',padding:'0 20px',flexShrink:0,boxShadow:'0 2px 8px rgba(0,0,0,.2)'}},
       r('div',{style:{display:'flex',alignItems:'center',gap:14}},
+        r('button',{className:'cbt-burger',onClick:()=>this.setState(st=>({sidebarOpen:!st.sidebarOpen})),title:'Menu',style:{display:'none',background:'rgba(255,255,255,.15)',border:'1px solid rgba(255,255,255,.25)',borderRadius:7,width:32,height:28,cursor:'pointer',color:'#fff',fontSize:15,alignItems:'center',justifyContent:'center'}},'☰'),
         r('div',{style:{display:'flex',flexDirection:'column',lineHeight:1.1}},
           r('span',{style:{fontSize:16,fontWeight:800,color:'#fff',letterSpacing:'-.4px'}},'CEBAT'),
           r('span',{style:{fontSize:9,color:'rgba(255,255,255,.55)',fontWeight:600,textTransform:'uppercase',letterSpacing:'.1em'}},'by HBO')
@@ -5675,7 +5676,7 @@ class Component extends DCLogic {
         )
     );
 
-    return r('div',{style:{display:'flex',height:'100%',overflow:'hidden'}},col1,col2,col3,col4);
+    return r('div',{className:'cbt-logements',style:{display:'flex',height:'100%',overflow:'hidden'}},col1,col2,col3,col4);
   }
 
   vSchema(circuits){
