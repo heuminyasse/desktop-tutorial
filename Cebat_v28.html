@@ -2229,6 +2229,49 @@ class Component extends DCLogic {
     expandedPiece:null,tests:{},realisationTab:'bord',realisationFilter:{appId:null,pieceId:null,teId:null,bdId:null},realisationChecks:{},mesures:{},nomenclatureOverrides:{},toast:null,circuitFilter:'all',circuitsTab:'distribution',circuitsSel:{srcId:null,teId:null,cbId:null,bdId:null},editFonctionForm:{type:'eclairage',typeLampe:'led_plafond',puissance:12,quantite:1,distance:0,cmdType:'simple',cmdZoneId:'',cmdZone2Id:'',newZoneNom:'',showNewZone:false,djCalibre:10,djCourbe:'B',djPoles:'1',djDDR:30,djTableauId:'',djSection:1.5,departType:'tableau',departId:'',departDist:0,cableLongueur:0,cableSection:'1.5',cableType:'H07VU',cableRepere:'',nbConducteursConn:0,repBagues:false},editFonctionPieceId:null,editFonctionId:null,
   };
 
+  // ═══ PERSISTANCE (localStorage + export/import JSON) ═══
+  _STORE_KEY='cebat_v28_state';
+  _PERSIST_KEYS=['project','niveaux','appartements','pieces','tableauxElec','departs','inverseurs','boitesDeriv','disjoncteurs','interrupteurs','zonesCommande','nextNivId','nextAppId','nextPieceId','nextFonctionId','nextElemId','theme','view','nomenclatureOverrides','realisationChecks','mesures','tests'];
+  _snapshot(){const o={};for(const k of this._PERSIST_KEYS)if(this.state[k]!==undefined)o[k]=this.state[k];return o;}
+  _saveState(){try{localStorage.setItem(this._STORE_KEY,JSON.stringify(this._snapshot()));}catch(e){/* quota depasse ou mode prive: on ignore */}}
+  _loadState(){try{const raw=localStorage.getItem(this._STORE_KEY);if(!raw)return null;const d=JSON.parse(raw);return(d&&typeof d==='object')?d:null;}catch(e){return null;}}
+  setState(update,cb){super.setState(update,cb);this._saveState();}
+  componentDidMount(){const saved=this._loadState();if(saved&&Object.keys(saved).length)this.setState(saved);}
+  exportJSON(){
+    try{
+      const data={app:'Cebat',version:'v28',exportedAt:new Date().toISOString(),state:this._snapshot()};
+      const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
+      const url=URL.createObjectURL(blob);
+      const a=document.createElement('a');
+      const slug=((this.state.project&&this.state.project.nom)||'projet').replace(/[^a-z0-9]+/gi,'_').replace(/^_+|_+$/g,'').toLowerCase()||'projet';
+      a.href=url;a.download='cebat_'+slug+'.json';
+      document.body.appendChild(a);a.click();a.remove();
+      setTimeout(()=>URL.revokeObjectURL(url),1000);
+      this.showToast('Projet exporte');
+    }catch(e){this.showToast("Echec de l'export");}
+  }
+  importJSON(){
+    const input=document.createElement('input');
+    input.type='file';input.accept='application/json,.json';
+    input.onchange=e=>{
+      const file=e.target.files&&e.target.files[0];if(!file)return;
+      const reader=new FileReader();
+      reader.onload=ev=>{
+        try{
+          const parsed=JSON.parse(ev.target.result);
+          const st=(parsed&&parsed.state&&typeof parsed.state==='object')?parsed.state:parsed;
+          if(!st||typeof st!=='object'){this.showToast('Fichier invalide');return;}
+          const patch={};for(const k of this._PERSIST_KEYS)if(st[k]!==undefined)patch[k]=st[k];
+          if(Object.keys(patch).length===0){this.showToast('Aucune donnee Cebat trouvee');return;}
+          this.setState({...patch,showModal:false,toast:null});
+          this.showToast('Projet importe');
+        }catch(err){this.showToast('Fichier JSON illisible');}
+      };
+      reader.readAsText(file);
+    };
+    input.click();
+  }
+
   // ═══ CONSTANTS ═══
   TC={villa:{label:'Villa / Maison individuelle',icon:'apt_villa'},duplex:{label:'Duplex',icon:'apt_duplex'},immeuble:{label:'Immeuble résidentiel'},immeuble_mixte:{label:'Immeuble mixte',icon:'apt_appart'},commerce:{label:'Commerce / Bureau',icon:'apt_commerce'},entrepot:{label:'Entrepôt / Industriel',icon:'building2'},villa_dep:{label:'Villa avec dépendances'}};
   NIV_TYPES={sous_sol:{label:'Sous-sol',etage:-1},cave:{label:'Cave',etage:-2},parking:{label:'Parking souterrain',etage:-3},rdc:{label:'Rez-de-chaussée',etage:0},mezzanine:{label:'Mezzanine',etage:0},etage:{label:'Étage',etage:null},comble:{label:'Combles / Grenier',etage:98},terrasse:{label:'Terrasse',etage:99},toiture:{label:'Toiture-terrasse',etage:100}};
@@ -2799,6 +2842,8 @@ class Component extends DCLogic {
         ),
         r('div',{style:{width:1,height:18,background:'rgba(255,255,255,.2)'}}),
         r('span',{style:{fontSize:11,color:'rgba(255,255,255,.6)'}},project.client),
+        r('button',{onClick:()=>this.importJSON(),title:'Importer un projet (.json)',style:{background:'rgba(255,255,255,.15)',border:'1px solid rgba(255,255,255,.25)',borderRadius:7,height:26,padding:'0 10px',cursor:'pointer',display:'flex',alignItems:'center',gap:5,fontSize:11,fontWeight:600,color:'rgba(255,255,255,.9)',fontFamily:c.font,whiteSpace:'nowrap'}},'📥 Importer'),
+        r('button',{onClick:()=>this.exportJSON(),title:'Exporter le projet (.json)',style:{background:'rgba(255,255,255,.15)',border:'1px solid rgba(255,255,255,.25)',borderRadius:7,height:26,padding:'0 10px',cursor:'pointer',display:'flex',alignItems:'center',gap:5,fontSize:11,fontWeight:600,color:'rgba(255,255,255,.9)',fontFamily:c.font,whiteSpace:'nowrap'}},'📤 Exporter'),
         r('button',{onClick:()=>this.setState(s=>({theme:s.theme==='dark'?'light':'dark'})),style:{background:'rgba(255,255,255,.15)',border:'1px solid rgba(255,255,255,.25)',borderRadius:7,width:30,height:26,cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',fontSize:13,color:'rgba(255,255,255,.8)',transition:'all .2s'}},theme==='dark'?'☀️':'🌙')
       )
     );
@@ -5452,436 +5497,6 @@ class Component extends DCLogic {
     return r('div',{style:{display:'flex',height:'100%',overflow:'hidden'}},col1,col2,col3,col4);
   }
 
-  vAppartements(){
-    const{appartements,niveaux,pieces,filterNivId}=this.state;const c=this.C;const r=this.r;
-    const openAdd=()=>this.setState({showModal:true,modalType:'addAppart',editId:null,appForm:{nom:'',type:'appartement',surface:80,niveauId:niveaux[0]?.id||1}});
-    const filtered=filterNivId?appartements.filter(a=>a.niveauId===+filterNivId):appartements;
-    const appTypeIco={villa:'apt_villa',appartement:'apt_appart',studio:'apt_studio',duplex:'apt_duplex',commerce:'apt_commerce',parking:'apt_parking'};
-    const nivSorted=[...niveaux].sort((a,b)=>b.etage-a.etage);
-    return r('div',{style:{padding:'24px 28px',animation:'fadeIn .3s ease'}},
-      this.SH('Appartements & Logements',filtered.length+' logement'+(filtered.length!==1?'s':'')+' · '+(filterNivId?'filtré par niveau':'tous niveaux'),
-        r('div',{style:{display:'flex',gap:8}},
-          r('select',{value:filterNivId||'',onChange:e=>this.setState({filterNivId:e.target.value||null}),style:{background:c.surf2,border:`1px solid ${c.bdr2}`,borderRadius:7,padding:'6px 10px',color:c.text,fontSize:12,outline:'none',fontFamily:c.font}},
-            r('option',{value:''},'Tous les niveaux'),...nivSorted.map(n=>r('option',{key:n.id,value:n.id},n.nom))),
-          this.Btn('+ Ajouter',openAdd,'primary','md','+'))),
-      r('div',{style:{marginBottom:12,padding:'10px 14px',background:'rgba(37,99,235,.05)',border:`1px solid rgba(37,99,235,.15)`,borderRadius:9,fontSize:12,color:c.muted}},'ℹ️ Les appartements sont les logements individuels du projet. Chaque appartement est rattaché à un niveau et contiendra ses propres pièces.'),
-      filtered.length===0&&r('div',{style:{background:c.surf2,border:`1px dashed ${c.bdr2}`,borderRadius:12,padding:48,textAlign:'center'}},r('div',{style:{display:'inline-flex',color:c.muted,marginBottom:10}},this.ico('hoist',36)),r('div',{style:{fontSize:15,fontWeight:600,color:c.text2,marginBottom:18}},'Aucun appartement — créez d\'abord des niveaux'),this.Btn('+ Ajouter',openAdd,'primary','md','+')),
-      r('div',{style:{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(300px,1fr))',gap:14}},
-        ...filtered.map(app=>{
-          const niv=niveaux.find(n=>n.id===app.niveauId);
-          const pcs=pieces.filter(p=>p.appId===app.id);
-          const fnCount=pcs.reduce((s,p)=>s+(p.fonctions||[]).length,0);
-          const etageLabel=niv?(niv.etage<0?`Niveau ${niv.etage}`:niv.etage===0?'RDC':`Étage ${niv.etage}`):'?';
-          return r('div',{key:app.id,style:{background:c.surf2,border:`1px solid ${c.bdr}`,borderRadius:12,overflow:'hidden'}},
-            r('div',{style:{padding:'14px 16px',borderBottom:`1px solid ${c.bdr}`,display:'flex',alignItems:'flex-start',justifyContent:'space-between'}},
-              r('div',{style:{display:'flex',alignItems:'center',gap:10}},
-                r('div',{style:{width:38,height:38,background:c.surf3,borderRadius:8,display:'flex',alignItems:'center',justifyContent:'center',color:c.text2}},this.ico(appTypeIco[app.type]||'apt_appart',22)),
-                r('div',null,r('div',{style:{fontSize:13,fontWeight:700,color:c.text}},app.nom),r('div',{style:{fontSize:11,color:c.muted,marginTop:2}},this.AT[app.type]?.label||app.type))),
-              r('div',{style:{display:'flex',gap:5}},
-                r('button',{onClick:()=>this.openEdit('addAppart',app,'appForm',{nom:app.nom,type:app.type,surface:app.surface,niveauId:app.niveauId}),style:{background:'transparent',border:`1px solid ${c.bdr2}`,borderRadius:5,padding:'3px 7px',color:c.muted,cursor:'pointer',fontSize:11}},this.ico('pencil',11)),
-                r('button',{onClick:()=>{this.deleteItem('appartements',app.id);this.showToast('Supprimé');},style:{background:'transparent',border:'1px solid rgba(239,68,68,.3)',borderRadius:5,padding:'3px 7px',color:c.danger,cursor:'pointer',fontSize:11}},this.ico('trash',11)))),
-            r('div',{style:{padding:'10px 16px'}},
-              r('div',{style:{display:'flex',gap:6,flexWrap:'wrap',marginBottom:10}},
-                this.Bdg(etageLabel,c.acBlue),this.Bdg(app.surface+'m²',c.muted),
-                this.Bdg(pcs.length+' pièces',c.purple),this.Bdg(fnCount+' fonctions',c.success)),
-              pcs.length>0&&r('div',{style:{display:'flex',flexWrap:'wrap',gap:4,marginBottom:10}},
-                ...pcs.map(p=>r('div',{key:p.id,style:{display:'flex',alignItems:'center',gap:4,padding:'3px 8px',background:p.couleur||c.surf3,borderRadius:6,fontSize:11,color:'#333',border:`1px solid ${c.bdr}`}},r('span',{style:{display:'inline-flex',alignItems:'center',color:'#555'}},this.getPieceIcon(p.type)),' ',p.nom))),
-              r('div',{style:{display:'flex',gap:6}},
-                this.Btn('+ Pièce',()=>this.setState({showModal:true,modalType:'addPiece',editId:null,pieceForm:{nom:'',type:'sejour',surface:20,niveau:'standard',loadMode:'default',appId:app.id,couleur:'#FFFFFF',typePlafond:'standard',typeMur:'enduit',typeSol:'carrelage'}}),'ghost','sm','+'),
-                this.Btn('Voir pièces →',()=>this.setState({view:'pieces',filterAppId:app.id}),'sec','sm'))));
-        })));
-  }
-
-  vPieces(circuits){
-    const{pieces,appartements,niveaux,filterAppId}=this.state;const c=this.C;const r=this.r;
-    const openAdd=(appId)=>this.setState({showModal:true,modalType:'addPiece',editId:null,pieceForm:{nom:'',type:'sejour',surface:20,niveau:'standard',loadMode:'default',appId:appId||appartements[0]?.id||1,couleur:'#FFFFFF',typePlafond:'standard',typeMur:'enduit',typeSol:'carrelage'}});
-    const openAddFn=(pieceId)=>this.setState({showModal:true,modalType:'addFonction',selectedPieceId:pieceId,fonctionForm:{type:'eclairage',typeLampe:'led_plafond',puissance:12,quantite:1}});
-    const deleteFn=(pieceId,fnId)=>this.setState(s=>({pieces:s.pieces.map(p=>p.id===pieceId?{...p,fonctions:(p.fonctions||[]).filter(f=>f.id!==fnId)}:p)}));
-
-    // Group by niveau (high → low)
-    const nivSorted=[...niveaux].sort((a,b)=>b.etage-a.etage);
-    const filteredApps=filterAppId?appartements.filter(a=>a.id===+filterAppId):appartements;
-    const totalPieces=filteredApps.reduce((s,a)=>s+pieces.filter(p=>p.appId===a.id).length,0);
-
-    return r('div',{style:{padding:'24px 28px',animation:'fadeIn .3s ease'}},
-      this.SH('Pièces & Espaces',totalPieces+' pièce'+(totalPieces!==1?'s':'')+' · groupées par niveau (haut → bas)',
-        r('div',{style:{display:'flex',gap:8}},
-          r('select',{value:filterAppId||'',onChange:e=>this.setState({filterAppId:e.target.value||null}),style:{background:c.surf2,border:`1px solid ${c.bdr2}`,borderRadius:7,padding:'6px 10px',color:c.text,fontSize:12,outline:'none',fontFamily:c.font}},
-            r('option',{value:''},'Tous les appartements'),...appartements.map(a=>r('option',{key:a.id,value:a.id},a.nom))),
-          this.Btn('+ Pièce',()=>openAdd(filteredApps[0]?.id),'primary','md','+'))),
-
-      // Niveau groups
-      ...nivSorted.map(niv=>{
-        const appsInNiv=filteredApps.filter(a=>a.niveauId===niv.id);
-        if(appsInNiv.length===0)return null;
-        const pcsInNiv=pieces.filter(p=>appsInNiv.some(a=>a.id===p.appId));
-        if(pcsInNiv.length===0&&appsInNiv.every(a=>pieces.filter(p=>p.appId===a.id).length===0))return null;
-        const etageLabel=niv.etage<0?`Niveau ${niv.etage}`:niv.etage===0?'RDC':`Étage ${niv.etage}`;
-        return r('div',{key:niv.id,style:{marginBottom:24}},
-          // Niveau header
-          r('div',{style:{display:'flex',alignItems:'center',gap:10,marginBottom:10,paddingBottom:8,borderBottom:`2px solid ${c.bdr2}`}},
-            r('div',{style:{width:36,height:36,borderRadius:8,background:niv.etage<0?'rgba(239,68,68,.15)':niv.etage===0?'rgba(37,99,235,.15)':'rgba(34,197,94,.15)',display:'flex',alignItems:'center',justifyContent:'center'}},
-              r('div',{style:{fontSize:12,fontWeight:800,color:niv.etage<0?c.danger:niv.etage===0?c.accent:c.success,fontFamily:c.mono}},etageLabel)),
-            r('div',null,r('h2',{style:{fontSize:15,fontWeight:700,color:c.text}},niv.nom),r('div',{style:{fontSize:11,color:c.muted}},appsInNiv.length+' appartement'+(appsInNiv.length!==1?'s':'')+' · '+pcsInNiv.length+' pièces'))),
-
-          // Apartments in this niveau
-          ...appsInNiv.map(app=>{
-            const appPieces=pieces.filter(p=>p.appId===app.id);
-            return r('div',{key:app.id,style:{marginBottom:14}},
-              // App header
-              r('div',{style:{display:'flex',alignItems:'center',gap:8,marginBottom:8,padding:'8px 12px',background:c.surf2,borderRadius:8,border:`1px solid ${c.bdr}`}},
-                r('span',{style:{display:'inline-flex',alignItems:'center',color:c.muted}},this.ico('hoist',15)),
-                r('span',{style:{fontSize:12,fontWeight:700,color:c.text}},app.nom),
-                this.Bdg(app.surface+'m²',c.muted),
-                this.Bdg(appPieces.length+' pièces',c.acBlue),
-                r('div',{style:{marginLeft:'auto',display:'flex',gap:6}},
-                  this.Btn('+ Pièce',()=>openAdd(app.id),'ghost','sm','+'))),
-
-              // Pieces list
-              appPieces.length===0&&r('div',{style:{padding:'12px 16px',textAlign:'center',background:c.surf3,borderRadius:8,border:`1px dashed ${c.bdr2}`,fontSize:12,color:c.muted}},'Aucune pièce — cliquez + Pièce pour commencer'),
-              r('div',{style:{display:'flex',flexDirection:'column',gap:8}},
-                ...appPieces.map(p=>{
-                  const pcircs=circuits.filter(ci=>ci.pid===p.id);
-                  const exp=this.state.expandedPiece===p.id;
-                  const nL=this.getNbL(p);const nP=this.getNbP(p);
-                  return r('div',{key:p.id,style:{background:c.surf2,border:`1px solid ${exp?c.acBlue:c.bdr}`,borderRadius:10,overflow:'hidden',transition:'border .2s'}},
-                    // Piece header row
-                    r('div',{style:{padding:'10px 14px',display:'flex',alignItems:'center',gap:8}},
-                      r('div',{style:{width:28,height:28,borderRadius:6,background:p.couleur||'#fff',border:`1px solid ${c.bdr2}`,flexShrink:0}}),
-                      r('div',{style:{flex:1,minWidth:0}},
-                        r('div',{style:{display:'flex',alignItems:'center',gap:7,marginBottom:2}},
-                          r('span',{style:{display:'inline-flex',alignItems:'center',color:c.muted}},this.getPieceIcon(p.type)),
-                          r('span',{style:{fontSize:13,fontWeight:700,color:c.text}},p.nom),
-                          this.Bdg(p.surface+'m²',c.muted)),
-                        r('div',{style:{display:'flex',gap:5,flexWrap:'wrap'}},
-                          this.Bdg(this.PT[p.type]?.label||p.type,c.muted),
-                          this.Bdg('Plafond: '+(this.PLAFOND[p.typePlafond]||p.typePlafond),c.muted),
-                          this.Bdg('Sol: '+(this.SOL[p.typeSol]||p.typeSol),c.cyan),
-                          this.Bdg('Mur: '+(this.MUR[p.typeMur]||p.typeMur),c.purple)
-                        )),
-                      r('div',{style:{display:'flex',gap:4,flexShrink:0}},
-                        r('button',{onClick:()=>this.openEdit('addPiece',p,'pieceForm',{nom:p.nom,type:p.type,surface:p.surface,niveau:p.niveau,appId:p.appId,couleur:p.couleur||'#FFFFFF',typePlafond:p.typePlafond||'standard',typeMur:p.typeMur||'enduit',typeSol:p.typeSol||'carrelage'}),style:{background:'transparent',border:`1px solid ${c.bdr2}`,borderRadius:5,padding:'3px 6px',color:c.muted,cursor:'pointer',fontSize:11}},this.ico('pencil',11)),
-                        r('button',{onClick:()=>this.setState({showModal:true,modalType:'deletePiece',editId:p.id,deletePieceTargetId:null}),style:{background:'transparent',border:'1px solid rgba(239,68,68,.3)',borderRadius:5,padding:'3px 6px',color:c.danger,cursor:'pointer',fontSize:11}},this.ico('trash',11)),
-                        r('span',{onClick:()=>this.setState(s=>({expandedPiece:s.expandedPiece===p.id?null:p.id})),style:{color:c.muted,fontSize:11,marginLeft:2,cursor:'pointer',userSelect:'none',padding:'3px 6px'}},exp?'▲':'▼'))),
-
-                    // Fonctions list
-                    r('div',{style:{padding:'0 14px 6px',display:'flex',flexDirection:'column',gap:4}},
-                      ...(p.fonctions||[]).map(fn=>{
-                        const fnInfo=this.FNS[fn.type];if(!fnInfo)return null;
-                        const isEcl=fn.type==='eclairage';const isPrise=['prises','prises_sdb'].includes(fn.type);
-                        const ltLabel=isEcl?(this.LAMP_TYPES[fn.typeLampe]?.label||fn.typeLampe):'';
-                        const refsStr=this.formatRefs(fn);
-                        return r('div',{key:fn.id,style:{display:'flex',alignItems:'center',gap:6,padding:'5px 8px',background:c.surf3,borderRadius:7,border:`1px solid ${c.bdr}`}},
-                          r('span',{style:{fontSize:13,filter:'grayscale(1) opacity(.5)'}},this.ico(fnInfo.ico,14)),
-                          r('div',{style:{flex:1,minWidth:0}},
-                            r('div',{style:{display:'flex',alignItems:'center',gap:6,flexWrap:'wrap'}},
-                              r('span',{style:{fontSize:11,fontWeight:600,color:fnInfo.color}},fnInfo.label),
-                              isEcl&&r('span',{style:{fontSize:11,color:c.muted}},ltLabel+' · '+(fn.puissance||12)+'W'),
-                              (isEcl||isPrise)&&fn.quantite>1&&this.Bdg('×'+fn.quantite,c.muted)),
-                            r('div',{style:{fontSize:10,color:c.muted,fontFamily:c.mono,marginTop:2}},refsStr+(isEcl&&fn.quantite>1?' (parallèle, même disj.)':''))),
-                          r('button',{onClick:e=>{e.stopPropagation();this.setState({showModal:true,modalType:'deleteFn',deleteFnTarget:{pieceId:p.id,fnId:fn.id}});},style:{background:'transparent',border:'1px solid rgba(239,68,68,.3)',color:c.danger,cursor:'pointer',fontSize:11,padding:'1px 4px',borderRadius:4,flexShrink:0,display:'inline-flex',alignItems:'center'}},this.ico('trash',10)));
-                      }),
-                      (p.fonctions||[]).length===0&&r('div',{style:{fontSize:11,color:c.muted,fontStyle:'italic',padding:'4px 0'}},'Aucune fonction — ajoutez des équipements'),
-                      r('div',{style:{marginTop:4}},this.Btn('+ Ajouter fonction',()=>openAddFn(p.id),'ghost','sm','+'))
-                    ),
-
-                    // Expanded circuits
-                    exp&&r('div',{style:{borderTop:`1px solid ${c.bdr}`,background:c.surf3,padding:'10px 14px'}},
-                      r('div',{style:{fontSize:9,fontWeight:700,color:c.muted,textTransform:'uppercase',letterSpacing:'.08em',marginBottom:7}},'CIRCUITS CALCULÉS — NF C 15-100'),
-                      r('div',{style:{display:'flex',flexDirection:'column',gap:4}},
-                        ...pcircs.map(ci=>r('div',{key:ci.id,style:{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'5px 9px',background:c.surf2,borderRadius:6,border:`1px solid ${c.bdr}`}},
-                          r('div',{style:{display:'flex',alignItems:'center',gap:6}},r('div',{style:{width:6,height:6,borderRadius:'50%',background:ci.color,flexShrink:0}}),r('span',{style:{fontSize:11,color:c.text}},ci.nom)),
-                          r('div',{style:{display:'flex',gap:5}},this.Bdg(ci.section+'mm²',c.muted),this.Bdg(ci.calibreType+ci.calibre+'A',ci.color)))),
-                        pcircs.length===0&&r('span',{style:{fontSize:11,color:c.muted,fontStyle:'italic'}},'Ajoutez des fonctions pour voir les circuits')),
-                      r('div',{style:{marginTop:8,display:'grid',gridTemplateColumns:'1fr 1fr',gap:3,fontSize:11,padding:'8px 10px',background:'rgba(37,99,235,.06)',borderRadius:6,border:'1px solid rgba(37,99,235,.15)'}},
-                        r('span',{style:{color:c.muted}},'Points lum. :'),r('span',{style:{color:c.text2,fontFamily:c.mono,textAlign:'right'}},nL+' pts'),
-                        r('span',{style:{color:c.muted}},'Prises :'),r('span',{style:{color:c.text2,fontFamily:c.mono,textAlign:'right'}},nP+' prises'))
-                    )
-                  );
-                }))
-            );
-          }));
-      }).filter(Boolean)
-    );
-  }
-
-  vCircuits(circuits){
-    const{circuitsTab,tableauxElec,boitesDeriv,interrupteurs,zonesCommande,pieces,circuitFilter,departs}=this.state;const c=this.C;const r=this.r;
-    const opts=this.detectZoneOptimisations();
-    const tabBtn=(id,label,ico)=>r('button',{onClick:()=>this.setState({circuitsTab:id}),style:{padding:'6px 14px',borderRadius:7,fontSize:12,fontWeight:circuitsTab===id?700:400,cursor:'pointer',border:`1px solid ${circuitsTab===id?c.accent:c.bdr2}`,background:circuitsTab===id?'rgba(37,99,235,.12)':'transparent',color:circuitsTab===id?c.accent:c.text2,fontFamily:c.font,display:'flex',alignItems:'center',gap:5}},ico,' ',label);
-    const getPieceNom=id=>{const p=pieces.find(x=>x.id===id);return p?p.nom:'Non définie';};
-
-    return r('div',{style:{padding:'24px 28px',animation:'fadeIn .3s ease'}},
-      this.SH('Circuits électriques','Distribution physique et circuits NF C 15-100',
-        r('div',{style:{display:'flex',gap:6}},tabBtn('distribution','Distribution',this.ico('circuits',13)),tabBtn('auto','Circuits auto NF C 15-100',this.ico('tableau_elec',13)))),
-
-      // ── DISTRIBUTION TAB ──
-      circuitsTab==='distribution'&&(()=>{
-        const deps=this.state.departs||[];
-        const allDj=this.state.disjoncteurs||[];
-        const allPieces=this.state.pieces;
-        const tabPrinc=tableauxElec.filter(t=>!t.type||t.type==='principal');
-        const tabSec=tableauxElec.filter(t=>t.type==='secondaire');
-        const djForTab=id=>allDj.filter(d=>d.tableauId===id);
-        const djPwr=d=>this.calcDjPower(d,allPieces);
-        const openDep=()=>this.setState({showModal:true,modalType:'addDepart',departForm:{nom:'',type:'comptage',calibre:60,poles:4,courbe:'S',tableauElecId:'',pieceId:'',description:'',emplacement:'',tension:'mono',ddr:300}});
-        const openTP=()=>this.setState({showModal:true,modalType:'addTableauElec',editId:null,tableauElecForm:{nom:'',pieceId:'',description:'',type:'principal',appId:'',departId:'',raccordType:'bornier',raccordIdx:1}});
-        const openTS=()=>this.setState({showModal:true,modalType:'addTableauElec',editId:null,tableauElecForm:{nom:'',pieceId:'',description:'',type:'secondaire',appId:'',departId:''}});
-        const addCB=tabId=>{const code=this.genDjCode(allDj,tabId);this.setState(s=>({disjoncteurs:[...s.disjoncteurs,{id:s.nextElemId,code,recepteurs:[],pieceId:null,calibre:10,courbe:'B',poles:'1',ddr:30,section:1.5,tableauId:tabId}],nextElemId:s.nextElemId+1}));this.showToast(code+' cree');};
-
-        const cbCard=d=>{
-          const totW=djPwr(d);const l=this.djNFCLimit(d);
-          const pct=Math.min(Math.round(totW/l.maxW*100),100);
-          const nPct=Math.min(Math.round((d.recepteurs||[]).length/l.maxR*100),100);
-          const over=totW>l.maxW||(d.recepteurs||[]).length>l.maxR;
-          const mPct=Math.max(pct,nPct);
-          return r('div',{key:d.id,style:{background:'#fff',border:'1px solid '+(over?c.danger:c.bdr),borderRadius:7,padding:'8px 10px'}},
-            r('div',{style:{display:'flex',alignItems:'center',gap:5,marginBottom:5}},
-              r('div',{style:{fontFamily:c.mono,fontSize:11,fontWeight:800,color:over?c.danger:'#ef4444',flex:1}},d.code),
-              this.Bdg(d.courbe+d.calibre+'A','#ef4444'),this.Bdg(d.section+'mm',c.muted),
-              d.ddr>0&&this.Bdg(d.ddr+'mA','#0284C7'),
-              r('button',{onClick:()=>this.setState({showModal:true,modalType:'editDisjoncteur',editId:d.id}),style:{background:'transparent',border:'1px solid '+c.bdr2,borderRadius:4,color:c.muted,cursor:'pointer',padding:'1px 4px',display:'inline-flex',alignItems:'center'}},this.ico('pencil',9)),
-              r('button',{onClick:()=>this.setState(st=>({disjoncteurs:st.disjoncteurs.filter(x=>x.id!==d.id)})),style:{background:'transparent',border:'none',color:c.danger,cursor:'pointer',fontSize:12,padding:0}},'x')
-            ),
-            r('div',{style:{marginBottom:4}},
-              r('div',{style:{display:'flex',justifyContent:'space-between',fontSize:9,color:over?c.danger:c.muted,marginBottom:2}},
-                r('span',null,(d.recepteurs||[]).length+' rec. '+totW+'W/'+l.maxW+'W'),
-                r('span',{style:{fontWeight:700,color:over?c.danger:mPct>80?c.warn:'#22c55e'}},mPct+'%')
-              ),
-              r('div',{style:{height:3,background:c.bdr2,borderRadius:2,overflow:'hidden'}},
-                r('div',{style:{height:'100%',width:mPct+'%',background:over?c.danger:mPct>80?c.warn:'#22c55e',borderRadius:2}})
-              ),
-              over&&r('div',{style:{fontSize:8,color:c.danger,fontWeight:700}},'NFC15100: '+l.label)
-            ),
-            (d.recepteurs||[]).length>0&&r('div',{style:{display:'flex',flexWrap:'wrap',gap:2}},
-              ...(d.recepteurs||[]).map(ref=>r('span',{key:ref,style:{fontFamily:c.mono,fontSize:8,padding:'1px 4px',borderRadius:3,background:'rgba(239,68,68,.08)',color:'#ef4444'}},ref))
-            )
-          );
-        };
-
-        const bloc=(num,label,col,note,btn,body)=>r('div',{style:{marginBottom:16,background:c.surf2,border:'1px solid '+c.bdr,borderRadius:12,padding:'14px 16px'}},
-          r('div',{style:{display:'flex',alignItems:'center',gap:8,marginBottom:8,paddingBottom:6,borderBottom:'2px solid '+col}},
-            r('span',{style:{fontSize:10,fontWeight:800,color:col,textTransform:'uppercase',letterSpacing:'.07em',flex:1}},num+' — '+label),btn),
-          note&&r('div',{style:{fontSize:9,color:c.muted,marginBottom:8,padding:'4px 8px',background:col+'0d',borderRadius:5,border:'1px solid '+col+'25'}},note),
-          body
-        );
-
-        const tabCard=(te,col)=>{
-          const cbList=djForTab(te.id);
-          const totW=cbList.reduce((s,d)=>s+djPwr(d),0);
-          return r('div',{key:te.id,style:{background:'#fff',border:'1px solid '+c.bdr,borderRadius:9,overflow:'hidden',marginBottom:6}},
-            r('div',{style:{padding:'9px 12px',borderBottom:'1px solid '+c.bdr,display:'flex',alignItems:'center',gap:9}},
-              r('div',{style:{width:30,height:40,background:col==='#0277BD'?'linear-gradient(180deg,#1f3a6e,#0f1f3a)':'linear-gradient(180deg,#2d1f5e,#18103a)',border:'2px solid '+col,borderRadius:4,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',flexShrink:0}},
-                r('div',{style:{fontSize:6,color:col==='#0277BD'?'#6ba3ff':'#c4b5fd',fontWeight:800}},col==='#0277BD'?'TGBT':'DIV'),r('div',{style:{fontSize:5,color:col==='#0277BD'?'#93c5fd':'#a78bfa'}},'|||')
-              ),
-              r('div',{style:{flex:1}},
-                r('div',{style:{fontSize:12,fontWeight:700,color:c.text}},te.nom),
-                r('div',{style:{display:'flex',gap:4,marginTop:2}},
-                  this.Bdg(cbList.length+' CB',col),
-                  totW>0&&r('span',{style:{fontSize:9,fontWeight:700,color:col,fontFamily:c.mono}},(totW/1000).toFixed(2)+' kW')
-                )
-              ),
-              r('button',{onClick:()=>addCB(te.id),style:{padding:'4px 8px',border:'1px dashed #ef4444',borderRadius:5,background:'rgba(239,68,68,.04)',color:'#ef4444',fontSize:10,fontWeight:700,cursor:'pointer'}},'+CB'),
-              r('button',{onClick:()=>(()=>{const _pc=this.state.pieces.find(p=>p.id===te.pieceId);this.openEdit('addTableauElec',te,'tableauElecForm',{nom:te.nom,pieceId:te.pieceId?String(te.pieceId):'',description:te.description||'',type:te.type||'principal',appId:_pc?String(_pc.appId):'',departId:te.departId?String(te.departId):''});})(),style:{background:'transparent',border:'1px solid '+c.bdr2,borderRadius:5,padding:'3px 6px',color:c.muted,cursor:'pointer',fontSize:11}},this.ico('pencil',11))
-            ),
-            cbList.length===0?r('div',{style:{padding:'8px 12px',fontSize:11,color:c.muted,fontStyle:'italic'}},'Aucun CB'):
-            r('div',{style:{padding:'8px 12px',display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(170px,1fr))',gap:5}},cbList.map(d=>cbCard(d)))
-          );
-        };
-
-        const invs=this.state.inverseurs||[];
-        const hasCpt=deps.some(d=>d.type==='comptage');
-        const hasAlt=deps.some(d=>d.type==='electrogene'||d.type==='solaire');
-        const orphanCBs=allDj.filter(d=>!d.tableauId);
-        const allCBsDisplay=allDj;
-        const cbColCard=d=>{
-          const tw=djPwr(d);const l=this.djNFCLimit(d);const pct=Math.min(Math.round(tw/l.maxW*100),100);const over=tw>l.maxW;
-          const teCB=tableauxElec.find(t=>t.id===d.tableauId);
-          const teCode=teCB?this.genTECode(teCB,this.state):'ND';
-          const cbCode=this.genDjCode(allDj.slice(0,allDj.indexOf(d)+1),d.tableauId);
-          if(visibleCbIds&&!visibleCbIds.includes(d.id))return null;
-          const cbOn=filtCbId===d.id;
-          return r('div',{key:d.id,onClick:(e)=>{if(e.target.closest&&e.target.closest('button'))return;toggleSel('cbId',d.id);},style:{margin:'4px 8px',background:cbOn?'rgba(239,68,68,.08)':'#fff',border:'1px solid '+(cbOn?'#ef4444':over?c.danger:c.bdr),borderRadius:6,padding:'7px 9px',cursor:'pointer',outline:selRing(cbOn,'#ef4444')}},
-            r('div',{style:{display:'flex',alignItems:'center',gap:4,marginBottom:3}},
-              r('span',{style:{fontFamily:c.mono,fontSize:11,fontWeight:900,color:'#ef4444',flex:1}},cbCode),
-              this.Bdg(d.courbe+d.calibre+'A','#ef4444'),
-              d.ddr>0&&this.Bdg(d.ddr+'mA','#0284C7'),
-              r('button',{onClick:()=>this.setState({showModal:true,modalType:'editDisjoncteur',editId:d.id}),style:{background:'transparent',border:'none',color:c.muted,cursor:'pointer',padding:1}},this.ico('pencil',8)),
-              r('button',{onClick:()=>this.setState(st=>({disjoncteurs:st.disjoncteurs.filter(x=>x.id!==d.id)})),style:{background:'transparent',border:'none',color:c.danger,cursor:'pointer',fontSize:10,padding:0}},'x')
-            ),
-            r('div',{style:{fontSize:8,color:'#94a3b8',fontFamily:c.mono,marginBottom:3}},teCode+(d.tableauId?'':' — sans tableau')),
-            r('div',{style:{height:3,background:c.bdr2,borderRadius:2,overflow:'hidden'}},
-              r('div',{style:{height:'100%',width:pct+'%',background:over?c.danger:pct>80?c.warn:'#22c55e',borderRadius:2}})
-            ),
-            over&&r('div',{style:{fontSize:7,color:c.danger,fontWeight:700,marginTop:2}},'DEPASSE NFC')
-          );
-        };
-
-        const colW={flex:'0 0 auto',display:'flex',flexDirection:'column',borderRight:'1px solid '+c.bdr,height:'100%',overflow:'hidden'};
-        const colHdrSt=(col)=>({padding:'10px 12px',borderBottom:'2px solid '+col,background:col+'15',display:'flex',alignItems:'center',gap:6,flexShrink:0});
-        const colBody={flex:1,overflowY:'auto',paddingBottom:8};
-        const sel=this.state.circuitsSel||{srcId:null,teId:null,cbId:null,bdId:null};
-        const setSel=(u)=>this.setState(s=>({circuitsSel:{...(s.circuitsSel||{}),...u}}));
-        const toggleSel=(key,id)=>{const cur=(this.state.circuitsSel||{})[key];setSel({srcId:null,teId:null,cbId:null,bdId:null,[key]:cur===id?null:id});};
-        const filtSrcId=sel.srcId,filtTeId=sel.teId,filtCbId=sel.cbId,filtBdId=sel.bdId;
-        const selRing=(on,col)=>on?'2px solid '+(col||'#0277BD'):'none';
-
-        // ── Cascade filter helpers ──
-        // Which TE are visible given current selection?
-        const visibleTeIds=(()=>{
-          if(filtSrcId) return tableauxElec.filter(t=>t.departId===filtSrcId).map(t=>t.id);
-          if(filtCbId){const dj=allDj.find(d=>d.id===filtCbId);return dj?[dj.tableauId]:[];}
-          if(filtBdId){const bd=boitesDeriv.find(b=>b.id===filtBdId);return bd?[bd.tableauId]:[];}
-          return null; // null = show all
-        })();
-        // Which CB are visible?
-        const visibleCbIds=(()=>{
-          if(filtTeId) return allDj.filter(d=>d.tableauId===filtTeId).map(d=>d.id);
-          if(filtCbId) return [filtCbId];
-          if(filtSrcId){const teIds=tableauxElec.filter(t=>t.departId===filtSrcId).map(t=>t.id);return allDj.filter(d=>teIds.includes(d.tableauId)).map(d=>d.id);}
-          if(filtBdId){const bd=boitesDeriv.find(b=>b.id===filtBdId);const bdFns=pieces.flatMap(p=>p.fonctions||[]).filter(fn=>fn.departType==='boite'&&String(fn.departId)===String(filtBdId));const dj=allDj.find(d=>(d.recepteurs||[]).some(ref=>bdFns.some(fn=>fn.ref===ref)));return dj?[dj.id]:[];}
-          return null;
-        })();
-        // Which BD are visible?
-        const visibleBdIds=(()=>{
-          if(filtBdId) return [filtBdId];
-          if(filtCbId){const dj=allDj.find(d=>d.id===filtCbId);const refs=(dj&&dj.recepteurs)||[];const allFnsX=pieces.flatMap(p=>p.fonctions||[]);const bds=refs.map(ref=>{const fn=allFnsX.find(f=>f.ref===ref);return fn&&fn.departType==='boite'?+fn.departId:null;}).filter(Boolean);return [...new Set(bds)];}
-          if(filtTeId){const cbsOfTE=allDj.filter(d=>d.tableauId===filtTeId);const refs=cbsOfTE.flatMap(d=>d.recepteurs||[]);const allFnsX=pieces.flatMap(p=>p.fonctions||[]);const bds=refs.map(ref=>{const fn=allFnsX.find(f=>f.ref===ref);return fn&&fn.departType==='boite'?+fn.departId:null;}).filter(Boolean);return [...new Set(bds)];}
-          if(filtSrcId){const teIds=tableauxElec.filter(t=>t.departId===filtSrcId).map(t=>t.id);return boitesDeriv.filter(b=>teIds.includes(b.tableauId)).map(b=>b.id);}
-          return null;
-        })();
-        // Which Src are visible?
-        const visibleSrcIds=(()=>{
-          if(filtSrcId) return [filtSrcId];
-          if(filtTeId){const te=tableauxElec.find(t=>t.id===filtTeId);return te&&te.departId?[te.departId]:null;}
-          if(filtCbId){const dj=allDj.find(d=>d.id===filtCbId);const te=dj?tableauxElec.find(t=>t.id===dj.tableauId):null;return te&&te.departId?[te.departId]:null;}
-          return null;
-        })();
-
-        const srcCard=(d)=>{const cf={comptage:{l:'Reseau',col:'#16a34a'},electrogene:{l:'GE',col:'#ef4444'},solaire:{l:'Solaire',col:'#f59e0b'}}[d.type]||{l:d.type,col:c.muted};if(visibleSrcIds&&!visibleSrcIds.includes(d.id))return null;const sOn=filtSrcId===d.id;return r('div',{key:d.id,onClick:()=>toggleSel('srcId',d.id),style:{margin:'6px 8px',background:sOn?cf.col+'14':'#fff',border:'1px solid '+(sOn?cf.col:c.bdr),borderRadius:7,padding:'8px 10px',cursor:'pointer',outline:selRing(sOn,cf.col)}},r('div',{style:{display:'flex',alignItems:'center',gap:5,marginBottom:3}},r('span',{style:{fontFamily:c.mono,fontSize:11,fontWeight:800,color:cf.col}},'['+this.genSourceCode(d,this.state)+']'),r('span',{style:{fontSize:11,fontWeight:600,color:c.text,flex:1,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}},d.nom),r('button',{onClick:()=>this.setState({showModal:true,modalType:'editDepart',editDepartId:d.id,departForm:{nom:d.nom,type:d.type,calibre:d.calibre,poles:d.poles,courbe:d.courbe,tableauElecId:d.tableauElecId?String(d.tableauElecId):'',pieceId:d.pieceId?String(d.pieceId):'',description:d.description||'',emplacement:d.emplacement||'',tension:d.tension||'mono',ddr:d.ddr!=null?d.ddr:300}}),style:{background:'transparent',border:'none',color:c.muted,cursor:'pointer',padding:2}},this.ico('pencil',9)),r('button',{onClick:()=>this.setState(st=>({departs:st.departs.filter(x=>x.id!==d.id),inverseurs:st.departs.filter(x=>x.id!==d.id).length<2?[]:st.inverseurs})),style:{background:'transparent',border:'none',color:c.danger,cursor:'pointer',fontSize:11,padding:0}},'x')),r('div',{style:{display:'flex',gap:3,flexWrap:'wrap'}},this.Bdg(cf.l,cf.col),this.Bdg(d.courbe+d.calibre+'A',cf.col),this.Bdg(d.poles+'P',c.muted),this.Bdg(d.dbCode||('DB'+(this.state.departs.findIndex(x=>x.id===d.id)+1)),'#7c3aed')));};
-
-        const tabCardCol=(te,col)=>{const cbList=djForTab(te.id);const totW=cbList.reduce((s,d)=>s+djPwr(d),0);const pc=pieces.find(p=>p.id===te.pieceId);const teCode=this.genTECode(te,this.state);if(visibleTeIds&&!visibleTeIds.includes(te.id))return null;const tOn=filtTeId===te.id;return r('div',{key:te.id,onClick:(e)=>{if(e.target.closest&&e.target.closest('button'))return;toggleSel('teId',te.id);},style:{margin:'6px 8px',background:tOn?col+'14':'#fff',border:'1px solid '+(tOn?col:c.bdr),borderRadius:7,padding:'8px 10px',cursor:'pointer',outline:selRing(tOn,col)}},r('div',{style:{display:'flex',alignItems:'center',gap:5,marginBottom:4}},r('span',{style:{fontFamily:c.mono,fontSize:10,fontWeight:900,color:col,flexShrink:0}},teCode),r('span',{style:{fontSize:11,fontWeight:700,color:c.text,flex:1,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',marginLeft:4}},te.nom),r('button',{onClick:()=>addCB(te.id),style:{padding:'1px 5px',border:'1px dashed #ef4444',borderRadius:4,background:'rgba(239,68,68,.04)',color:'#ef4444',fontSize:9,cursor:'pointer',flexShrink:0}},'+CB'),r('button',{onClick:()=>(()=>{const _pc=this.state.pieces.find(p=>p.id===te.pieceId);this.openEdit('addTableauElec',te,'tableauElecForm',{nom:te.nom,pieceId:te.pieceId?String(te.pieceId):'',description:te.description||'',type:te.type||'principal',appId:_pc?String(_pc.appId):'',departId:te.departId?String(te.departId):''});})(),style:{background:'transparent',border:'none',color:c.muted,cursor:'pointer',padding:2}},this.ico('pencil',9)),r('button',{onClick:()=>this.setState(s=>({tableauxElec:s.tableauxElec.filter(x=>x.id!==te.id)})),style:{background:'transparent',border:'none',color:c.danger,cursor:'pointer',fontSize:11,padding:0}},'x')),r('div',{style:{display:'flex',gap:3,flexWrap:'wrap'}},this.Bdg(te.cb0Code||(this.state.tableauxElec.findIndex(t=>t.id===te.id)+1+'CB0'),'#ef4444'),this.Bdg(cbList.length+' CB',col),pc&&this.Bdg(pc.nom,c.muted),totW>0&&this.Bdg((totW/1000).toFixed(1)+'kW',col)));};
-
-        const boiteCardCol=(b)=>{const pc=pieces.find(p=>p.id===b.pieceId);const tab=tableauxElec.find(t=>t.id===b.tableauId);const typeLabel={encastre:'Encastree',saillie:'Saillie',etanche:'IP55',plafond:'DCL'}[b.type]||b.type;if(visibleBdIds&&!visibleBdIds.includes(b.id))return null;const bdOn=filtBdId===b.id;return r('div',{key:b.id,onClick:(e)=>{if(e.target.closest&&e.target.closest('button'))return;toggleSel('bdId',b.id);},style:{margin:'6px 8px',background:bdOn?'rgba(245,158,11,.08)':'#fff',border:'1px solid '+(bdOn?'#f59e0b':c.bdr),borderRadius:7,padding:'8px 10px',cursor:'pointer',outline:selRing(bdOn,'#f59e0b')}},r('div',{style:{display:'flex',alignItems:'center',gap:5,marginBottom:3}},r('span',{style:{fontFamily:c.mono,fontSize:10,fontWeight:900,color:'#f59e0b',flexShrink:0}},this.genBDCode(b,this.state)),r('span',{style:{fontSize:11,fontWeight:600,color:'#64748b',flex:1,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',marginLeft:4}},b.nom||''),r('button',{onClick:()=>this.openEdit('addBoite',b,'boiteForm',{nom:b.nom||'',label:'',pieceId:b.pieceId?String(b.pieceId):'',type:b.type,tableauId:b.tableauId?String(b.tableauId):'',position:b.position||'',hauteurPlafond:b.hauteurPlafond||30,cote:b.cote||'plafond',description:b.description||'',retourDepart:false,retourEditFonction:false}),style:{background:'transparent',border:'none',color:c.muted,cursor:'pointer',padding:2}},this.ico('pencil',9)),r('button',{onClick:()=>{this.deleteItem('boitesDeriv',b.id);this.showToast('Supprimee');},style:{background:'transparent',border:'none',color:c.danger,cursor:'pointer',fontSize:11,padding:0}},'x')),r('div',{style:{display:'flex',gap:3,flexWrap:'wrap'}},this.Bdg(typeLabel,'#94a3b8'),pc&&this.Bdg(pc.nom,c.muted),tab&&this.Bdg(tab.nom,'#94a3b8')));};
-
-        const zoneCardCol=(z)=>{const zInters=interrupteurs.filter(i=>i.zoneId===z.id);const pc=pieces.find(p=>p.id===z.pieceId);return r('div',{key:z.id,style:{margin:'6px 8px',background:'#fff',border:'1px solid '+c.bdr,borderRadius:7,overflow:'hidden'}},r('div',{style:{padding:'8px 10px',borderBottom:zInters.length?'1px solid '+c.bdr:'none'}},r('div',{style:{display:'flex',alignItems:'center',gap:5,marginBottom:3}},z.zoneCode&&r('span',{style:{fontSize:8,fontWeight:800,color:'#fff',background:'#7c3aed',borderRadius:3,padding:'1px 4px',flexShrink:0}},z.zoneCode),r('span',{style:{fontSize:11,fontWeight:700,color:c.text,flex:1,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}},z.nom),r('button',{onClick:()=>this.openEdit('addZone',z,'zoneForm',{nom:z.nom,pieceId:z.pieceId?String(z.pieceId):'',position:z.position||'',hauteur:z.hauteur||120,cote:z.cote||'gauche',retourEditFonction:false}),style:{background:'transparent',border:'none',color:c.muted,cursor:'pointer',padding:2}},this.ico('pencil',9)),r('button',{onClick:()=>{this.deleteItem('zonesCommande',z.id);this.showToast('Zone supprimee');},style:{background:'transparent',border:'none',color:c.danger,cursor:'pointer',fontSize:11,padding:0}},'x')),r('div',{style:{display:'flex',gap:3,flexWrap:'wrap'}},pc&&this.Bdg(pc.nom,c.muted),this.Bdg(zInters.length+' inter.','#7c3aed'))),zInters.length>0&&r('div',{style:{padding:'4px 6px',display:'flex',flexDirection:'column',gap:2}},zInters.map(i=>r('div',{key:i.id,style:{display:'flex',alignItems:'center',gap:4,padding:'2px 4px',background:c.surf3,borderRadius:4}},r('span',{style:{fontFamily:c.mono,fontSize:9,fontWeight:700,color:'#0277BD',flex:1}},this.genInterCode(i,this.state)),this.Bdg({simple:'SA',va_vient:'VV',poussoir:'PO',double:'DA',variateur:'VA',detecteur:'DT',domotique:'DM'}[i.type]||i.type,'#0277BD'),r('button',{onClick:()=>{this.deleteItem('interrupteurs',i.id);this.showToast('Supprime');},style:{background:'transparent',border:'none',color:c.danger,cursor:'pointer',fontSize:10,padding:0}},'x')))));};
-
-        const anySel=filtSrcId||filtTeId||filtCbId||filtBdId;
-        return r('div',null,
-          anySel&&r('div',{style:{display:'flex',alignItems:'center',gap:6,padding:'5px 10px',marginBottom:6,background:'rgba(2,119,189,.06)',border:'1px solid rgba(2,119,189,.2)',borderRadius:7,fontSize:10}},
-            r('span',{style:{color:'#0277BD',fontWeight:600}},'Filtre :'),
-            filtSrcId&&r('span',{style:{padding:'2px 7px',background:'#16a34a20',borderRadius:4,color:'#16a34a',fontWeight:700}},this.genSourceCode(departs.find(d=>d.id===filtSrcId)||{type:'comptage',id:filtSrcId},this.state)),
-            filtTeId&&r('span',{style:{padding:'2px 7px',background:'#0277BD20',borderRadius:4,color:'#0277BD',fontWeight:700}},this.genTECode(tableauxElec.find(t=>t.id===filtTeId)||{id:filtTeId},this.state)),
-            filtCbId&&r('span',{style:{padding:'2px 7px',background:'#ef444420',borderRadius:4,color:'#ef4444',fontWeight:700}},(()=>{const dj=this.state.disjoncteurs.find(d=>d.id===filtCbId);return dj?this.genDjCode(this.state.disjoncteurs.slice(0,this.state.disjoncteurs.indexOf(dj)+1),dj.tableauId):'CB?';})()),
-            filtBdId&&r('span',{style:{padding:'2px 7px',background:'#f59e0b20',borderRadius:4,color:'#f59e0b',fontWeight:700}},this.genBDCode(boitesDeriv.find(b=>b.id===filtBdId)||{id:filtBdId},this.state)),
-            r('button',{onClick:()=>setSel({srcId:null,teId:null,cbId:null,bdId:null}),style:{marginLeft:'auto',padding:'2px 8px',background:'transparent',border:'1px solid #94a3b8',borderRadius:4,fontSize:9,cursor:'pointer',color:'#64748b'}},'× Réinitialiser')
-          ),
-          r('div',{style:{display:'flex',height:'calc(100vh - 250px)',overflowX:'auto',overflowY:'hidden',border:'1px solid '+c.bdr,borderRadius:10,background:c.surf2}},
-
-          r('div',{style:{...colW,minWidth:180}},
-            r('div',{style:colHdrSt('#16a34a')},r('span',{style:{fontSize:10,fontWeight:800,color:'#16a34a',textTransform:'uppercase',letterSpacing:'.06em',flex:1}},'Sources'),r('button',{onClick:openDep,style:{background:'#16a34a',color:'#fff',border:'none',borderRadius:5,padding:'3px 7px',fontSize:9,fontWeight:700,cursor:'pointer'}},'+Src')),
-            r('div',{style:colBody},
-              deps.length===0?r('div',{style:{padding:'14px',textAlign:'center',fontSize:10,color:c.muted,fontStyle:'italic'}},'Aucune source'):deps.map(d=>srcCard(d)),
-              (hasCpt&&hasAlt||invs.length>0)&&r('div',{style:{margin:'6px 8px',padding:'7px 10px',background:'rgba(6,182,212,.06)',border:'1px solid rgba(6,182,212,.25)',borderRadius:7}},
-                r('div',{style:{display:'flex',alignItems:'center',gap:5,marginBottom:invs.length?4:0}},this.ico('inverseur_source',12),r('span',{style:{fontSize:10,fontWeight:700,color:'#0891b2',flex:1}},'Inverseur IS'),invs.length===0&&r('button',{onClick:()=>this.checkAutoInverseur(deps),style:{background:'#0891b2',color:'#fff',border:'none',borderRadius:4,padding:'2px 7px',fontSize:9,cursor:'pointer'}},'Creer IS')),
-                invs.map(inv=>r('div',{key:inv.id,style:{fontSize:9,color:'#0891b2',fontFamily:c.mono,display:'flex',alignItems:'center',gap:4}},inv.code,r('button',{onClick:()=>this.setState(st=>({inverseurs:st.inverseurs.filter(x=>x.id!==inv.id)})),style:{background:'transparent',border:'none',color:c.danger,cursor:'pointer',fontSize:10,padding:0}},'x')))
-              )
-            )
-          ),
-
-          r('div',{style:{...colW,minWidth:220,display:'flex',flexDirection:'column'}},
-            r('div',{style:{display:'flex',flexDirection:'column',flex:'0 0 50%',minHeight:0,borderBottom:'2px solid '+c.bdr}},
-              r('div',{style:colHdrSt('#0277BD')},r('span',{style:{fontSize:10,fontWeight:800,color:'#0277BD',textTransform:'uppercase',letterSpacing:'.06em',flex:1}},'Tableaux principaux'),r('button',{onClick:openTP,style:{background:'#0277BD',color:'#fff',border:'none',borderRadius:5,padding:'3px 7px',fontSize:9,fontWeight:700,cursor:'pointer'}},'+TP')),
-              r('div',{style:{...colBody,flex:1,minHeight:0}},
-                tabPrinc.length===0?r('div',{style:{padding:'14px',textAlign:'center',fontSize:10,color:c.muted,fontStyle:'italic'}},'Aucun tableau principal'):tabPrinc.map(te=>tabCardCol(te,'#0277BD'))
-              )
-            ),
-            r('div',{style:{display:'flex',flexDirection:'column',flex:'0 0 50%',minHeight:0}},
-              r('div',{style:colHdrSt('#7c3aed')},r('span',{style:{fontSize:10,fontWeight:800,color:'#7c3aed',textTransform:'uppercase',letterSpacing:'.06em',flex:1}},'Tableaux secondaires'),r('button',{onClick:openTS,style:{background:'#7c3aed',color:'#fff',border:'none',borderRadius:5,padding:'3px 7px',fontSize:9,fontWeight:700,cursor:'pointer'}},'+TS')),
-              r('div',{style:{...colBody,flex:1,minHeight:0}},tabSec.length===0?r('div',{style:{padding:'14px',textAlign:'center',fontSize:10,color:c.muted,fontStyle:'italic'}},'Aucun tableau secondaire'):tabSec.map(te=>tabCardCol(te,'#7c3aed')))
-            )
-          ),
-
-          r('div',{style:{...colW,minWidth:190}},
-            r('div',{style:colHdrSt('#ef4444')},
-              r('span',{style:{fontSize:10,fontWeight:800,color:'#ef4444',textTransform:'uppercase',letterSpacing:'.06em',flex:1}},'Protection'),
-              r('button',{onClick:()=>addCB(tableauxElec[0]&&tableauxElec[0].id),style:{background:'#ef4444',color:'#fff',border:'none',borderRadius:5,padding:'3px 7px',fontSize:9,fontWeight:700,cursor:'pointer'}},'+CB')
-            ),
-            r('div',{style:colBody},
-              allCBsDisplay.length===0?r('div',{style:{padding:'14px',textAlign:'center',fontSize:10,color:c.muted,fontStyle:'italic'}},'Aucun disjoncteur'):allCBsDisplay.map(d=>cbColCard(d)),
-              orphanCBs.length>0&&r('div',{style:{margin:'4px 8px',padding:'5px 8px',background:'rgba(0,0,0,.03)',border:'1px dashed '+c.bdr2,borderRadius:5}},r('div',{style:{fontSize:8,color:c.muted,marginBottom:2}},'CB sans tableau'),orphanCBs.map(d=>cbColCard(d)))
-            )
-          ),
-
-          r('div',{style:{...colW,minWidth:200,display:'flex',flexDirection:'column'}},
-            r('div',{style:{display:'flex',flexDirection:'column',flex:'0 0 50%',minHeight:0,borderBottom:'2px solid '+c.bdr}},
-              r('div',{style:colHdrSt('#94a3b8')},r('span',{style:{fontSize:10,fontWeight:800,color:'#64748b',textTransform:'uppercase',letterSpacing:'.06em',flex:1}},'Boites de derivation'),r('button',{onClick:()=>{this.setState({showModal:true,modalType:'addBoite',editId:null,boiteForm:{nom:'',label:'',pieceId:'',type:'encastre',tableauId:'',position:'',hauteurPlafond:30,cote:'plafond',description:'',raccordType:'connecteur',raccordIdx:1,retourDepart:false,retourEditFonction:false}});},style:{background:'#94a3b8',color:'#fff',border:'none',borderRadius:5,padding:'3px 7px',fontSize:9,fontWeight:700,cursor:'pointer'}},'+BD')),
-              r('div',{style:{...colBody,flex:1,minHeight:0}},boitesDeriv.length===0?r('div',{style:{padding:'14px',textAlign:'center',fontSize:10,color:c.muted,fontStyle:'italic'}},'Aucune boite'):boitesDeriv.map(b=>boiteCardCol(b)))
-            ),
-            r('div',{style:{display:'flex',flexDirection:'column',flex:'0 0 50%',minHeight:0}},
-              r('div',{style:colHdrSt('#7c3aed')},r('span',{style:{fontSize:10,fontWeight:800,color:'#7c3aed',textTransform:'uppercase',letterSpacing:'.06em',flex:1}},'Zones de commande'),r('button',{onClick:()=>this.setState({showModal:true,modalType:'addZone',editId:null,zoneForm:{nom:'',pieceId:'',position:'',hauteur:120,cote:'gauche',retourEditFonction:false}}),style:{background:'#7c3aed',color:'#fff',border:'none',borderRadius:5,padding:'3px 7px',fontSize:9,fontWeight:700,cursor:'pointer'}},'+Zone')),
-              r('div',{style:{...colBody,flex:1,minHeight:0}},zonesCommande.length===0?r('div',{style:{padding:'14px',textAlign:'center',fontSize:10,color:c.muted,fontStyle:'italic'}},'Aucune zone'):r('div',null,zonesCommande.map(z=>zoneCardCol(z))))
-            )
-          ),
-
-          r('div',{style:{...colW,minWidth:190}},
-            r('div',{style:colHdrSt('#0891b2')},
-              r('span',{style:{fontSize:10,fontWeight:800,color:'#0891b2',textTransform:'uppercase',letterSpacing:'.06em',flex:1}},'Interrupteurs'),
-              r('button',{onClick:()=>this.setState({showModal:true,modalType:'addInter',editId:null,interForm:{nom:'',pieceId:'',type:'simple',circuitRef:'',zoneId:''}}),style:{background:'#0891b2',color:'#fff',border:'none',borderRadius:5,padding:'3px 7px',fontSize:9,fontWeight:700,cursor:'pointer'}},'+Inter')
-            ),
-            r('div',{style:colBody},
-              interrupteurs.length===0
-                ?r('div',{style:{padding:'14px',textAlign:'center',fontSize:10,color:c.muted,fontStyle:'italic'}},'Aucun interrupteur')
-                :r('div',null,interrupteurs.map(i=>{
-                  const zone=zonesCommande.find(z=>z.id===i.zoneId);
-                  const pc=pieces.find(p=>p.id===i.pieceId);
-                  const TYPE_LBL={simple:'Simple',va_vient:'Va-et-vient',poussoir:'Poussoir',double:'Double',variateur:'Variateur',detecteur:'Detecteur',domotique:'Domotique'};
-                  return r('div',{key:i.id,style:{margin:'4px 8px',background:'#fff',border:'1px solid '+c.bdr,borderRadius:6,padding:'7px 9px'}},
-                    r('div',{style:{display:'flex',alignItems:'center',gap:4,marginBottom:2}},
-                      r('span',{style:{fontFamily:c.mono,fontSize:11,fontWeight:900,color:'#0891b2',flex:1}},this.genInterCode(i,this.state)),
-                      this.Bdg(TYPE_LBL[i.type]||i.type,'#0891b2'),
-                      r('button',{onClick:()=>this.openEdit('addInter',i,'interForm',{nom:i.nom||'',pieceId:i.pieceId?String(i.pieceId):'',type:i.type||'simple',circuitRef:i.circuitRef||'',zoneId:i.zoneId?String(i.zoneId):''}),style:{background:'transparent',border:'none',color:c.muted,cursor:'pointer',padding:1}},this.ico('pencil',8)),
-                      r('button',{onClick:()=>{this.deleteItem('interrupteurs',i.id);this.showToast('Supprime');},style:{background:'transparent',border:'none',color:c.danger,cursor:'pointer',fontSize:10,padding:0}},'x')
-                    ),
-                    r('div',{style:{display:'flex',gap:3,flexWrap:'wrap'}},
-                      i.circuitRef&&this.Bdg(i.circuitRef,'#64748b'),
-                      zone&&this.Bdg(zone.zoneCode||zone.nom,'#7c3aed'),
-                      pc&&this.Bdg(pc.nom,c.muted)
-                    )
-                  );
-                }))
-            )
-          )
-
-        )
-        );
-      })(),
-      // ── AUTO CIRCUITS TAB ──
-      circuitsTab==='auto'&&r('div',null,
-        r('div',{style:{display:'grid',gridTemplateColumns:'repeat(5,1fr)',gap:8,marginBottom:14}},
-          this.Stat(circuits.length,'Total',c.acBlue),this.Stat(circuits.filter(ci=>ci.type==='eclairage').length,'Éclairage','#f59e0b'),
-          this.Stat(circuits.filter(ci=>ci.type==='prises').length,'Prises',c.acBlue),this.Stat(circuits.filter(ci=>ci.type==='specialise').length,'Spécialisés',c.danger),
-          this.Stat((circuits.reduce((s,ci)=>s+ci.puissance,0)/1000).toFixed(1)+' kW','Charge',c.warn)),
-        r('div',{style:{display:'flex',gap:4,marginBottom:12}},
-          ...['all','eclairage','prises','specialise'].map(f=>r('button',{key:f,onClick:()=>this.setState({circuitFilter:f}),style:{padding:'4px 10px',borderRadius:6,fontSize:11,fontWeight:500,cursor:'pointer',background:circuitFilter===f?c.accent:'transparent',border:`1px solid ${circuitFilter===f?c.accent:c.bdr2}`,color:circuitFilter===f?'#fff':c.muted,fontFamily:c.font}},{all:'Tous',eclairage:'Éclairage',prises:'Prises',specialise:'Spécialisés'}[f]))),
-        r('div',{style:{background:c.surf2,border:`1px solid ${c.bdr}`,borderRadius:12,overflow:'hidden'}},
-          r('table',{style:{width:'100%',borderCollapse:'collapse',fontSize:11}},
-            r('thead',null,r('tr',{style:{background:c.surf3,borderBottom:`1px solid ${c.bdr2}`}},...['#','Circuit','Pièce','Section','Disj.','DDR','Puiss.','Long.'].map(h=>r('th',{key:h,style:{padding:'8px 12px',textAlign:'left',fontSize:9,fontWeight:700,color:c.muted,textTransform:'uppercase',letterSpacing:'.06em',whiteSpace:'nowrap'}},h)))),
-            r('tbody',null,...(circuitFilter==='all'?circuits:circuits.filter(ci=>ci.type===circuitFilter)).map((ci,i)=>r('tr',{key:ci.id,style:{borderBottom:`1px solid ${c.bdr}`,background:i%2?'transparent':'rgba(255,255,255,.01)'}},
-              r('td',{style:{padding:'7px 12px',color:c.muted,fontFamily:c.mono}},ci.id),
-              r('td',{style:{padding:'7px 12px'}},r('div',{style:{display:'flex',alignItems:'center',gap:6}},r('div',{style:{width:6,height:6,borderRadius:2,background:ci.color,flexShrink:0}}),r('span',{style:{color:c.text,fontWeight:500}},ci.nom))),
-              r('td',{style:{padding:'7px 12px',color:c.text2}},ci.piece),
-              r('td',{style:{padding:'7px 12px'}},this.Bdg(ci.section+' mm²',c.muted)),
-              r('td',{style:{padding:'7px 12px'}},this.Bdg(ci.calibreType+ci.calibre+'A',ci.color)),
-              r('td',{style:{padding:'7px 12px'}},r('span',{style:{fontSize:10,padding:'2px 6px',borderRadius:5,background:ci.ddr===2?'rgba(239,68,68,.12)':'rgba(37,99,235,.1)',color:ci.ddr===2?c.danger:c.acBlue}},'DDR'+ci.ddr)),
-              r('td',{style:{padding:'7px 12px',color:c.warn,fontFamily:c.mono}},(ci.puissance/1000).toFixed(1)+' kW'),
-              r('td',{style:{padding:'7px 12px',color:c.text2,fontFamily:c.mono}},'~'+ci.len+'m'))))
-          )
-        )
-      )
-    );
-  }
-
   vCircuits(circuits){
     const{circuitsTab,tableauxElec,boitesDeriv,interrupteurs,zonesCommande,pieces,circuitFilter,departs}=this.state;const c=this.C;const r=this.r;
     const opts=this.detectZoneOptimisations();
@@ -6881,7 +6496,7 @@ class Component extends DCLogic {
     this.C=this.getC(theme);const circuits=this.calcCircuits();const c=this.C;const r=this.r;
     const views={
       dashboard:()=>this.vDashboard(circuits),projet:()=>this.vProjet(),
-      logements:()=>this.vLogements(circuits),appartements:()=>this.vLogements(circuits),pieces:()=>this.vLogements(circuits),
+      logements:()=>this.vLogements(circuits),
       circuits:()=>this.vCircuits(circuits),
       realisation:()=>this.vRealisation(circuits),cablage:()=>this.vCablage(circuits),
       domotique:()=>this.vDomotique(),devis:()=>this.vDevis(circuits),
