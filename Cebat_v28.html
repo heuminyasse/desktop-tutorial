@@ -2250,6 +2250,26 @@ class Component extends DCLogic {
       this.showToast('Projet exporte');
     }catch(e){this.showToast("Echec de l'export");}
   }
+  exportCSV(){
+    try{
+      const circuits=this.calcCircuits();
+      const apps=this.state.appartements||[];
+      const appNom=id=>{const a=apps.find(x=>x.id===id);return a?a.nom:'';};
+      const TYPE={eclairage:'Eclairage',prises:'Prises',specialise:'Specialise'};
+      const headers=['Appartement','Piece','Circuit','Type','Calibre (A)','Courbe','Section (mm2)','DDR','Puissance (W)','Nb points','Longueur (m)','Reference'];
+      const esc=v=>{const s=v==null?'':String(v);return /[";\n]/.test(s)?'"'+s.replace(/"/g,'""')+'"':s;};
+      const rows=circuits.map(ci=>[appNom(ci.appId),ci.piece||'',ci.nom||'',TYPE[ci.type]||ci.type||'',ci.calibre,ci.calibreType||'',ci.section,ci.ddr,ci.puissance,ci.nb,ci.len,ci.ref||''].map(esc).join(';'));
+      const csv='﻿'+[headers.join(';'),...rows].join('\r\n');
+      const blob=new Blob([csv],{type:'text/csv;charset=utf-8'});
+      const url=URL.createObjectURL(blob);
+      const a=document.createElement('a');
+      const slug=((this.state.project&&this.state.project.nom)||'projet').replace(/[^a-z0-9]+/gi,'_').replace(/^_+|_+$/g,'').toLowerCase()||'projet';
+      a.href=url;a.download='cebat_nomenclature_'+slug+'.csv';
+      document.body.appendChild(a);a.click();a.remove();
+      setTimeout(()=>URL.revokeObjectURL(url),1000);
+      this.showToast('Nomenclature CSV exportee ('+circuits.length+' circuits)');
+    }catch(e){this.showToast("Echec de l'export CSV");}
+  }
   importJSON(){
     const input=document.createElement('input');
     input.type='file';input.accept='application/json,.json';
@@ -2325,7 +2345,7 @@ class Component extends DCLogic {
     const letter=this._fnLetter(fn.type);
     const allFns=state.pieces.flatMap(p=>(p.fonctions||[]).map(f=>({...f,piece:p})));
     const sameType=allFns.filter(f=>this._fnLetter(f.type)===letter);
-    const globalIdx=sameType.findIndex(f=>f.id===fn.id&&f.piece&&fn.piece&&f.piece.id===fn.piece.id)+1||1;
+    const _gi=sameType.findIndex(f=>f.id===fn.id&&f.piece&&fn.piece&&f.piece.id===fn.piece.id);const globalIdx=_gi>=0?_gi+1:sameType.length+1;
     const allBD=state.boitesDeriv;const allTE=state.tableauxElec;
     // Trouver le prefixe: numero de BD ou de TE
     if(fn.departType==='boite'){
@@ -2558,8 +2578,8 @@ class Component extends DCLogic {
 
   // ═══ HELPERS ═══
   getFnTypes(p){return(p.fonctions||[]).map(f=>f.type);}
-  getNbL(p){const ef=(p.fonctions||[]).filter(f=>f.type==='eclairage');if(ef.length>0)return ef.reduce((s,f)=>s+(f.quantite||1),0);const t=this.PT[p.type]||{minL:1};const n=this.NV[p.niveau]||{bonus:0};return Math.max(t.minL,t.minL+Math.floor(p.surface/15)+n.bonus);}
-  getNbP(p){const pf=(p.fonctions||[]).filter(f=>['prises','prises_sdb'].includes(f.type));if(pf.length>0)return pf.reduce((s,f)=>s+(f.quantite||1),0);const t=this.PT[p.type]||{minP:2};const n=this.NV[p.niveau]||{bonus:0};return Math.max(t.minP,t.minP+Math.max(0,Math.floor((p.surface-10)/5))+n.bonus);}
+  getNbL(p){const ef=(p.fonctions||[]).filter(f=>f.type==='eclairage');if(ef.length>0)return ef.reduce((s,f)=>s+(f.quantite||1),0);const t=this.PT[p.type]||{minL:1};const n=this.NV[p.niveau]||{bonus:0};return t.minL+Math.max(0,Math.floor(p.surface/15))+n.bonus;}
+  getNbP(p){const pf=(p.fonctions||[]).filter(f=>['prises','prises_sdb'].includes(f.type));if(pf.length>0)return pf.reduce((s,f)=>s+(f.quantite||1),0);const t=this.PT[p.type]||{minP:2};const n=this.NV[p.niveau]||{bonus:0};return t.minP+Math.max(0,Math.floor((p.surface-10)/5))+n.bonus;}
   getLen(p){return Math.round(Math.sqrt(p.surface)*5+10);}
   getPieceIcon(t){const k={sejour:'sejour',cuisine:'cuisine',chambre:'chambre',sdb:'sdb',wc:'wc',bureau:'bureau',couloir:'couloir',garage:'garage',cave:'cave',exterieur:'exterieur'}[t]||'sejour';return this.ico(k,15);}
   getNivLabel(niv){const label=niv.etage<0?`Niveau ${niv.etage}`:niv.etage===0?'RDC':`Étage ${niv.etage}`;return label;}
@@ -2594,7 +2614,7 @@ class Component extends DCLogic {
     return opts;
   }
 
-  getCompletion(){const{pieces,niveaux,appartements,project}=this.state;let s=0;if(project.nom&&project.adresse)s+=15;if(niveaux.length>0)s+=15;if(appartements.length>0)s+=15;if(pieces.length>=1)s+=15;if(pieces.some(p=>(p.fonctions||[]).length>=2))s+=20;s+=20;return Math.min(s,100);}
+  getCompletion(){const{pieces,niveaux,appartements,project}=this.state;let s=0;if(project.nom&&project.adresse)s+=15;if(niveaux.length>0)s+=15;if(appartements.length>0)s+=15;if(pieces.length>=1)s+=15;if(pieces.some(p=>(p.fonctions||[]).length>=2))s+=20;const te=this.state.tableauxElec||[];const dj=this.state.disjoncteurs||[];if(te.length>0&&dj.length>0)s+=20;return Math.min(s,100);}
 
   // ═══ CALC ═══
   calcCircuits(){
@@ -2645,7 +2665,7 @@ class Component extends DCLogic {
   Stat(val,label,color='#0284C7',sub=''){const c=this.C;return this.r('div',{style:{background:'#fff',border:`1px solid ${c.bdr}`,borderRadius:10,padding:'16px 18px',boxShadow:`0 1px 4px ${c.shadow}`}},this.r('div',{style:{fontSize:10,color:c.muted,marginBottom:5,textTransform:'uppercase',letterSpacing:'.05em',fontWeight:600}},label),this.r('div',{style:{fontSize:24,fontWeight:800,color,fontFamily:c.mono}},val),sub&&this.r('div',{style:{fontSize:10,color:c.muted,marginTop:3}},sub));}
   SH(title,sub='',extra=null){const c=this.C;return this.r('div',{style:{marginBottom:24}},this.r('div',{style:{display:'flex',justifyContent:'space-between',alignItems:'flex-start'}},this.r('div',null,this.r('h1',{style:{fontSize:21,fontWeight:800,color:c.text,marginBottom:3,letterSpacing:'-.4px'}},title),sub&&this.r('p',{style:{fontSize:13,color:c.muted}},sub)),extra));}
   showToast(msg){this.setState({toast:msg});clearTimeout(this._tt);this._tt=setTimeout(()=>this.setState({toast:null}),3000);}
-  Inp(field,label,type='text',form,setForm,opts={}){const c=this.C;return this.r('div',{style:{marginBottom:14}},this.r('label',{style:{display:'block',fontSize:11,color:c.text2,marginBottom:5,fontWeight:600}},label),this.r('input',{type,value:form[field]??'',onChange:e=>setForm(f=>({...f,[field]:type==='number'?+e.target.value:e.target.value})),...opts,style:{width:'100%',background:c.surf3,border:`1px solid ${c.bdr2}`,borderRadius:7,padding:'8px 11px',color:c.text,fontSize:13,outline:'none',fontFamily:c.font,...(opts.style||{})}}));}
+  Inp(field,label,type='text',form,setForm,opts={}){const c=this.C;return this.r('div',{style:{marginBottom:14}},this.r('label',{style:{display:'block',fontSize:11,color:c.text2,marginBottom:5,fontWeight:600}},label),this.r('input',{type,value:form[field]??'',onChange:e=>setForm(f=>({...f,[field]:type==='number'?(e.target.value===''?'':(Number.isFinite(+e.target.value)?+e.target.value:f[field])):e.target.value})),...opts,style:{width:'100%',background:c.surf3,border:`1px solid ${c.bdr2}`,borderRadius:7,padding:'8px 11px',color:c.text,fontSize:13,outline:'none',fontFamily:c.font,...(opts.style||{})}}));}
   Sel(field,label,options,form,setForm,onChangeCb=null){const c=this.C;return this.r('div',{style:{marginBottom:14}},this.r('label',{style:{display:'block',fontSize:11,color:c.text2,marginBottom:5,fontWeight:600}},label),this.r('select',{value:form[field]??'',onChange:e=>{const v=e.target.value;setForm(f=>({...f,[field]:v}));if(onChangeCb)onChangeCb(v);},style:{width:'100%',background:c.surf3,border:`1px solid ${c.bdr2}`,borderRadius:7,padding:'8px 11px',color:c.text,fontSize:13,outline:'none',fontFamily:c.font,appearance:'auto'}},...options.map(([v,l])=>this.r('option',{key:v,value:v},l))));}
   ModalShell(title,onClose,children,footer){const c=this.C;return this.r('div',null,this.r('div',{style:{padding:'22px 26px 0'}},this.r('div',{style:{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:20}},this.r('h2',{style:{fontSize:16,fontWeight:700,color:c.text}},title),this.r('button',{onClick:onClose,style:{background:'transparent',border:'none',color:c.muted,fontSize:22,cursor:'pointer',lineHeight:1}},'×')),children),this.r('div',{style:{padding:'14px 26px 22px',borderTop:`1px solid ${c.bdr}`,display:'flex',gap:8,justifyContent:'flex-end'}},footer));}
   deleteItem(arr,id){this.setState(s=>({[arr]:s[arr].filter(x=>x.id!==id)}))}
@@ -2905,7 +2925,7 @@ class Component extends DCLogic {
     const save=()=>{
       if(!form.nom.trim())return;
       const code=editId?form.code||autoCode:autoCode;
-      const appCodeVal=editId?form.appCode||(this.state.appartements.find(a=>a.id===editId)?.appCode||'APP??'):this.genAppSeqCode(this.state.appartements);const obj={nom:form.nom,type:form.type||'appartement',surface:+form.surface,niveauId:+form.niveauId,code,position:form.position||'',appCode:appCodeVal};
+      const _as=+form.surface;if(!Number.isFinite(_as)||_as<=0){this.showToast('Surface invalide (m²)');return;}const appCodeVal=editId?form.appCode||(this.state.appartements.find(a=>a.id===editId)?.appCode||'APP??'):this.genAppSeqCode(this.state.appartements);const obj={nom:form.nom,type:form.type||'appartement',surface:+form.surface,niveauId:+form.niveauId,code,position:form.position||'',appCode:appCodeVal};
       if(editId!==null)this.setState(s=>({appartements:s.appartements.map(a=>a.id===editId?{...a,...obj}:a),showModal:false,editId:null}));
       else this.setState(s=>({appartements:[...s.appartements,{...obj,id:s.nextAppId}],nextAppId:s.nextAppId+1,showModal:false}));
       this.showToast('Appartement enregistré ✓');
@@ -2936,7 +2956,7 @@ class Component extends DCLogic {
     const close=()=>this.setState({showModal:false});
     const save=()=>{
       if(!form.nom.trim())return;
-      const pcCode=editId?(this.state.pieces.find(p=>p.id===editId)?.pieceCode||this.genPieceCode(this.state.pieces)):this.genPieceCode(this.state.pieces);const obj={nom:form.nom,type:form.type,surface:+form.surface,niveau:form.niveau,appId:+form.appId,couleur:form.couleur,typePlafond:form.typePlafond,typeMur:form.typeMur,typeSol:form.typeSol,pieceCode:pcCode};
+      const _ps=+form.surface;if(!Number.isFinite(_ps)||_ps<=0){this.showToast('Surface invalide (m²)');return;}const pcCode=editId?(this.state.pieces.find(p=>p.id===editId)?.pieceCode||this.genPieceCode(this.state.pieces)):this.genPieceCode(this.state.pieces);const obj={nom:form.nom,type:form.type,surface:+form.surface,niveau:form.niveau,appId:+form.appId,couleur:form.couleur,typePlafond:form.typePlafond,typeMur:form.typeMur,typeSol:form.typeSol,pieceCode:pcCode};
       if(editId!==null)this.setState(s=>({pieces:s.pieces.map(p=>p.id===editId?{...p,...obj,fonctions:p.fonctions}:p),showModal:false,editId:null}));
       else this.setState(s=>{
         const useDef=form.loadMode!=='manual';
@@ -5036,7 +5056,7 @@ class Component extends DCLogic {
     const{project,niveaux,appartements,pieces}=this.state;const c=this.C;const r=this.r;
     const d=this.state.projectDraft||project;
     const upd=(k,v)=>this.setState(s=>({projectDraft:{...(s.projectDraft||s.project),[k]:v}}));
-    const fi=(k,l,type='text',opts={})=>r('div',{style:{marginBottom:14}},r('label',{style:{display:'block',fontSize:11,color:c.text2,marginBottom:5,fontWeight:600}},l),r('input',{type,value:d[k]??'',onChange:e=>upd(k,type==='number'?+e.target.value:e.target.value),...opts,style:{width:'100%',background:c.surf3,border:`1px solid ${c.bdr2}`,borderRadius:7,padding:'8px 11px',color:c.text,fontSize:13,outline:'none',fontFamily:c.font}}));
+    const fi=(k,l,type='text',opts={})=>r('div',{style:{marginBottom:14}},r('label',{style:{display:'block',fontSize:11,color:c.text2,marginBottom:5,fontWeight:600}},l),r('input',{type,value:d[k]??'',onChange:e=>upd(k,type==='number'?(e.target.value===''?'':(Number.isFinite(+e.target.value)?+e.target.value:d[k])):e.target.value),...opts,style:{width:'100%',background:c.surf3,border:`1px solid ${c.bdr2}`,borderRadius:7,padding:'8px 11px',color:c.text,fontSize:13,outline:'none',fontFamily:c.font}}));
     const se=(k,l,opts)=>r('div',{style:{marginBottom:14}},r('label',{style:{display:'block',fontSize:11,color:c.text2,marginBottom:5,fontWeight:600}},l),r('select',{value:d[k]??'',onChange:e=>upd(k,e.target.value),style:{width:'100%',background:c.surf3,border:`1px solid ${c.bdr2}`,borderRadius:7,padding:'8px 11px',color:c.text,fontSize:13,outline:'none',fontFamily:c.font,appearance:'auto'}},...opts.map(([v,l2])=>r('option',{key:v,value:v},l2))));
     const cdg={3:15,6:30,9:40,12:60,15:60,18:80,24:100}[d.puissanceSouscrite]||60;
     const openAddNiv=()=>this.setState({showModal:true,modalType:'addNiveau',editId:null,nivForm:{nom:'',typeNiv:'etage',etage:niveaux.length>0?Math.max(...niveaux.map(n=>n.etage))+1:0}});
@@ -6468,7 +6488,7 @@ class Component extends DCLogic {
       {cat:'Appareillage',color:c.success,items:[{d:'Prises 2P+T 16A',q:nP,pu:6.5,u:'u'},{d:'Interrupteurs simples / va-et-vient',q:nL,pu:8.0,u:'u'},{d:'Boîtes encastrement Ø67mm',q:nP+nL,pu:1.5,u:'u'},{d:'DCL douilles E27/E14',q:nL,pu:2.80,u:'u'}]},
     ];
     return r('div',{style:{padding:'24px 28px',animation:'fadeIn .3s ease'}},
-      this.SH('Devis estimatif','Estimation indicative — '+today,this.Btn(r('span',{style:{display:'inline-flex',alignItems:'center',gap:5}},this.ico('print_ico',13),'Imprimer'),()=>window.print(),'ghost','md')),
+      this.SH('Devis estimatif','Estimation indicative — '+today,r('div',{style:{display:'flex',gap:8}},this.Btn('⤓ Export CSV',()=>this.exportCSV(),'sec','md'),this.Btn(r('span',{style:{display:'inline-flex',alignItems:'center',gap:5}},this.ico('print_ico',13),'Imprimer'),()=>window.print(),'ghost','md'))),
       r('div',{style:{background:c.surf2,border:`1px solid ${c.bdr}`,borderRadius:12,padding:'12px 16px',marginBottom:14,display:'grid',gridTemplateColumns:'repeat(2,1fr)',gap:4,fontSize:11}},
         r('span',{style:{color:c.muted}},'Projet :'),r('span',{style:{color:c.text,fontWeight:500}},project.nom),
         r('span',{style:{color:c.muted}},'Niveaux / Apparts. / Pièces :'),r('span',{style:{color:c.text}},niveaux.length+' / '+appartements.length+' / '+pieces.length),

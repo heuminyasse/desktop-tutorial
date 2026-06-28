@@ -3,6 +3,12 @@
 **Fichier audité :** `Cebat_v28.html` (~4,2 Mo, un seul fichier autonome)
 **Date :** 2026-06-28
 
+> **Statut des correctifs (mise à jour) :** ✅ **C1, C2, C3, C4, C6, C7, C8, C9 corrigés**
+> (persistance + export JSON/CSV, suppression du code mort, validation des saisies,
+> robustesse des codes et des calculs de complétion). ⏸️ **C5** (pré-compilation/perf)
+> volontairement **non traité** — voir la note ci-dessous. 🚫 **§3** (conformité NF C 15-100)
+> reste à valider par un professionnel qualifié.
+
 ## 1. Vue d'ensemble
 
 Cebat est une application de **conception d'installation électrique du bâtiment**
@@ -132,15 +138,44 @@ faire confirmer par un professionnel :
 
 ## 5. Priorisation suggérée
 
-| Priorité | Élément | Effort | Impact |
-|----------|---------|--------|--------|
-| 1 | **C1** Persistance + export/import JSON | Moyen | Très élevé |
-| 2 | **C6** Validation des saisies (anti-NaN) | Moyen | Élevé |
-| 3 | **C2/C3** Supprimer le code mort (`vCircuits` ×2, vues orphelines) | Faible | Moyen |
-| 4 | **C4** Export CSV nomenclature | Moyen | Moyen |
-| 5 | **C9/C7/C8** Robustesse codes + calculs complétion | Faible | Moyen |
-| 6 | **C5** Pré-compilation / allègement | Élevé | Moyen (perf) |
-| 7 | **§3** Revue normative NF C 15-100 | Externe | Élevé (métier) |
+| Priorité | Élément | Effort | Impact | Statut |
+|----------|---------|--------|--------|--------|
+| 1 | **C1** Persistance + export/import JSON | Moyen | Très élevé | ✅ Fait |
+| 2 | **C6** Validation des saisies (anti-NaN) | Moyen | Élevé | ✅ Fait |
+| 3 | **C2/C3** Supprimer le code mort (`vCircuits` ×2, vues orphelines) | Faible | Moyen | ✅ Fait |
+| 4 | **C4** Export CSV nomenclature | Moyen | Moyen | ✅ Fait |
+| 5 | **C9/C7/C8** Robustesse codes + calculs complétion | Faible | Moyen | ✅ Fait |
+| 6 | **C5** Pré-compilation / allègement | Élevé | Moyen (perf) | ⏸️ Non traité (cf. note) |
+| 7 | **§3** Revue normative NF C 15-100 | Externe | Élevé (métier) | 🚫 À valider par un pro |
+
+### Note sur C5 (pré-compilation / allègement) — non traité, par choix
+
+Les pistes de C5 (retirer Babel, externaliser les polices base64) **réduiraient le
+poids** mais **casseraient l'autonomie hors-ligne du fichier unique**, qui est la
+principale qualité de l'outil (un seul `.html` qui s'ouvre partout, sans serveur ni
+réseau). Sur un outil local mono-utilisateur, le gain de démarrage ne justifie pas ce
+risque ni cette perte de portabilité. À reconsidérer seulement si l'app évolue vers un
+déploiement web avec étape de build. Les autres correctifs n'introduisent aucune
+dépendance et préservent le caractère autonome du fichier.
+
+### Détail des correctifs appliqués
+
+- **C1** — `setState` surchargé pour sauvegarder l'état dans `localStorage` à chaque
+  changement ; `componentDidMount` recharge au démarrage. Seules les données métier
+  sont persistées (UI transitoire exclue). Boutons **📥 Importer / 📤 Exporter** (JSON).
+- **C2/C3** — Suppression du `vCircuits` dupliqué et des vues `vAppartements`/`vPieces`
+  orphelines + leurs routes mortes (−431 lignes).
+- **C4** — `exportCSV()` : nomenclature des circuits (séparateur `;` + BOM UTF-8 pour
+  Excel FR), bouton « Export CSV » dans la vue *Devis & Rapport*.
+- **C6** — Helpers de saisie numérique blindés contre `NaN` (la valeur précédente est
+  conservée en cas d'entrée invalide ; champ laissable vide pendant la saisie) ;
+  validation `surface > 0` au moment de créer un appartement ou une pièce.
+- **C7** — `getCompletion` : les derniers 20 % ne sont plus « offerts » mais
+  conditionnés à la présence d'un tableau électrique + au moins un disjoncteur.
+- **C8** — `getNbL` / `getNbP` : suppression du `Math.max` redondant (comportement
+  identique sur surfaces valides, garde contre les valeurs négatives conservée).
+- **C9** — `genCEBATCode` : index défensif (`findIndex >= 0`) pour éviter une collision
+  de code repère quand une fonction n'a pas de pièce rattachée.
 
 ---
 
