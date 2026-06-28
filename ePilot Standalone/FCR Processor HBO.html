@@ -244,9 +244,10 @@ function detectHeader(rows){
     var row=rows[i];
     var s=row.map(function(c){return nn(c);}).join(' ');
     var hasDesig=/desig|libel|descr|designat|article|prestat|denomination|objet/.test(s);
-    var hasPrix=/prix|pu\b|p\.?u\.?|tarif|cout|co[uû]t|unit/.test(s);
+    /* Fix: 'unit' retiré (faux positif avec 'Unité') ; 'p u' couvre 'P.U' normalisé ; montant ajouté */
+    var hasPrix=/prix|\bpu\b|\bp u\b|tarif|cout|co[uû]t|montant/.test(s);
     if(hasDesig && hasPrix) return i;
-    if(hasDesig && row.length>=3) return i; /* moins stricte si beaucoup de colonnes */
+    if(hasDesig && row.length>=4) return i;
   }
   return -1;
 }
@@ -259,7 +260,8 @@ function mapCols(headerRow){
     if(/desig|libel|descr|denominat|d[eé]sign|article|prestat/.test(s) && m.desig<0) m.desig=i;
     else if(/^(u\.?m\.?|unit[eé]|unt|unites?)$/.test(s) && m.unite<0) m.unite=i;
     else if(/^(qt[eé]|q(?:uan)?t[eé]|quantit)/.test(s) && m.qte<0) m.qte=i;
-    else if(/^(p\.?u\.?|prix.{0,6}unit|unit.{0,6}prix|pu\b|tarif.{0,6}unit|co[uû]t.{0,6}unit)/.test(s) && m.pu<0) m.pu=i;
+    /* Fix: après nn(), "P.U"→"p u", "P.U HT"→"p u ht", "PU HT"→"pu ht" — gérer l'espace */
+    else if(/^(pu\b|p u\b|prix.{0,6}unit|unit.{0,6}prix|tarif.{0,6}unit|co[uû]t.{0,6}unit)/.test(s) && m.pu<0) m.pu=i;
     else if(/r[eé]f[eé]r|^r[eé]f\.?$|^code$|^c[oô]d/.test(s) && m.ref<0) m.ref=i;
     else if(/^(lot|section|chapitre|rubrique|poste|categ)/.test(s) && m.section<0) m.section=i;
     else if(/fabricant|marque|brand|fourniss/.test(s) && m.fab<0) m.fab=i;
@@ -315,13 +317,12 @@ function classify(row, m){
    EXTRACTION D'UNE FEUILLE
 ══════════════════════════════════════════════════════ */
 function extractRows(rows, filename, sheet){
-  if(!rows||!rows.length) return {items:[], rejected:[]};
+  if(!rows||!rows.length) return {items:[], rejected:[], diag:'feuille vide'};
   var hIdx=detectHeader(rows);
-  if(hIdx<0){ /* essai sans en-tête détecté : suppose row 0 = header */
-    hIdx=0;
-  }
+  if(hIdx<0) hIdx=0;
   var m=mapCols(rows[hIdx]);
-  if(m.desig<0) return {items:[], rejected:[], noHeader:true};
+  var diagCols='En-tête ligne '+(hIdx+1)+' | desig:'+m.desig+' qte:'+m.qte+' pu:'+m.pu+' total:'+m.total+' unite:'+m.unite;
+  if(m.desig<0) return {items:[], rejected:[], noHeader:true, diag:'⚠️ Colonne désignation introuvable. '+diagCols};
 
   /* Contexte de section courant (pour les lignes qui héritent d'une section) */
   var curSection='';
@@ -337,7 +338,8 @@ function extractRows(rows, filename, sheet){
     if(!row||row.every(function(c){return !String(c||'').trim();})) continue; /* ligne vide */
 
     var desig=String(row[m.desig]||'').trim();
-    var pu=Number(String(row[m.pu]>=0?row[m.pu]:'').replace(/[\s ]/g,'').replace(',','.'))||0;
+    /* Fix: tester m.pu>=0 (l'index), pas row[m.pu]>=0 (la valeur qui échoue sur "1 500") */
+    var pu=Number(String(m.pu>=0?row[m.pu]:'').replace(/[\s ]/g,'').replace(',','.'))||0;
     var qte=Number(String(m.qte>=0?row[m.qte]:'').replace(/[\s ]/g,'').replace(',','.'))||0;
     var unite=m.unite>=0?String(row[m.unite]||'').trim():'U';
     var ref=m.ref>=0?String(row[m.ref]||'').trim():'';
@@ -374,7 +376,8 @@ function extractRows(rows, filename, sheet){
       _sheet:sheet  /* PI ou Data */
     });
   }
-  return {items:items, rejected:rejected};
+  var diagNoPrice=m.pu<0?'⚠️ Colonne PU introuvable (en-têtes : '+rows[hIdx].slice(0,10).join(' | ')+')':'';
+  return {items:items, rejected:rejected, diag:(diagNoPrice||diagCols)};
 }
 
 /* ══════════════════════════════════════════════════════
@@ -404,8 +407,9 @@ function processWorkbook(wb){
 
   var merged=mergeSheets(piResult.items, dataResult.items);
   var rejected=piResult.rejected.concat(dataResult.rejected);
+  var diag='['+wb.filename+'] PI→'+piResult.diag+' / Data→'+dataResult.diag;
 
-  return {items:merged, rejected:rejected};
+  return {items:merged, rejected:rejected, diag:diag};
 }
 
 /* ══════════════════════════════════════════════════════
@@ -677,16 +681,19 @@ function processFiles(files){
 
   var promises=Array.from(files).map(function(f){return readFile(f);});
   Promise.all(promises).then(function(workbooks){
+    var diagLines=[];
     workbooks.forEach(function(wb){
       var res=processWorkbook(wb);
       res.items.forEach(function(it){ it._globalIdx=allItems.length; allItems.push(it); });
       rejectedItems=rejectedItems.concat(res.rejected);
+      diagLines.push(res.diag);
     });
 
     statusBar.innerHTML='<span class="status-ok">✅ '+files.length+' fichier(s) traité(s)</span>'
       +' · <b>'+allItems.filter(function(it){return it.type==='fourniture';}).length+'</b> articles'
       +' · <b>'+allItems.filter(function(it){return it.type==='service';}).length+'</b> services'
-      +' · <b>'+rejectedItems.length+'</b> lignes rejetées';
+      +' · <b>'+rejectedItems.length+'</b> lignes rejetées'
+      +'<br><small style="color:#6b7280;font-size:10px">'+diagLines.map(esc).join('<br>')+'</small>';
 
     document.getElementById('results').style.display='block';
     document.getElementById('controls').style.display='flex';
