@@ -13,7 +13,7 @@ header p{font-size:12px;opacity:.85}
 .container{max-width:1400px;margin:0 auto;padding:20px}
 
 /* Drop zone */
-#drop-zone{border:2.5px dashed #d1d5db;border-radius:12px;padding:40px 24px;text-align:center;background:#fff;cursor:pointer;transition:.15s;margin-bottom:18px}
+#drop-zone{border:2.5px dashed #d1d5db;border-radius:12px;padding:40px 24px;text-align:center;background:#fff;cursor:pointer;transition:.15s;margin-bottom:14px}
 #drop-zone.over{border-color:#B5000A;background:#fff5f5}
 #drop-zone h2{font-size:16px;font-weight:600;margin-bottom:8px;color:#374151}
 #drop-zone p{color:#6b7280;font-size:12px;margin-bottom:12px}
@@ -21,10 +21,21 @@ header p{font-size:12px;opacity:.85}
 .btn-pick{display:inline-block;padding:8px 20px;background:#B5000A;color:#fff;border-radius:8px;cursor:pointer;font-weight:600;font-size:13px;border:none}
 .btn-pick:hover{background:#900008}
 
+/* Col config */
+#col-config{background:#fff;border:1px solid #e5e7eb;border-radius:8px;padding:10px 16px;margin-bottom:14px;font-size:12px}
+#col-config summary{cursor:pointer;font-weight:600;color:#374151;user-select:none}
+.cfg-grid{display:flex;flex-wrap:wrap;gap:14px;margin-top:12px;align-items:flex-end}
+.cfg-field{display:flex;flex-direction:column;gap:4px}
+.cfg-field label{font-size:10px;font-weight:600;color:#6b7280;text-transform:uppercase;letter-spacing:.04em}
+.cfg-field input{width:54px;padding:5px 8px;border:1.5px solid #d1d5db;border-radius:6px;font-size:13px;text-transform:uppercase;text-align:center}
+.cfg-field input:focus{outline:none;border-color:#B5000A}
+.cfg-sep{width:1px;height:40px;background:#e5e7eb;margin:0 4px}
+
 /* Status */
-#status-bar{background:#fff;border:1px solid #e5e7eb;border-radius:8px;padding:10px 16px;margin-bottom:14px;display:none;font-size:12px;color:#374151}
+#status-bar{background:#fff;border:1px solid #e5e7eb;border-radius:8px;padding:10px 16px;margin-bottom:14px;display:none;font-size:12px;color:#374151;line-height:1.6}
 .status-ok{color:#16a34a;font-weight:600}
 .status-err{color:#dc2626;font-weight:600}
+.diag-line{color:#6b7280;font-size:10px;margin-top:4px;font-family:monospace}
 
 /* Controls */
 #controls{background:#fff;border:1px solid #e5e7eb;border-radius:10px;padding:12px 16px;margin-bottom:14px;display:none;gap:10px;flex-wrap:wrap;align-items:center}
@@ -38,7 +49,6 @@ header p{font-size:12px;opacity:.85}
 .btn-outline:hover{border-color:#B5000A;color:#B5000A}
 .btn-green{background:#16a34a;color:#fff;border-color:#16a34a}
 .btn-green:hover{background:#15803d}
-.ml-auto{margin-left:auto}
 
 /* Tabs */
 .tabs{display:flex;gap:4px;margin-bottom:0;border-bottom:2px solid #e5e7eb}
@@ -68,14 +78,13 @@ tbody td{padding:6px 10px;vertical-align:middle}
 .td-unite{text-align:center;font-size:11px;color:#6b7280}
 .td-num{text-align:center;color:#9ca3af;font-size:11px;width:40px}
 .td-src{font-size:10px;color:#9ca3af;white-space:nowrap}
+.td-four{font-size:11px;color:#374151}
+.td-mon{font-size:10px;color:#6b7280;text-align:center}
 .tag{display:inline-flex;align-items:center;padding:2px 7px;border-radius:4px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.04em}
 .tag-fourniture{background:#dcfce7;color:#15803d}
 .tag-service{background:#dbeafe;color:#1d4ed8}
 .tag-rejet{background:#f1f5f9;color:#6b7280}
 .reason{font-size:10px;color:#9ca3af;max-width:220px}
-
-/* Action bar */
-#action-bar{display:none;background:#fff;border:1px solid #e5e7eb;border-radius:10px;padding:12px 16px;margin-top:14px;display:none;gap:10px;flex-wrap:wrap;align-items:center}
 
 /* Summary chips */
 .summary{display:flex;gap:8px;flex-wrap:wrap;padding:12px 14px;background:#f8fafc;border-bottom:1px solid #e5e7eb}
@@ -104,11 +113,37 @@ tbody td{padding:6px 10px;vertical-align:middle}
   <div id="drop-zone">
     <h2>📂 Déposez vos fichiers FCR ici</h2>
     <p>Accepte les fichiers <strong>.xlsm</strong> et <strong>.xlsx</strong> — plusieurs fichiers à la fois<br>
-       Chaque fichier doit avoir une feuille <strong>PI</strong> (prix vendus) et/ou <strong>Data</strong> (prix fournisseurs)</p>
+       Chaque fichier doit avoir une feuille <strong>PI</strong> (prix vendus) et <strong>Data</strong> (prix fournisseurs)</p>
     <label class="btn-pick">Sélectionner des fichiers
       <input type="file" id="file-input" multiple accept=".xlsm,.xlsx,.xls">
     </label>
   </div>
+
+  <!-- Configuration des colonnes -->
+  <details id="col-config" open>
+    <summary>⚙️ Configuration des colonnes — spécifiez les lettres exactes si la détection auto échoue</summary>
+    <div class="cfg-grid">
+      <div>
+        <div style="font-size:10px;font-weight:700;color:#B5000A;text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px">Feuille PI (prix vendus)</div>
+        <div style="display:flex;gap:10px">
+          <div class="cfg-field"><label>Désignation</label><input id="cfg-pi-des" type="text" placeholder="auto" maxlength="3"></div>
+          <div class="cfg-field"><label>PU vendu</label><input id="cfg-pi-pu" type="text" value="H" maxlength="3"></div>
+          <div class="cfg-field"><label>Quantité</label><input id="cfg-pi-qte" type="text" placeholder="auto" maxlength="3"></div>
+          <div class="cfg-field"><label>Unité</label><input id="cfg-pi-unite" type="text" placeholder="auto" maxlength="3"></div>
+        </div>
+      </div>
+      <div class="cfg-sep"></div>
+      <div>
+        <div style="font-size:10px;font-weight:700;color:#2563eb;text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px">Feuille Data (prix fournisseurs)</div>
+        <div style="display:flex;gap:10px">
+          <div class="cfg-field"><label>Désignation</label><input id="cfg-da-des" type="text" placeholder="auto" maxlength="3"></div>
+          <div class="cfg-field"><label>PU fournisseur</label><input id="cfg-da-pu" type="text" value="L" maxlength="3"></div>
+          <div class="cfg-field"><label>Monnaie</label><input id="cfg-da-mon" type="text" value="M" maxlength="3"></div>
+          <div class="cfg-field"><label>Fournisseur</label><input id="cfg-da-four" type="text" value="N" maxlength="3"></div>
+        </div>
+      </div>
+    </div>
+  </details>
 
   <!-- Status -->
   <div id="status-bar"></div>
@@ -169,15 +204,14 @@ tbody td{padding:6px 10px;vertical-align:middle}
 /* ══════════════════════════════════════════════════════
    DONNÉES GLOBALES
 ══════════════════════════════════════════════════════ */
-var allItems = [];      /* tous les articles/services acceptés */
-var rejectedItems = []; /* rejetés */
-var _fileCount = 0;
+var allItems = [];
+var rejectedItems = [];
+var _lastFiles = null;
 
 /* ══════════════════════════════════════════════════════
    UTILITAIRES
 ══════════════════════════════════════════════════════ */
 function nn(s){
-  /* normalise : minuscule, sans accent, sans ponctuation → espaces */
   return String(s||'').normalize('NFD').replace(/[̀-ͯ]/g,'')
     .toLowerCase().replace(/[^a-z0-9]/g,' ').replace(/\s+/g,' ').trim();
 }
@@ -195,16 +229,57 @@ function toast(msg, ms){
   clearTimeout(toast._t); toast._t=setTimeout(function(){el.style.display='none';}, ms||2800);
 }
 
+/* Convertit une valeur Excel (nombre ou chaîne) en nombre.
+   Gère : vrais nombres, "1 500", "1.500" (point = milliers), "1,500" */
+function parseNum(v){
+  if(v===null||v===undefined||v==='') return 0;
+  if(typeof v==='number') return v; /* raw:true → vrai nombre JS, no ambiguity */
+  var s=String(v).trim().replace(/ /g,' '); /* non-breaking space → space */
+  /* Détecter si le point est séparateur de milliers (ex: "73.304" → 73304) :
+     le point est séparateur si suivi exactement de 3 chiffres sans décimale après */
+  if(/^\d{1,3}(\.\d{3})+$/.test(s)) s=s.replace(/\./g,'');
+  /* Remplacer virgule décimale → point */
+  s=s.replace(/\s/g,'').replace(',','.');
+  return Number(s)||0;
+}
+
+/* Convertit une lettre de colonne Excel (A, B, …, Z, AA, …) en index 0-based */
+function colLetterToIdx(letter){
+  if(!letter) return -1;
+  var s=String(letter).trim().toUpperCase().replace(/[^A-Z]/g,'');
+  if(!s) return -1;
+  var idx=0;
+  for(var i=0;i<s.length;i++) idx=idx*26+(s.charCodeAt(i)-64);
+  return idx-1;
+}
+
+/* Lit la configuration colonnes depuis les inputs */
+function getColConfig(){
+  function g(id){ return colLetterToIdx(document.getElementById(id).value); }
+  return {
+    piDes:  g('cfg-pi-des'),
+    piPu:   g('cfg-pi-pu'),
+    piQte:  g('cfg-pi-qte'),
+    piUnit: g('cfg-pi-unite'),
+    daDes:  g('cfg-da-des'),
+    daPu:   g('cfg-da-pu'),
+    daMon:  g('cfg-da-mon'),
+    daFour: g('cfg-da-four')
+  };
+}
+
 /* ══════════════════════════════════════════════════════
    LECTURE FICHIER EXCEL
+   raw:true → nombres retournés comme vrais nombres JS
+   (raw:false retourne des chaînes formatées ex: "73.304"
+    qui deviennent 73.304 si Number() les interprète comme décimales)
 ══════════════════════════════════════════════════════ */
 function readFile(file){
   return new Promise(function(res, rej){
     var reader = new FileReader();
     reader.onload = function(e){
       try{
-        var wb = XLSX.read(e.target.result, {type:'array', cellText:true, cellDates:true});
-        /* Feuilles */
+        var wb = XLSX.read(e.target.result, {type:'array', cellDates:true});
         var sheetNames = wb.SheetNames.map(function(n){return n.trim();});
 
         function getSheet(names){
@@ -212,7 +287,8 @@ function readFile(file){
             for(var j=0;j<sheetNames.length;j++){
               if(sheetNames[j].toLowerCase()===names[i].toLowerCase()||
                  sheetNames[j].toLowerCase().indexOf(names[i].toLowerCase())>=0)
-                return XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[j]],{header:1,defval:'',raw:false});
+                return XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[j]],
+                  {header:1, defval:'', raw:true});
             }
           }
           return null;
@@ -221,13 +297,14 @@ function readFile(file){
         var piRows   = getSheet(['PI','Prix vente','Prix vendu','Vente','Offer','Offre']);
         var dataRows = getSheet(['Data','DATA','Fournisseur','Prix achat','Achat','Purchase']);
 
-        /* Si on n'a que 1 feuille → PI par défaut */
         if(!piRows && wb.SheetNames.length>=1)
-          piRows = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]],{header:1,defval:'',raw:false});
+          piRows = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]],
+            {header:1,defval:'',raw:true});
         if(!dataRows && wb.SheetNames.length>=2)
-          dataRows = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[1]],{header:1,defval:'',raw:false});
+          dataRows = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[1]],
+            {header:1,defval:'',raw:true});
 
-        res({filename: file.name, pi: piRows||[], data: dataRows||[]});
+        res({filename:file.name, pi:piRows||[], data:dataRows||[]});
       }catch(err){ rej(err); }
     };
     reader.onerror = function(){ rej(new Error('Lecture impossible: '+file.name)); };
@@ -239,12 +316,11 @@ function readFile(file){
    DÉTECTION EN-TÊTES
 ══════════════════════════════════════════════════════ */
 function detectHeader(rows){
-  /* Cherche la première ligne avec un champ désignation ET un champ prix */
-  for(var i=0;i<Math.min(20,rows.length);i++){
+  for(var i=0;i<Math.min(25,rows.length);i++){
     var row=rows[i];
-    var s=row.map(function(c){return nn(c);}).join(' ');
+    var s=row.map(function(c){return nn(String(c));}).join(' ');
     var hasDesig=/desig|libel|descr|designat|article|prestat|denomination|objet/.test(s);
-    /* Fix: 'unit' retiré (faux positif avec 'Unité') ; 'p u' couvre 'P.U' normalisé ; montant ajouté */
+    /* 'unit' retiré (faux positif avec 'Unité') ; 'p u' couvre 'P.U' normalisé */
     var hasPrix=/prix|\bpu\b|\bp u\b|tarif|cout|co[uû]t|montant/.test(s);
     if(hasDesig && hasPrix) return i;
     if(hasDesig && row.length>=4) return i;
@@ -253,18 +329,19 @@ function detectHeader(rows){
 }
 
 function mapCols(headerRow){
-  var m={desig:-1,unite:-1,qte:-1,pu:-1,ref:-1,section:-1,fab:-1,total:-1};
+  var m={desig:-1,unite:-1,qte:-1,pu:-1,ref:-1,section:-1,fab:-1,total:-1,mon:-1};
   headerRow.forEach(function(h,i){
-    var s=nn(h);
+    var s=nn(String(h));
     if(s.length<1) return;
     if(/desig|libel|descr|denominat|d[eé]sign|article|prestat/.test(s) && m.desig<0) m.desig=i;
     else if(/^(u\.?m\.?|unit[eé]|unt|unites?)$/.test(s) && m.unite<0) m.unite=i;
     else if(/^(qt[eé]|q(?:uan)?t[eé]|quantit)/.test(s) && m.qte<0) m.qte=i;
-    /* Fix: après nn(), "P.U"→"p u", "P.U HT"→"p u ht", "PU HT"→"pu ht" — gérer l'espace */
-    else if(/^(pu\b|p u\b|prix.{0,6}unit|unit.{0,6}prix|tarif.{0,6}unit|co[uû]t.{0,6}unit)/.test(s) && m.pu<0) m.pu=i;
+    /* 'p u' = P.U après normalisation (nn remplace '.' par espace) */
+    else if(/^(pu\b|p u\b|p\.?v\.?|pv\b|prix.{0,8}unit|unit.{0,8}prix|prix.{0,8}vente|tarif.{0,8}unit|co[uû]t.{0,8}unit)/.test(s) && m.pu<0) m.pu=i;
     else if(/r[eé]f[eé]r|^r[eé]f\.?$|^code$|^c[oô]d/.test(s) && m.ref<0) m.ref=i;
     else if(/^(lot|section|chapitre|rubrique|poste|categ)/.test(s) && m.section<0) m.section=i;
-    else if(/fabricant|marque|brand|fourniss/.test(s) && m.fab<0) m.fab=i;
+    else if(/fabricant|fourniss|marque|brand|vendeur|supplier/.test(s) && m.fab<0) m.fab=i;
+    else if(/monnaie|devise|currency|curr/.test(s) && m.mon<0) m.mon=i;
     else if(/^(total|montant|ht)/.test(s) && m.total<0) m.total=i;
   });
   return m;
@@ -273,16 +350,15 @@ function mapCols(headerRow){
 /* ══════════════════════════════════════════════════════
    RÈGLES DE NETTOYAGE
 ══════════════════════════════════════════════════════ */
-/* Patterns de titres / en-têtes de lot à rejeter */
 var TITLE_RE=/^[-=_*#\s\.]+$|^(LOT\s|CHAPITRE\s|SECTION\s|SOUS[-\s]LOT\s|TITRE\s|TOTAL|MONTANT|R[ÉE]CAP|SOUS[-\s]TOTAL|BORDEREAU|FOURNITURES?\s*:?$|TRAVAUX\s*:?$|PRESTATION|IMPORT[ÉE]|DIVERS|OPTIONS?$)/i;
 var ROMAN_RE=/^(?:I{1,3}|IV|VI{0,3}|IX|XI{0,2}|XIV|X?[IVX]+)[\s\.\-\)]/i;
 var NUM_SECTION_RE=/^(\d{1,2}|\d{1,2}\.\d{1,2}|\d{1,2}\.\d{1,2}\.\d{1,2})\s*[-\.\)]\s*/;
 
 function rejectReason(row, m, opts){
   var desig=String(row[m.desig]||'').trim();
-  var pu=Number(String(row[m.pu]||'').replace(/\s/g,'').replace(',','.'))||0;
-  var qte=Number(String(row[m.qte]||'').replace(/\s/g,'').replace(',','.'))||0;
-  var total=m.total>=0?(Number(String(row[m.total]||'').replace(/\s/g,'').replace(',','.'))||0):null;
+  var pu=parseNum(m.pu>=0 ? row[m.pu] : 0);
+  var qte=parseNum(m.qte>=0 ? row[m.qte] : 0);
+  var total=m.total>=0 ? parseNum(row[m.total]) : null;
 
   if(!desig || desig.length<2) return 'Désignation vide';
   if(opts.titles){
@@ -294,37 +370,56 @@ function rejectReason(row, m, opts){
   }
   if(opts.noPrice && pu<=0 && (total===null||total<=0)) return 'Prix = 0';
   if(opts.noQty && qte<=0 && m.qte>=0) return 'Quantité = 0';
-  return null; /* pas rejeté */
+  return null;
 }
 
 /* ══════════════════════════════════════════════════════
    CLASSIFICATION SERVICE vs FOURNITURE
 ══════════════════════════════════════════════════════ */
-var SVC_KW=/\b(m\.?[oô]\.?|main[- ]?d['’ ]?[oœ]euvre|m\.?d?o\.?|travaux|installation|montage|pose\b|mise en [oœ]uvre|m\.?e\.?o\.?|supervision|management|ing[eé]nieur|essai[sx]?|v[eé]rification|contr[oô]le|inspection|formation|assistance|audit|r[eé]ception|d[eé]molition|terrassement|excavation|fondation|ma[cç]onnerie|enduit|cr[eé]pit|ravalement|peinture|toiture|charpente|plomberie|[eé]lectricit[eé]|canalisation|assainissement|levage|soudage|soudure|calorifuge|gros.*[oœ]euvre|second.*[oœ]euvre|vrd|commission|honoraire[sx]?|coordination|pilotage|encadrement|gardiennage|nettoyage|entretien|maintenance|r[eé]paration|forage|bouchonnage|joints?|[eé]tanchéit[eé]|isolation|menuiserie|serrurerie|quincaillerie.*pose|transport|livraison|manutention|d[eé]chargement|chargement|stockage)\b/i;
+var SVC_KW=/\b(m\.?[oô]\.?|main[- ]?d['' ]?[oœ]euvre|m\.?d?o\.?|travaux|installation|montage|pose\b|mise en [oœ]uvre|m\.?e\.?o\.?|supervision|management|ing[eé]nieur|essai[sx]?|v[eé]rification|contr[oô]le|inspection|formation|assistance|audit|r[eé]ception|d[eé]molition|terrassement|excavation|fondation|ma[cç]onnerie|enduit|cr[eé]pit|ravalement|peinture|toiture|charpente|plomberie|[eé]lectricit[eé]|canalisation|assainissement|levage|soudage|soudure|calorifuge|gros.*[oœ]euvre|second.*[oœ]euvre|vrd|commission|honoraire[sx]?|coordination|pilotage|encadrement|gardiennage|nettoyage|entretien|maintenance|r[eé]paration|forage|bouchonnage|joints?|[eé]tancheit[eé]|isolation|menuiserie|serrurerie|quincaillerie.*pose|transport|livraison|manutention|d[eé]chargement|chargement|stockage)\b/i;
 
 function classify(row, m){
   var desig=nn(String(row[m.desig]||''));
   var section=m.section>=0?nn(String(row[m.section]||'')):'';
   var unite=m.unite>=0?String(row[m.unite]||'').trim().toUpperCase():'';
-
   if(SVC_KW.test(desig)||SVC_KW.test(section)) return 'service';
-  /* Unité forfait / ensemble → souvent service */
   if(/^(FF|FORFAIT|ENS|ENSEMBLE|FT)$/.test(unite)) return 'service';
   return 'fourniture';
 }
 
 /* ══════════════════════════════════════════════════════
    EXTRACTION D'UNE FEUILLE
+   overrides : {desig, pu, qte, unite, mon, fab} — indices 0-based (ou -1 = pas d'override)
 ══════════════════════════════════════════════════════ */
-function extractRows(rows, filename, sheet){
+function extractRows(rows, filename, sheet, overrides){
   if(!rows||!rows.length) return {items:[], rejected:[], diag:'feuille vide'};
+
   var hIdx=detectHeader(rows);
   if(hIdx<0) hIdx=0;
-  var m=mapCols(rows[hIdx]);
-  var diagCols='En-tête ligne '+(hIdx+1)+' | desig:'+m.desig+' qte:'+m.qte+' pu:'+m.pu+' total:'+m.total+' unite:'+m.unite;
-  if(m.desig<0) return {items:[], rejected:[], noHeader:true, diag:'⚠️ Colonne désignation introuvable. '+diagCols};
 
-  /* Contexte de section courant (pour les lignes qui héritent d'une section) */
+  var m=mapCols(rows[hIdx]);
+
+  /* Appliquer les overrides de colonnes */
+  if(overrides){
+    if(overrides.desig>=0) m.desig=overrides.desig;
+    if(overrides.pu>=0)    m.pu=overrides.pu;
+    if(overrides.qte>=0)   m.qte=overrides.qte;
+    if(overrides.unite>=0) m.unite=overrides.unite;
+    if(overrides.mon>=0)   m.mon=overrides.mon;
+    if(overrides.fab>=0)   m.fab=overrides.fab;
+  }
+
+  var diagCols='['+sheet+'] En-tête lig.'+(hIdx+1)
+    +' | desig:col'+(m.desig>=0?String.fromCharCode(65+m.desig):'?')
+    +' pu:col'+(m.pu>=0?String.fromCharCode(65+m.pu):'?')
+    +' qte:col'+(m.qte>=0?String.fromCharCode(65+m.qte):'?')
+    +(m.mon>=0?' mon:col'+String.fromCharCode(65+m.mon):'')
+    +(m.fab>=0?' four:col'+String.fromCharCode(65+m.fab):'');
+
+  if(m.desig<0) return {items:[], rejected:[], noHeader:true,
+    diag:'⚠️ '+sheet+' : col. désignation introuvable — '
+      +'en-têtes : '+rows[hIdx].slice(0,10).map(function(c){return String(c||'');}).join(' | ')};
+
   var curSection='';
   var items=[], rejected=[];
   var opts={
@@ -335,18 +430,17 @@ function extractRows(rows, filename, sheet){
 
   for(var i=hIdx+1;i<rows.length;i++){
     var row=rows[i];
-    if(!row||row.every(function(c){return !String(c||'').trim();})) continue; /* ligne vide */
+    if(!row||row.every(function(c){return !String(c||'').trim();})) continue;
 
     var desig=String(row[m.desig]||'').trim();
-    /* Fix: tester m.pu>=0 (l'index), pas row[m.pu]>=0 (la valeur qui échoue sur "1 500") */
-    var pu=Number(String(m.pu>=0?row[m.pu]:'').replace(/[\s ]/g,'').replace(',','.'))||0;
-    var qte=Number(String(m.qte>=0?row[m.qte]:'').replace(/[\s ]/g,'').replace(',','.'))||0;
-    var unite=m.unite>=0?String(row[m.unite]||'').trim():'U';
-    var ref=m.ref>=0?String(row[m.ref]||'').trim():'';
-    var fab=m.fab>=0?String(row[m.fab]||'').trim():'';
-    var section=m.section>=0?String(row[m.section]||'').trim():'';
+    var pu=parseNum(m.pu>=0 ? row[m.pu] : 0);
+    var qte=parseNum(m.qte>=0 ? row[m.qte] : 0);
+    var unite=m.unite>=0 ? String(row[m.unite]||'').trim() : 'U';
+    var ref=m.ref>=0 ? String(row[m.ref]||'').trim() : '';
+    var fab=m.fab>=0 ? String(row[m.fab]||'').trim() : '';
+    var section=m.section>=0 ? String(row[m.section]||'').trim() : '';
+    var monnaie=m.mon>=0 ? String(row[m.mon]||'').trim() : (sheet==='PI'?'FCFA':'');
 
-    /* Met à jour la section courante si ligne de section */
     if(!section&&desig&&pu<=0&&opts.titles){
       if(TITLE_RE.test(desig)||ROMAN_RE.test(desig)||NUM_SECTION_RE.test(desig)){
         curSection=desig.replace(NUM_SECTION_RE,'').replace(ROMAN_RE,'').trim();
@@ -369,31 +463,33 @@ function extractRows(rows, filename, sheet){
       unite:unite||'U',
       ref:ref,
       fab:fab,
+      monnaie:monnaie||'FCFA',
       section:section||curSection,
       type:type,
       src:filename+'·'+sheet,
       excluded:false,
-      _sheet:sheet  /* PI ou Data */
+      _sheet:sheet
     });
   }
-  var diagNoPrice=m.pu<0?'⚠️ Colonne PU introuvable (en-têtes : '+rows[hIdx].slice(0,10).join(' | ')+')':'';
-  return {items:items, rejected:rejected, diag:(diagNoPrice||diagCols)};
+  return {items:items, rejected:rejected, diag:diagCols};
 }
 
 /* ══════════════════════════════════════════════════════
    FUSION PI + DATA (cross-référence par désignation)
 ══════════════════════════════════════════════════════ */
 function mergeSheets(piItems, dataItems){
-  /* Index Data par désignation normalisée */
   var dataIdx={};
-  dataItems.forEach(function(d){ var k=nn(d.desig); if(!dataIdx[k]) dataIdx[k]=d; });
+  dataItems.forEach(function(d){
+    var k=nn(d.desig);
+    if(!dataIdx[k]) dataIdx[k]=d;
+  });
 
   return piItems.map(function(item){
     var merged=Object.assign({},item);
-    var k=nn(item.desig);
-    var match=dataIdx[k];
-    if(match) merged.puFour=match.pu;
-    else merged.puFour=0;
+    var match=dataIdx[nn(item.desig)];
+    merged.puFour   = match ? match.pu      : 0;
+    merged.monnaieFour = match ? (match.monnaie||'') : '';
+    merged.fournisseur = match ? (match.fab||'')      : '';
     return merged;
   });
 }
@@ -401,14 +497,25 @@ function mergeSheets(piItems, dataItems){
 /* ══════════════════════════════════════════════════════
    TRAITEMENT COMPLET D'UN FICHIER
 ══════════════════════════════════════════════════════ */
-function processWorkbook(wb){
-  var piResult   = extractRows(wb.pi,   wb.filename, 'PI');
-  var dataResult = extractRows(wb.data, wb.filename, 'Data');
+function processWorkbook(wb, cfg){
+  var piOver={
+    desig: cfg.piDes,
+    pu:    cfg.piPu,
+    qte:   cfg.piQte,
+    unite: cfg.piUnit
+  };
+  var daOver={
+    desig: cfg.daDes,
+    pu:    cfg.daPu,
+    mon:   cfg.daMon,
+    fab:   cfg.daFour
+  };
 
+  var piResult   = extractRows(wb.pi,   wb.filename, 'PI',   piOver);
+  var dataResult = extractRows(wb.data, wb.filename, 'Data', daOver);
   var merged=mergeSheets(piResult.items, dataResult.items);
   var rejected=piResult.rejected.concat(dataResult.rejected);
-  var diag='['+wb.filename+'] PI→'+piResult.diag+' / Data→'+dataResult.diag;
-
+  var diag=piResult.diag+' / '+dataResult.diag;
   return {items:merged, rejected:rejected, diag:diag};
 }
 
@@ -422,7 +529,8 @@ function renderItems(items, tableId, summaryId, type){
 
   thead.innerHTML='<tr>'
     +'<th>#</th><th>Désignation</th><th>Référence</th>'
-    +'<th>Unité</th><th>PU vendu (FCFA)</th><th>PU fournisseur (FCFA)</th>'
+    +'<th>Unité</th><th>PU vendu (FCFA)</th>'
+    +'<th>PU fournisseur</th><th>Monnaie</th><th>Fournisseur</th>'
     +'<th>Type</th><th>Section</th><th>Source</th><th>Action</th>'
     +'</tr>';
 
@@ -432,29 +540,30 @@ function renderItems(items, tableId, summaryId, type){
     var rowCls=(it.excluded?'excluded ':'')+(it.type==='service'?'service-row':'fourniture-row');
     html+='<tr class="'+rowCls+'" data-idx="'+it._globalIdx+'">'
       +'<td class="td-num">'+(i+1)+'</td>'
-      +'<td class="desig-cell" style="max-width:300px">'+esc(it.desig)+'</td>'
+      +'<td class="desig-cell" style="max-width:280px">'+esc(it.desig)+'</td>'
       +'<td style="font-size:11px;color:#6b7280">'+esc(it.ref)+'</td>'
       +'<td class="td-unite">'+esc(it.unite)+'</td>'
       +'<td class="td-prix">'+fmt(it.pu)+'</td>'
       +'<td class="td-prix-four">'+fmt(it.puFour)+'</td>'
+      +'<td class="td-mon">'+esc(it.monnaieFour||'')+'</td>'
+      +'<td class="td-four">'+esc(it.fournisseur||'')+'</td>'
       +'<td>'+(it.type==='service'?'<span class="tag tag-service">Service</span>':'<span class="tag tag-fourniture">Article</span>')+'</td>'
-      +'<td style="font-size:11px;max-width:150px;color:#6b7280">'+esc(it.section)+'</td>'
+      +'<td style="font-size:11px;max-width:140px;color:#6b7280">'+esc(it.section)+'</td>'
       +'<td class="td-src">'+esc(it.src)+'</td>'
-      +'<td><button class="btn btn-outline" style="padding:3px 8px;font-size:10px" onclick="toggleItem('+it._globalIdx+')">'+
-        (it.excluded?'✅ Réintégrer':'⛔ Exclure')+'</button>'
-      +' <button class="btn btn-outline" style="padding:3px 8px;font-size:10px" onclick="switchType('+it._globalIdx+')">⇄ Changer</button></td>'
+      +'<td style="white-space:nowrap">'
+        +'<button class="btn btn-outline" style="padding:3px 8px;font-size:10px" onclick="toggleItem('+it._globalIdx+')">'+
+          (it.excluded?'✅ Réintégrer':'⛔ Exclure')+'</button>'
+        +' <button class="btn btn-outline" style="padding:3px 8px;font-size:10px" onclick="switchType('+it._globalIdx+')">⇄ Changer</button>'
+      +'</td>'
       +'</tr>';
   });
-  tbody.innerHTML=html||'<tr><td colspan="10" style="text-align:center;color:#9ca3af;padding:20px">Aucun élément</td></tr>';
+  tbody.innerHTML=html||'<tr><td colspan="12" style="text-align:center;color:#9ca3af;padding:20px">Aucun élément</td></tr>';
 
-  /* Summary chips */
   var sum=document.getElementById(summaryId);
-  var total=rows.length;
   var ok=rows.filter(function(it){return !it.excluded;}).length;
   var moy=ok>0?(rows.filter(function(it){return !it.excluded&&it.pu>0;}).reduce(function(a,it){return a+it.pu;},0)/ok):0;
-  sum.innerHTML='<span class="chip '+(type==='service'?'chip-s':'chip-a')+'">'+ok+' '+
-    (type==='service'?'services':'articles')+' retenus</span>'
-    +(total>ok?'<span class="chip chip-r">'+(total-ok)+' exclus</span>':'')
+  sum.innerHTML='<span class="chip '+(type==='service'?'chip-s':'chip-a')+'">'+ok+' '+(type==='service'?'services':'articles')+' retenus</span>'
+    +(rows.length>ok?'<span class="chip chip-r">'+(rows.length-ok)+' exclus</span>':'')
     +(moy>0?'<span class="chip chip-f">PU moyen : '+fmt(moy)+' FCFA</span>':'');
 }
 
@@ -475,10 +584,8 @@ function renderRejets(rejected){
 }
 
 function renderAll(){
-  var articles=allItems.filter(function(it){return it.type==='fourniture';});
-  var services=allItems.filter(function(it){return it.type==='service';});
-  document.getElementById('cnt-a').textContent=articles.length;
-  document.getElementById('cnt-s').textContent=services.length;
+  document.getElementById('cnt-a').textContent=allItems.filter(function(it){return it.type==='fourniture';}).length;
+  document.getElementById('cnt-s').textContent=allItems.filter(function(it){return it.type==='service';}).length;
   document.getElementById('cnt-r').textContent=rejectedItems.length;
   renderItems(allItems,'t-articles','sum-articles','fourniture');
   renderItems(allItems,'t-services','sum-services','service');
@@ -502,16 +609,15 @@ window.toggleItem=toggleItem; window.switchType=switchType;
    GÉNÉRATION CODE A (CATALOGUE)
 ══════════════════════════════════════════════════════ */
 function assignCodes(items){
-  /* Essaie de trouver le prochain code disponible depuis IDB, sinon part de 1 */
   var nextA=1, nextS=1;
-  return items.map(function(it,i){
+  return items.map(function(it){
     var pfx=it.type==='service'?'S':'A';
     var num=(it.type==='service')?(nextS++):(nextA++);
     return Object.assign({},it,{
-      codeA: pfx+String(100000+num).slice(1), /* A00001 … */
+      codeA: pfx+String(100000+num).slice(1),
       designation: it.desig,
       reference: it.ref,
-      fabricant: it.fab||''
+      fabricant: it.fournisseur||it.fab||''
     });
   });
 }
@@ -535,9 +641,9 @@ document.getElementById('btn-export-json').addEventListener('click',function(){
 ══════════════════════════════════════════════════════ */
 document.getElementById('btn-export-csv').addEventListener('click',function(){
   var kept=allItems.filter(function(it){return !it.excluded;});
-  var header=['Type','Désignation','Référence','Unité','PU Vendu (FCFA)','PU Fournisseur (FCFA)','Section','Source'];
+  var header=['Type','Désignation','Référence','Unité','PU Vendu (FCFA)','PU Fournisseur','Monnaie','Fournisseur','Section','Source'];
   var rows=[header].concat(kept.map(function(it){
-    return [it.type,it.desig,it.ref,it.unite,it.pu||'',it.puFour||'',it.section,it.src];
+    return [it.type,it.desig,it.ref,it.unite,it.pu||'',it.puFour||'',it.monnaieFour||'',it.fournisseur||'',it.section,it.src];
   }));
   var csv=rows.map(function(r){
     return r.map(function(c){return '"'+String(c||'').replace(/"/g,'""')+'"';}).join(';');
@@ -556,15 +662,13 @@ document.getElementById('btn-export-csv').addEventListener('click',function(){
 document.getElementById('btn-load-idb').addEventListener('click',function(){
   var kept=allItems.filter(function(it){return !it.excluded;});
   if(!kept.length){ toast('Aucun élément à charger.'); return; }
-
-  /* Essaie d'accéder à epilot_price_catalog (même origine file://) */
   try{
     var req=indexedDB.open('epilot_price_catalog');
     req.onsuccess=function(e){
       var db=e.target.result;
       var stores=Array.from(db.objectStoreNames);
       db.close();
-      if(stores.indexOf('catalog')>=0||stores.indexOf('backups')>=0){
+      if(stores.indexOf('catalog')>=0){
         loadIntoCatalog(kept, db.name);
       } else {
         downloadLoadScript(kept);
@@ -575,16 +679,14 @@ document.getElementById('btn-load-idb').addEventListener('click',function(){
 });
 
 function loadIntoCatalog(kept, dbName){
-  /* Lit le catalogue existant pour trouver le prochain codeA */
   var openReq=indexedDB.open(dbName);
   openReq.onsuccess=function(e){
     var db=e.target.result;
     var tx=db.transaction(['catalog'],'readwrite');
     var store=tx.objectStore('catalog');
-
-    /* Lire tous les codes existants pour déduire le prochain N° */
     var nextA=1, nextS=1;
     var getAll=store.getAll ? store.getAll() : null;
+
     function doWrite(existingRecords){
       var existing=existingRecords||[];
       existing.forEach(function(r){
@@ -592,11 +694,9 @@ function loadIntoCatalog(kept, dbName){
         if(/^A(\d+)/.test(code)) nextA=Math.max(nextA,parseInt(code.slice(1))+1);
         if(/^S(\d+)/.test(code)) nextS=Math.max(nextS,parseInt(code.slice(1))+1);
       });
-      /* Signature pour déduplication */
       var sigMap={};
       existing.forEach(function(r){
-        var sig=nn(r.designation||r.desig||'')+'|'+(r.type==='service'?'s':'a');
-        sigMap[sig]=r.codeA;
+        sigMap[nn(r.designation||r.desig||'')+'|'+(r.type==='service'?'s':'a')]=r.codeA;
       });
 
       var tx2=db.transaction(['catalog'],'readwrite');
@@ -604,22 +704,22 @@ function loadIntoCatalog(kept, dbName){
       var added=0, skipped=0;
       kept.forEach(function(it){
         var sig=nn(it.desig)+'|'+(it.type==='service'?'s':'a');
-        if(sigMap[sig]){ skipped++; return; } /* déjà présent → skip */
+        if(sigMap[sig]){ skipped++; return; }
         var num=(it.type==='service')?(nextS++):(nextA++);
-        var pfx=it.type==='service'?'S':'A';
-        var codeA=pfx+String(100000+num).slice(1);
-        var record={
+        var codeA=(it.type==='service'?'S':'A')+String(100000+num).slice(1);
+        s2.put({
           codeA:codeA,
           designation:it.desig,
           reference:it.ref||'',
-          fabricant:it.fab||'',
+          fabricant:it.fournisseur||it.fab||'',
           unite:it.unite||'U',
           section:it.section||'',
           type:it.type,
           pu:it.pu||0,
-          puFour:it.puFour||0
-        };
-        s2.put(record);
+          puFour:it.puFour||0,
+          monnaieFour:it.monnaieFour||'',
+          fournisseur:it.fournisseur||''
+        });
         sigMap[sig]=codeA;
         added++;
       });
@@ -633,7 +733,6 @@ function loadIntoCatalog(kept, dbName){
 
     if(getAll){ getAll.onsuccess=function(e){ doWrite(e.target.result); }; getAll.onerror=function(){ doWrite([]); }; }
     else {
-      /* fallback cursor */
       var all=[]; var cur=store.openCursor();
       cur.onsuccess=function(e){ var c=e.target.result; if(c){all.push(c.value);c.continue();}else doWrite(all); };
       cur.onerror=function(){ doWrite([]); };
@@ -643,7 +742,6 @@ function loadIntoCatalog(kept, dbName){
 }
 
 function downloadLoadScript(kept){
-  /* Génère un .js à coller dans la console du navigateur sur ePilot */
   var coded=assignCodes(kept);
   var data=JSON.stringify(coded);
   var script=
@@ -655,7 +753,7 @@ function downloadLoadScript(kept){
 '    var db=e.target.result;\n'+
 '    var tx=db.transaction(["catalog"],"readwrite");\n'+
 '    var s=tx.objectStore("catalog");\n'+
-'    items.forEach(function(it){ s.put({codeA:it.codeA,designation:it.designation||it.desig,reference:it.reference||it.ref||"",fabricant:it.fabricant||it.fab||"",unite:it.unite||"U",section:it.section||"",type:it.type,pu:it.pu||0,puFour:it.puFour||0}); });\n'+
+'    items.forEach(function(it){ s.put({codeA:it.codeA,designation:it.designation||it.desig,reference:it.reference||it.ref||"",fabricant:it.fabricant||"",unite:it.unite||"U",section:it.section||"",type:it.type,pu:it.pu||0,puFour:it.puFour||0,monnaieFour:it.monnaieFour||"",fournisseur:it.fournisseur||""}); });\n'+
 '    tx.oncomplete=function(){ db.close(); console.log("✅ "+items.length+" articles chargés dans epilot_price_catalog"); };\n'+
 '  };\n'+
 '})();\n';
@@ -672,28 +770,29 @@ function downloadLoadScript(kept){
 ══════════════════════════════════════════════════════ */
 function processFiles(files){
   if(!files||!files.length) return;
-  _fileCount=0;
+  _lastFiles=files;
   allItems=[]; rejectedItems=[];
 
   var statusBar=document.getElementById('status-bar');
   statusBar.style.display='block';
   statusBar.innerHTML='⏳ Traitement de '+files.length+' fichier(s)…';
 
+  var cfg=getColConfig();
   var promises=Array.from(files).map(function(f){return readFile(f);});
   Promise.all(promises).then(function(workbooks){
     var diagLines=[];
     workbooks.forEach(function(wb){
-      var res=processWorkbook(wb);
+      var res=processWorkbook(wb, cfg);
       res.items.forEach(function(it){ it._globalIdx=allItems.length; allItems.push(it); });
       rejectedItems=rejectedItems.concat(res.rejected);
-      diagLines.push(res.diag);
+      diagLines.push('['+wb.filename+'] '+res.diag);
     });
 
+    var nA=allItems.filter(function(it){return it.type==='fourniture';}).length;
+    var nS=allItems.filter(function(it){return it.type==='service';}).length;
     statusBar.innerHTML='<span class="status-ok">✅ '+files.length+' fichier(s) traité(s)</span>'
-      +' · <b>'+allItems.filter(function(it){return it.type==='fourniture';}).length+'</b> articles'
-      +' · <b>'+allItems.filter(function(it){return it.type==='service';}).length+'</b> services'
-      +' · <b>'+rejectedItems.length+'</b> lignes rejetées'
-      +'<br><small style="color:#6b7280;font-size:10px">'+diagLines.map(esc).join('<br>')+'</small>';
+      +' · <b>'+nA+'</b> articles · <b>'+nS+'</b> services · <b>'+rejectedItems.length+'</b> lignes rejetées'
+      +'<div class="diag-line">'+diagLines.map(esc).join('<br>')+'</div>';
 
     document.getElementById('results').style.display='block';
     document.getElementById('controls').style.display='flex';
@@ -703,9 +802,9 @@ function processFiles(files){
   });
 }
 
-/* ── Retraitement avec options ── */
+/* ── Retraitement avec options modifiées ── */
 document.getElementById('btn-reprocess').addEventListener('click',function(){
-  document.getElementById('file-input').dispatchEvent(new Event('change-reprocess'));
+  if(_lastFiles) processFiles(_lastFiles);
 });
 
 /* ══════════════════════════════════════════════════════
@@ -715,7 +814,7 @@ var dz=document.getElementById('drop-zone');
 dz.addEventListener('dragover',function(e){ e.preventDefault(); dz.classList.add('over'); });
 dz.addEventListener('dragleave',function(){ dz.classList.remove('over'); });
 dz.addEventListener('drop',function(e){ e.preventDefault(); dz.classList.remove('over'); processFiles(e.dataTransfer.files); });
-dz.addEventListener('click',function(){ document.getElementById('file-input').click(); });
+dz.addEventListener('click',function(e){ if(e.target.tagName!=='LABEL'&&e.target.tagName!=='INPUT') document.getElementById('file-input').click(); });
 
 document.getElementById('file-input').addEventListener('change',function(){
   if(this.files&&this.files.length) processFiles(this.files);
@@ -736,11 +835,11 @@ Array.from(document.querySelectorAll('.tab')).forEach(function(btn){
 /* SheetJS fallback si CDN indisponible */
 window.addEventListener('load',function(){
   if(typeof XLSX==='undefined'){
-    document.getElementById('status-bar').style.display='block';
-    document.getElementById('status-bar').innerHTML=
-      '<span class="status-err">⚠️ La bibliothèque SheetJS n\'a pas pu être chargée (vérifier la connexion internet).<br>'
-      +'Alternative : téléchargez <a href="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js" target="_blank">xlsx.full.min.js</a> '
-      +'et placez-le dans le même dossier que ce fichier, puis remplacez le script CDN par <code>&lt;script src="xlsx.full.min.js"&gt;</code></span>';
+    var sb=document.getElementById('status-bar');
+    sb.style.display='block';
+    sb.innerHTML='<span class="status-err">⚠️ SheetJS non chargé (vérifier la connexion internet).<br>'
+      +'Téléchargez <a href="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js">xlsx.full.min.js</a> '
+      +'et placez-le dans le même dossier, puis changez le &lt;script src="..."&gt; en chemin local.</span>';
   }
 });
 </script>
