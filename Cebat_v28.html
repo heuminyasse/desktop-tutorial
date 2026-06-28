@@ -2355,7 +2355,7 @@ class Component extends DCLogic {
           const okSec=this.sectionOkForCalibre(d.section,d.calibre);const col=okSec?'#16a34a':'#dc2626';
           RC(brkX,bcy-12,118,24,okSec?'#E8F5E9':'#FDECEA',col,5);TX(brkX+6,bcy-1,d.code||'CB',10,col,700);TX(brkX+6,bcy+10,(d.calibre||'?')+'A'+(d.courbe||'')+' '+(d.section||'?')+'mm2',8,'#6B7280');
           const refs=(d.recepteurs||[]);const shown=refs.slice(0,7).map(rf=>rf+(refPiece[rf]?'('+refPiece[rf]+')':'')).join('  ')+(refs.length>7?'  +'+(refs.length-7):'');
-          LN(brkX+118,bcy,recX-6,bcy,'#CBD5E1');TX(recX,bcy+4,refs.length?shown:'(aucun)',9,'#374151');
+          let wc='';try{wc=this.genCableCBCode(d,s);}catch(e){}LN(brkX+118,bcy,recX-6,bcy,'#CBD5E1');if(wc)TX(brkX+122,bcy-3,wc,7,'#7c3aed',700);TX(recX,bcy+4,refs.length?shown:'(aucun)',9,'#374151');
         });
         ry=gBottom+6;
       });
@@ -5995,11 +5995,11 @@ class Component extends DCLogic {
             const gmap={};djs.forEach(d=>{const key=(+d.ddr||0);(gmap[key]=gmap[key]||[]).push(d);});
             const groups=this.rangeesOf(te.id).map(rw=>{const ds=[...new Set(rw.brs.map(d=>+d.ddr||0))];return{ddr:ds.length===1?ds[0]:0,mixed:ds.length>1,rangee:rw.rangee,brs:rw.brs};});
             const breakerRow=(d)=>{
-              const refs=d.recepteurs||[];const okSec=this.sectionOkForCalibre(d.section,d.calibre);
+              const refs=d.recepteurs||[];const okSec=this.sectionOkForCalibre(d.section,d.calibre);let wcode='';try{wcode=this.genCableCBCode?this.genCableCBCode(d,s):'';}catch(e){}
               return r('div',{key:d.id,style:{position:'relative',display:'flex',alignItems:'center',gap:8,padding:'4px 0'}},
                 r('div',{style:{position:'absolute',left:-14,top:'50%',width:14,height:2,background:rail2}}),
                 box('Divisionnaire',d.code||('CB'+d.id),(d.calibre||'?')+'A '+(d.courbe||'')+' · '+(d.section||'?')+'mm²',okSec?'#16a34a':'#dc2626'),
-                r('div',{style:{color:c.bdr3,fontSize:13}},'→'),
+                r('div',{style:{display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',lineHeight:1}},wcode?r('span',{style:{fontSize:8,fontFamily:c.mono,color:c.purple,fontWeight:700}},wcode):null,r('span',{style:{color:c.bdr3,fontSize:13}},'→')),
                 r('div',{style:{display:'flex',flexWrap:'wrap',gap:5,alignItems:'center'}},
                   refs.length===0?r('span',{style:{fontSize:10,color:c.muted,fontStyle:'italic'}},'(aucun récepteur)'):null,
                   ...refs.map(rf=>chip(rf))));
