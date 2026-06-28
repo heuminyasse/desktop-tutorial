@@ -2319,6 +2319,75 @@ class Component extends DCLogic {
       window.print();
     }catch(e){try{window.print();}catch(_){}}
   }
+  schemaSVG(){
+    const s=this.state;const{departs,tableauxElec,disjoncteurs,pieces}=s;
+    const refPiece={},refType={};
+    pieces.forEach(p=>(p.fonctions||[]).forEach(fn=>{refPiece[fn.ref]=p.nom;refType[fn.ref]=fn.type;}));
+    const TYPEA=new Set(['prises_sdb','lave_linge','four','borne_ve','climatisation','chauffe_eau']);
+    const esc=t=>String(t==null?'':t).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    const R=(x,y,w,h,f,st,rx)=>'<rect x="'+x+'" y="'+y+'" width="'+w+'" height="'+h+'" rx="'+(rx||6)+'" fill="'+f+'" stroke="'+st+'" stroke-width="1.5"/>';
+    const T=(x,y,t,sz,f,w)=>'<text x="'+x+'" y="'+y+'" font-family="monospace" font-size="'+(sz||11)+'" fill="'+(f||'#111827')+'" font-weight="'+(w||400)+'">'+esc(t)+'</text>';
+    const L=(x1,y1,x2,y2,col,sw)=>'<line x1="'+x1+'" y1="'+y1+'" x2="'+x2+'" y2="'+y2+'" stroke="'+(col||'#9CA3AF')+'" stroke-width="'+(sw||2)+'"/>';
+    const W=1180;const P=[];let y=24;
+    P.push(T(20,y,'Schema unifilaire — '+((s.project&&s.project.nom)||''),16,'#0f172a',700));y+=16;
+    P.push(T(20,y,'Source -> AGCP -> Tete -> Differentiel -> Divisionnaire -> Recepteur',10,'#6B7280',400));y+=22;
+    let x=20;
+    (departs||[]).forEach(d=>{P.push(R(x,y,160,48,'#E6F0F7','#0277BD',8));P.push(T(x+10,y+18,d.code||'SRC',11,'#0277BD',700));P.push(T(x+10,y+32,(d.calibre||'?')+'A '+(d.poles||'')+'P',9,'#6B7280'));P.push(T(x+10,y+44,'AGCP '+(d.dbCode||'DB')+(d.ddr?' '+d.ddr+'mA':''),9,'#6B7280'));x+=180;});
+    y+=48+26;
+    const rowH=30,brkX=320,recX=452,diffX=170,teteX=20;
+    (tableauxElec||[]).forEach(te=>{
+      const djs=disjoncteurs.filter(d=>d.tableauId===te.id);
+      const gmap={};djs.forEach(d=>{const k=(+d.ddr||0);(gmap[k]=gmap[k]||[]).push(d);});
+      const groups=Object.keys(gmap).map(k=>+k).sort((a,b)=>(a||9999)-(b||9999)).map(k=>({ddr:k,brs:gmap[k]}));
+      const totalRows=Math.max(1,djs.length);const teH=totalRows*rowH+24;
+      P.push(T(20,y,(te.code||'TE')+' — '+(te.nom||''),12,'#0277BD',700));
+      const startY=y+10;const teteY=startY+(teH-44)/2;
+      P.push(R(teteX,teteY,96,42,'#E6F0F7','#0277BD',6));P.push(T(teteX+8,teteY+17,'TETE',8,'#0277BD',700));P.push(T(teteX+8,teteY+33,te.cb0Code||'CB0',12,'#0277BD',700));
+      const teteCx=teteX+96,teteCy=teteY+21;let ry=startY+6;
+      groups.forEach(g=>{
+        const gRows=g.brs.length;const gTop=ry,gBottom=ry+gRows*rowH;const diffCy=(gTop+gBottom)/2;
+        const typeA=g.brs.some(d=>(d.recepteurs||[]).some(rf=>TYPEA.has(refType[rf])));
+        P.push(L(teteCx,teteCy,diffX-12,teteCy));P.push(L(diffX-12,teteCy,diffX-12,diffCy));P.push(L(diffX-12,diffCy,diffX,diffCy));
+        P.push(R(diffX,diffCy-17,128,34,'#E0F7FA','#06b6d4',6));P.push(T(diffX+8,diffCy-3,'ID '+(g.ddr>0?g.ddr+'mA':'—'),9,'#0e7490',700));P.push(T(diffX+8,diffCy+11,g.ddr>0?(typeA?'Type A':'Type AC'):'sans DDR',8,'#6B7280'));
+        g.brs.forEach((d,bi)=>{
+          const bcy=ry+bi*rowH+rowH/2;
+          P.push(L(diffX+128,diffCy,brkX-12,diffCy,'#CBD5E1'));P.push(L(brkX-12,diffCy,brkX-12,bcy,'#CBD5E1'));P.push(L(brkX-12,bcy,brkX,bcy,'#CBD5E1'));
+          const okSec=this.sectionOkForCalibre(d.section,d.calibre);const col=okSec?'#16a34a':'#dc2626';
+          P.push(R(brkX,bcy-12,118,24,okSec?'#E8F5E9':'#FDECEA',col,5));P.push(T(brkX+6,bcy-1,d.code||'CB',10,col,700));P.push(T(brkX+6,bcy+10,(d.calibre||'?')+'A'+(d.courbe||'')+' '+(d.section||'?')+'mm2',8,'#6B7280'));
+          const refs=(d.recepteurs||[]);const shown=refs.slice(0,7).map(rf=>rf+(refPiece[rf]?'('+refPiece[rf]+')':'')).join('  ')+(refs.length>7?'  +'+(refs.length-7):'');
+          P.push(L(brkX+118,bcy,recX-6,bcy,'#CBD5E1'));P.push(T(recX,bcy+4,refs.length?shown:'(aucun)',9,'#374151'));
+        });
+        ry=gBottom+6;
+      });
+      y=startY+teH+18;
+    });
+    const H=y+20;
+    return '<svg xmlns="http://www.w3.org/2000/svg" width="'+W+'" height="'+H+'" viewBox="0 0 '+W+' '+H+'"><rect width="'+W+'" height="'+H+'" fill="#ffffff"/>'+P.join('')+'</svg>';
+  }
+  exportSchemaSVG(){
+    try{
+      const svg=this.schemaSVG();const blob=new Blob([svg],{type:'image/svg+xml;charset=utf-8'});const url=URL.createObjectURL(blob);
+      const a=document.createElement('a');const slug=(((this.state.project||{}).nom)||'projet').replace(/[^a-z0-9]+/gi,'_').toLowerCase();
+      a.href=url;a.download='cebat_schema_'+slug+'.svg';document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);
+      this.showToast('Schema SVG exporte');
+    }catch(e){this.showToast('Echec export SVG');}
+  }
+  exportSchemaPNG(){
+    try{
+      const svg=this.schemaSVG();const blob=new Blob([svg],{type:'image/svg+xml;charset=utf-8'});const url=URL.createObjectURL(blob);
+      const img=new Image();
+      img.onload=()=>{
+        try{
+          const scale=2;const canvas=document.createElement('canvas');canvas.width=img.width*scale;canvas.height=img.height*scale;
+          const ctx=canvas.getContext('2d');ctx.fillStyle='#ffffff';ctx.fillRect(0,0,canvas.width,canvas.height);ctx.scale(scale,scale);ctx.drawImage(img,0,0);
+          URL.revokeObjectURL(url);
+          canvas.toBlob(bl=>{if(!bl){this.showToast('Echec export PNG');return;}const u=URL.createObjectURL(bl);const a=document.createElement('a');const slug=(((this.state.project||{}).nom)||'projet').replace(/[^a-z0-9]+/gi,'_').toLowerCase();a.href=u;a.download='cebat_schema_'+slug+'.png';document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(u),1000);this.showToast('Schema PNG exporte');},'image/png');
+        }catch(e){this.showToast('Echec export PNG');}
+      };
+      img.onerror=()=>{URL.revokeObjectURL(url);this.showToast('Echec export PNG');};
+      img.src=url;
+    }catch(e){this.showToast('Echec export PNG');}
+  }
   exportJSON(){
     try{
       const data={app:'Cebat',version:'v28',exportedAt:new Date().toISOString(),state:this._snapshot()};
@@ -5800,7 +5869,7 @@ class Component extends DCLogic {
           r('div',{style:{fontSize:9,color:c.muted}},(i.type||'')+(i.circuitRef?' → '+i.circuitRef:'')+(pc?' · '+pc:'')+(zn?' · '+zn:'')));
       })))):null;
     return r('div',{style:{padding:'24px 28px',animation:'fadeIn .3s ease',overflowY:'auto',height:'100%'}},
-      this.SH('Schéma unifilaire','Source → AGCP → Tête → Différentiel → Disjoncteur divisionnaire → Récepteur',this.Btn(r('span',{style:{display:'inline-flex',alignItems:'center',gap:5}},this.ico('print_ico',13),'PDF paysage'),()=>this.printLandscape(),'ghost','md')),
+      this.SH('Schéma unifilaire','Source → AGCP → Tête → Différentiel → Disjoncteur divisionnaire → Récepteur',r('div',{style:{display:'flex',gap:8}},this.Btn('SVG',()=>this.exportSchemaSVG(),'sec','md'),this.Btn('PNG',()=>this.exportSchemaPNG(),'sec','md'),this.Btn(r('span',{style:{display:'inline-flex',alignItems:'center',gap:5}},this.ico('print_ico',13),'PDF paysage'),()=>this.printLandscape(),'ghost','md'))),
       legend,
       r('div',{style:{background:c.surf2,border:'1px solid '+c.bdr,borderRadius:12,padding:'16px 18px',marginBottom:16}},
         r('div',{style:{fontSize:10,fontWeight:700,color:c.muted,textTransform:'uppercase',letterSpacing:'.08em',marginBottom:10}},'Alimentation générale'),
