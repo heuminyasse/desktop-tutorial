@@ -2361,14 +2361,14 @@ class Component extends DCLogic {
       });
       y=startY+teH+18;
     });
-    const contentH=y+10;const cartH=74,fm=10;const H=contentH+cartH;
+    const contentH=y+10;const cartH=92,fm=10;const H=contentH+cartH;
     RC(fm,fm,W-2*fm,H-2*fm,'none','#94a3b8',2);
-    const cbW=430,cbH=60,cbX=W-fm-cbW,cbY=H-fm-cbH;
+    const cbW=480,cbH=74,cbX=W-fm-cbW,cbY=H-fm-cbH;
     RC(cbX,cbY,cbW,cbH,'#F8FAFC','#64748B',2);LN(cbX+250,cbY,cbX+250,cbY+cbH,'#64748B');
     let dateStr='';try{dateStr=new Date().toLocaleDateString('fr-FR');}catch(e){}
     const proj=s.project||{};
-    TX(cbX+10,cbY+18,'PROJET : '+(proj.nom||'—'),11,'#0f172a',700);TX(cbX+10,cbY+34,'Client : '+(proj.client||'—'),9,'#374151');TX(cbX+10,cbY+50,'Adr. : '+(proj.adresse||'—'),9,'#374151');
-    TX(cbX+260,cbY+18,'SCHEMA UNIFILAIRE',10,'#0277BD',700);TX(cbX+260,cbY+34,'Date : '+dateStr,9,'#374151');TX(cbX+260,cbY+50,'Feuille : 1/1   NF C 15-100',9,'#374151');
+    TX(cbX+10,cbY+16,'PROJET : '+(proj.nom||'—'),11,'#0f172a',700);TX(cbX+10,cbY+31,'Client : '+(proj.client||'—'),9,'#374151');TX(cbX+10,cbY+46,'Adr. : '+(proj.adresse||'—'),9,'#374151');TX(cbX+10,cbY+61,'Bureau : '+(proj.bureau||'—'),9,'#374151');
+    TX(cbX+260,cbY+16,'SCHEMA UNIFILAIRE',10,'#0277BD',700);TX(cbX+260,cbY+31,'Dessinateur : '+(proj.dessinateur||'—'),9,'#374151');TX(cbX+260,cbY+46,'Date : '+dateStr+'    Indice : '+(proj.indice||'—'),9,'#374151');TX(cbX+260,cbY+61,'Feuille : 1/1    NF C 15-100',9,'#374151');
     return{W,H,prims};
   }
   schemaSVG(teId){
@@ -5435,7 +5435,8 @@ class Component extends DCLogic {
         // ── COL 1 : Infos projet + Client ──
         r('div',{style:{display:'flex',flexDirection:'column',gap:14}},
           this.Card('Informations générales',r('div',null,fi('nom','Nom du projet *'),fi('adresse','Adresse des travaux'),fi('annee','Année','number',{min:1900,max:2030})),null,18),
-          this.Card('Client',r('div',null,fi('client','Nom client'),fi('tel','Téléphone','tel'),fi('email','Email','email')),null,18)
+          this.Card('Client',r('div',null,fi('client','Nom client'),fi('tel','Téléphone','tel'),fi('email','Email','email')),null,18),
+          this.Card('Cartouche du plan',r('div',null,fi('bureau','Bureau / Société'),fi('dessinateur','Dessinateur'),fi('indice','Indice / Révision')),null,18)
         ),
 
         // ── COL 2 : Construction + Alimentation ──
