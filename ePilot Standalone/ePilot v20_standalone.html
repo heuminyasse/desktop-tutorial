@@ -6737,5 +6737,105 @@ html body[class] #vac-gantt td.emp .nm{font-weight:500 !important;}</style>
   }, 1500);
 })();
 </script>
+
+<script id="__STAFF_CONTACTS_v1__">
+/* __STAFF_CONTACTS_v1__ — Contacts HBO Cameroon : téléphone + email par employé.
+   Enrichit PERSONNEL_DATA (telephone / telephones[0] / email) par correspondance de nom,
+   et pré-remplit #ec-phone + #ec-f-email dans la fiche HR quand l'employé correspond.
+   Idempotent : ne remplace jamais une valeur déjà présente (ne modifie pas manuellement saisi). */
+(function(){
+  if(window.__staffContacts) return; window.__staffContacts=true;
+
+  /* ── Annuaire ── */
+  var ANNUAIRE=[
+    {name:'Adianie Teumou',    tel:'672 89 44 20', email:'Adteumou@hbocameroon.com'},
+    {name:'Andy Fofou',        tel:'691 90 91 84', email:'AFofou@hbocameroon.com'},
+    {name:'Armel Noukam',      tel:'696 11 67 43', email:'Umbakop@hbocameroon.com'},
+    {name:'Bertrand Momha',    tel:'693 18 65 80', email:'BMomha@hbocameroon.com'},
+    {name:'Brice Nyasse',      tel:'677 19 22 49', email:'BNyasse@hbocameroon.com'},
+    {name:'Franck Sassa',      tel:'695 68 13 85', email:'FSassa@hbocameroon.com'},
+    {name:'Geordane Tagne',    tel:'697 57 39 25', email:'GTagne@hbocameroon.com'},
+    {name:'Janvier Emok',      tel:'691 44 28 31', email:'JEmok@hbocameroon.com'},
+    {name:'Ludovic Ngami',     tel:'691 26 63 02', email:'LNgami@hbocameroon.com'},
+    {name:'Orthance Momha',    tel:'694 60 22 27', email:'OMomha@hbocameroon.com'},
+    {name:'Rodrigue Noukio',   tel:'696 23 01 14', email:'RNoukio@hbocameroon.com'},
+    {name:'Rostand Nankam',    tel:'699 44 92 79', email:'RNankam@hbocameroon.com'},
+    {name:'Staline Sobze',     tel:'695 50 91 18', email:'SSobze@hbocameroon.com'},
+    {name:'Yvan Essombe',      tel:'694 23 16 39', email:'YEssombe@hbocameroon.com'}
+  ];
+
+  /* ── Normalisation (supprime accents, ponctuation, minuscule) ── */
+  function nn(s){
+    return String(s||'').normalize('NFD').replace(/[̀-ͯ]/g,'')
+      .toLowerCase().replace(/[^a-z0-9]/g,' ').replace(/\s+/g,' ').trim();
+  }
+
+  /* ── Correspondance nom : au moins 2 mots en commun ── */
+  function nameMatch(refName, prenoms, nom){
+    var ref=nn(refName).split(' ');
+    var emp=nn((prenoms||'')+' '+(nom||'')).split(' ');
+    var hits=0;
+    ref.forEach(function(w){ if(w.length>1 && emp.indexOf(w)>=0) hits++; });
+    return hits>=Math.min(2, ref.length);
+  }
+
+  /* ── Enrichissement PERSONNEL_DATA ── */
+  var _patched=false;
+  function patchData(){
+    var data=window.PERSONNEL_DATA;
+    if(!Array.isArray(data)||data.length===0) return false;
+    ANNUAIRE.forEach(function(c){
+      var emp=null;
+      for(var i=0;i<data.length;i++){
+        var p=data[i]; if(!p) continue;
+        if(nameMatch(c.name, p.prenoms||p.Prenoms||p.prenom||p.Prenom||'',
+                             p.nom||p.Nom||'')){ emp=p; break; }
+      }
+      if(!emp) return;
+      /* téléphone */
+      if(!emp.telephone&&!emp.Telephone&&!emp.tel){
+        emp.telephone=c.tel; emp.tel=c.tel;
+        if(!emp.telephones||!emp.telephones.length)
+          emp.telephones=[{type:'mobile',tel:c.tel}];
+        else if(!emp.telephones[0].tel)
+          emp.telephones[0].tel=c.tel;
+      }
+      /* email */
+      if(!emp.email&&!emp.Email) { emp.email=c.email; emp.Email=c.email; }
+    });
+    _patched=true;
+    return true;
+  }
+
+  /* ── Pré-remplissage fiche HR (#ec-phone, #ec-f-email) ── */
+  function fillFiche(){
+    var mat=document.getElementById('ec-f-mat'); if(!mat) return;
+    var matVal=(mat.value||'').trim(); if(!matVal) return;
+    var nomEl=document.getElementById('ec-f-nom');
+    var prenEl=document.getElementById('ec-f-prenoms');
+    var nom=(nomEl&&nomEl.value||'').trim();
+    var pre=(prenEl&&prenEl.value||'').trim();
+    if(!nom&&!pre) return;
+
+    var contact=null;
+    ANNUAIRE.forEach(function(c){ if(!contact&&nameMatch(c.name,pre,nom)) contact=c; });
+    if(!contact) return;
+
+    var phoneEl=document.getElementById('ec-phone');
+    var emailEl=document.getElementById('ec-f-email');
+    if(phoneEl&&!phoneEl.value) phoneEl.value=contact.tel;
+    if(emailEl&&!emailEl.value) emailEl.value=contact.email;
+  }
+
+  /* ── Boot ── */
+  var tries=0;
+  (function boot(){
+    if(!_patched){ if(!patchData()){ if(++tries<60) setTimeout(boot,500); return; } }
+    /* watcher fiche HR */
+    if(window.__epOnBodyMut){ window.__epOnBodyMut(function(){ try{fillFiche();}catch(e){}  }); }
+    var t=0; (function poll(){ try{fillFiche();}catch(e){} if(++t<200) setTimeout(poll,800); })();
+  })();
+})();
+</script>
 </body>
 </html>
