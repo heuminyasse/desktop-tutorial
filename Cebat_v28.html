@@ -2249,6 +2249,7 @@ class Component extends DCLogic {
       const nm=(this.state.project&&this.state.project.nom)||'Projet';
       if(e){e.name=nm;e.savedAt=this._nowStamp();}else{idx.push({id,name:nm,savedAt:this._nowStamp()});}
       this._saveIndex(idx);
+      try{if(typeof document!=='undefined'&&this.state.project)document.title='Cebat — '+(this.state.project.nom||'Projet');}catch(e){}
     }catch(e){}
   }
   _applyProject(id,extra){
@@ -2260,7 +2261,7 @@ class Component extends DCLogic {
   setState(update,cb){super.setState(update,cb);this._saveState();}
   componentDidMount(){
     try{
-      if(!this._pristine){this._pristine={};for(const k of this._PERSIST_KEYS)this._pristine[k]=JSON.parse(JSON.stringify(this.state[k]));}
+      if(!this._pristine){this._pristine={};for(const k of this._PERSIST_KEYS)this._pristine[k]=JSON.parse(JSON.stringify(this.state[k]));}try{if(typeof document!=='undefined'&&!document.getElementById('cebat-print-css')){const st=document.createElement('style');st.id='cebat-print-css';st.textContent='@media print{@page{margin:14mm;}body *{visibility:hidden !important;}[data-print="main"],[data-print="main"] *{visibility:visible !important;}[data-print="main"]{position:absolute !important;left:0;top:0;width:100%;height:auto !important;overflow:visible !important;background:#fff !important;}[data-print="main"] *{overflow:visible !important;max-height:none !important;box-shadow:none !important;}html,body{height:auto !important;overflow:visible !important;background:#fff !important;}[data-print="hide"]{display:none !important;}}';document.head.appendChild(st);}}catch(e){}
       let idx=this._loadIndex();let cur=null;try{cur=localStorage.getItem(this._PROJ_CUR);}catch(e){}
       if(idx.length===0){
         const id=this._genProjId();let legacy=null;try{legacy=localStorage.getItem(this._STORE_KEY);}catch(e){}
@@ -2960,7 +2961,7 @@ class Component extends DCLogic {
     const elemTotal=tableauxElec.length+boitesDeriv.length+interrupteurs.length+zonesCommande.length;
     const bdgMap={appartements:appartements.length,pieces:pieces.length,circuits:circuits.length+elemTotal};
     const red='#0277BD';
-    return r('aside',{style:{width:220,background:'#FFFFFF',borderRight:`1px solid ${c.bdr}`,display:'flex',flexDirection:'column',flexShrink:0,overflow:'hidden'}},
+    return r('aside',{'data-print':'hide',style:{width:220,background:'#FFFFFF',borderRight:`1px solid ${c.bdr}`,display:'flex',flexDirection:'column',flexShrink:0,overflow:'hidden'}},
       // Project card
       r('div',{style:{padding:'14px 16px',borderBottom:`1px solid ${c.bdr}`}},
         r('div',{style:{fontSize:9,color:c.muted,fontWeight:700,textTransform:'uppercase',letterSpacing:'.08em',marginBottom:4}},'PROJET ACTIF'),
@@ -2998,7 +2999,7 @@ class Component extends DCLogic {
     const{view,project,theme}=this.state;const c=this.C;const r=this.r;
     const nav=this.NAV.find(n=>n.id===view);
     const red='#0277BD';
-    return r('header',{style:{height:52,background:red,display:'flex',alignItems:'center',justifyContent:'space-between',padding:'0 20px',flexShrink:0,boxShadow:'0 2px 8px rgba(0,0,0,.2)'}},
+    return r('header',{'data-print':'hide',style:{height:52,background:red,display:'flex',alignItems:'center',justifyContent:'space-between',padding:'0 20px',flexShrink:0,boxShadow:'0 2px 8px rgba(0,0,0,.2)'}},
       r('div',{style:{display:'flex',alignItems:'center',gap:14}},
         r('div',{style:{display:'flex',flexDirection:'column',lineHeight:1.1}},
           r('span',{style:{fontSize:16,fontWeight:800,color:'#fff',letterSpacing:'-.4px'}},'CEBAT'),
@@ -6647,7 +6648,7 @@ class Component extends DCLogic {
       {cat:'Appareillage',color:c.success,items:[{d:'Prises 2P+T 16A',q:nP,pu:6.5,u:'u'},{d:'Interrupteurs simples / va-et-vient',q:nL,pu:8.0,u:'u'},{d:'Boîtes encastrement Ø67mm',q:nP+nL,pu:1.5,u:'u'},{d:'DCL douilles E27/E14',q:nL,pu:2.80,u:'u'}]},
     ];
     return r('div',{style:{padding:'24px 28px',animation:'fadeIn .3s ease'}},
-      this.SH('Devis estimatif','Estimation indicative — '+today,r('div',{style:{display:'flex',gap:8}},this.Btn('⤓ Export CSV',()=>this.exportCSV(),'sec','md'),this.Btn(r('span',{style:{display:'inline-flex',alignItems:'center',gap:5}},this.ico('print_ico',13),'Imprimer'),()=>window.print(),'ghost','md'))),
+      this.SH('Devis estimatif','Estimation indicative — '+today,r('div',{style:{display:'flex',gap:8}},this.Btn('⤓ Export CSV',()=>this.exportCSV(),'sec','md'),this.Btn(r('span',{style:{display:'inline-flex',alignItems:'center',gap:5}},this.ico('print_ico',13),'Imprimer / PDF'),()=>window.print(),'ghost','md'))),
       r('div',{style:{background:c.surf2,border:`1px solid ${c.bdr}`,borderRadius:12,padding:'12px 16px',marginBottom:14,display:'grid',gridTemplateColumns:'repeat(2,1fr)',gap:4,fontSize:11}},
         r('span',{style:{color:c.muted}},'Projet :'),r('span',{style:{color:c.text,fontWeight:500}},project.nom),
         r('span',{style:{color:c.muted}},'Niveaux / Apparts. / Pièces :'),r('span',{style:{color:c.text}},niveaux.length+' / '+appartements.length+' / '+pieces.length),
@@ -6684,7 +6685,7 @@ class Component extends DCLogic {
       this.renderTopBar(),
       r('div',{style:{display:'flex',flex:1,overflow:'hidden'}},
         this.renderSidebar(circuits),
-        r('main',{style:{flex:1,overflowY:'auto',background:c.bg}},(views[view]||views.dashboard)())),
+        r('main',{'data-print':'main',style:{flex:1,overflowY:'auto',background:c.bg}},(views[view]||views.dashboard)())),
       showModal&&this.renderModal(),
       toast&&r('div',{style:{position:'fixed',bottom:22,right:22,background:c.surf2,border:`1px solid ${c.bdr2}`,borderRadius:9,padding:'10px 16px',display:'flex',alignItems:'center',gap:8,boxShadow:`0 8px 32px ${c.shadow}`,zIndex:300,animation:'appear .2s ease'}},
         r('div',{style:{width:6,height:6,borderRadius:'50%',background:c.success}}),
