@@ -5270,36 +5270,7 @@ document.addEventListener('DOMContentLoaded', async function() {
   }, false);
 })();
 </script>
-<style id="__KPI_UNIFORM_v1__">
-/* Uniformisation des KPI au style « Paie » (13px/700 valeur, 9px muted libellé, carte neutre,
-   Calibri Light), aligné à droite. Chargé après le bundle → surcharge l'harmonisation existante. */
-#view-vacation .vac-stat, #view-marketing .mkt-kpi, #view-papiers [data-fst],
-#view-orders .ep-dep-kpis > div, #view-orders .ep-det-kpis > div, #view-achats .ep-ach-kpis > div,
-#view-expenses .exp-kpi, #view-jsareports .jr-kpi{
-  background:var(--card-2) !important; border:1px solid var(--line) !important;
-  border-radius:5px !important; padding:4px 10px !important; box-shadow:none !important;
-  font-family:'Calibri Light','Calibri','Inter',sans-serif !important; min-width:auto !important;
-}
-/* valeurs (le nombre) */
-#view-vacation .vac-stat .v, #view-marketing .mkt-kpi-v, #view-papiers [data-fst] > div:first-child,
-#view-orders .ep-dep-kpis > div > div:last-child, #view-orders .ep-det-kpis > div > div:nth-child(2),
-#view-achats .ep-ach-kpis > div > div:nth-child(2), #view-expenses .exp-kpi strong,
-#view-jsareports .jr-kpi .v{
-  font-size:13px !important; font-weight:700 !important; line-height:1.1 !important;
-  font-family:'Calibri Light','Calibri','Inter',sans-serif !important;
-}
-/* libellés */
-#view-vacation .vac-stat .l, #view-marketing .mkt-kpi-l, #view-papiers [data-fst] > div:not(:first-child),
-#view-orders .ep-dep-kpis > div > div:first-child, #view-orders .ep-det-kpis > div > div:first-child,
-#view-achats .ep-ach-kpis > div > div:first-child, #view-expenses .exp-kpi span,
-#view-jsareports .jr-kpi .k{
-  font-size:9px !important; font-weight:400 !important; color:var(--muted) !important;
-  line-height:1.2 !important; text-transform:none !important; letter-spacing:0 !important;
-}
-/* rangées alignées à droite (et la mienne JSA en flex au lieu de grille) */
-#view-vacation .vac-stats, #view-marketing .mkt-kpis{ margin-left:auto !important; justify-content:flex-end !important; }
-#view-jsareports .jr-kpis{ display:flex !important; grid-template-columns:none !important; gap:6px !important; justify-content:flex-end !important; }
-</style>
+
 <script id="__CREDIT_ADMIN_v1__">
 /* __CREDIT_ADMIN_v1__ — Paie/Crédits : modifier ou supprimer un crédit (administrateur).
    Remplace __CREDIT_DELETE_v1__. Droits : groupId 'admin' ou 'direction' (session RBAC).
@@ -6537,6 +6508,233 @@ html body[class] #vac-gantt td.emp .nm{font-weight:500 !important;}</style>
 
   if(window.__epOnBodyMut){ window.__epOnBodyMut(function(){ try{ detect(); }catch(e){} }); }
   var t=0; (function poll(){ try{ detect(); }catch(e){} if(++t<300) setTimeout(poll,800); })();
+})();
+</script>
+
+<style id="__KPI_UNIFORM_v2__">
+/* ═══ Uniformisation KPI — référence « style Paie » ═══
+   1) Règles statiques pour les vues dont les classes sont connues.
+   2) Classes utilitaires .hkn-card / .hkn-val / .hkn-lbl pour le scanner JS. */
+
+/* ── Carte KPI (conteneur individuel) ── */
+#view-vacation .vac-stat,
+#view-marketing .mkt-kpi,
+#view-papiers [data-fst],
+#view-orders .ep-dep-kpis > div, #view-orders .ep-det-kpis > div,
+#view-achats .ep-ach-kpis > div,
+#view-expenses .exp-kpi,
+#view-jsareports .jr-kpi,
+.hkn-card {
+  background:var(--card-2) !important;
+  border:1px solid var(--line) !important;
+  border-radius:5px !important;
+  padding:4px 10px !important;
+  box-shadow:none !important;
+  font-family:'Calibri Light','Calibri','Inter',sans-serif !important;
+  min-width:auto !important;
+}
+
+/* ── Valeur numérique ── */
+#view-vacation .vac-stat .v,
+#view-marketing .mkt-kpi-v,
+#view-papiers [data-fst] > div:first-child,
+#view-orders .ep-dep-kpis > div > div:last-child,
+#view-orders .ep-det-kpis > div > div:nth-child(2),
+#view-achats .ep-ach-kpis > div > div:nth-child(2),
+#view-expenses .exp-kpi strong,
+#view-jsareports .jr-kpi .v,
+.hkn-val {
+  font-size:13px !important;
+  font-weight:700 !important;
+  line-height:1.1 !important;
+  font-family:'Calibri Light','Calibri','Inter',sans-serif !important;
+}
+
+/* ── Libellé ── */
+#view-vacation .vac-stat .l,
+#view-marketing .mkt-kpi-l,
+#view-papiers [data-fst] > div:not(:first-child),
+#view-orders .ep-dep-kpis > div > div:first-child,
+#view-orders .ep-det-kpis > div > div:first-child,
+#view-achats .ep-ach-kpis > div > div:first-child,
+#view-expenses .exp-kpi span,
+#view-jsareports .jr-kpi .k,
+.hkn-lbl {
+  font-size:9px !important;
+  font-weight:400 !important;
+  color:var(--muted) !important;
+  line-height:1.2 !important;
+  text-transform:none !important;
+  letter-spacing:0 !important;
+}
+
+/* ── Barre KPI Clients (#cl-kpi-bar) ── */
+#view-clients #cl-kpi-bar {
+  display:flex !important;
+  flex-wrap:wrap !important;
+  gap:6px !important;
+  align-items:center !important;
+  justify-content:flex-end !important;
+}
+#view-clients #cl-kpi-bar > * {
+  background:var(--card-2) !important;
+  border:1px solid var(--line) !important;
+  border-radius:5px !important;
+  padding:4px 10px !important;
+  font-family:'Calibri Light','Calibri','Inter',sans-serif !important;
+  font-weight:400 !important;
+  letter-spacing:0 !important;
+}
+/* valeur (partie numérique) */
+#view-clients #cl-kpi-bar > * strong,
+#view-clients #cl-kpi-bar > * b,
+#view-clients #cl-kpi-bar > * .v {
+  font-size:13px !important; font-weight:700 !important; display:inline !important;
+}
+/* libellé texte */
+#view-clients #cl-kpi-bar > * small,
+#view-clients #cl-kpi-bar > * .l,
+#view-clients #cl-kpi-bar > * .k,
+#view-clients #cl-kpi-bar > * span:not(:first-child) {
+  font-size:9px !important; color:var(--muted) !important; font-weight:400 !important;
+}
+
+/* ── Barres et grilles globales ── */
+#view-vacation .vac-stats,
+#view-marketing .mkt-kpis { margin-left:auto !important; justify-content:flex-end !important; }
+#view-jsareports .jr-kpis {
+  display:flex !important;
+  grid-template-columns:none !important;
+  gap:6px !important;
+  justify-content:flex-end !important;
+}
+</style>
+<script id="__KPI_SCAN_v1__">
+/* __KPI_SCAN_v1__ — Scanner dynamique : trouve les blocs KPI dans toutes les vues
+   (classes inconnues du bundle compressé) et leur applique le style Paie via .hkn-card/.hkn-val/.hkn-lbl.
+   S'active à chaque navigation et mutation. Exclut les vues déjà couvertes par __KPI_UNIFORM_v2__. */
+(function(){
+  if(window.__kpiScan) return; window.__kpiScan=true;
+
+  /* Vues dont les KPIs sont déjà gérés par __KPI_UNIFORM_v2__ (CSS statique) */
+  var SKIP_VIEWS=['view-vacation','view-marketing','view-papiers','view-orders','view-achats','view-expenses','view-jsareports','view-clients'];
+
+  /* Patterns de noms de classe (insensible casse) indiquant un conteneur KPI ou une carte KPI */
+  var KPI_RE=/\bkpi[s]?\b|\bstat[s]?\b|\bmetric[s]?\b/i;
+  var KPI_BAR_RE=/\bkpis\b|\bkpi-bar\b|\bkpi-row\b|\bkpi-strip\b|\bkpi-wrap\b|\bstats-bar\b/i;
+
+  /* Heuristique : une «barre KPI» contient plusieurs enfants directs qui ont chacun
+     une valeur numérique et un libellé → ce sont des cartes KPI individuelles. */
+  function looksLikeKpiBar(el){
+    var ch=el.children;
+    if(ch.length<2||ch.length>20) return false;
+    var cls=(el.className||'');
+    if(!KPI_BAR_RE.test(cls)&&!(el.id&&/kpi|stat/i.test(el.id))) return false;
+    /* au moins la moitié des enfants doivent avoir une valeur numérique dans leur texte */
+    var hits=0;
+    for(var i=0;i<ch.length;i++){ if(/\d/.test(ch[i].textContent||'')) hits++; }
+    return hits>=Math.max(1,Math.floor(ch.length/2));
+  }
+
+  function looksLikeKpiCard(el){
+    /* Carte individuelle : classe contenant 'kpi' ou 'stat', peu d'enfants (≤4), du texte numérique */
+    var cls=(el.className||'');
+    if(!KPI_RE.test(cls)) return false;
+    if(el.children.length>5) return false;
+    return /\d/.test(el.textContent||'');
+  }
+
+  /* Trouve la valeur (premier gros chiffre) et le libellé dans une carte */
+  function findValLbl(card){
+    /* tentative 1 : classes sémantiques connues */
+    var val=card.querySelector('.v,.val,.value,.count,.montant,.nb,.num');
+    var lbl=card.querySelector('.l,.lbl,.label,.k,.key,.title,.libelle,.libellé');
+    if(val&&lbl) return {val:val,lbl:lbl};
+    /* tentative 2 : strong/b pour la valeur, texte restant pour le libellé */
+    val=card.querySelector('strong,b');
+    if(val){
+      var others=Array.prototype.filter.call(card.querySelectorAll('span,small,div'),function(e){return !e.contains(val)&&e.children.length===0;});
+      lbl=others[0]||null;
+      if(val&&lbl) return {val:val,lbl:lbl};
+    }
+    /* tentative 3 : premier enfant = valeur, dernier = libellé */
+    var ch=card.children;
+    if(ch.length>=2&&/\d/.test(ch[0].textContent||'')){
+      return {val:ch[0], lbl:ch[ch.length-1]};
+    }
+    if(ch.length>=2&&/\d/.test(ch[ch.length-1].textContent||'')){
+      return {val:ch[ch.length-1], lbl:ch[0]};
+    }
+    return {val:null,lbl:null};
+  }
+
+  function normalizeBar(bar){
+    if(bar.__kpiScanned) return; bar.__kpiScanned=true;
+    var cards=Array.prototype.slice.call(bar.children);
+    cards.forEach(function(card){
+      if(card.__kpiScanned) return; card.__kpiScanned=true;
+      if(!card.classList.contains('hkn-card')) card.classList.add('hkn-card');
+      var r=findValLbl(card);
+      if(r.val&&!r.val.classList.contains('hkn-val')) r.val.classList.add('hkn-val');
+      if(r.lbl&&!r.lbl.classList.contains('hkn-lbl')) r.lbl.classList.add('hkn-lbl');
+    });
+  }
+
+  function normalizeCard(card){
+    if(card.__kpiScanned) return; card.__kpiScanned=true;
+    if(!card.classList.contains('hkn-card')) card.classList.add('hkn-card');
+    var r=findValLbl(card);
+    if(r.val&&!r.val.classList.contains('hkn-val')) r.val.classList.add('hkn-val');
+    if(r.lbl&&!r.lbl.classList.contains('hkn-lbl')) r.lbl.classList.add('hkn-lbl');
+  }
+
+  function scanView(view){
+    if(!view) return;
+    var vid=view.id||'';
+    if(SKIP_VIEWS.indexOf(vid)>=0) return;
+    /* Cherche des barres KPI (conteneurs de cartes KPI) */
+    var all=view.querySelectorAll('*');
+    Array.prototype.forEach.call(all, function(el){
+      if(el.__kpiScanned) return;
+      if(looksLikeKpiBar(el)){ normalizeBar(el); return; }
+      if(looksLikeKpiCard(el)){ normalizeCard(el); }
+    });
+  }
+
+  function scanAll(){
+    /* Scanne toutes les vues visibles (display != none) */
+    var views=document.querySelectorAll('[id^="view-"]');
+    Array.prototype.forEach.call(views, function(v){
+      if(v.style.display==='none'||v.hidden) return;
+      try{ scanView(v); }catch(e){}
+    });
+  }
+
+  /* Démarrage + hook navigation */
+  if(window.__epOnBodyMut){ window.__epOnBodyMut(function(){ try{scanAll();}catch(e){} }); }
+  var t=0; (function poll(){ try{scanAll();}catch(e){} if(++t<300) setTimeout(poll,900); })();
+
+  /* Hook HubViews.showView pour scanner la vue cible après navigation */
+  (function hookNav(){
+    if(!window.HubViews||!window.HubViews.showView||window.HubViews.__kpiScanHooked) return;
+    window.HubViews.__kpiScanHooked=true;
+    var orig=window.HubViews.showView;
+    window.HubViews.showView=function(name){
+      var r=orig.apply(this,arguments);
+      setTimeout(function(){
+        var v=document.getElementById('view-'+name); if(v) try{scanView(v);}catch(e){}
+      }, 500);
+      return r;
+    };
+  })();
+  setTimeout(function(){
+    try{ if(!window.HubViews||!window.HubViews.__kpiScanHooked){ (function hookNav(){
+      if(!window.HubViews||!window.HubViews.showView||window.HubViews.__kpiScanHooked) return;
+      window.HubViews.__kpiScanHooked=true;
+      var orig=window.HubViews.showView;
+      window.HubViews.showView=function(name){ var r=orig.apply(this,arguments); setTimeout(function(){ var v=document.getElementById('view-'+name); if(v) try{scanView(v);}catch(e){}},500); return r; };
+    })(); } }catch(e){}
+  }, 1500);
 })();
 </script>
 </body>
