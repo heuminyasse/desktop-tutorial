@@ -2252,22 +2252,36 @@ class Component extends DCLogic {
   }
   exportCSV(){
     try{
-      const circuits=this.calcCircuits();
-      const apps=this.state.appartements||[];
+      const s=this.state;
+      const apps=s.appartements||[],pcs=s.pieces||[],tes=s.tableauxElec||[],djs=s.disjoncteurs||[],deps=s.departs||[],bds=s.boitesDeriv||[],inters=s.interrupteurs||[],zones=s.zonesCommande||[];
       const appNom=id=>{const a=apps.find(x=>x.id===id);return a?a.nom:'';};
-      const TYPE={eclairage:'Eclairage',prises:'Prises',specialise:'Specialise'};
-      const headers=['Appartement','Piece','Circuit','Type','Calibre (A)','Courbe','Section (mm2)','DDR','Puissance (W)','Nb points','Longueur (m)','Reference'];
-      const esc=v=>{const s=v==null?'':String(v);return /[";\n]/.test(s)?'"'+s.replace(/"/g,'""')+'"':s;};
-      const rows=circuits.map(ci=>[appNom(ci.appId),ci.piece||'',ci.nom||'',TYPE[ci.type]||ci.type||'',ci.calibre,ci.calibreType||'',ci.section,ci.ddr,ci.puissance,ci.nb,ci.len,ci.ref||''].map(esc).join(';'));
-      const csv='﻿'+[headers.join(';'),...rows].join('\r\n');
+      const pieceNom=id=>{const p=pcs.find(x=>x.id===id);return p?p.nom:'';};
+      const pieceApp=id=>{const p=pcs.find(x=>x.id===id);return p?appNom(p.appId):'';};
+      const teCode=id=>{const t=tes.find(x=>x.id===id);return t?(t.code||t.nom||''):'';};
+      const esc=v=>{const t=v==null?'':String(v);return /[";\n]/.test(t)?'"'+t.replace(/"/g,'""')+'"':t;};
+      const sep=';';const out=[];let total=0;
+      const block=(title,headers,rows)=>{out.push(esc(title));out.push(headers.join(sep));rows.forEach(rw=>{out.push(rw.map(esc).join(sep));total++;});out.push('');};
+      const pr=s.project||{};
+      block('PROJET',['Champ','Valeur'],[['Nom',pr.nom],['Adresse',pr.adresse],['Client',pr.client],['Telephone',pr.tel],['Email',pr.email],['Alimentation',pr.typeAlim],['Puissance souscrite (kVA)',pr.puissanceSouscrite],['Type construction',pr.typeConstruction],['Annee',pr.annee]]);
+      block('SOURCES / DEPARTS',['Code source','Disj. branchement','Nom','Type','Calibre (A)','Poles','Courbe','Tension','DDR (mA)'],deps.map(d=>[d.code,d.dbCode,d.nom,d.type,d.calibre,d.poles,d.courbe,d.tension,d.ddr]));
+      block('TABLEAUX ELECTRIQUES',['Code','Disj. tete','Nom','Type','Appartement','Description'],tes.map(t=>[t.code,t.cb0Code,t.nom,t.type,appNom(t.appId)||pieceApp(t.pieceId),t.description]));
+      block('DISJONCTEURS',['Code','Tableau','Recepteurs','Calibre (A)','Courbe','Poles','DDR (mA)','Section (mm2)','Puissance (W)'],djs.map(d=>{let pw='';try{pw=this.calcDjPower(d,pcs);}catch(e){}return [d.code,teCode(d.tableauId),(d.recepteurs||[]).join(' '),d.calibre,d.courbe,d.poles,d.ddr,d.section,pw];}));
+      block('BOITES DE DERIVATION',['Code','Label','Piece','Tableau','Type','Cote','Hauteur plafond (cm)'],bds.map(b=>[b.nom,b.label,pieceNom(b.pieceId),teCode(b.tableauId),b.type,b.cote,b.hauteurPlafond]));
+      block('INTERRUPTEURS / COMMANDES',['Code','Type','Piece','Circuit commande','Zone'],inters.map(i=>{let code='';try{code=this.genInterCode(i,s);}catch(e){}const z=zones.find(zz=>zz.id===i.zoneId);return [code,i.type,pieceNom(i.pieceId),i.circuitRef,z?(z.zoneCode||z.nom):''];}));
+      block('ZONES DE COMMANDE',['Code','Nom','Piece','Cote','Hauteur (cm)','Position'],zones.map(z=>[z.zoneCode,z.nom,pieceNom(z.pieceId),z.cote,z.hauteur,z.position]));
+      const fnRows=[];pcs.forEach(p=>(p.fonctions||[]).forEach(fn=>{let cable='';try{cable=this.genCEBATCode({...fn,piece:p},s);}catch(e){}const lbl=(this.FNS[fn.type]||{}).label||fn.type;fnRows.push([appNom(p.appId),p.nom,fn.ref,cable,lbl,fn.quantite||1,fn.puissance!=null?fn.puissance:'']);}));
+      block('RECEPTEURS / FONCTIONS',['Appartement','Piece','Ref','Code cable','Fonction','Quantite','Puissance (W)'],fnRows);
+      const circuits=this.calcCircuits();const CT={eclairage:'Eclairage',prises:'Prises',specialise:'Specialise'};
+      block('CIRCUITS CALCULES (dimensionnement)',['Appartement','Piece','Circuit','Type','Calibre (A)','Courbe','Section (mm2)','DDR','Puissance (W)','Nb points','Longueur (m)','Reference'],circuits.map(ci=>[appNom(ci.appId),ci.piece,ci.nom,CT[ci.type]||ci.type,ci.calibre,ci.calibreType,ci.section,ci.ddr,ci.puissance,ci.nb,ci.len,ci.ref]));
+      const csv='﻿'+out.join('\r\n');
       const blob=new Blob([csv],{type:'text/csv;charset=utf-8'});
       const url=URL.createObjectURL(blob);
       const a=document.createElement('a');
-      const slug=((this.state.project&&this.state.project.nom)||'projet').replace(/[^a-z0-9]+/gi,'_').replace(/^_+|_+$/g,'').toLowerCase()||'projet';
+      const slug=(pr.nom||'projet').replace(/[^a-z0-9]+/gi,'_').replace(/^_+|_+$/g,'').toLowerCase()||'projet';
       a.href=url;a.download='cebat_nomenclature_'+slug+'.csv';
       document.body.appendChild(a);a.click();a.remove();
       setTimeout(()=>URL.revokeObjectURL(url),1000);
-      this.showToast('Nomenclature CSV exportee ('+circuits.length+' circuits)');
+      this.showToast('Nomenclature CSV exportee ('+total+' lignes)');
     }catch(e){this.showToast("Echec de l'export CSV");}
   }
   importJSON(){
