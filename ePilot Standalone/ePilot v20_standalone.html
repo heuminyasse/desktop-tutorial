@@ -1468,6 +1468,8 @@ document.addEventListener('DOMContentLoaded', async function() {
   <script src="epdata.js"></script>
 <script id="__FCR_CATALOGUE_SEED_v1__">
 (function(){
+  /* Déjà semé une fois : l'IDB contient les données, on ne fait plus rien */
+  try{ if(localStorage.getItem('epilot_articles_cat_v1')==='1') return; }catch(_){}
   if(window.__fcrCatalogueSeedDone) return;
   window.__fcrCatalogueSeedDone = true;
 
@@ -1502,10 +1504,10 @@ document.addEventListener('DOMContentLoaded', async function() {
       db.push(item);
       added++;
     });
+    try{ window.idbSaveAll(db); }catch(_){}
+    try{ localStorage.setItem('epilot_articles_cat_v1','1'); }catch(_){}
     if(added > 0){
-      try{ window.idbSaveAll(db); }catch(_){}
       try{ if(typeof window.renderArticles==='function') window.renderArticles(); }catch(_){}
-      console.log('[Seed FCR] +' + added + ' articles/services chargés (total: ' + db.length + ')');
     }
     return true;
   }
