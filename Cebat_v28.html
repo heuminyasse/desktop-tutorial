@@ -2231,12 +2231,85 @@ class Component extends DCLogic {
 
   // ═══ PERSISTANCE (localStorage + export/import JSON) ═══
   _STORE_KEY='cebat_v28_state';
+  _PROJ_INDEX='cebat_v28_projects';
+  _PROJ_CUR='cebat_v28_current';
   _PERSIST_KEYS=['project','niveaux','appartements','pieces','tableauxElec','departs','inverseurs','boitesDeriv','disjoncteurs','interrupteurs','zonesCommande','nextNivId','nextAppId','nextPieceId','nextFonctionId','nextElemId','theme','view','nomenclatureOverrides','realisationChecks','mesures','tests'];
+  _projKey(id){return 'cebat_v28_p_'+id;}
   _snapshot(){const o={};for(const k of this._PERSIST_KEYS)if(this.state[k]!==undefined)o[k]=this.state[k];return o;}
-  _saveState(){try{localStorage.setItem(this._STORE_KEY,JSON.stringify(this._snapshot()));}catch(e){/* quota depasse ou mode prive: on ignore */}}
-  _loadState(){try{const raw=localStorage.getItem(this._STORE_KEY);if(!raw)return null;const d=JSON.parse(raw);return(d&&typeof d==='object')?d:null;}catch(e){return null;}}
+  _pickPersist(d){const o={};for(const k of this._PERSIST_KEYS)if(d&&d[k]!==undefined)o[k]=d[k];return o;}
+  _loadIndex(){try{const a=JSON.parse(localStorage.getItem(this._PROJ_INDEX)||'[]');return Array.isArray(a)?a:[];}catch(e){return[];}}
+  _saveIndex(idx){try{localStorage.setItem(this._PROJ_INDEX,JSON.stringify(idx));}catch(e){}}
+  _nowStamp(){try{return new Date().toISOString();}catch(e){return '';}}
+  _genProjId(){try{return 'P'+Date.now().toString(36)+Math.floor(Math.random()*1296).toString(36);}catch(e){return 'P'+Math.floor(Math.random()*1e9).toString(36);}}
+  _saveState(){
+    try{
+      const id=this._curProjId;if(!id)return;
+      localStorage.setItem(this._projKey(id),JSON.stringify(this._snapshot()));
+      const idx=this._loadIndex();const e=idx.find(p=>p.id===id);
+      const nm=(this.state.project&&this.state.project.nom)||'Projet';
+      if(e){e.name=nm;e.savedAt=this._nowStamp();}else{idx.push({id,name:nm,savedAt:this._nowStamp()});}
+      this._saveIndex(idx);
+    }catch(e){}
+  }
+  _applyProject(id,extra){
+    this._curProjId=id;try{localStorage.setItem(this._PROJ_CUR,String(id));}catch(e){}
+    let d={};try{const raw=localStorage.getItem(this._projKey(id));d=raw?JSON.parse(raw):{};}catch(e){d={};}
+    const base=this._pristine?JSON.parse(JSON.stringify(this._pristine)):{};
+    this.setState({...base,...this._pickPersist(d),showModal:false,selectedLogAppId:null,selectedLogPieceId:null,...(extra||{})});
+  }
   setState(update,cb){super.setState(update,cb);this._saveState();}
-  componentDidMount(){const saved=this._loadState();if(saved&&Object.keys(saved).length)this.setState(saved);}
+  componentDidMount(){
+    try{
+      if(!this._pristine){this._pristine={};for(const k of this._PERSIST_KEYS)this._pristine[k]=JSON.parse(JSON.stringify(this.state[k]));}
+      let idx=this._loadIndex();let cur=null;try{cur=localStorage.getItem(this._PROJ_CUR);}catch(e){}
+      if(idx.length===0){
+        const id=this._genProjId();let legacy=null;try{legacy=localStorage.getItem(this._STORE_KEY);}catch(e){}
+        try{localStorage.setItem(this._projKey(id),legacy||JSON.stringify(this._snapshot()));}catch(e){}
+        idx=[{id,name:(this.state.project&&this.state.project.nom)||'Projet',savedAt:this._nowStamp()}];
+        this._saveIndex(idx);cur=id;try{localStorage.removeItem(this._STORE_KEY);}catch(e){}
+      }
+      if(!cur||!idx.find(p=>p.id===cur))cur=idx[0].id;
+      this._applyProject(cur);
+    }catch(e){}
+  }
+  projSwitch(id){if(!id||id===this._curProjId)return;this._saveState();this._applyProject(id);this.showToast('Projet charge');}
+  projNew(){
+    this._saveState();const id=this._genProjId();
+    const fresh=this._pristine?JSON.parse(JSON.stringify(this._pristine)):this._snapshot();
+    fresh.project={...fresh.project,nom:'Nouveau projet'};
+    const idx=this._loadIndex();idx.push({id,name:fresh.project.nom,savedAt:this._nowStamp()});this._saveIndex(idx);
+    this._curProjId=id;try{localStorage.setItem(this._PROJ_CUR,String(id));localStorage.setItem(this._projKey(id),JSON.stringify(fresh));}catch(e){}
+    this.setState({...fresh,showModal:false,selectedLogAppId:null,selectedLogPieceId:null,view:'projet'});
+    this.showToast('Nouveau projet cree');
+  }
+  projDuplicate(){
+    this._saveState();const id=this._genProjId();const snap=this._snapshot();
+    snap.project={...snap.project,nom:((snap.project&&snap.project.nom)||'Projet')+' (copie)'};
+    const idx=this._loadIndex();idx.push({id,name:snap.project.nom,savedAt:this._nowStamp()});this._saveIndex(idx);
+    this._curProjId=id;try{localStorage.setItem(this._PROJ_CUR,String(id));localStorage.setItem(this._projKey(id),JSON.stringify(snap));}catch(e){}
+    this.setState({...snap});this.showToast('Projet duplique');
+  }
+  projRename(name){if(!name||!name.trim())return;this.setState(s=>({project:{...s.project,nom:name.trim()}}));this.showToast('Projet renomme');}
+  projDelete(id){
+    let idx=this._loadIndex();if(idx.length<=1){this.showToast('Impossible de supprimer le dernier projet');return;}
+    const wasCur=(id===this._curProjId);idx=idx.filter(p=>p.id!==id);this._saveIndex(idx);
+    try{localStorage.removeItem(this._projKey(id));}catch(e){}
+    if(wasCur)this._applyProject(idx[0].id);else this.setState({});
+    this.showToast('Projet supprime');
+  }
+  renderProjMenu(){
+    const c=this.C;const r=this.r;const idx=this._loadIndex();const cur=this._curProjId||'';
+    const tb={background:'rgba(255,255,255,.15)',border:'1px solid rgba(255,255,255,.25)',borderRadius:7,height:26,minWidth:26,cursor:'pointer',display:'inline-flex',alignItems:'center',justifyContent:'center',fontSize:12,color:'#fff',fontFamily:c.font,padding:'0 7px'};
+    return r('div',{style:{display:'flex',alignItems:'center',gap:5}},
+      r('select',{value:cur,title:'Projet courant',onChange:e=>this.projSwitch(e.target.value),style:{...tb,fontSize:11,fontWeight:700,maxWidth:170,padding:'0 8px'}},
+        idx.length===0?r('option',{value:''},'—'):null,
+        ...idx.map(p=>r('option',{key:p.id,value:p.id,style:{color:'#111827'}},p.name||'Projet'))),
+      r('button',{onClick:()=>this.projNew(),title:'Nouveau projet',style:tb},'+'),
+      r('button',{onClick:()=>this.projDuplicate(),title:'Dupliquer ce projet',style:tb},'⧉'),
+      r('button',{onClick:()=>{const n=window.prompt('Renommer le projet :',(this.state.project&&this.state.project.nom)||'');if(n)this.projRename(n);},title:'Renommer le projet',style:tb},'✎'),
+      r('button',{onClick:()=>{if(idx.length>1){if(window.confirm('Supprimer definitivement ce projet ?'))this.projDelete(cur);}else this.showToast('Impossible de supprimer le dernier projet');},title:'Supprimer le projet',style:{...tb,color:'#fecaca'}},'\u{1F5D1}')
+    );
+  }
   exportJSON(){
     try{
       const data={app:'Cebat',version:'v28',exportedAt:new Date().toISOString(),state:this._snapshot()};
@@ -2905,7 +2978,7 @@ class Component extends DCLogic {
         ),
         r('div',{style:{width:1,height:18,background:'rgba(255,255,255,.2)'}}),
         r('span',{style:{fontSize:11,color:'rgba(255,255,255,.6)'}},project.client),
-        r('button',{onClick:()=>this.importJSON(),title:'Importer un projet (.json)',style:{background:'rgba(255,255,255,.15)',border:'1px solid rgba(255,255,255,.25)',borderRadius:7,height:26,padding:'0 10px',cursor:'pointer',display:'flex',alignItems:'center',gap:5,fontSize:11,fontWeight:600,color:'rgba(255,255,255,.9)',fontFamily:c.font,whiteSpace:'nowrap'}},'📥 Importer'),
+        this.renderProjMenu(),r('div',{style:{width:1,height:18,background:'rgba(255,255,255,.2)'}}),r('button',{onClick:()=>this.importJSON(),title:'Importer un projet (.json)',style:{background:'rgba(255,255,255,.15)',border:'1px solid rgba(255,255,255,.25)',borderRadius:7,height:26,padding:'0 10px',cursor:'pointer',display:'flex',alignItems:'center',gap:5,fontSize:11,fontWeight:600,color:'rgba(255,255,255,.9)',fontFamily:c.font,whiteSpace:'nowrap'}},'📥 Importer'),
         r('button',{onClick:()=>this.exportJSON(),title:'Exporter le projet (.json)',style:{background:'rgba(255,255,255,.15)',border:'1px solid rgba(255,255,255,.25)',borderRadius:7,height:26,padding:'0 10px',cursor:'pointer',display:'flex',alignItems:'center',gap:5,fontSize:11,fontWeight:600,color:'rgba(255,255,255,.9)',fontFamily:c.font,whiteSpace:'nowrap'}},'📤 Exporter'),
         r('button',{onClick:()=>this.setState(s=>({theme:s.theme==='dark'?'light':'dark'})),style:{background:'rgba(255,255,255,.15)',border:'1px solid rgba(255,255,255,.25)',borderRadius:7,width:30,height:26,cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',fontSize:13,color:'rgba(255,255,255,.8)',transition:'all .2s'}},theme==='dark'?'☀️':'🌙')
       )
