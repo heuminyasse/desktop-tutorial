@@ -2273,7 +2273,7 @@ class Component extends DCLogic {
       this._applyProject(cur);
     }catch(e){}
   }
-  projSwitch(id){if(!id||id===this._curProjId)return;this._saveState();this._applyProject(id);this.showToast('Projet charge');}
+  projSwitch(id){if(!id||id===this._curProjId)return;if(!this._loadIndex().some(p=>p.id===id)){this.showToast('Projet introuvable');return;}this._saveState();this._applyProject(id);this.showToast('Projet charge');}
   projNew(){
     this._saveState();const id=this._genProjId();
     const fresh=this._pristine?JSON.parse(JSON.stringify(this._pristine)):this._snapshot();
@@ -2367,7 +2367,7 @@ class Component extends DCLogic {
   exportSchemaSVG(){
     try{
       const svg=this.schemaSVG();const blob=new Blob([svg],{type:'image/svg+xml;charset=utf-8'});const url=URL.createObjectURL(blob);
-      const a=document.createElement('a');const slug=(((this.state.project||{}).nom)||'projet').replace(/[^a-z0-9]+/gi,'_').toLowerCase();
+      const a=document.createElement('a');const slug=(((this.state.project||{}).nom)||'projet').replace(/[^a-z0-9]+/gi,'_').replace(/^_+|_+$/g,'').toLowerCase()||'projet';
       a.href=url;a.download='cebat_schema_'+slug+'.svg';document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);
       this.showToast('Schema SVG exporte');
     }catch(e){this.showToast('Echec export SVG');}
@@ -2381,7 +2381,7 @@ class Component extends DCLogic {
           const scale=2;const canvas=document.createElement('canvas');canvas.width=img.width*scale;canvas.height=img.height*scale;
           const ctx=canvas.getContext('2d');ctx.fillStyle='#ffffff';ctx.fillRect(0,0,canvas.width,canvas.height);ctx.scale(scale,scale);ctx.drawImage(img,0,0);
           URL.revokeObjectURL(url);
-          canvas.toBlob(bl=>{if(!bl){this.showToast('Echec export PNG');return;}const u=URL.createObjectURL(bl);const a=document.createElement('a');const slug=(((this.state.project||{}).nom)||'projet').replace(/[^a-z0-9]+/gi,'_').toLowerCase();a.href=u;a.download='cebat_schema_'+slug+'.png';document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(u),1000);this.showToast('Schema PNG exporte');},'image/png');
+          canvas.toBlob(bl=>{if(!bl){this.showToast('Echec export PNG');return;}const u=URL.createObjectURL(bl);const a=document.createElement('a');const slug=(((this.state.project||{}).nom)||'projet').replace(/[^a-z0-9]+/gi,'_').replace(/^_+|_+$/g,'').toLowerCase()||'projet';a.href=u;a.download='cebat_schema_'+slug+'.png';document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(u),1000);this.showToast('Schema PNG exporte');},'image/png');
         }catch(e){this.showToast('Echec export PNG');}
       };
       img.onerror=()=>{URL.revokeObjectURL(url);this.showToast('Echec export PNG');};
@@ -2440,7 +2440,7 @@ class Component extends DCLogic {
     input.type='file';input.accept='application/json,.json';
     input.onchange=e=>{
       const file=e.target.files&&e.target.files[0];if(!file)return;
-      const reader=new FileReader();
+      const reader=new FileReader();reader.onerror=()=>this.showToast('Erreur de lecture du fichier');
       reader.onload=ev=>{
         try{
           const parsed=JSON.parse(ev.target.result);
