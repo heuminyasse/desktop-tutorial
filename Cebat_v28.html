@@ -2338,7 +2338,7 @@ class Component extends DCLogic {
     (teId?(tableauxElec||[]).filter(t=>t.id===teId):(tableauxElec||[])).forEach(te=>{
       const djs=disjoncteurs.filter(d=>d.tableauId===te.id);
       const gmap={};djs.forEach(d=>{const k=(+d.ddr||0);(gmap[k]=gmap[k]||[]).push(d);});
-      const groups=Object.keys(gmap).map(k=>+k).sort((a,b)=>(a||9999)-(b||9999)).map(k=>({ddr:k,brs:gmap[k]}));
+      const groups=this.rangeesOf(te.id).map(rw=>{const ds=[...new Set(rw.brs.map(d=>+d.ddr||0))];return{ddr:ds.length===1?ds[0]:0,mixed:ds.length>1,rangee:rw.rangee,brs:rw.brs};});
       const totalRows=Math.max(1,djs.length);const teH=totalRows*rowH+24;
       const br=this._boardRows(te);TX(20,y,(te.code||'TE')+' — '+(te.nom||'')+'   ['+br.usedModules+' mod / '+br.nbRangees+' rg]',12,'#0277BD',700);
       const startY=y+10;const teteY=startY+(teH-44)/2;
@@ -2348,7 +2348,7 @@ class Component extends DCLogic {
         const gRows=g.brs.length;const gTop=ry,gBottom=ry+gRows*rowH;const diffCy=(gTop+gBottom)/2;
         const typeA=g.brs.some(d=>(d.recepteurs||[]).some(rf=>TYPEA.has(refType[rf])));
         LN(teteCx,teteCy,diffX-12,teteCy);LN(diffX-12,teteCy,diffX-12,diffCy);LN(diffX-12,diffCy,diffX,diffCy);
-        RC(diffX,diffCy-17,128,34,'#E0F7FA','#06b6d4',6);TX(diffX+8,diffCy-3,'R'+(gi+1)+' ID '+(g.ddr>0?g.ddr+'mA':'—'),9,'#0e7490',700);TX(diffX+8,diffCy+11,g.ddr>0?(typeA?'Type A':'Type AC'):'sans DDR',8,'#6B7280');
+        RC(diffX,diffCy-17,128,34,'#E0F7FA','#06b6d4',6);TX(diffX+8,diffCy-3,'R'+g.rangee+' ID '+(g.mixed?'mix':(g.ddr>0?g.ddr+'mA':'—')),9,'#0e7490',700);TX(diffX+8,diffCy+11,g.mixed?'mixte':(g.ddr>0?(typeA?'Type A':'Type AC'):'sans DDR'),8,'#6B7280');
         g.brs.forEach((d,bi)=>{
           const bcy=ry+bi*rowH+rowH/2;
           LN(diffX+128,diffCy,brkX-12,diffCy,'#CBD5E1');LN(brkX-12,diffCy,brkX-12,bcy,'#CBD5E1');LN(brkX-12,bcy,brkX,bcy,'#CBD5E1');
@@ -5891,6 +5891,10 @@ class Component extends DCLogic {
     const byR={};djs.forEach(d=>{const rr=d.rangee||1;(byR[rr]=byR[rr]||[]).push(d);});
     return Object.keys(byR).map(k=>+k).sort((a,b)=>a-b).map(rr=>({rangee:rr,brs:byR[rr].sort((a,b)=>(a.ordre||0)-(b.ordre||0))}));
   }
+  compactRangees(teId){
+    this.setState(s=>{const rows=this.rangeesOf(teId);const map={};rows.forEach((rw,i)=>{rw.brs.forEach((d,oi)=>{map[d.id]={rangee:i+1,ordre:oi};});});return{disjoncteurs:s.disjoncteurs.map(d=>map[d.id]?{...d,...map[d.id]}:d)};});
+    this.showToast('Rangees compactees');
+  }
   dropCb(cbId,targetRangee,beforeCbId){
     if(!cbId)return;
     this.setState(s=>{
@@ -5920,16 +5924,17 @@ class Component extends DCLogic {
       return r('div',{key:d.id,draggable:true,
         onDragStart:()=>this.setState({dragCb:d.id}),
         onDragOver:e=>e.preventDefault(),
-        onDrop:e=>{e.preventDefault();e.stopPropagation();const dc=this.state.dragCb;if(dc&&dc!==d.id)this.dropCb(dc,rangee,d.id);this.setState({dragCb:null});},
+        onDrop:e=>{e.preventDefault();e.stopPropagation();const dc=this.state.dragCb;if(dc&&dc!==d.id)this.dropCb(dc,rangee,d.id);this.setState({dragCb:null,dragOverCb:null});},
+        onDragEnter:e=>{e.preventDefault();if(this.state.dragCb&&this.state.dragCb!==d.id)this.setState({dragOverCb:d.id});},
         title:'Glisser pour deplacer',
-        style:{width:cardW(p),height:56,background:col+'14',border:'1px solid '+col,borderRadius:6,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',cursor:'grab',flexShrink:0,padding:'2px'}},
+        style:{width:cardW(p),height:56,background:col+'14',border:'1px solid '+col,borderRadius:6,outline:this.state.dragOverCb===d.id?'2px dashed '+c.accent:'none',outlineOffset:'1px',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',cursor:'grab',flexShrink:0,padding:'2px'}},
         r('div',{style:{fontSize:9,fontWeight:800,color:col,fontFamily:c.mono,textAlign:'center'}},d.code||('CB'+d.id)),
         r('div',{style:{fontSize:7,color:c.muted,fontFamily:c.mono}},(d.calibre||'?')+'A'+(d.courbe||'')),
         r('div',{style:{fontSize:7,color:c.muted}},p+'M'));
     };
     const rowEl=(row)=>{
       const used=row.brs.reduce((a,d)=>a+this._poles(d),0)+2;const over=used>ROW;
-      return r('div',{key:row.rangee,onDragOver:e=>e.preventDefault(),onDrop:e=>{e.preventDefault();const dc=this.state.dragCb;if(dc)this.dropCb(dc,row.rangee,null);this.setState({dragCb:null});},
+      return r('div',{key:row.rangee,onDragOver:e=>e.preventDefault(),onDrop:e=>{e.preventDefault();const dc=this.state.dragCb;if(dc)this.dropCb(dc,row.rangee,null);this.setState({dragCb:null,dragOverCb:null});},
         style:{border:'1px solid '+(over?c.danger:c.bdr2),borderRadius:9,padding:'8px 10px',marginBottom:10,background:c.surf}},
         r('div',{style:{display:'flex',alignItems:'center',gap:8,marginBottom:6}},
           r('span',{style:{fontSize:11,fontWeight:800,color:c.accent}},'Rangee '+row.rangee),
@@ -5941,10 +5946,10 @@ class Component extends DCLogic {
     };
     const maxR=rows.reduce((m,r2)=>Math.max(m,r2.rangee),0);
     return r('div',{style:{padding:'24px 28px',animation:'fadeIn .3s ease',overflowY:'auto',height:'100%'}},
-      this.SH('Composition du tableau','Glisser-deposer les disjoncteurs entre rangees (1 rangee = '+ROW+' modules, ID compris)'),
+      this.SH('Composition du tableau','Glisser-deposer les disjoncteurs entre rangees (1 rangee = '+ROW+' modules, ID compris)',teId?this.Btn('Compacter les rangees',()=>this.compactRangees(teId),'sec','sm'):null),
       tableauxElec.length>1?r('div',{style:{display:'flex',gap:6,marginBottom:14,flexWrap:'wrap'}},...tableauxElec.map(t=>r('button',{key:t.id,onClick:()=>this.setState({rangeeTeId:t.id}),style:{padding:'5px 12px',borderRadius:7,fontSize:11,fontWeight:t.id===teId?700:400,border:'1px solid '+(t.id===teId?c.accent:c.bdr2),background:t.id===teId?'rgba(2,119,189,.1)':'transparent',color:t.id===teId?c.accent:c.text2,cursor:'pointer'}},t.code||t.nom))):null,
       rows.length===0?r('div',{style:{fontSize:12,color:c.muted,padding:'16px 0'}},'Aucun disjoncteur dans ce tableau.'):r('div',null,...rows.map(rowEl)),
-      r('div',{onDragOver:e=>e.preventDefault(),onDrop:e=>{e.preventDefault();const dc=this.state.dragCb;if(dc)this.dropCb(dc,maxR+1,null);this.setState({dragCb:null});},
+      r('div',{onDragOver:e=>e.preventDefault(),onDrop:e=>{e.preventDefault();const dc=this.state.dragCb;if(dc)this.dropCb(dc,maxR+1,null);this.setState({dragCb:null,dragOverCb:null});},
         style:{border:'2px dashed '+c.bdr3,borderRadius:9,padding:'14px',textAlign:'center',fontSize:11,color:c.muted,cursor:'copy',marginTop:4}},'+ Deposer ici pour creer une nouvelle rangee'));
   }
   vSchema(circuits){
@@ -5988,7 +5993,7 @@ class Component extends DCLogic {
             const bds=(boitesDeriv||[]).filter(b=>b.tableauId===te.id);
             const teCode=te.code||te.nom||('TE'+te.id);
             const gmap={};djs.forEach(d=>{const key=(+d.ddr||0);(gmap[key]=gmap[key]||[]).push(d);});
-            const groups=Object.keys(gmap).map(k=>+k).sort((a,b)=>(a||9999)-(b||9999)).map(k=>({ddr:k,brs:gmap[k]}));
+            const groups=this.rangeesOf(te.id).map(rw=>{const ds=[...new Set(rw.brs.map(d=>+d.ddr||0))];return{ddr:ds.length===1?ds[0]:0,mixed:ds.length>1,rangee:rw.rangee,brs:rw.brs};});
             const breakerRow=(d)=>{
               const refs=d.recepteurs||[];const okSec=this.sectionOkForCalibre(d.section,d.calibre);
               return r('div',{key:d.id,style:{position:'relative',display:'flex',alignItems:'center',gap:8,padding:'4px 0'}},
@@ -6002,10 +6007,10 @@ class Component extends DCLogic {
             const br=this._boardRows(te);
             const groupBlock=(g,gi)=>{
               const typeA=g.brs.some(d=>(d.recepteurs||[]).some(rf=>TYPEA.has(refType[rf])));
-              const idLabel=g.ddr>0?g.ddr+' mA · '+(typeA?'Type A':'Type AC'):'SANS DIFFÉRENTIEL';
+              const idLabel=g.mixed?'différentiels mixtes':(g.ddr>0?g.ddr+' mA · '+(typeA?'Type A':'Type AC'):'SANS DIFFÉRENTIEL');
               return r('div',{key:g.ddr,style:{position:'relative',display:'flex',gap:16,alignItems:'flex-start',padding:'10px 0 2px 18px'}},
                 r('div',{style:{position:'absolute',left:0,top:20,width:16,height:2,background:rail}}),
-                box('Rangée '+(gi+1),g.ddr>0?('ID '+g.ddr):'—',idLabel,g.ddr>0?cDiff:'#dc2626'),
+                box('Rangée '+g.rangee,g.mixed?'ID mix':(g.ddr>0?('ID '+g.ddr):'—'),idLabel,(g.ddr>0||g.mixed)?cDiff:'#dc2626'),
                 r('div',{style:{borderLeft:'2px solid '+rail2,paddingLeft:14,display:'flex',flexDirection:'column',gap:2}},
                   ...g.brs.map(breakerRow)));
             };
