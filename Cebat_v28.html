@@ -2261,7 +2261,7 @@ class Component extends DCLogic {
   setState(update,cb){super.setState(update,cb);this._saveState();}
   componentDidMount(){
     try{
-      if(!this._pristine){this._pristine={};for(const k of this._PERSIST_KEYS)this._pristine[k]=JSON.parse(JSON.stringify(this.state[k]));}try{if(typeof document!=='undefined'&&!document.getElementById('cebat-print-css')){const st=document.createElement('style');st.id='cebat-print-css';st.textContent='@media print{@page{margin:14mm;}body *{visibility:hidden !important;}[data-print="main"],[data-print="main"] *{visibility:visible !important;}[data-print="main"]{position:absolute !important;left:0;top:0;width:100%;height:auto !important;overflow:visible !important;background:#fff !important;}[data-print="main"] *{overflow:visible !important;max-height:none !important;box-shadow:none !important;}html,body{height:auto !important;overflow:visible !important;background:#fff !important;}[data-print="hide"]{display:none !important;}}@media (max-width:1024px){.cbt-auto{grid-template-columns:repeat(3,1fr) !important;}.cbt-2to1{grid-template-columns:1fr !important;}.cbt-sidebar{width:184px !important;}}@media (max-width:680px){.cbt-auto{grid-template-columns:repeat(2,1fr) !important;}.cbt-sidebar{width:152px !important;}}@media (max-width:680px){.cbt-burger{display:inline-flex !important;}.cbt-sidebar{position:fixed !important;left:0;top:52px;bottom:0;width:210px !important;z-index:250;transform:translateX(-110%);transition:transform .2s ease;box-shadow:0 10px 40px rgba(0,0,0,.3);}.cbt-sidebar.cbt-sb-open{transform:translateX(0);}.cbt-logements{flex-direction:column !important;height:auto !important;overflow:visible !important;}.cbt-logements>div{width:100% !important;flex:0 0 auto !important;border-right:none !important;border-bottom:1px solid rgba(120,120,120,.25) !important;min-height:220px;}}';document.head.appendChild(st);}}catch(e){}
+      if(!this._pristine){this._pristine={};for(const k of this._PERSIST_KEYS)this._pristine[k]=JSON.parse(JSON.stringify(this.state[k]));}try{if(typeof document!=='undefined'&&!document.getElementById('cebat-print-css')){const st=document.createElement('style');st.id='cebat-print-css';st.textContent='@media print{@page{margin:14mm;}body *{visibility:hidden !important;}[data-print="main"],[data-print="main"] *{visibility:visible !important;}[data-print="main"]{position:absolute !important;left:0;top:0;width:100%;height:auto !important;overflow:visible !important;background:#fff !important;}[data-print="main"] *{overflow:visible !important;max-height:none !important;box-shadow:none !important;}html,body{height:auto !important;overflow:visible !important;background:#fff !important;}[data-print="hide"]{display:none !important;}}@media (max-width:1024px){.cbt-auto{grid-template-columns:repeat(3,1fr) !important;}.cbt-2to1{grid-template-columns:1fr !important;}.cbt-sidebar{width:184px !important;}}@media (max-width:680px){.cbt-auto{grid-template-columns:repeat(2,1fr) !important;}.cbt-sidebar{width:152px !important;}}@media (max-width:680px){.cbt-burger{display:inline-flex !important;}.cbt-sidebar{position:fixed !important;left:0;top:52px;bottom:0;width:210px !important;z-index:250;transform:translateX(-110%);transition:transform .2s ease;box-shadow:0 10px 40px rgba(0,0,0,.3);}.cbt-sidebar.cbt-sb-open{transform:translateX(0);}.cbt-logements{flex-direction:column !important;height:auto !important;overflow:visible !important;}.cbt-logements>div{width:100% !important;flex:0 0 auto !important;border-right:none !important;border-bottom:1px solid rgba(120,120,120,.25) !important;min-height:220px;}}@media (max-width:680px){.cbt-hide-sm{display:none !important;}}';document.head.appendChild(st);}}catch(e){}
       let idx=this._loadIndex();let cur=null;try{cur=localStorage.getItem(this._PROJ_CUR);}catch(e){}
       if(idx.length===0){
         const id=this._genProjId();let legacy=null;try{legacy=localStorage.getItem(this._STORE_KEY);}catch(e){}
@@ -2310,6 +2310,14 @@ class Component extends DCLogic {
       r('button',{onClick:()=>{const n=window.prompt('Renommer le projet :',(this.state.project&&this.state.project.nom)||'');if(n)this.projRename(n);},title:'Renommer le projet',style:tb},'✎'),
       r('button',{onClick:()=>{if(idx.length>1){if(window.confirm('Supprimer definitivement ce projet ?'))this.projDelete(cur);}else this.showToast('Impossible de supprimer le dernier projet');},title:'Supprimer le projet',style:{...tb,color:'#fecaca'}},'\u{1F5D1}')
     );
+  }
+  printLandscape(){
+    try{
+      if(typeof document!=='undefined'&&!document.getElementById('cebat-land')){const st=document.createElement('style');st.id='cebat-land';st.textContent='@media print{@page{size:A4 landscape;margin:10mm;}}';document.head.appendChild(st);}
+      const cleanup=()=>{const e=document.getElementById('cebat-land');if(e)e.remove();window.removeEventListener('afterprint',cleanup);};
+      window.addEventListener('afterprint',cleanup);
+      window.print();
+    }catch(e){try{window.print();}catch(_){}}
   }
   exportJSON(){
     try{
@@ -3008,19 +3016,19 @@ class Component extends DCLogic {
           r('span',{style:{fontSize:9,color:'rgba(255,255,255,.55)',fontWeight:600,textTransform:'uppercase',letterSpacing:'.1em'}},'by HBO')
         ),
         r('div',{style:{width:1,height:26,background:'rgba(255,255,255,.22)',margin:'0 4px'}}),
-        r('div',{style:{display:'flex',alignItems:'center',gap:5,fontSize:12,color:'rgba(255,255,255,.7)'}},
+        r('div',{className:'cbt-hide-sm',style:{display:'flex',alignItems:'center',gap:5,fontSize:12,color:'rgba(255,255,255,.7)'}},
           r('span',null,'Installation électrique'),
           r('span',{style:{color:'rgba(255,255,255,.35)'}},'›'),
           r('span',{style:{color:'#fff',fontWeight:600}},nav?nav.label:'Dashboard')
         )
       ),
       r('div',{style:{display:'flex',alignItems:'center',gap:10}},
-        r('div',{style:{display:'flex',alignItems:'center',gap:5,fontSize:11,color:'rgba(255,255,255,.55)'}},
+        r('div',{className:'cbt-hide-sm',style:{display:'flex',alignItems:'center',gap:5,fontSize:11,color:'rgba(255,255,255,.55)'}},
           r('div',{style:{width:5,height:5,borderRadius:'50%',background:'#4ade80',flexShrink:0}}),
           'NF C 15-100'
         ),
         r('div',{style:{width:1,height:18,background:'rgba(255,255,255,.2)'}}),
-        r('span',{style:{fontSize:11,color:'rgba(255,255,255,.6)'}},project.client),
+        r('span',{className:'cbt-hide-sm',style:{fontSize:11,color:'rgba(255,255,255,.6)'}},project.client),
         this.renderProjMenu(),r('div',{style:{width:1,height:18,background:'rgba(255,255,255,.2)'}}),r('button',{onClick:()=>this.importJSON(),title:'Importer un projet (.json)',style:{background:'rgba(255,255,255,.15)',border:'1px solid rgba(255,255,255,.25)',borderRadius:7,height:26,padding:'0 10px',cursor:'pointer',display:'flex',alignItems:'center',gap:5,fontSize:11,fontWeight:600,color:'rgba(255,255,255,.9)',fontFamily:c.font,whiteSpace:'nowrap'}},'📥 Importer'),
         r('button',{onClick:()=>this.exportJSON(),title:'Exporter le projet (.json)',style:{background:'rgba(255,255,255,.15)',border:'1px solid rgba(255,255,255,.25)',borderRadius:7,height:26,padding:'0 10px',cursor:'pointer',display:'flex',alignItems:'center',gap:5,fontSize:11,fontWeight:600,color:'rgba(255,255,255,.9)',fontFamily:c.font,whiteSpace:'nowrap'}},'📤 Exporter'),
         r('button',{onClick:()=>this.setState(s=>({theme:s.theme==='dark'?'light':'dark'})),style:{background:'rgba(255,255,255,.15)',border:'1px solid rgba(255,255,255,.25)',borderRadius:7,width:30,height:26,cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',fontSize:13,color:'rgba(255,255,255,.8)',transition:'all .2s'}},theme==='dark'?'☀️':'🌙')
@@ -5682,13 +5690,16 @@ class Component extends DCLogic {
   vSchema(circuits){
     const s=this.state;const c=this.C;const r=this.r;
     const{departs,tableauxElec,disjoncteurs,inverseurs,boitesDeriv,interrupteurs,zonesCommande,pieces}=s;
-    const refPiece={};const refType={};
+    const refPiece={},refType={};
     pieces.forEach(p=>(p.fonctions||[]).forEach(fn=>{refPiece[fn.ref]=p.nom;refType[fn.ref]=fn.type;}));
     const fnColor={eclairage:'#f59e0b',prises:'#3b82f6',prises_sdb:'#3b82f6'};
+    const rail=c.bdr3,rail2=c.bdr2;const cTete='#0277BD',cDiff='#06b6d4';
     const zoneName=id=>{const z=(zonesCommande||[]).find(zz=>zz.id===id);return z?(z.zoneCode||z.nom||''):'';};
     const interByRef={};(interrupteurs||[]).forEach(i=>{if(i.circuitRef){(interByRef[i.circuitRef]=interByRef[i.circuitRef]||[]).push(i);}});
-    const node=(code,sub,color)=>r('div',{style:{border:'1px solid '+color+'66',borderRadius:8,background:color+'14',padding:'7px 11px',minWidth:96,textAlign:'center'}},
-      r('div',{style:{fontSize:11,fontWeight:800,color,fontFamily:c.mono}},code),
+    const TYPEA=new Set(['prises_sdb','lave_linge','four','borne_ve','climatisation','chauffe_eau']);
+    const box=(label,code,sub,color,strong)=>r('div',{style:{border:(strong?'2px':'1px')+' solid '+color+(strong?'':'66'),borderRadius:8,background:color+(strong?'22':'12'),padding:'7px 11px',minWidth:106,flexShrink:0}},
+      label?r('div',{style:{fontSize:7.5,fontWeight:800,color,textTransform:'uppercase',letterSpacing:'.07em',marginBottom:2,opacity:.9}},label):null,
+      r('div',{style:{fontSize:12,fontWeight:800,color,fontFamily:c.mono}},code),
       sub?r('div',{style:{fontSize:9,color:c.muted,marginTop:2,whiteSpace:'pre-line'}},sub):null);
     const chip=(rf)=>{
       const col=fnColor[refType[rf]]||'#94a3b8';const inters=interByRef[rf]||[];
@@ -5697,47 +5708,70 @@ class Component extends DCLogic {
         rf,refPiece[rf]?r('span',{style:{fontFamily:c.font,color:c.muted}},'· '+refPiece[rf]):null,
         cmd?r('span',{style:{fontFamily:c.font,color:c.purple},title:'Commande'},'⌥'+cmd):null);
     };
-    const subHdr=(t)=>r('div',{style:{fontSize:9,fontWeight:700,color:c.muted,textTransform:'uppercase',letterSpacing:'.07em',margin:'10px 0 6px'}},t);
-    const sources=r('div',{style:{display:'flex',gap:12,flexWrap:'wrap',alignItems:'center'}},
+    const subHdr=(t)=>r('div',{style:{fontSize:9,fontWeight:700,color:c.muted,textTransform:'uppercase',letterSpacing:'.07em',margin:'12px 0 6px'}},t);
+    const legend=r('div',{style:{display:'flex',flexWrap:'wrap',gap:14,marginBottom:14,fontSize:10,color:c.muted}},
+      ...[['Source / AGCP',cTete],['Tête de tableau',cTete],['Inter. différentiel',cDiff],['Disjoncteur divisionnaire','#16a34a'],['Section insuffisante','#dc2626']].map((x,k)=>r('div',{key:k,style:{display:'flex',alignItems:'center',gap:5}},r('span',{style:{width:11,height:11,borderRadius:3,background:x[1]+'22',border:'1px solid '+x[1]}}),x[0])));
+    // ALIMENTATION
+    const sources=r('div',{style:{display:'flex',gap:18,flexWrap:'wrap',alignItems:'center'}},
       departs.length===0?r('div',{style:{fontSize:11,color:c.muted}},'Aucune source — ajoutez un depart'):null,
-      ...departs.map(d=>node(d.code||'SRC',(d.nom||'')+'\n'+(d.calibre||'?')+'A · DB '+(d.dbCode||'—'),'#0277BD')),
-      (inverseurs&&inverseurs.length>0)?node(inverseurs[0].code||'IS','Inverseur\nde source','#06b6d4'):null);
+      ...departs.map(d=>r('div',{key:d.id,style:{display:'flex',alignItems:'center',gap:8}},
+        box('Source',d.code||'SRC',(d.nom||'')+'\n'+(d.calibre||'?')+'A · '+(d.poles||'?')+'P',cTete,true),
+        r('div',{style:{width:16,height:2,background:rail}}),
+        box('AGCP / Branchement',d.dbCode||'DB',(d.ddr?d.ddr+'mA':'')+(d.courbe?' · '+d.courbe:''),cTete))),
+      (inverseurs&&inverseurs.length>0)?box('Inverseur',inverseurs[0].code||'IS','Source de secours','#7c3aed'):null);
+    // TABLEAUX
     const boards=tableauxElec.length===0
       ? r('div',{style:{fontSize:12,color:c.muted,padding:'10px 0'}},'Aucun tableau electrique')
-      : r('div',{style:{display:'flex',flexDirection:'column',gap:16}},
+      : r('div',{style:{display:'flex',flexDirection:'column',gap:18}},
           ...tableauxElec.map(te=>{
             const djs=disjoncteurs.filter(d=>d.tableauId===te.id);
             const bds=(boitesDeriv||[]).filter(b=>b.tableauId===te.id);
             const teCode=te.code||te.nom||('TE'+te.id);
+            const gmap={};djs.forEach(d=>{const key=(+d.ddr||0);(gmap[key]=gmap[key]||[]).push(d);});
+            const groups=Object.keys(gmap).map(k=>+k).sort((a,b)=>(a||9999)-(b||9999)).map(k=>({ddr:k,brs:gmap[k]}));
+            const breakerRow=(d)=>{
+              const refs=d.recepteurs||[];const okSec=this.sectionOkForCalibre(d.section,d.calibre);
+              return r('div',{key:d.id,style:{position:'relative',display:'flex',alignItems:'center',gap:8,padding:'4px 0'}},
+                r('div',{style:{position:'absolute',left:-14,top:'50%',width:14,height:2,background:rail2}}),
+                box('Divisionnaire',d.code||('CB'+d.id),(d.calibre||'?')+'A '+(d.courbe||'')+' · '+(d.section||'?')+'mm²',okSec?'#16a34a':'#dc2626'),
+                r('div',{style:{color:c.bdr3,fontSize:13}},'→'),
+                r('div',{style:{display:'flex',flexWrap:'wrap',gap:5,alignItems:'center'}},
+                  refs.length===0?r('span',{style:{fontSize:10,color:c.muted,fontStyle:'italic'}},'(aucun récepteur)'):null,
+                  ...refs.map(rf=>chip(rf))));
+            };
+            const groupBlock=(g)=>{
+              const typeA=g.brs.some(d=>(d.recepteurs||[]).some(rf=>TYPEA.has(refType[rf])));
+              const idLabel=g.ddr>0?g.ddr+' mA · '+(typeA?'Type A':'Type AC'):'SANS DIFFÉRENTIEL';
+              return r('div',{key:g.ddr,style:{position:'relative',display:'flex',gap:16,alignItems:'flex-start',padding:'10px 0 2px 18px'}},
+                r('div',{style:{position:'absolute',left:0,top:20,width:16,height:2,background:rail}}),
+                box('Inter. différentiel',g.ddr>0?('ID '+g.ddr):'—',idLabel,g.ddr>0?cDiff:'#dc2626'),
+                r('div',{style:{borderLeft:'2px solid '+rail2,paddingLeft:14,display:'flex',flexDirection:'column',gap:2}},
+                  ...g.brs.map(breakerRow)));
+            };
             return r('div',{key:te.id,style:{border:'1px solid '+c.bdr2,borderRadius:10,background:c.surf,boxShadow:'0 1px 4px '+c.shadow,overflow:'hidden'}},
               r('div',{style:{display:'flex',alignItems:'center',gap:10,padding:'10px 14px',background:c.surf3,borderBottom:'1px solid '+c.bdr}},
                 r('span',{style:{fontSize:12,fontWeight:800,color:c.accent,fontFamily:c.mono}},teCode),
                 r('span',{style:{fontSize:12,color:c.text,fontWeight:600}},te.nom||''),
-                te.cb0Code?r('span',{style:{marginLeft:'auto',fontSize:10,fontFamily:c.mono,color:c.muted,border:'1px solid '+c.bdr2,borderRadius:5,padding:'2px 6px'}},'Tete '+te.cb0Code):null),
-              r('div',{style:{padding:'10px 14px'}},
-                r('div',{style:{display:'flex',flexDirection:'column',gap:8}},
-                  djs.length===0?r('div',{style:{fontSize:11,color:c.muted,fontStyle:'italic'}},'Aucun disjoncteur'):null,
-                  ...djs.map(d=>{
-                    const refs=d.recepteurs||[];const okSec=this.sectionOkForCalibre(d.section,d.calibre);
-                    return r('div',{key:d.id,style:{display:'flex',alignItems:'stretch',gap:10}},
-                      node(d.code||('CB'+d.id),(d.calibre||'?')+'A '+(d.courbe||'')+'\n'+(d.section||'?')+'mm² · '+(d.ddr?d.ddr+'mA':'—'),okSec?'#16a34a':'#dc2626'),
-                      r('div',{style:{width:18,display:'flex',alignItems:'center',justifyContent:'center',color:c.bdr3}},'→'),
-                      r('div',{style:{flex:1,display:'flex',flexWrap:'wrap',gap:5,alignItems:'center'}},
-                        refs.length===0?r('span',{style:{fontSize:10,color:c.muted,fontStyle:'italic'}},'(aucun recepteur)'):null,
-                        ...refs.map(rf=>chip(rf))));
-                  })),
-                bds.length>0?r('div',null,subHdr('Boites de derivation'),
-                  r('div',{style:{display:'flex',flexWrap:'wrap',gap:8}},
-                    ...bds.map(b=>{
-                      let bdCode=b.nom;try{bdCode=this.genBDCode?this.genBDCode(b,s):b.nom;}catch(e){bdCode=b.nom;}
-                      const served=pieces.flatMap(p=>(p.fonctions||[]).filter(fn=>fn.departType==='boite'&&String(fn.departId)===String(b.id)).map(fn=>fn.ref));
-                      const pc=(pieces.find(p=>p.id===b.pieceId)||{}).nom||'';
-                      return r('div',{key:b.id,style:{border:'1px solid '+c.bdr2,borderRadius:7,background:c.surf3,padding:'6px 9px'}},
-                        r('div',{style:{fontSize:10,fontWeight:800,color:c.cyan,fontFamily:c.mono}},(bdCode||'BD')+(b.label?' · '+b.label:'')),
-                        pc?r('div',{style:{fontSize:9,color:c.muted}},pc):null,
-                        served.length>0?r('div',{style:{fontSize:9,color:c.muted,marginTop:2,fontFamily:c.mono}},'→ '+served.join(' ')):null);
-                    }))):null)
-            );
+                r('span',{style:{marginLeft:'auto',fontSize:9,color:c.muted}},djs.length+' départs · '+groups.length+' diff.')),
+              r('div',{style:{padding:'14px 16px',overflowX:'auto'}},
+                r('div',{style:{display:'inline-flex',alignItems:'flex-start',gap:0}},
+                  r('div',{style:{display:'flex',flexDirection:'column',alignItems:'center',paddingTop:6}},
+                    box('Disj. de tête',te.cb0Code||'CB0','Général',cTete,true)),
+                  r('div',{style:{width:18,height:2,background:rail,marginTop:24}}),
+                  r('div',{style:{borderLeft:'2px solid '+rail,marginLeft:0}},
+                    djs.length===0?r('div',{style:{fontSize:11,color:c.muted,fontStyle:'italic',padding:'8px 0 8px 18px'}},'Aucun disjoncteur'):null,
+                    ...groups.map(groupBlock)))),
+              bds.length>0?r('div',{style:{padding:'0 16px 12px'}},subHdr('Boîtes de dérivation'),
+                r('div',{style:{display:'flex',flexWrap:'wrap',gap:8}},
+                  ...bds.map(b=>{
+                    let bdCode=b.nom;try{bdCode=this.genBDCode?this.genBDCode(b,s):b.nom;}catch(e){bdCode=b.nom;}
+                    const served=pieces.flatMap(p=>(p.fonctions||[]).filter(fn=>fn.departType==='boite'&&String(fn.departId)===String(b.id)).map(fn=>fn.ref));
+                    const pc=(pieces.find(p=>p.id===b.pieceId)||{}).nom||'';
+                    return r('div',{key:b.id,style:{border:'1px solid '+c.bdr2,borderRadius:7,background:c.surf3,padding:'6px 9px'}},
+                      r('div',{style:{fontSize:10,fontWeight:800,color:cDiff,fontFamily:c.mono}},(bdCode||'BD')+(b.label?' · '+b.label:'')),
+                      pc?r('div',{style:{fontSize:9,color:c.muted}},pc):null,
+                      served.length>0?r('div',{style:{fontSize:9,color:c.muted,marginTop:2,fontFamily:c.mono}},'→ '+served.join(' ')):null);
+                  }))):null);
           }));
     const cmdSection=(interrupteurs&&interrupteurs.length>0)?r('div',{style:{marginTop:16}},this.Card('Commandes & zones',r('div',{style:{display:'flex',flexWrap:'wrap',gap:8}},
       ...interrupteurs.map(i=>{
@@ -5748,9 +5782,10 @@ class Component extends DCLogic {
           r('div',{style:{fontSize:9,color:c.muted}},(i.type||'')+(i.circuitRef?' → '+i.circuitRef:'')+(pc?' · '+pc:'')+(zn?' · '+zn:'')));
       })))):null;
     return r('div',{style:{padding:'24px 28px',animation:'fadeIn .3s ease',overflowY:'auto',height:'100%'}},
-      this.SH('Schema unifilaire','Source -> Tableau -> Disjoncteur/Boite -> Recepteur (genere automatiquement)',this.Btn(r('span',{style:{display:'inline-flex',alignItems:'center',gap:5}},this.ico('print_ico',13),'Imprimer / PDF'),()=>window.print(),'ghost','md')),
-      r('div',{style:{background:c.surf2,border:'1px solid '+c.bdr,borderRadius:12,padding:'16px 18px',marginBottom:14}},
-        r('div',{style:{fontSize:10,fontWeight:700,color:c.muted,textTransform:'uppercase',letterSpacing:'.08em',marginBottom:8}},'Alimentation'),
+      this.SH('Schéma unifilaire','Source → AGCP → Tête → Différentiel → Disjoncteur divisionnaire → Récepteur',this.Btn(r('span',{style:{display:'inline-flex',alignItems:'center',gap:5}},this.ico('print_ico',13),'PDF paysage'),()=>this.printLandscape(),'ghost','md')),
+      legend,
+      r('div',{style:{background:c.surf2,border:'1px solid '+c.bdr,borderRadius:12,padding:'16px 18px',marginBottom:16}},
+        r('div',{style:{fontSize:10,fontWeight:700,color:c.muted,textTransform:'uppercase',letterSpacing:'.08em',marginBottom:10}},'Alimentation générale'),
         sources),
       boards,cmdSection);
   }
