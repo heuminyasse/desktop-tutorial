@@ -2702,6 +2702,46 @@ class Component extends DCLogic {
   }
 
   getCompletion(){const{pieces,niveaux,appartements,project}=this.state;let s=0;if(project.nom&&project.adresse)s+=15;if(niveaux.length>0)s+=15;if(appartements.length>0)s+=15;if(pieces.length>=1)s+=15;if(pieces.some(p=>(p.fonctions||[]).length>=2))s+=20;const te=this.state.tableauxElec||[];const dj=this.state.disjoncteurs||[];if(te.length>0&&dj.length>0)s+=20;return Math.min(s,100);}
+  checkConformite(){
+    const s=this.state;const issues=[];const add=(level,msg)=>issues.push({level,msg});
+    const pcs=s.pieces||[],djs=s.disjoncteurs||[],tes=s.tableauxElec||[],deps=s.departs||[];
+    const refType={};pcs.forEach(p=>(p.fonctions||[]).forEach(fn=>{refType[fn.ref]=fn.type;}));
+    if(!deps.some(d=>d.type==='comptage'))add('warn','Aucune source de comptage (raccordement reseau) definie.');
+    tes.forEach(t=>{if(!djs.some(d=>d.tableauId===t.id))add('warn','Tableau « '+(t.nom||t.code||t.id)+' » sans disjoncteur.');});
+    djs.forEach(d=>{
+      const code=d.code||('CB'+d.id);const refs=d.recepteurs||[];
+      if(refs.length===0){add('warn','Disjoncteur '+code+' sans recepteur affecte.');return;}
+      if(!this.sectionOkForCalibre(d.section,d.calibre))add('error','Disjoncteur '+code+' : section '+d.section+'mm² insuffisante pour '+d.calibre+'A (min '+this.sectionMinForCalibre(d.calibre)+'mm²).');
+      const hasSdb=refs.some(rf=>refType[rf]==='prises_sdb');
+      if(hasSdb&&(!d.ddr||d.ddr>30))add('error','Disjoncteur '+code+' (prises SDB) : differentiel 30 mA requis.');
+      else if(!d.ddr)add('warn','Disjoncteur '+code+' sans differentiel (DDR) associe.');
+      const lim=this.djNFCLimit(d);let pw=0;try{pw=this.calcDjPower(d,pcs);}catch(e){}
+      if(refs.length>lim.maxR)add('warn','Disjoncteur '+code+' : '+refs.length+' recepteurs > '+lim.maxR+' max ('+lim.label+').');
+      if(pw>lim.maxW)add('warn','Disjoncteur '+code+' : '+pw+'W > '+lim.maxW+'W ('+lim.label+').');
+    });
+    pcs.forEach(p=>{if(!(p.fonctions||[]).some(fn=>fn.type==='eclairage'))add('warn','Piece « '+p.nom+' » sans point d\'eclairage.');});
+    return issues;
+  }
+  renderConfCard(){
+    const c=this.C;const r=this.r;
+    const iss=this.checkConformite();
+    const err=iss.filter(i=>i.level==='error').length;
+    const wrn=iss.filter(i=>i.level==='warn').length;
+    const body=iss.length===0
+      ? r('div',{style:{fontSize:12,color:c.success,fontWeight:600}},'✓ Aucune anomalie detectee')
+      : r('div',null,
+          r('div',{style:{display:'flex',gap:8,marginBottom:10}},
+            err>0?r('span',{style:{fontSize:11,fontWeight:700,color:c.danger,background:'rgba(220,38,38,.1)',border:'1px solid rgba(220,38,38,.3)',borderRadius:6,padding:'2px 8px'}},err+' erreur'+(err>1?'s':'')):null,
+            wrn>0?r('span',{style:{fontSize:11,fontWeight:700,color:c.warn,background:'rgba(217,119,6,.1)',border:'1px solid rgba(217,119,6,.3)',borderRadius:6,padding:'2px 8px'}},wrn+' avertissement'+(wrn>1?'s':'')):null),
+          r('div',{style:{display:'flex',flexDirection:'column',gap:5,maxHeight:240,overflowY:'auto'}},
+            ...iss.map((i,k)=>r('div',{key:k,style:{display:'flex',alignItems:'flex-start',gap:7,fontSize:11,color:c.text2,padding:'5px 8px',background:i.level==='error'?'rgba(220,38,38,.05)':'rgba(217,119,6,.05)',borderRadius:6,borderLeft:'3px solid '+(i.level==='error'?c.danger:c.warn)}},
+              r('span',{style:{flexShrink:0}},i.level==='error'?'⛔':'⚠️'),
+              r('span',null,i.msg)))));
+    return r('div',{style:{marginTop:14}},this.Card('Conformite NF C 15-100 — indicatif',
+      r('div',{style:{paddingTop:2}},
+        r('div',{style:{fontSize:10,color:c.muted,marginBottom:8,fontStyle:'italic'}},'Verifications automatiques indicatives — a valider par un professionnel qualifie.'),
+        body)));
+  }
 
   // ═══ CALC ═══
   calcCircuits(){
@@ -5166,7 +5206,8 @@ class Component extends DCLogic {
             r('div',{style:{height:5,background:c.bdr2,borderRadius:3}},r('div',{style:{height:'100%',width:(circuits.length?circuits.filter(ci=>ci.type===s.type).length/circuits.length*100:0)+'%',background:s.color,borderRadius:3}}))))
         ))
       ),
-      r('div',{style:{marginTop:14}},this.Card('Charge par appartement',r('div',{style:{paddingTop:4}},appartements.length===0?r('div',{style:{fontSize:12,color:c.muted,padding:'8px 0'}},'Aucun appartement'):(()=>{const ap=appartements.map(a=>({a,w:pieces.filter(p=>p.appId===a.id).reduce((s,p)=>s+(p.fonctions||[]).reduce((ss,fn)=>{const q=fn.quantite||1;return ss+(fn.type==='eclairage'?(fn.puissance||10)*q:fn.type==='prises'||fn.type==='prises_sdb'?460*q:({four:6000,lave_vaisselle:2200,lave_linge:2500,seche_linge:2400,chauffe_eau:3000,climatisation:2500,borne_ve:7400,hotte:300,vmc:200,portail:500}[fn.type]||0));},0),0)}));const max=Math.max(1,...ap.map(x=>x.w));return ap.map(({a,w})=>r('div',{key:a.id,style:{marginBottom:10}},r('div',{style:{display:'flex',justifyContent:'space-between',marginBottom:4}},r('span',{style:{fontSize:12,color:c.text,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}},a.nom),r('span',{style:{fontSize:12,fontWeight:700,color:c.accent,fontFamily:c.mono}},w>=1000?(w/1000).toFixed(1)+' kW':w+' W')),r('div',{style:{height:6,background:c.bdr2,borderRadius:3}},r('div',{style:{height:'100%',width:(w/max*100)+'%',background:'linear-gradient(90deg,#0277BD,#0EA5E9)',borderRadius:3}}))));})())))
+      r('div',{style:{marginTop:14}},this.Card('Charge par appartement',r('div',{style:{paddingTop:4}},appartements.length===0?r('div',{style:{fontSize:12,color:c.muted,padding:'8px 0'}},'Aucun appartement'):(()=>{const ap=appartements.map(a=>({a,w:pieces.filter(p=>p.appId===a.id).reduce((s,p)=>s+(p.fonctions||[]).reduce((ss,fn)=>{const q=fn.quantite||1;return ss+(fn.type==='eclairage'?(fn.puissance||10)*q:fn.type==='prises'||fn.type==='prises_sdb'?460*q:({four:6000,lave_vaisselle:2200,lave_linge:2500,seche_linge:2400,chauffe_eau:3000,climatisation:2500,borne_ve:7400,hotte:300,vmc:200,portail:500}[fn.type]||0));},0),0)}));const max=Math.max(1,...ap.map(x=>x.w));return ap.map(({a,w})=>r('div',{key:a.id,style:{marginBottom:10}},r('div',{style:{display:'flex',justifyContent:'space-between',marginBottom:4}},r('span',{style:{fontSize:12,color:c.text,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}},a.nom),r('span',{style:{fontSize:12,fontWeight:700,color:c.accent,fontFamily:c.mono}},w>=1000?(w/1000).toFixed(1)+' kW':w+' W')),r('div',{style:{height:6,background:c.bdr2,borderRadius:3}},r('div',{style:{height:'100%',width:(w/max*100)+'%',background:'linear-gradient(90deg,#0277BD,#0EA5E9)',borderRadius:3}}))));})()))),
+      this.renderConfCard()
     );
   }
 
