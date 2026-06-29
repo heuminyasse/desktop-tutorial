@@ -7883,6 +7883,7 @@ class Component extends DCLogic {
       r('div',{style:{flex:1}}),
       selFn?this.Btn('★ Nouveau circuit pour '+selFn,createFromSel,'primary','sm'):null,
       nUnassigned>0?this.Btn('⚡ Auto-affecter ('+nUnassigned+')',()=>this.feuilleAutoAssign(),'sec','sm'):null,
+      this.Btn('↔ Longueurs auto (plan)',()=>this.estimateLengthsFromPlan(),'sec','sm'),
       this.Btn('+ Circuit vide',addEmpty,'ghost','sm'));
     const empty=(txt)=>r('div',{style:{fontSize:11,color:c.muted,fontStyle:'italic',padding:'16px 4px'}},txt);
     return r('div',{style:{padding:'18px 22px',height:'100%',display:'flex',flexDirection:'column',animation:'fadeIn .3s ease',boxSizing:'border-box'}},
@@ -7917,6 +7918,27 @@ class Component extends DCLogic {
       else if(t<2*room.w+room.h){x=room.w-(t-room.w-room.h);y=room.h-inset;}else{x=inset;y=room.h-(t-2*room.w-room.h);}
       out[m.key]={x:Math.min(room.w-inset,Math.max(inset,x)),y:Math.min(room.h-inset,Math.max(inset,y))};});
     return out;
+  }
+  estimateCircuitLength(d){
+    // Longueur estimee depuis le plan d'implantation : cheminement le long des murs + remontees
+    const pcs=this.state.pieces||[];const refs=d.recepteurs||[];
+    const hCeil=(this.state.project&&+this.state.project.hauteurSousPlafond>0)?+this.state.project.hauteurSousPlafond:2.5;
+    let total=0,counted=0;
+    refs.forEach(ref=>{
+      const p=pcs.find(pp=>(pp.fonctions||[]).some(fn=>fn.ref===ref));if(!p)return;
+      const room=this._planRoom(p);const markers=this._planMarkers(p).filter(mk=>mk.ref===ref);
+      const pos=this._planPositions(p,room,markers);
+      markers.forEach(mk=>{const q=pos[mk.key];if(!q)return;total+=Math.abs(q.x)+Math.abs(q.y)+hCeil;counted++;});
+    });
+    if(counted===0)return null;
+    return Math.ceil(total+3);// +3 m de remontee vers le tableau / reserve
+  }
+  estimateLengthsFromPlan(){
+    const djs=this.state.disjoncteurs||[];const upd={};let n=0;
+    djs.forEach(d=>{const L=this.estimateCircuitLength(d);if(L&&L>0){upd[d.id]=L;n++;}});
+    if(n===0){this.showToast('Aucun point positionne — placez les fonctions sur le plan d\'implantation');return;}
+    this.setState(st=>({disjoncteurs:st.disjoncteurs.map(d=>upd[d.id]?{...d,longueur:upd[d.id]}:d)}));
+    this.showToast(n+' longueur(s) estimee(s) depuis le plan');
   }
   vPlanImplantation(){
     const s=this.state;const c=this.C;const r=this.r;
