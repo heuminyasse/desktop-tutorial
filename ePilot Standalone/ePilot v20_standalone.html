@@ -6862,6 +6862,82 @@ html body[class] #vac-gantt td.emp .nm{font-weight:500 !important;}</style>
   })();
 })();
 </script>
+<script id="__FCR_NUM_v1__">
+(function(){
+'use strict';
+if(window.__fcrNumV1) return; window.__fcrNumV1=true;
+
+/* Auto-assign sec.item numbers to lines that have num='—' or empty */
+function autoNum(){
+  var sec=0, item=0;
+  (window.LIGNES_INIT||[]).forEach(function(l){
+    if(l.type==='section'){ sec++; item=0; }
+    else{ item++; if(!l.num||l.num==='—') l.num=sec+'.'+item; }
+  });
+}
+
+/* Convert each .td-num cell to a small editable input */
+function patchNumCells(){
+  document.querySelectorAll('#view-fcr tr[data-idx] td.td-num').forEach(function(td){
+    if(td.querySelector('input')) return;
+    var idx=parseInt(td.closest('tr').getAttribute('data-idx'));
+    var val=(window.LIGNES_INIT&&window.LIGNES_INIT[idx]&&window.LIGNES_INIT[idx].num)||'';
+    var inp=document.createElement('input');
+    inp.value=val;
+    inp.title='Numéro modifiable';
+    inp.style.cssText='width:100%;box-sizing:border-box;border:none;background:transparent;'
+      +'text-align:center;font-size:9px;color:var(--gray,#6b7280);font-family:inherit;'
+      +'outline:none;padding:0;cursor:text;';
+    inp.addEventListener('focus',function(){
+      inp.style.background='#fffbe6';
+      inp.style.borderBottom='1px solid var(--accent,#B5000A)';
+    });
+    inp.addEventListener('blur',function(){
+      inp.style.background='transparent';
+      inp.style.borderBottom='none';
+    });
+    inp.addEventListener('input',function(){
+      if(window.LIGNES_INIT&&window.LIGNES_INIT[idx]) window.LIGNES_INIT[idx].num=inp.value;
+    });
+    td.textContent='';
+    td.appendChild(inp);
+  });
+}
+
+/* Widen N° col: 28px → 31px (+10%) */
+function widenCol(){
+  var col=document.querySelector('#view-fcr table.lignes colgroup col:first-child');
+  if(col&&!col.__fcrNumW){ col.style.width='31px'; col.__fcrNumW=true; }
+}
+
+function applyAll(){ autoNum(); patchNumCells(); widenCol(); }
+
+/* Wrap window.renderAll so every re-render keeps numbers editable */
+function patchRenderAll(){
+  if(typeof window.renderAll!=='function') return false;
+  if(window.renderAll.__fcrNumV1) return true;
+  var orig=window.renderAll;
+  window.renderAll=function(){
+    orig.apply(this,arguments);
+    autoNum(); patchNumCells(); widenCol();
+  };
+  window.renderAll.__fcrNumV1=true;
+  return true;
+}
+
+var _t=0;
+function boot(){
+  if(!patchRenderAll()){ if(++_t<100) setTimeout(boot,500); return; }
+  applyAll();
+}
+if(window.__epOnBodyMut){
+  window.__epOnBodyMut(function(){
+    if(document.querySelector('#view-fcr table.lignes')){ patchRenderAll(); applyAll(); }
+  });
+}
+setTimeout(boot,800);
+})();
+</script>
 <script id="__FCR_UI_v1__">
 (function(){
 'use strict';
