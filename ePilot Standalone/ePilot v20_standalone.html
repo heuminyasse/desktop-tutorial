@@ -7405,5 +7405,112 @@ if(window.__epKeepApplying){
 
 })();
 </script>
+<script id="__FCR_DEDUP_v1__">
+/* Fix: FCR_DB contient des doublons (article importé SANS code + article catalogue AVEC code,
+   même (ref-pi, desc)). Ce patch déduplique FCR_DB en mémoire et corrige le chargement des devis. */
+(function(){
+'use strict';
+if(window.__fcrDedupV1) return; window.__fcrDedupV1=true;
+
+var SEP='\x00';
+function nn(s){ return (s||'').toLowerCase().replace(/\s+/g,' ').trim(); }
+
+function artKey(a){
+  var pi=(a['ref-pi']||'').trim().toUpperCase();
+  var d=nn(a.desc||a.designation||'');
+  if(!pi||!d) return null;
+  return pi+SEP+d;
+}
+
+function dedupArr(arr){
+  if(!arr||arr.length<2) return arr||[];
+  var byKey={};
+  arr.forEach(function(a){
+    if(!a) return;
+    var k=artKey(a);
+    if(k===null) return;
+    var prev=byKey[k];
+    if(!prev){ byKey[k]=a; return; }
+    var ac=!!(a.code||'').trim(), pc=!!(prev.code||'').trim();
+    if(ac&&!pc){
+      if(!parseFloat(a.pu)&&parseFloat(prev.pu)) a.pu=prev.pu;
+      if(!parseFloat(a.qty)&&parseFloat(prev.qty)) a.qty=prev.qty;
+      if(!parseFloat(a.rabais)&&parseFloat(prev.rabais)) a.rabais=prev.rabais;
+      byKey[k]=a;
+    } else if(!ac&&pc){
+      if(!parseFloat(prev.pu)&&parseFloat(a.pu)) prev.pu=a.pu;
+      if(!parseFloat(prev.qty)&&parseFloat(a.qty)) prev.qty=a.qty;
+    }
+  });
+  var result=[], seen={};
+  arr.forEach(function(a){
+    if(!a){ result.push(a); return; }
+    var k=artKey(a);
+    if(k===null){ result.push(a); return; }
+    if(byKey[k]===a&&!seen[k]){ seen[k]=true; result.push(a); }
+  });
+  return result;
+}
+
+function dedupInPlace(){
+  var db=window.FCR_DB;
+  if(!db||db.length<2) return;
+  var orig=db.length;
+  var clean=dedupArr(db.slice());
+  if(clean.length===orig) return;
+  db.length=0;
+  clean.forEach(function(a){ db.push(a); });
+  console.info('[FCR Dedup] FCR_DB: '+orig+' → '+db.length+' (-'+(orig-clean.length)+' doublons supprimés)');
+}
+
+/* Intercepter les assignations de window.FCR_DB */
+var _db=window.FCR_DB||[];
+try{
+  Object.defineProperty(window,'FCR_DB',{
+    configurable:true, enumerable:true,
+    get:function(){ return _db; },
+    set:function(v){ _db=v; if(v&&v.length>20) setTimeout(dedupInPlace,400); }
+  });
+}catch(e){}
+
+/* Patcher acPILoad : dédupliquer FCR_DB avant le filtrage */
+function patchAcPILoad(){
+  if(typeof window.acPILoad!=='function') return false;
+  if(window.acPILoad.__dedupV1) return true;
+  var orig=window.acPILoad;
+  window.acPILoad=function(ref){
+    dedupInPlace();
+    orig.apply(this,arguments);
+  };
+  window.acPILoad.__dedupV1=true;
+  return true;
+}
+
+/* Patcher chargerDevisParNumero : dédupliquer avant le chargement */
+function patchCharger(){
+  if(typeof window.chargerDevisParNumero!=='function') return false;
+  if(window.chargerDevisParNumero.__dedupV1) return true;
+  var orig=window.chargerDevisParNumero;
+  window.chargerDevisParNumero=function(){
+    dedupInPlace();
+    orig.apply(this,arguments);
+  };
+  window.chargerDevisParNumero.__dedupV1=true;
+  return true;
+}
+
+var _bt=0;
+function boot(){
+  var done=patchAcPILoad()&&patchCharger();
+  if(done) return;
+  if(++_bt<40) setTimeout(boot,500);
+}
+
+/* Déduplication initiale après stabilisation des seeds (~5s) */
+setTimeout(function(){ dedupInPlace(); boot(); },5000);
+boot();
+
+})();
+</script>
 </body>
 </html>
