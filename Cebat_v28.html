@@ -6069,6 +6069,34 @@ class Component extends DCLogic {
       r('div',{onDragOver:e=>e.preventDefault(),onDrop:e=>{e.preventDefault();const dc=this.state.dragCb;if(dc)this.dropCb(dc,maxR+1,null);this.setState({dragCb:null,dragOverCb:null});},
         style:{border:'2px dashed '+c.bdr3,borderRadius:9,padding:'14px',textAlign:'center',fontSize:11,color:c.muted,cursor:'copy',marginTop:4}},'+ Deposer ici pour creer une nouvelle rangee'));
   }
+  renderMultifilaire(){
+    const s=this.state;const c=this.C;const r=this.r;const{tableauxElec,disjoncteurs,pieces}=s;
+    const refPiece={};pieces.forEach(p=>(p.fonctions||[]).forEach(fn=>{refPiece[fn.ref]=p.nom;}));
+    const wire=(lbl,col,sec)=>r('div',{style:{display:'flex',alignItems:'center',gap:6,marginBottom:2}},
+      r('span',{style:{width:24,fontSize:8,fontWeight:700,color:col==='grad'?'#43a047':col,fontFamily:c.mono}},lbl),
+      r('div',{style:{flex:1,height:4,borderRadius:2,background:col==='grad'?'repeating-linear-gradient(45deg,#43a047 0 4px,#fdd835 4px 8px)':col}}),
+      r('span',{style:{fontSize:8,color:c.muted,fontFamily:c.mono}},sec));
+    return r('div',{style:{display:'flex',flexDirection:'column',gap:14}},
+      tableauxElec.length===0?r('div',{style:{fontSize:12,color:c.muted}},'Aucun tableau'):null,
+      ...tableauxElec.map(te=>{
+        const djs=disjoncteurs.filter(d=>d.tableauId===te.id);
+        return r('div',{key:te.id,style:{border:'1px solid '+c.bdr2,borderRadius:10,background:c.surf,overflow:'hidden',boxShadow:'0 1px 4px '+c.shadow}},
+          r('div',{style:{padding:'10px 14px',background:c.surf3,borderBottom:'1px solid '+c.bdr,fontSize:12,fontWeight:700,color:c.accent,fontFamily:c.mono}},(te.code||'TE')+' — '+(te.nom||'')),
+          r('div',{style:{padding:'8px 14px',display:'flex',flexDirection:'column'}},
+            djs.length===0?r('div',{style:{fontSize:11,color:c.muted,fontStyle:'italic',padding:'6px 0'}},'Aucun disjoncteur'):null,
+            ...djs.map(d=>{
+              const np=this._poles(d);const isTri=np>=3;const sec=(d.section||1.5)+'mm2';const okSec=this.sectionOkForCalibre(d.section,d.calibre);const col=okSec?'#16a34a':'#dc2626';
+              const refs=(d.recepteurs||[]);const room=refs.map(rf=>refPiece[rf]).filter(Boolean)[0]||'';
+              const phs=isTri?[['L1','#6d4c41'],['L2','#212121'],['L3','#9e9e9e']]:[['L','#6d4c41']];
+              const conductors=[...phs,['N','#42a5f5'],['PE','grad']];
+              let wc='';try{wc=this.genCableCBCode(d,s);}catch(e){}
+              return r('div',{key:d.id,style:{display:'flex',alignItems:'center',gap:12,padding:'8px 0',borderBottom:'1px solid '+c.bdr}},
+                r('div',{style:{minWidth:96}},r('div',{style:{fontSize:11,fontWeight:800,color:col,fontFamily:c.mono}},d.code||('CB'+d.id)),r('div',{style:{fontSize:9,color:c.muted}},(d.calibre||'?')+'A '+(d.courbe||'')),wc?r('div',{style:{fontSize:8,color:c.purple,fontFamily:c.mono,fontWeight:700}},wc):null),
+                r('div',{style:{flex:1,maxWidth:300}},...conductors.map(x=>wire(x[0],x[1],sec))),
+                r('div',{style:{minWidth:130,fontSize:10,color:c.text2,fontFamily:c.mono}},(refs.join(' ')||'(aucun)')+(room?' · '+room:'')));
+            })));
+      }));
+  }
   vSchema(circuits){
     const s=this.state;const c=this.C;const r=this.r;
     const{departs,tableauxElec,disjoncteurs,inverseurs,boitesDeriv,interrupteurs,zonesCommande,pieces}=s;
@@ -6167,11 +6195,13 @@ class Component extends DCLogic {
       })))):null;
     return r('div',{style:{padding:'24px 28px',animation:'fadeIn .3s ease',overflowY:'auto',height:'100%'}},
       this.SH('Schéma unifilaire','Source → AGCP → Tête → Différentiel → Disjoncteur divisionnaire → Récepteur',r('div',{style:{display:'flex',gap:8}},this.Btn('DXF',()=>this.exportSchemaDXF(),'sec','md'),this.Btn('SVG',()=>this.exportSchemaSVG(),'sec','md'),this.Btn('PNG',()=>this.exportSchemaPNG(),'sec','md'),this.Btn('PDF feuilles',()=>this.printSchemaSheets(),'sec','md'),this.Btn('Étiquettes',()=>this.printLabels(),'sec','md'),this.Btn(r('span',{style:{display:'inline-flex',alignItems:'center',gap:5}},this.ico('print_ico',13),'PDF paysage'),()=>this.printLandscape(),'ghost','md'))),
+      r('div',{style:{display:'flex',gap:6,marginBottom:12}},...[['uni','Unifilaire'],['multi','Multifilaire']].map(m2=>r('button',{key:m2[0],onClick:()=>this.setState({schemaMode:m2[0]}),style:{padding:'5px 14px',borderRadius:7,fontSize:12,fontWeight:(this.state.schemaMode||'uni')===m2[0]?700:400,border:'1px solid '+((this.state.schemaMode||'uni')===m2[0]?c.accent:c.bdr2),background:(this.state.schemaMode||'uni')===m2[0]?'rgba(2,119,189,.1)':'transparent',color:(this.state.schemaMode||'uni')===m2[0]?c.accent:c.text2,cursor:'pointer',fontFamily:c.font}},m2[1]))),
       legend,wireLegend,
       r('div',{style:{background:c.surf2,border:'1px solid '+c.bdr,borderRadius:12,padding:'16px 18px',marginBottom:16}},
         r('div',{style:{fontSize:10,fontWeight:700,color:c.muted,textTransform:'uppercase',letterSpacing:'.08em',marginBottom:10}},'Alimentation générale'),
         sources),
-      boards,cmdSection);
+      (this.state.schemaMode==='multi')?this.renderMultifilaire():boards,
+      (this.state.schemaMode==='multi')?null:cmdSection);
   }
   vCircuits(circuits){
     const{circuitsTab,tableauxElec,boitesDeriv,interrupteurs,zonesCommande,pieces,circuitFilter,departs}=this.state;const c=this.C;const r=this.r;
