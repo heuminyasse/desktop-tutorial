@@ -6275,7 +6275,11 @@ class Component extends DCLogic {
       ni('Hauteur (mm)',a.H,v=>this.setState(st=>({armoire:{...st.armoire,H:v}})),70),
       ni('Profondeur (mm)',a.P,v=>this.setState(st=>({armoire:{...st.armoire,P:v}})),70),
       r('div',{style:{display:'flex',flexDirection:'column',gap:2}},r('label',{style:{fontSize:9,color:c.muted}},'Indice IP'),r('select',{value:a.ip||'IP55',onChange:e=>this.setState(st=>({armoire:{...st.armoire,ip:e.target.value}})),style:{background:c.surf3,border:'1px solid '+c.bdr2,borderRadius:5,padding:'5px 6px',color:c.text,fontSize:12}},...['IP20','IP30','IP44','IP55','IP65','IP66'].map(x=>r('option',{key:x,value:x},x)))),
-      r('div',{style:{flex:1}}),this.Btn('Imprimer calques',()=>this.printArmoire(),'sec','sm'));
+      ((s.tableauxElec||[]).length>0)?r('div',{style:{display:'flex',flexDirection:'column',gap:2}},r('label',{style:{fontSize:9,color:c.muted}},'Tableau implanté'),r('select',{value:a.tableauId!=null?a.tableauId:((s.tableauxElec[0]||{}).id),onChange:e=>this.setState(st=>({armoire:{...st.armoire,tableauId:+e.target.value}})),style:{background:c.surf3,border:'1px solid '+c.bdr2,borderRadius:5,padding:'5px 6px',color:c.text,fontSize:12}},...(s.tableauxElec||[]).map(t=>r('option',{key:t.id,value:t.id},(t.code||t.nom||('TE'+t.id)))))):null,
+      ni('Pas rail (mm)',a.railPitch||150,v=>this.setState(st=>({armoire:{...st.armoire,railPitch:v}})),70),
+      r('label',{style:{display:'flex',alignItems:'center',gap:4,fontSize:10,color:c.text2,cursor:'pointer'}},r('input',{type:'checkbox',checked:a.showImplant!==false,onChange:e=>this.setState(st=>({armoire:{...st.armoire,showImplant:e.target.checked}}))}),'Implantation'),
+      r('label',{style:{display:'flex',alignItems:'center',gap:4,fontSize:10,color:c.text2,cursor:'pointer'}},r('input',{type:'checkbox',checked:!!a.showCotation,onChange:e=>this.setState(st=>({armoire:{...st.armoire,showCotation:e.target.checked}}))}),'Cotation'),
+      r('div',{style:{flex:1}}),this.Btn('Export DXF',()=>this.exportArmoireDXF(),'sec','sm'),this.Btn('Imprimer calques',()=>this.printArmoire(),'sec','sm'));
     const tabs=r('div',{style:{display:'flex',gap:5,flexWrap:'wrap',marginBottom:12}},...this.ARMOIRE_FACES.map(f=>{const n=allCuts.filter(x=>x.face===f[0]).length;const on=f[0]===face;return r('button',{key:f[0],onClick:()=>this.setState({armoireFace:f[0],armoireSel:null}),style:{padding:'5px 11px',borderRadius:7,fontSize:11,fontWeight:on?700:400,border:'1px solid '+(on?c.accent:c.bdr2),background:on?'rgba(2,119,189,.1)':'transparent',color:on?c.accent:c.text2,cursor:'pointer',fontFamily:c.font}},f[1]+(n?' ('+n+')':''));}));
     const addbar=r('div',{style:{display:'flex',gap:8,alignItems:'center',marginBottom:12,flexWrap:'wrap'}},
       r('span',{style:{fontSize:10,fontWeight:700,color:c.muted,textTransform:'uppercase',letterSpacing:'.06em'}},'Ajouter'),
@@ -6284,7 +6288,19 @@ class Component extends DCLogic {
     const grid=[];for(let gx=50;gx<fd.w;gx+=50)grid.push(r('line',{key:'gx'+gx,x1:gx*SCALE,y1:0,x2:gx*SCALE,y2:Hpx,stroke:c.bdr,strokeWidth:0.5}));for(let gy=50;gy<fd.h;gy+=50)grid.push(r('line',{key:'gy'+gy,x1:0,y1:gy*SCALE,x2:W,y2:gy*SCALE,stroke:c.bdr,strokeWidth:0.5}));
     const onMove=(e)=>{const d=s.armoireDrag;if(!d)return;const dx=(e.clientX-d.cx)/SCALE,dy=(e.clientY-d.cy)/SCALE;upCut(d.id,{x:Math.max(0,Math.round(d.ox+dx)),y:Math.max(0,Math.round(d.oy+dy))});};
     const shapeEl=(ct)=>{const comp=this.ARMOIRE_COMP[ct.comp]||{};const isC=conf[ct.id];const col=isC?'#dc2626':(comp.color||c.accent);const seld=ct.id===selId;const common={onMouseDown:(e)=>{this.setState({armoireSel:ct.id,armoireDrag:{id:ct.id,cx:e.clientX,cy:e.clientY,ox:ct.x,oy:ct.y}});},fill:col+'33',stroke:col,strokeWidth:seld?2.5:1.3,style:{cursor:'move'}};if(ct.shape==='circle')return r('circle',{key:ct.id,cx:(ct.x+ct.w/2)*SCALE,cy:(ct.y+ct.h/2)*SCALE,r:Math.max(2,ct.w/2*SCALE),...common});return r('rect',{key:ct.id,x:ct.x*SCALE,y:ct.y*SCALE,width:ct.w*SCALE,height:ct.h*SCALE,...common});};
-    const svg=r('svg',{width:W,height:Hpx,viewBox:'0 0 '+W+' '+Hpx,onMouseMove:onMove,onMouseUp:()=>this.setState({armoireDrag:null}),onMouseLeave:()=>this.setState({armoireDrag:null}),style:{background:c.surf,border:'2px solid '+c.bdr3,borderRadius:6,maxWidth:'100%'}},...grid,...cuts.map(shapeEl),...cuts.map(ct=>r('text',{key:'t'+ct.id,x:(ct.x+ct.w/2)*SCALE,y:(ct.y+ct.h/2)*SCALE+3,fontSize:9,textAnchor:'middle',fill:c.text,style:{pointerEvents:'none'}},ct.label||'')));
+    const implantEls=[];
+    if(face==='platine'&&a.showImplant!==false){const pl=this._armoirePlatineLayout(a);pl.rails.forEach((rl,ri)=>{
+      implantEls.push(r('line',{key:'rl'+ri,x1:rl.x0*SCALE,y1:rl.y*SCALE,x2:(rl.x0+rl.w)*SCALE,y2:rl.y*SCALE,stroke:c.bdr3,strokeWidth:3}));
+      rl.devices.forEach((dv,di)=>{const y0=(rl.y-22)*SCALE,hh=44*SCALE;const col=dv.kind==='tete'?c.accent:(dv.kind==='diff'?'#06b6d4':'#16a34a');
+        implantEls.push(r('rect',{key:'dv'+ri+'_'+di,x:dv.x*SCALE,y:y0,width:dv.w*SCALE,height:hh,fill:col+'22',stroke:col,strokeWidth:1,rx:2}));
+        implantEls.push(r('text',{key:'dt'+ri+'_'+di,x:(dv.x+dv.w/2)*SCALE,y:y0+hh/2+3,fontSize:7,textAnchor:'middle',fill:c.text2,style:{pointerEvents:'none'}},dv.label));});});}
+    const cotaEls=[];
+    if(a.showCotation){cuts.forEach((ct,ci)=>{const cx=(ct.x+ct.w/2),cy=(ct.y+ct.h/2);
+      cotaEls.push(r('line',{key:'cv'+ci,x1:cx*SCALE,y1:0,x2:cx*SCALE,y2:cy*SCALE,stroke:c.accent,strokeWidth:0.6,strokeDasharray:'3 2'}));
+      cotaEls.push(r('line',{key:'ch'+ci,x1:0,y1:cy*SCALE,x2:cx*SCALE,y2:cy*SCALE,stroke:c.accent,strokeWidth:0.6,strokeDasharray:'3 2'}));
+      cotaEls.push(r('text',{key:'cxt'+ci,x:cx*SCALE+2,y:9,fontSize:8,fill:c.accent,style:{pointerEvents:'none'}},String(Math.round(cx))));
+      cotaEls.push(r('text',{key:'cyt'+ci,x:2,y:cy*SCALE-2,fontSize:8,fill:c.accent,style:{pointerEvents:'none'}},String(Math.round(cy))));});}
+    const svg=r('svg',{width:W,height:Hpx,viewBox:'0 0 '+W+' '+Hpx,onMouseMove:onMove,onMouseUp:()=>this.setState({armoireDrag:null}),onMouseLeave:()=>this.setState({armoireDrag:null}),style:{background:c.surf,border:'2px solid '+c.bdr3,borderRadius:6,maxWidth:'100%'}},...grid,...implantEls,...cuts.map(shapeEl),...cuts.map(ct=>r('text',{key:'t'+ct.id,x:(ct.x+ct.w/2)*SCALE,y:(ct.y+ct.h/2)*SCALE+3,fontSize:9,textAnchor:'middle',fill:c.text,style:{pointerEvents:'none'}},ct.label||'')),...cotaEls);
     const linkWH=(ct)=>ct.shape==='circle'||ct.shape==='square';
     const editor=selCut?r('div',{style:{border:'1px solid '+c.bdr2,borderRadius:9,padding:12,marginBottom:12}},
       r('div',{style:{fontSize:11,fontWeight:700,color:c.text,marginBottom:8}},'Decoupe selectionnee — '+(this.ARMOIRE_COMP[selCut.comp]||{label:selCut.shape}).label),
@@ -6311,7 +6327,10 @@ class Component extends DCLogic {
     try{
       const a=this.state.armoire||{};const esc=t=>String(t==null?'':t).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
       const sheets=this.ARMOIRE_FACES.map(f=>{const fd=this.faceDims(a,f[0]);const SC=Math.min(170/Math.max(fd.w,1),240/Math.max(fd.h,1));const W=fd.w*SC,H=fd.h*SC;const cuts=(a.cutouts||[]).filter(x=>x.face===f[0]);
-        let sh='';cuts.forEach(ct=>{if(ct.shape==='circle')sh+='<circle cx="'+((ct.x+ct.w/2)*SC)+'" cy="'+((ct.y+ct.h/2)*SC)+'" r="'+(ct.w/2*SC)+'" fill="none" stroke="#111" stroke-width="1"/>';else sh+='<rect x="'+(ct.x*SC)+'" y="'+(ct.y*SC)+'" width="'+(ct.w*SC)+'" height="'+(ct.h*SC)+'" fill="none" stroke="#111" stroke-width="1"/>';sh+='<text x="'+((ct.x+ct.w/2)*SC)+'" y="'+((ct.y+ct.h/2)*SC+3)+'" font-size="7" text-anchor="middle" fill="#333">'+esc(ct.label||'')+'</text>';});
+        let sh='';
+        if(f[0]==='platine'&&a.showImplant!==false){const pl=this._armoirePlatineLayout(a);pl.rails.forEach(rl=>{sh+='<line x1="'+(rl.x0*SC)+'" y1="'+(rl.y*SC)+'" x2="'+((rl.x0+rl.w)*SC)+'" y2="'+(rl.y*SC)+'" stroke="#888" stroke-width="2"/>';rl.devices.forEach(dv=>{const y0=(rl.y-22)*SC,hh=44*SC;sh+='<rect x="'+(dv.x*SC)+'" y="'+y0+'" width="'+(dv.w*SC)+'" height="'+hh+'" fill="#eef" stroke="#555" stroke-width="0.8"/><text x="'+((dv.x+dv.w/2)*SC)+'" y="'+(y0+hh/2+2)+'" font-size="6" text-anchor="middle" fill="#333">'+esc(dv.label)+'</text>';});});}
+        cuts.forEach(ct=>{if(ct.shape==='circle')sh+='<circle cx="'+((ct.x+ct.w/2)*SC)+'" cy="'+((ct.y+ct.h/2)*SC)+'" r="'+(ct.w/2*SC)+'" fill="none" stroke="#111" stroke-width="1"/>';else sh+='<rect x="'+(ct.x*SC)+'" y="'+(ct.y*SC)+'" width="'+(ct.w*SC)+'" height="'+(ct.h*SC)+'" fill="none" stroke="#111" stroke-width="1"/>';sh+='<text x="'+((ct.x+ct.w/2)*SC)+'" y="'+((ct.y+ct.h/2)*SC+3)+'" font-size="7" text-anchor="middle" fill="#333">'+esc(ct.label||'')+'</text>';
+          if(a.showCotation){const cx=(ct.x+ct.w/2),cy=(ct.y+ct.h/2);sh+='<line x1="'+(cx*SC)+'" y1="0" x2="'+(cx*SC)+'" y2="'+(cy*SC)+'" stroke="#0277BD" stroke-width="0.4" stroke-dasharray="3 2"/><line x1="0" y1="'+(cy*SC)+'" x2="'+(cx*SC)+'" y2="'+(cy*SC)+'" stroke="#0277BD" stroke-width="0.4" stroke-dasharray="3 2"/><text x="'+(cx*SC+1)+'" y="8" font-size="6" fill="#0277BD">'+Math.round(cx)+'</text><text x="1" y="'+(cy*SC-1)+'" font-size="6" fill="#0277BD">'+Math.round(cy)+'</text>';}});
         return '<div style="display:inline-block;margin:6mm;vertical-align:top;page-break-inside:avoid"><div style="font:bold 10pt monospace;color:#0277BD;margin-bottom:2mm">'+esc(f[1])+' — '+fd.w+'x'+fd.h+' mm</div><svg width="'+W+'" height="'+H+'" viewBox="0 0 '+W+' '+H+'"><rect x="0" y="0" width="'+W+'" height="'+H+'" fill="#fff" stroke="#111" stroke-width="1.5"/>'+sh+'</svg></div>';}).join('');
       const html='<div style="font-family:Arial,sans-serif;padding:6mm"><h2 style="margin:0 0 3mm">Plan de percage armoire — '+esc((this.state.project||{}).nom||'')+'</h2><div style="font-size:9pt;color:#555;margin-bottom:4mm">Armoire '+a.L+'x'+a.H+'x'+a.P+' mm · '+esc(a.ip||'IP55')+' — calques par face</div>'+sheets+'</div>';
       const cont=document.createElement('div');cont.id='cebat-armoire';cont.setAttribute('data-print','main');cont.style.position='absolute';cont.style.left='-99999px';cont.style.top='0';cont.innerHTML=html;document.body.appendChild(cont);
@@ -6319,6 +6338,54 @@ class Component extends DCLogic {
       const cleanup=()=>{cont.remove();if(main){if(prev)main.setAttribute('data-print',prev);else main.removeAttribute('data-print');}window.removeEventListener('afterprint',cleanup);};
       window.addEventListener('afterprint',cleanup);window.print();
     }catch(e){this.showToast('Echec impression calques');}
+  }
+  _armoirePlatineLayout(a){
+    // Implantation reelle sur la platine : rails DIN + appareils modulaires (18 mm/module)
+    const tes=this.state.tableauxElec||[];const deps=this.state.departs||[];
+    const te=tes.find(t=>t.id===a.tableauId)||tes[0];
+    const fd=this.faceDims(a,'platine');const moduleW=18,left=20,top=45;
+    const pitch=(+a.railPitch>0?+a.railPitch:150);const rails=[];
+    if(!te)return{rails,pitch,te:null,fd,moduleW};
+    let ry=top;
+    const dep=deps.find(d=>d.id===te.departId)||deps.find(d=>d.type==='comptage');
+    if(dep){rails.push({y:ry,x0:left,w:Math.max(0,fd.w-2*left),devices:[{x:left,w:moduleW*Math.max(2,this._poles(dep)),label:(dep.code||'Arrivee'),kind:'tete'}]});ry+=pitch;}
+    this.rangeesOf(te.id).forEach(row=>{
+      const ds=[...new Set(row.brs.map(d=>+d.ddr||0))];const ddr=ds.length===1?ds[0]:0;
+      const maxP=row.brs.reduce((m,d)=>Math.max(m,this._poles(d)),1);
+      let dx=left;const devices=[];
+      if(ddr>0){const w=moduleW*(maxP>2?4:2);devices.push({x:dx,w,label:ddr+'mA',kind:'diff'});dx+=w;}
+      row.brs.forEach(d=>{const w=moduleW*this._poles(d);devices.push({x:dx,w,label:d.code||'CB',kind:'cb'});dx+=w;});
+      rails.push({y:ry,x0:left,w:Math.max(0,fd.w-2*left),devices,over:dx>left+(fd.w-2*left)});ry+=pitch;
+    });
+    return{rails,pitch,te,fd,moduleW};
+  }
+  armoireDXF(a){
+    const out=['0','SECTION','2','ENTITIES'];let xo=0;const gap=60;
+    this.ARMOIRE_FACES.forEach(f=>{
+      const face=f[0];const fd=this.faceDims(a,face);const H=fd.h;const layer=face.toUpperCase();
+      const X=v=>(xo+(+v)).toFixed(2);const Y=v=>(H-(+v)).toFixed(2);
+      const line=(x1,y1,x2,y2,lay)=>out.push('0','LINE','8',lay||layer,'10',X(x1),'20',Y(y1),'11',X(x2),'21',Y(y2));
+      const rect=(x,y,w,h,lay)=>{line(x,y,x+w,y,lay);line(x+w,y,x+w,y+h,lay);line(x+w,y+h,x,y+h,lay);line(x,y+h,x,y,lay);};
+      const circle=(cx,cy,rr,lay)=>out.push('0','CIRCLE','8',lay||layer,'10',X(cx),'20',Y(cy),'40',(+rr).toFixed(2));
+      const text=(x,y,t,h,lay)=>out.push('0','TEXT','8',lay||layer,'10',X(x),'20',Y(y),'40',((+h)||10).toFixed(2),'1',String(t==null?'':t).replace(/\n/g,' '));
+      rect(0,0,fd.w,fd.h);text(0,-14,f[1]+' '+fd.w+'x'+fd.h+'mm',10);
+      if(face==='platine'){const pl=this._armoirePlatineLayout(a);pl.rails.forEach(rl=>{line(rl.x0,rl.y,rl.x0+rl.w,rl.y,'RAILS');rl.devices.forEach(dv=>{const y0=rl.y-22,hh=44;rect(dv.x,y0,dv.w,hh,'APPAREILS');text(dv.x+1,y0+hh/2,dv.label,7,'APPAREILS');});});}
+      (a.cutouts||[]).filter(x=>x.face===face).forEach(ct=>{const cx=ct.x+ct.w/2,cy=ct.y+ct.h/2;
+        if(ct.shape==='circle')circle(cx,cy,ct.w/2);else rect(ct.x,ct.y,ct.w,ct.h);
+        text(cx-ct.w/2+1,cy,ct.label||'',6);
+        line(cx,0,cx,cy,'COTATION');line(0,cy,cx,cy,'COTATION');
+        text(cx+2,3,String(Math.round(cx)),6,'COTATION');text(3,cy+2,String(Math.round(cy)),6,'COTATION');});
+      xo+=fd.w+gap;
+    });
+    out.push('0','ENDSEC','0','EOF');return out.join('\n');
+  }
+  exportArmoireDXF(){
+    try{
+      const a=this.state.armoire||{};const dxf=this.armoireDXF(a);const blob=new Blob([dxf],{type:'application/dxf'});const url=URL.createObjectURL(blob);
+      const el=document.createElement('a');const slug=(((this.state.project||{}).nom)||'projet').replace(/[^a-z0-9]+/gi,'_').replace(/^_+|_+$/g,'').toLowerCase()||'projet';
+      el.href=url;el.download='cebat_armoire_'+slug+'.dxf';document.body.appendChild(el);el.click();el.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);
+      this.showToast('Armoire DXF exportee (calques par face)');
+    }catch(e){this.showToast('Echec export DXF armoire');}
   }
   vSchema(circuits){
     const s=this.state;const c=this.C;const r=this.r;
