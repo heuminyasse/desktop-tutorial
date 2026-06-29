@@ -2245,7 +2245,7 @@ class Component extends DCLogic {
   _STORE_KEY='cebat_v28_state';
   _PROJ_INDEX='cebat_v28_projects';
   _PROJ_CUR='cebat_v28_current';
-  _PERSIST_KEYS=['project','niveaux','appartements','pieces','tableauxElec','departs','inverseurs','boitesDeriv','disjoncteurs','interrupteurs','zonesCommande','nextNivId','nextAppId','nextPieceId','nextFonctionId','nextElemId','theme','view','nomenclatureOverrides','realisationChecks','mesures','tests','armoire'];
+  _PERSIST_KEYS=['project','niveaux','appartements','pieces','tableauxElec','departs','inverseurs','boitesDeriv','disjoncteurs','interrupteurs','zonesCommande','nextNivId','nextAppId','nextPieceId','nextFonctionId','nextElemId','theme','view','nomenclatureOverrides','realisationChecks','mesures','tests','armoire','focusMode'];
   _projKey(id){return 'cebat_v28_p_'+id;}
   _snapshot(){const o={};for(const k of this._PERSIST_KEYS)if(this.state[k]!==undefined)o[k]=this.state[k];return o;}
   _pickPersist(d){const o={};for(const k of this._PERSIST_KEYS)if(d&&d[k]!==undefined)o[k]=d[k];return o;}
@@ -3468,6 +3468,7 @@ class Component extends DCLogic {
         r('span',{className:'cbt-hide-sm',style:{fontSize:11,color:'rgba(255,255,255,.6)'}},project.client),
         this.renderProjMenu(),r('div',{style:{width:1,height:18,background:'rgba(255,255,255,.2)'}}),r('button',{onClick:()=>this.importJSON(),title:'Importer un projet (.json)',style:{background:'rgba(255,255,255,.15)',border:'1px solid rgba(255,255,255,.25)',borderRadius:7,height:26,padding:'0 10px',cursor:'pointer',display:'flex',alignItems:'center',gap:5,fontSize:11,fontWeight:600,color:'rgba(255,255,255,.9)',fontFamily:c.font,whiteSpace:'nowrap'}},'📥 Importer'),
         r('button',{onClick:()=>this.exportJSON(),title:'Exporter le projet (.json)',style:{background:'rgba(255,255,255,.15)',border:'1px solid rgba(255,255,255,.25)',borderRadius:7,height:26,padding:'0 10px',cursor:'pointer',display:'flex',alignItems:'center',gap:5,fontSize:11,fontWeight:600,color:'rgba(255,255,255,.9)',fontFamily:c.font,whiteSpace:'nowrap'}},'📤 Exporter'),
+        r('button',{onClick:()=>this.setState(s=>({focusMode:!s.focusMode})),title:this.state.focusMode?'Quitter le mode focus (afficher le menu)':'Mode focus (masquer le menu)',style:{background:this.state.focusMode?'rgba(255,255,255,.32)':'rgba(255,255,255,.15)',border:'1px solid rgba(255,255,255,'+(this.state.focusMode?'.5':'.25')+')',borderRadius:7,width:30,height:26,cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',fontSize:13,color:'#fff',transition:'all .2s'}},this.state.focusMode?'⤢':'⤡'),
         r('button',{onClick:()=>this.setState(s=>({theme:s.theme==='dark'?'light':'dark'})),style:{background:'rgba(255,255,255,.15)',border:'1px solid rgba(255,255,255,.25)',borderRadius:7,width:30,height:26,cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',fontSize:13,color:'rgba(255,255,255,.8)',transition:'all .2s'}},theme==='dark'?'☀️':'🌙')
       )
     );
@@ -7593,11 +7594,11 @@ class Component extends DCLogic {
       const teName=(tes.find(t=>t.id===d.tableauId)||{}).code||'';
       const isSel=s.feuilleSelCircuit===d.id;
       const isDropT=s.feuilleDropTarget===d.id;const dragActive=!!s.feuilleDragFn;
-      return r('div',{key:d.id,onClick:()=>this.setState({feuilleSelCircuit:d.id}),
+      return r('div',{key:d.id,className:'cbt-card',onClick:()=>this.setState({feuilleSelCircuit:d.id}),
         onDragOver:(e)=>{e.preventDefault();try{e.dataTransfer.dropEffect='move';}catch(_){}if(s.feuilleDropTarget!==d.id)this.setState({feuilleDropTarget:d.id});},
         onDragLeave:()=>{if(s.feuilleDropTarget===d.id)this.setState({feuilleDropTarget:null});},
         onDrop:(e)=>{e.preventDefault();let ref='';try{ref=e.dataTransfer.getData('text/plain');}catch(_){}moveOrAssign(ref||s.feuilleDragFn,d.id);},
-        style:{border:'2px solid '+(isDropT?c.accent:isSel?c.accent:over?c.danger:(dragActive?c.bdr2:c.bdr)),borderStyle:isDropT?'dashed':'solid',borderRadius:9,padding:'9px 11px',marginBottom:8,background:isDropT?'rgba(2,119,189,.07)':c.surf,transition:'border-color .12s,background .12s'}},
+        style:{border:'2px solid '+(isDropT?c.accent:isSel?c.accent:over?c.danger:(dragActive?c.bdr2:c.bdr)),borderStyle:isDropT?'dashed':'solid',borderRadius:11,padding:'9px 11px',marginBottom:8,background:isDropT?'rgba(2,119,189,.07)':c.surf,boxShadow:isDropT?c.elev2:c.elev1,transition:'border-color .12s,background .12s,box-shadow .12s'}},
         r('div',{style:{display:'flex',alignItems:'center',gap:6,marginBottom:7,flexWrap:'wrap'}},
           r('span',{style:{fontFamily:c.mono,fontWeight:900,fontSize:14,color:'#0277BD'}},d.code),
           teName?r('span',{style:{fontSize:9,color:c.muted,fontFamily:c.mono}},teName):null,
@@ -7619,17 +7620,17 @@ class Component extends DCLogic {
           over?r('span',{style:{color:c.danger,fontWeight:700}},'surcharge'):null));
     };
     // RIGHT — synthèse live
-    const stat=(label,val,col)=>r('div',{style:{background:c.surf,border:'1px solid '+c.bdr,borderRadius:8,padding:'6px 11px'}},r('div',{style:{fontSize:9,color:c.muted,textTransform:'uppercase',letterSpacing:'.05em'}},label),r('div',{style:{fontSize:15,fontWeight:800,color:col||c.text,fontFamily:c.mono}},val));
+    const stat=(label,val,col)=>r('div',{className:'cbt-stat',style:{background:c.surf,border:'1px solid '+c.bdr,borderRadius:10,padding:'6px 11px',boxShadow:c.elev1}},r('div',{style:{fontSize:9,color:c.muted,textTransform:'uppercase',letterSpacing:'.05em'}},label),r('div',{style:{fontSize:15,fontWeight:800,color:col||c.text,fontFamily:c.mono}},val));
     const rightChildren=[
       colHeader('Synthèse'),
-      r('div',{key:'bil',style:{background:c.surf,border:'1px solid '+c.bdr,borderRadius:9,padding:'10px 12px',marginBottom:10}},
+      r('div',{key:'bil',className:'cbt-card',style:{background:c.surf,border:'1px solid '+c.bdr,borderRadius:11,padding:'10px 12px',marginBottom:10,boxShadow:c.elev1}},
         r('div',{style:{fontSize:10,fontWeight:700,color:c.muted,marginBottom:6}},'Bilan de puissance'),
         r('div',{style:{display:'flex',justifyContent:'space-between',fontSize:11,marginBottom:3}},r('span',{style:{color:c.text2}},'Installée'),r('span',{style:{fontFamily:c.mono,fontWeight:700}},Math.round(bilan.totalInstalledW)+' W')),
         r('div',{style:{display:'flex',justifyContent:'space-between',fontSize:11,marginBottom:3}},r('span',{style:{color:c.text2}},'Foisonnée'),r('span',{style:{fontFamily:c.mono,fontWeight:700,color:c.accent}},bilan.kvaFoisonne+' kVA')),
         bilan.souscriteKva?r('div',{style:{display:'flex',justifyContent:'space-between',fontSize:11}},r('span',{style:{color:c.text2}},'Souscrite'),r('span',{style:{fontFamily:c.mono,fontWeight:700,color:bilan.kvaFoisonne>bilan.souscriteKva?c.danger:c.success}},bilan.souscriteKva+' kVA')):null),
-      ...tes.map(te=>{const br=this._boardRows(te);const full=br.usedModules>br.capacity;return r('div',{key:'te'+te.id,style:{background:c.surf,border:'1px solid '+c.bdr,borderRadius:9,padding:'9px 12px',marginBottom:8}},
+      ...tes.map(te=>{const br=this._boardRows(te);const full=br.usedModules>br.capacity;return r('div',{key:'te'+te.id,className:'cbt-card',style:{background:c.surf,border:'1px solid '+c.bdr,borderRadius:11,padding:'9px 12px',marginBottom:8,boxShadow:c.elev1}},
         r('div',{style:{display:'flex',justifyContent:'space-between',fontSize:11}},r('span',{style:{fontWeight:700,color:'#0277BD',fontFamily:c.mono}},te.code||te.nom),r('span',{style:{fontFamily:c.mono,color:full?c.warn:c.text2}},br.usedModules+' mod / '+br.nbRangees+' rg')));}),
-      r('div',{key:'conf',style:{background:c.surf,border:'1px solid '+c.bdr,borderRadius:9,padding:'10px 12px'}},
+      r('div',{key:'conf',className:'cbt-card',style:{background:c.surf,border:'1px solid '+c.bdr,borderRadius:11,padding:'10px 12px',boxShadow:c.elev1}},
         r('div',{style:{display:'flex',alignItems:'center',gap:6,marginBottom:6}},r('span',{style:{fontSize:10,fontWeight:700,color:c.muted}},'Conformité'),r('span',{style:{marginLeft:'auto',fontSize:10,fontWeight:800,color:nErr?c.danger:nWarn?c.warn:c.success,fontFamily:c.mono}},nErr?nErr+' err':nWarn?nWarn+' avert':'OK')),
         ...(issues.slice(0,6).map((i,k)=>r('div',{key:k,style:{fontSize:9,color:c.text2,marginBottom:3,paddingLeft:8,borderLeft:'2px solid '+(i.level==='error'?c.danger:i.level==='warn'?c.warn:c.accent)}},i.msg))),
         issues.length>6?r('div',{style:{fontSize:9,color:c.muted,fontStyle:'italic'}},'+'+(issues.length-6)+' autre(s)…'):null,
@@ -7787,7 +7788,7 @@ class Component extends DCLogic {
     const app=r('div',{style:{display:'flex',flexDirection:'column',height:'100vh',overflow:'hidden','--elev1':c.elev1,'--elev2':c.elev2,'--elev3':c.elev3}},
       this.renderTopBar(),
       r('div',{style:{display:'flex',flex:1,overflow:'hidden'}},
-        this.renderSidebar(circuits),
+        this.state.focusMode?null:this.renderSidebar(circuits),
         r('main',{'data-print':'main',style:{flex:1,overflowY:'auto',background:c.bg}},(views[view]||views.dashboard)())),
       showModal&&this.renderModal(),
       toast&&r('div',{style:{position:'fixed',bottom:22,right:22,background:c.surf2,border:`1px solid ${c.bdr2}`,borderRadius:9,padding:'10px 16px',display:'flex',alignItems:'center',gap:8,boxShadow:`0 8px 32px ${c.shadow}`,zIndex:300,animation:'appear .2s ease'}},
