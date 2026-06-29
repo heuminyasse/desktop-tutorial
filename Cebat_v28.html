@@ -2946,6 +2946,12 @@ class Component extends DCLogic {
       djs.filter(d=>d.tableauId===t.id).forEach(d=>{if((+d.calibre||0)>=dc)add('warn','Selectivite amperometrique : '+(d.code||'CB')+' '+d.calibre+'A >= source '+(dep.code||dep.nom||'')+' '+dc+'A (calibre amont insuffisant).');});
     });
     (djs||[]).forEach(d=>{const refs=d.recepteurs||[];if(refs.length===0)return;const vd=this.voltageDropOf(d);if(vd.I<=0)return;const isEcl=refs.every(rf=>refType[rf]==='eclairage');const lim=isEcl?3:5;if(vd.pctCumul>lim){const rec=this.recommendedSection(d);const fix=rec.pct!=null&&rec.S>vd.S?' — section conseillee '+rec.S+'mm2 ('+rec.pct.toFixed(1)+'%).':'';add('warn','Chute de tension cumulee '+(d.code||'CB')+' : '+vd.pctCumul.toFixed(1)+'% > '+lim+'% (amont '+vd.pctMain.toFixed(1)+'% + circuit '+vd.pct.toFixed(1)+'%, L='+vd.L+'m'+(vd.est?' est.':'')+', S='+vd.S+'mm2, I='+vd.I.toFixed(1)+'A).'+fix);}});
+    // Longueur maximale protegee (declenchement magnetique sur defaut)
+    (djs||[]).forEach(d=>{if((d.recepteurs||[]).length===0)return;const L=+d.longueur;if(!(L>0))return;const lp=this.lmaxProtege(d);if(!isFinite(lp.lmax)||lp.lmax<=0)return;if(L>lp.lmax){const ddrOk=(+d.ddr>0&&+d.ddr<=500);add(ddrOk?'warn':'error','Longueur excessive '+(d.code||'CB')+' : '+L+'m > Lmax '+lp.lmax+'m (courbe '+(d.courbe||'C')+', '+d.calibre+'A, '+lp.S+'mm2) — declenchement magnetique non garanti sur court-circuit en bout de ligne'+(ddrOk?' (personnes protegees par le DDR '+d.ddr+'mA).':'. Augmenter la section, baisser la courbe, ou reduire la longueur.'));}});
+    // Pouvoir de coupure vs court-circuit presume
+    const _icc=+((s.project||{}).iccTableau)||0;const _pdc=+((s.project||{}).pdcDisjoncteurs)||0;
+    if(_icc>0&&_pdc>0&&_pdc<_icc)add('error','Pouvoir de coupure insuffisant : disjoncteurs '+_pdc+' kA < Icc presume au tableau '+_icc+' kA. Choisir des disjoncteurs '+_icc+' kA (ou superieur) ou prevoir une filiation.');
+    else if(_icc>0&&_pdc>0)add('info','Pouvoir de coupure OK : disjoncteurs '+_pdc+' kA >= Icc presume '+_icc+' kA.');
     return issues;
   }
   _fnPowerW(fn){const q=fn.quantite||1;if(fn.type==='eclairage')return (fn.puissance||10)*q;if(fn.type==='prises'||fn.type==='prises_sdb')return 460*q;return ({four:6000,lave_vaisselle:2200,lave_linge:2500,seche_linge:2400,chauffe_eau:3000,climatisation:2500,borne_ve:7400,hotte:300,vmc:200,portail:500,piscine:1500}[fn.type]||500)*q;}
@@ -2993,6 +2999,20 @@ class Component extends DCLogic {
       if(pct<=lim)return{S,pct:Math.round(pct*10)/10,lim,smin,I,L};
     }
     return{S:SECTIONS[SECTIONS.length-1],pct:null,lim,smin,I,L};
+  }
+  _circuitIm(d){
+    // Courant de fonctionnement magnetique (borne haute de la bande de declenchement)
+    const k={B:5,C:10,D:20}[(d.courbe||'C').toUpperCase()]||10;
+    return k*(+d.calibre||10);
+  }
+  lmaxProtege(d){
+    // Longueur maximale protegee par le declenchement magnetique (UTE C 15-105, methode simplifiee)
+    // Lmax = 0,8 . U0 . Sph / (rho . (1+m) . Im),  m = Sph/SPE (=1 si PE de meme section)
+    const S=parseFloat(d.section)||1.5;const Im=this._circuitIm(d);
+    if(Im<=0)return{lmax:Infinity,Im,S};
+    const rho=0.0225,m=1,U0=230;
+    const lmax=(0.8*U0*S)/(rho*(1+m)*Im);
+    return{lmax:Math.round(lmax),Im,S};
   }
   phaseAssign(){
     const djs=this.state.disjoncteurs||[];const pcs=this.state.pieces||[];const ph=[0,0,0];const map={};
@@ -5700,10 +5720,13 @@ class Component extends DCLogic {
           this.Card('Alimentation électrique',r('div',null,
             se('typeAlim','Type',[['monophase','Monophasé 230V'],['triphase','Triphasé 400V']]),
             se('puissanceSouscrite','Puissance souscrite',[['3','3 kVA'],['6','6 kVA'],['9','9 kVA'],['12','12 kVA'],['15','15 kVA'],['18','18 kVA'],['24','24 kVA']]),
+            r('div',{style:{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'0 14px'}},
+              se('iccTableau','Icc présumé au tableau',[['','— non défini —'],['1.5','1,5 kA'],['3','3 kA'],['4.5','4,5 kA'],['6','6 kA'],['10','10 kA'],['15','15 kA'],['25','25 kA']]),
+              se('pdcDisjoncteurs','Pouvoir de coupure (PdC)',[['','— non défini —'],['3','3 kA'],['4.5','4,5 kA'],['6','6 kA (standard)'],['10','10 kA'],['15','15 kA'],['25','25 kA']])),
             r('div',{style:{background:'rgba(2,132,199,.07)',border:`1px solid rgba(2,132,199,.2)`,borderRadius:7,padding:'11px 13px',marginTop:4}},
               r('div',{style:{fontSize:10,color:c.acBlue,fontWeight:700,marginBottom:2,textTransform:'uppercase',letterSpacing:'.06em'}},'Disjoncteur général auto-calculé'),
               r('div',{style:{fontSize:26,fontWeight:800,color:c.text,fontFamily:c.mono}},cdg+'A'),
-              r('div',{style:{fontSize:10,color:c.muted,marginTop:2}},'NF C 15-100 — type S'))),null,18)
+              r('div',{style:{fontSize:10,color:c.muted,marginTop:2}},'NF C 15-100 — type S · le PdC des disjoncteurs doit couvrir l\'Icc présumé'))),null,18)
         ),
 
         // ── COL 3 : Niveaux du bâtiment ──
@@ -7622,6 +7645,7 @@ class Component extends DCLogic {
           r('div',{style:{flex:1,height:5,background:c.surf3,borderRadius:3,overflow:'hidden'}},r('div',{style:{width:load+'%',height:'100%',background:over?c.danger:load>80?c.warn:c.success}})),
           r('span',{style:{fontFamily:c.mono}},pw+'W'),
           vd?r('span',{style:{fontFamily:c.mono,color:vd.pctCumul>5?c.danger:c.muted}},'ΔU '+vd.pctCumul.toFixed(1)+'%'):null,
+          (+d.longueur>0)?(()=>{const lp=this.lmaxProtege(d);const ko=isFinite(lp.lmax)&&(+d.longueur>lp.lmax);return r('span',{style:{fontFamily:c.mono,color:ko?c.danger:c.muted},title:'Longueur max protégée (déclenchement magnétique) = '+lp.lmax+'m'},'Lmax '+lp.lmax+'m');})():null,
           secOk?null:r('span',{style:{color:c.danger,fontWeight:700}},'section!'),
           over?r('span',{style:{color:c.danger,fontWeight:700}},'surcharge'):null));
     };
