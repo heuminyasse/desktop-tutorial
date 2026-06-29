@@ -2897,6 +2897,15 @@ class Component extends DCLogic {
     const nbRangees=Math.max(rows.length,Math.ceil(capacity/ROW));
     return{rows,teteModules,usedModules,capacity,nbRangees,ROW};
   }
+  _peSection(S){const s=parseFloat(S)||0;if(s<=0)return 0;if(s<=16)return s;if(s<=35)return 16;return Math.ceil(s/2);}
+  earthConductorSizing(){
+    const s=this.state;const deps=s.departs||[];
+    const main=deps.find(d=>d.type==='comptage')||deps[0]||null;
+    const phase=main?parseFloat(main.section)||0:0;
+    const pe=this._peSection(phase);
+    const lep=pe>0?Math.min(25,Math.max(6,Math.ceil(pe/2))):6;
+    return{phase,pe,lep,terreNu:25,terreIsole:16};
+  }
   checkConformite(){
     const s=this.state;const issues=[];const add=(level,msg)=>issues.push({level,msg});
     const pcs=s.pieces||[],djs=s.disjoncteurs||[],tes=s.tableauxElec||[],deps=s.departs||[];
@@ -2933,6 +2942,8 @@ class Component extends DCLogic {
       const libs=[...new Set(typeARefs.map(x=>x.lib))].join(', ');
       add('warn','Differentiel Type A obligatoire : '+typeARefs.length+' circuit(s) ('+libs+') a proteger par un ID 30 mA de Type A (NF C 15-100 §531.2.4) — composantes continues de defaut.');
     }
+    const ec=this.earthConductorSizing();
+    if(ec.phase>0)add('info','Conducteurs de protection (IEC 60364-5-54) : PE principal '+ec.pe+' mm² (phase '+ec.phase+' mm²), liaison equipotentielle principale '+ec.lep+' mm² (min 6), conducteur de terre 25 mm² Cu nu enterre ou 16 mm² Cu isole.');
     tes.forEach(t=>{
       const td=djs.filter(d=>d.tableauId===t.id);if(td.length===0)return;
       const byDdr={};td.forEach(d=>{const k=(+d.ddr||0);(byDdr[k]=byDdr[k]||[]).push(d);});
