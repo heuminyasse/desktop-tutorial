@@ -2802,6 +2802,7 @@ class Component extends DCLogic {
     {id:'dashboard',label:'Tableau de bord',cat:''},
     {id:'projet',label:'Projet & Structure','cat':''},
     {id:'logements',label:'Appartements & Pièces',cat:'Structure'},
+    {id:'feuille',label:'Feuille de puissance',cat:'Dimensionnement'},
     {id:'circuits',label:'Circuits',cat:'Dimensionnement'},
     {id:'schema',label:'Schéma unifilaire',cat:'Dimensionnement'},
     {id:'armoire',label:'Armoire électrique',cat:'Dimensionnement'},
@@ -7491,6 +7492,146 @@ class Component extends DCLogic {
     );
   }
 
+  _circuitRule(type){
+    const R={
+      eclairage:{calibre:16,courbe:'C',section:1.5,ddr:30,maxR:8,grp:'eclairage'},
+      prises:{calibre:20,courbe:'C',section:2.5,ddr:30,maxR:8,grp:'prises'},
+      prises_sdb:{calibre:20,courbe:'C',section:2.5,ddr:30,maxR:8,grp:'prises_sdb'},
+      four:{calibre:20,courbe:'C',section:2.5,ddr:30,maxR:1,grp:null},
+      lave_vaisselle:{calibre:20,courbe:'C',section:2.5,ddr:30,maxR:1,grp:null},
+      lave_linge:{calibre:20,courbe:'C',section:2.5,ddr:30,maxR:1,grp:null},
+      seche_linge:{calibre:20,courbe:'C',section:2.5,ddr:30,maxR:1,grp:null},
+      chauffe_eau:{calibre:20,courbe:'C',section:2.5,ddr:30,maxR:1,grp:null},
+      climatisation:{calibre:20,courbe:'C',section:2.5,ddr:30,maxR:1,grp:null},
+      borne_ve:{calibre:32,courbe:'C',section:6,ddr:30,maxR:1,grp:null},
+      piscine:{calibre:20,courbe:'C',section:2.5,ddr:30,maxR:1,grp:null}
+    };
+    return R[type]||{calibre:16,courbe:'C',section:1.5,ddr:30,maxR:1,grp:null};
+  }
+  feuilleAutoAssign(){
+    this.setState(st=>{
+      const pcs=st.pieces||[];const djs=[...(st.disjoncteurs||[])];
+      const assigned=new Set();djs.forEach(d=>(d.recepteurs||[]).forEach(rf=>assigned.add(rf)));
+      const teId=((st.tableauxElec||[])[0]||{}).id||null;
+      let nid=st.nextElemId;const newDjs=[];
+      const groups={};const specials=[];
+      pcs.forEach(p=>(p.fonctions||[]).forEach(fn=>{
+        if(!fn.ref||assigned.has(fn.ref))return;
+        const rule=this._circuitRule(fn.type);
+        if(rule.grp){const k=rule.grp+'|'+p.id;(groups[k]=groups[k]||[]).push({fn,p,rule});}
+        else specials.push({fn,p,rule});
+      }));
+      const pushDj=(refs,rule,pieceId)=>{newDjs.push({id:nid,code:this.genDjCode([...djs,...newDjs],teId),recepteurs:refs.slice(),pieceId,calibre:rule.calibre,courbe:rule.courbe,poles:'1',ddr:rule.ddr,section:rule.section,tableauId:teId});nid++;};
+      Object.keys(groups).forEach(k=>{const arr=groups[k];const rule=arr[0].rule;const pieceId=arr[0].p.id;for(let i=0;i<arr.length;i+=rule.maxR){pushDj(arr.slice(i,i+rule.maxR).map(x=>x.fn.ref),rule,pieceId);}});
+      specials.forEach(x=>pushDj([x.fn.ref],x.rule,x.p.id));
+      if(newDjs.length===0)return{};
+      return{disjoncteurs:[...djs,...newDjs],nextElemId:nid};
+    });
+    this.showToast('Circuits générés pour les fonctions non affectées');
+  }
+  vFeuillePuissance(){
+    const s=this.state;const c=this.C;const r=this.r;
+    const pcs=s.pieces||[];const djs=s.disjoncteurs||[];const tes=s.tableauxElec||[];
+    const FNS=this.FNS;
+    const refType={};pcs.forEach(p=>(p.fonctions||[]).forEach(fn=>{if(fn.ref)refType[fn.ref]=fn.type;}));
+    const assignOf={};djs.forEach(d=>(d.recepteurs||[]).forEach(rf=>{assignOf[rf]=d;}));
+    const selFn=s.feuilleSelFn||null;
+    let issues=[];try{issues=this.checkConformite();}catch(e){}
+    const nErr=issues.filter(i=>i.level==='error').length;const nWarn=issues.filter(i=>i.level==='warn').length;
+    const bilan=this.bilanPuissance();
+    const allRefs=[];pcs.forEach(p=>(p.fonctions||[]).forEach(fn=>{if(fn.ref)allRefs.push(fn.ref);}));
+    const nUnassigned=allRefs.filter(rf=>!assignOf[rf]).length;
+    const upDj=(id,patch)=>this.setState(st=>({disjoncteurs:st.disjoncteurs.map(d=>d.id===id?{...d,...patch}:d)}));
+    const unassign=(ref)=>this.setState(st=>({disjoncteurs:st.disjoncteurs.map(d=>(d.recepteurs||[]).includes(ref)?{...d,recepteurs:(d.recepteurs||[]).filter(x=>x!==ref)}:d)}));
+    const delDj=(id)=>this.setState(st=>({disjoncteurs:st.disjoncteurs.filter(d=>d.id!==id),feuilleSelCircuit:null}));
+    const assignSelTo=(djId)=>{if(!selFn||assignOf[selFn])return;this.setState(st=>({disjoncteurs:st.disjoncteurs.map(d=>d.id===djId?{...d,recepteurs:[...(d.recepteurs||[]),selFn]}:d),feuilleSelFn:null}));};
+    const createFromSel=()=>{if(!selFn||assignOf[selFn])return;const rule=this._circuitRule(refType[selFn]);const teId=(tes[0]||{}).id||null;const nd={id:s.nextElemId,code:this.genDjCode(djs,teId),recepteurs:[selFn],pieceId:null,calibre:rule.calibre,courbe:rule.courbe,poles:'1',ddr:rule.ddr,section:rule.section,tableauId:teId};this.setState(st=>({disjoncteurs:[...st.disjoncteurs,nd],nextElemId:st.nextElemId+1,feuilleSelFn:null}));};
+    const addEmpty=()=>{const teId=(tes[0]||{}).id||null;const nd={id:s.nextElemId,code:this.genDjCode(djs,teId),recepteurs:[],pieceId:null,calibre:16,courbe:'C',poles:'1',ddr:30,section:1.5,tableauId:teId};this.setState(st=>({disjoncteurs:[...st.disjoncteurs,nd],nextElemId:st.nextElemId+1,feuilleSelCircuit:nd.id}));};
+    const dotOf=(t)=>r('span',{style:{width:9,height:9,borderRadius:5,background:(FNS[t]||{}).color||'#94a3b8',display:'inline-block',flexShrink:0}});
+    const colHeader=(t,right)=>r('div',{style:{display:'flex',alignItems:'center',gap:8,marginBottom:8,paddingBottom:6,borderBottom:'2px solid '+c.bdr}},r('span',{style:{fontSize:11,fontWeight:800,color:c.text,textTransform:'uppercase',letterSpacing:'.06em'}},t),r('div',{style:{flex:1}}),right||null);
+    // LEFT — pièces & fonctions
+    const fnRow=(fn)=>{const ref=fn.ref;const dj=assignOf[ref];const sel=selFn===ref;const q=+fn.quantite>1?' ×'+fn.quantite:'';
+      return r('div',{key:ref,onClick:()=>{if(!dj)this.setState({feuilleSelFn:sel?null:ref});},style:{display:'flex',alignItems:'center',gap:7,padding:'5px 8px',borderRadius:6,cursor:dj?'default':'pointer',background:sel?'rgba(2,119,189,.14)':(dj?'transparent':c.surf3),border:'1px solid '+(sel?c.accent:'transparent'),marginBottom:3}},
+        dotOf(fn.type),
+        r('div',{style:{flex:1,minWidth:0}},r('div',{style:{fontSize:11,fontWeight:600,color:c.text,fontFamily:c.mono}},ref+q),r('div',{style:{fontSize:9,color:c.muted,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}},(FNS[fn.type]||{label:fn.type}).label)),
+        dj?r('span',{onClick:(e)=>{e.stopPropagation();this.setState({feuilleSelCircuit:dj.id});},title:'Voir le circuit',style:{fontSize:9,fontFamily:c.mono,fontWeight:700,color:'#0277BD',cursor:'pointer'}},dj.code):r('span',{style:{fontSize:8,fontWeight:700,color:c.warn,textTransform:'uppercase'}},'à affecter'),
+        dj?r('button',{onClick:(e)=>{e.stopPropagation();unassign(ref);},title:'Retirer du circuit',style:{border:'none',background:'transparent',color:c.muted,cursor:'pointer',fontSize:14,lineHeight:1,padding:0}},'×'):null);
+    };
+    const leftPieces=pcs.map(p=>{const fns=(p.fonctions||[]).filter(fn=>fn.ref);if(fns.length===0)return null;const na=fns.filter(fn=>!assignOf[fn.ref]).length;
+      return r('div',{key:p.id,style:{marginBottom:11}},
+        r('div',{style:{display:'flex',alignItems:'center',gap:6,marginBottom:4}},r('span',{style:{fontSize:11,fontWeight:800,color:c.text}},p.nom||('Pièce '+p.id)),r('span',{style:{fontSize:9,color:c.muted}},'('+(+p.surface||'?')+' m²)'),na>0?r('span',{style:{marginLeft:'auto',fontSize:8,fontWeight:700,color:c.warn,background:'rgba(217,119,6,.12)',borderRadius:4,padding:'1px 5px'}},na+' à affecter'):r('span',{style:{marginLeft:'auto',fontSize:11,color:c.success}},'✓')),
+        ...fns.map(fnRow));
+    }).filter(Boolean);
+    // CENTER — circuits
+    const calOpts=['10','16','20','25','32','40'];const sectOpts=['1.5','2.5','4','6','10','16'];const ddrOpts=['0','30','300'];const courbeOpts=['B','C','D'];
+    const miniSel=(val,opts,onch,fmt)=>r('select',{value:val,onClick:e=>e.stopPropagation(),onChange:e=>onch(e.target.value),style:{background:c.surf3,border:'1px solid '+c.bdr2,borderRadius:4,padding:'2px 3px',color:c.text,fontSize:10,fontFamily:c.mono,outline:'none'}},...opts.map(o=>r('option',{key:o,value:o},fmt?fmt(o):o)));
+    const circuitCard=(d)=>{
+      const refs=d.recepteurs||[];let pw=0;try{pw=this.calcDjPower(d,pcs);}catch(e){}
+      const lim=this.djNFCLimit(d);const over=pw>lim.maxW||refs.length>lim.maxR;const load=Math.min(100,Math.round(pw/Math.max(1,lim.maxW)*100));
+      let vd=null;try{vd=this.voltageDropOf(d);}catch(e){}
+      const secOk=this.sectionOkForCalibre(d.section,d.calibre);
+      const canAssign=selFn&&!assignOf[selFn];
+      const teName=(tes.find(t=>t.id===d.tableauId)||{}).code||'';
+      const isSel=s.feuilleSelCircuit===d.id;
+      return r('div',{key:d.id,onClick:()=>this.setState({feuilleSelCircuit:d.id}),style:{border:'2px solid '+(isSel?c.accent:over?c.danger:c.bdr),borderRadius:9,padding:'9px 11px',marginBottom:8,background:c.surf}},
+        r('div',{style:{display:'flex',alignItems:'center',gap:6,marginBottom:7,flexWrap:'wrap'}},
+          r('span',{style:{fontFamily:c.mono,fontWeight:900,fontSize:14,color:'#0277BD'}},d.code),
+          teName?r('span',{style:{fontSize:9,color:c.muted,fontFamily:c.mono}},teName):null,
+          r('div',{style:{flex:1}}),
+          miniSel(d.courbe||'C',courbeOpts,v=>upDj(d.id,{courbe:v})),
+          miniSel(String(d.calibre||16),calOpts,v=>upDj(d.id,{calibre:+v}),v=>v+'A'),
+          miniSel(String(d.section||1.5),sectOpts,v=>upDj(d.id,{section:+v}),v=>v+'mm²'),
+          miniSel(String(d.ddr||0),ddrOpts,v=>upDj(d.id,{ddr:+v}),v=>+v===0?'0':v+'mA'),
+          tes.length>1?miniSel(String(d.tableauId||''),tes.map(t=>String(t.id)),v=>upDj(d.id,{tableauId:v?+v:null}),v=>{const t=tes.find(x=>String(x.id)===v);return t?(t.code||t.nom):'—';}):null,
+          r('button',{onClick:(e)=>{e.stopPropagation();delDj(d.id);},title:'Supprimer le circuit',style:{border:'none',background:'transparent',color:c.danger,cursor:'pointer',fontSize:12}},'🗑')),
+        r('div',{style:{display:'flex',gap:5,flexWrap:'wrap',marginBottom:7,minHeight:18}},
+          refs.length?refs.map(rf=>r('span',{key:rf,style:{display:'inline-flex',alignItems:'center',gap:4,fontSize:10,fontWeight:600,color:c.text,background:((FNS[refType[rf]]||{}).color||'#94a3b8')+'22',border:'1px solid '+((FNS[refType[rf]]||{}).color||'#94a3b8'),borderRadius:5,padding:'1px 6px'}},rf,r('span',{onClick:(e)=>{e.stopPropagation();unassign(rf);},style:{cursor:'pointer',color:c.muted}},'×'))):r('span',{style:{fontSize:10,color:c.muted,fontStyle:'italic'}},'Aucun récepteur — glissez une fonction ici'),
+          canAssign?r('button',{onClick:(e)=>{e.stopPropagation();assignSelTo(d.id);},style:{fontSize:10,fontWeight:700,color:'#fff',background:c.accent,border:'none',borderRadius:5,padding:'2px 8px',cursor:'pointer'}},'+ '+selFn):null),
+        r('div',{style:{display:'flex',alignItems:'center',gap:9,fontSize:9,color:c.muted}},
+          r('div',{style:{flex:1,height:5,background:c.surf3,borderRadius:3,overflow:'hidden'}},r('div',{style:{width:load+'%',height:'100%',background:over?c.danger:load>80?c.warn:c.success}})),
+          r('span',{style:{fontFamily:c.mono}},pw+'W'),
+          vd?r('span',{style:{fontFamily:c.mono,color:vd.pctCumul>5?c.danger:c.muted}},'ΔU '+vd.pctCumul.toFixed(1)+'%'):null,
+          secOk?null:r('span',{style:{color:c.danger,fontWeight:700}},'section!'),
+          over?r('span',{style:{color:c.danger,fontWeight:700}},'surcharge'):null));
+    };
+    // RIGHT — synthèse live
+    const stat=(label,val,col)=>r('div',{style:{background:c.surf,border:'1px solid '+c.bdr,borderRadius:8,padding:'6px 11px'}},r('div',{style:{fontSize:9,color:c.muted,textTransform:'uppercase',letterSpacing:'.05em'}},label),r('div',{style:{fontSize:15,fontWeight:800,color:col||c.text,fontFamily:c.mono}},val));
+    const rightChildren=[
+      colHeader('Synthèse'),
+      r('div',{key:'bil',style:{background:c.surf,border:'1px solid '+c.bdr,borderRadius:9,padding:'10px 12px',marginBottom:10}},
+        r('div',{style:{fontSize:10,fontWeight:700,color:c.muted,marginBottom:6}},'Bilan de puissance'),
+        r('div',{style:{display:'flex',justifyContent:'space-between',fontSize:11,marginBottom:3}},r('span',{style:{color:c.text2}},'Installée'),r('span',{style:{fontFamily:c.mono,fontWeight:700}},Math.round(bilan.totalInstalledW)+' W')),
+        r('div',{style:{display:'flex',justifyContent:'space-between',fontSize:11,marginBottom:3}},r('span',{style:{color:c.text2}},'Foisonnée'),r('span',{style:{fontFamily:c.mono,fontWeight:700,color:c.accent}},bilan.kvaFoisonne+' kVA')),
+        bilan.souscriteKva?r('div',{style:{display:'flex',justifyContent:'space-between',fontSize:11}},r('span',{style:{color:c.text2}},'Souscrite'),r('span',{style:{fontFamily:c.mono,fontWeight:700,color:bilan.kvaFoisonne>bilan.souscriteKva?c.danger:c.success}},bilan.souscriteKva+' kVA')):null),
+      ...tes.map(te=>{const br=this._boardRows(te);const full=br.usedModules>br.capacity;return r('div',{key:'te'+te.id,style:{background:c.surf,border:'1px solid '+c.bdr,borderRadius:9,padding:'9px 12px',marginBottom:8}},
+        r('div',{style:{display:'flex',justifyContent:'space-between',fontSize:11}},r('span',{style:{fontWeight:700,color:'#0277BD',fontFamily:c.mono}},te.code||te.nom),r('span',{style:{fontFamily:c.mono,color:full?c.warn:c.text2}},br.usedModules+' mod / '+br.nbRangees+' rg')));}),
+      r('div',{key:'conf',style:{background:c.surf,border:'1px solid '+c.bdr,borderRadius:9,padding:'10px 12px'}},
+        r('div',{style:{display:'flex',alignItems:'center',gap:6,marginBottom:6}},r('span',{style:{fontSize:10,fontWeight:700,color:c.muted}},'Conformité'),r('span',{style:{marginLeft:'auto',fontSize:10,fontWeight:800,color:nErr?c.danger:nWarn?c.warn:c.success,fontFamily:c.mono}},nErr?nErr+' err':nWarn?nWarn+' avert':'OK')),
+        ...(issues.slice(0,6).map((i,k)=>r('div',{key:k,style:{fontSize:9,color:c.text2,marginBottom:3,paddingLeft:8,borderLeft:'2px solid '+(i.level==='error'?c.danger:i.level==='warn'?c.warn:c.accent)}},i.msg))),
+        issues.length>6?r('div',{style:{fontSize:9,color:c.muted,fontStyle:'italic'}},'+'+(issues.length-6)+' autre(s)…'):null,
+        issues.length===0?r('div',{style:{fontSize:10,color:c.success}},'Aucune anomalie.'):null)
+    ];
+    const centerToolbar=r('div',{style:{display:'flex',alignItems:'center',gap:7,marginBottom:8,paddingBottom:6,borderBottom:'2px solid '+c.bdr,flexWrap:'wrap'}},
+      r('span',{style:{fontSize:11,fontWeight:800,color:c.text,textTransform:'uppercase',letterSpacing:'.06em'}},'Circuits'),
+      r('div',{style:{flex:1}}),
+      selFn?this.Btn('★ Nouveau circuit pour '+selFn,createFromSel,'primary','sm'):null,
+      nUnassigned>0?this.Btn('⚡ Auto-affecter ('+nUnassigned+')',()=>this.feuilleAutoAssign(),'sec','sm'):null,
+      this.Btn('+ Circuit vide',addEmpty,'ghost','sm'));
+    const empty=(txt)=>r('div',{style:{fontSize:11,color:c.muted,fontStyle:'italic',padding:'16px 4px'}},txt);
+    return r('div',{style:{padding:'18px 22px',height:'100%',display:'flex',flexDirection:'column',animation:'fadeIn .3s ease',boxSizing:'border-box'}},
+      this.SH('Feuille de puissance','Pièces, circuits et tableau sur un seul écran — '+djs.length+' circuit'+(djs.length>1?'s':'')+(nUnassigned?' · '+nUnassigned+' fonction(s) à affecter':' · tout est affecté')),
+      r('div',{style:{display:'flex',gap:10,margin:'10px 0 14px',flexWrap:'wrap',alignItems:'center'}},
+        stat('Circuits',String(djs.length)),
+        stat('Puissance',bilan.kvaFoisonne+' kVA',c.accent),
+        stat('À affecter',String(nUnassigned),nUnassigned?c.warn:c.success),
+        stat('Conformité',nErr?nErr+' err':nWarn?nWarn+' avert':'OK',nErr?c.danger:nWarn?c.warn:c.success),
+        r('div',{style:{flex:1}}),
+        selFn?r('div',{style:{fontSize:11,color:c.accent,fontWeight:700,background:'rgba(2,119,189,.1)',border:'1px solid '+c.accent,borderRadius:8,padding:'7px 12px'}},'Sélection « '+selFn+' » — cliquez « + » sur un circuit ou « Nouveau circuit »'):null),
+      r('div',{style:{display:'flex',gap:14,flex:1,minHeight:0}},
+        r('div',{style:{width:262,flexShrink:0,display:'flex',flexDirection:'column',minHeight:0}},colHeader('Pièces & fonctions'),r('div',{style:{overflowY:'auto',flex:1,paddingRight:4}},leftPieces.length?leftPieces:empty('Aucune pièce avec des fonctions. Ajoutez-les dans « Appartements & Pièces ».'))),
+        r('div',{style:{flex:1,minWidth:300,display:'flex',flexDirection:'column',minHeight:0}},centerToolbar,r('div',{style:{overflowY:'auto',flex:1,paddingRight:4}},djs.length?djs.map(circuitCard):empty('Aucun circuit. Cliquez « Auto-affecter » ou « + Circuit vide ».'))),
+        r('div',{style:{width:264,flexShrink:0,display:'flex',flexDirection:'column',minHeight:0,overflowY:'auto'}},...rightChildren)));
+  }
   _planRoom(p){
     const surf=Math.max(1,+p.surface||9);
     const w=(p.plan&&+p.plan.w>0)?+p.plan.w:Math.max(2,Math.round(Math.sqrt(surf*1.3)*10)/10);
@@ -7610,6 +7751,7 @@ class Component extends DCLogic {
     const views={
       dashboard:()=>this.vDashboard(circuits),projet:()=>this.vProjet(),
       logements:()=>this.vLogements(circuits),
+      feuille:()=>this.vFeuillePuissance(),
       circuits:()=>this.vCircuits(circuits),
       schema:()=>this.vSchema(circuits),
       armoire:()=>this.vArmoire(),
