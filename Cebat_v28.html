@@ -2250,7 +2250,7 @@ class Component extends DCLogic {
   _STORE_KEY='cebat_v28_state';
   _PROJ_INDEX='cebat_v28_projects';
   _PROJ_CUR='cebat_v28_current';
-  _PERSIST_KEYS=['project','niveaux','appartements','pieces','tableauxElec','departs','inverseurs','boitesDeriv','disjoncteurs','interrupteurs','zonesCommande','nextNivId','nextAppId','nextPieceId','nextFonctionId','nextElemId','theme','view','nomenclatureOverrides','realisationChecks','mesures','tests','armoire','focusMode'];
+  _PERSIST_KEYS=['project','niveaux','appartements','pieces','tableauxElec','departs','inverseurs','boitesDeriv','disjoncteurs','interrupteurs','zonesCommande','nextNivId','nextAppId','nextPieceId','nextFonctionId','nextElemId','theme','view','nomenclatureOverrides','realisationChecks','mesures','tests','armoire','focusMode','poseStatuts'];
   _projKey(id){return 'cebat_v28_p_'+id;}
   _snapshot(){const o={};for(const k of this._PERSIST_KEYS)if(this.state[k]!==undefined)o[k]=this.state[k];return o;}
   _pickPersist(d){const o={};for(const k of this._PERSIST_KEYS)if(d&&d[k]!==undefined)o[k]=d[k];return o;}
@@ -6662,6 +6662,9 @@ class Component extends DCLogic {
     const b=(id,lbl)=>r('button',{onClick:()=>this.setState({nomencView:id}),style:{padding:'6px 14px',borderRadius:7,fontSize:12,fontWeight:v===id?700:400,cursor:'pointer',border:'1px solid '+(v===id?c.accent:c.bdr2),background:v===id?'rgba(2,119,189,.1)':'transparent',color:v===id?c.accent:c.text2,fontFamily:c.font}},lbl);
     return r('div',{style:{display:'flex',gap:6,marginBottom:14}},b('table','Tableau'),b('cable','Vue Câble'));
   }
+  POSE_STATES=[{k:'',l:'À poser',col:'#94a3b8'},{k:'pose',l:'Posé ✓',col:'#16a34a'},{k:'nc',l:'Anomalie ✗',col:'#dc2626'}];
+  _poseState(key){const v=((this.state.poseStatuts||{})[key])||'';return this.POSE_STATES.find(x=>x.k===v)||this.POSE_STATES[0];}
+  _cyclePose(key){const cur=((this.state.poseStatuts||{})[key])||'';const i=this.POSE_STATES.findIndex(x=>x.k===cur);const next=this.POSE_STATES[(i+1)%this.POSE_STATES.length].k;this.setState(s=>({poseStatuts:{...(s.poseStatuts||{}),[key]:next}}));}
   _condsFor(poles){return poles>=3?[['L1','#6d4c41'],['L2','#212121'],['L3','#9e9e9e'],['N','#42a5f5'],['PE','grad']]:[['L','#6d4c41'],['N','#42a5f5'],['PE','grad']];}
   _vueCableData(kind,id){
     const s=this.state;const entrants=[],sortants=[];
@@ -6673,18 +6676,18 @@ class Component extends DCLogic {
       const te=(s.tableauxElec||[]).find(t=>t.id===id);if(!te)return{entrants,sortants,center:null};
       const center={code:teCode(te),nom:te.nom||'',type:'TE'};
       const parentTe=(s.tableauxElec||[]).find(t=>t.id===te.departId);
-      if(parentTe){entrants.push({wcode:'',from:teCode(parentTe)+(parentTe.nom?' '+parentTe.nom:''),to:center.code,conds:this._condsFor(triAlim?3:1),sec:(te.feederSection||'?')+'mm²',bornes:(te.cb0Code||'CB0'),edit:{type:'te',id:te.id}});}
-      else{const dep=(s.departs||[]).find(d=>d.id===te.departId)||(s.departs||[]).find(d=>d.type==='comptage');if(dep){let sc='';try{sc=this.genSourceCode(dep,s);}catch(e){sc=dep.code||'SRC';}const tri=dep.tension==='tri'||dep.tension==='tri_it'||(+dep.poles>=3);entrants.push({wcode:dep.dbCode||'DB',from:sc+(dep.nom?' '+dep.nom:''),to:center.code,conds:this._condsFor(tri?3:1),sec:(dep.section||'16')+'mm²',bornes:(te.cb0Code||'CB0'),edit:{type:'dep',id:dep.id}});}}
-      (s.disjoncteurs||[]).filter(d=>d.tableauId===te.id).forEach(d=>{const refs=d.recepteurs||[];const room=refs.map(rf=>refPiece[rf]).filter(Boolean)[0]||'';let wc='';try{wc=this.genCableCBCode(d,s);}catch(e){}sortants.push({wcode:wc||d.code||'',from:center.code+(d.code?' '+d.code:''),to:(refs.join(' ')||'(libre)')+(room?' · '+room:''),conds:this._condsFor(this._poles(d)),sec:(d.section||'1.5')+'mm²',bornes:d.code||'',edit:{type:'dj',id:d.id}});});
-      (s.boitesDeriv||[]).filter(b=>String(b.tableauId)===String(te.id)).forEach(b=>{sortants.push({wcode:bdCode(b),from:center.code,to:bdCode(b)+(b.nom?' '+b.nom:''),conds:this._condsFor(1),sec:'?',bornes:'BD',edit:{type:'bd',id:b.id}});});
+      if(parentTe){entrants.push({wcode:'',from:teCode(parentTe)+(parentTe.nom?' '+parentTe.nom:''),to:center.code,conds:this._condsFor(triAlim?3:1),sec:(te.feederSection||'?')+'mm²',bornes:(te.cb0Code||'CB0'),edit:{type:'te',id:te.id},statutKey:'te'+te.id+'feed'});}
+      else{const dep=(s.departs||[]).find(d=>d.id===te.departId)||(s.departs||[]).find(d=>d.type==='comptage');if(dep){let sc='';try{sc=this.genSourceCode(dep,s);}catch(e){sc=dep.code||'SRC';}const tri=dep.tension==='tri'||dep.tension==='tri_it'||(+dep.poles>=3);entrants.push({wcode:dep.dbCode||'DB',from:sc+(dep.nom?' '+dep.nom:''),to:center.code,conds:this._condsFor(tri?3:1),sec:(dep.section||'16')+'mm²',bornes:(te.cb0Code||'CB0'),edit:{type:'dep',id:dep.id},statutKey:'dep'+dep.id+'te'+te.id});}}
+      (s.disjoncteurs||[]).filter(d=>d.tableauId===te.id).forEach(d=>{const refs=d.recepteurs||[];const room=refs.map(rf=>refPiece[rf]).filter(Boolean)[0]||'';let wc='';try{wc=this.genCableCBCode(d,s);}catch(e){}sortants.push({wcode:wc||d.code||'',from:center.code+(d.code?' '+d.code:''),to:(refs.join(' ')||'(libre)')+(room?' · '+room:''),conds:this._condsFor(this._poles(d)),sec:(d.section||'1.5')+'mm²',bornes:d.code||'',edit:{type:'dj',id:d.id},statutKey:'dj'+d.id});});
+      (s.boitesDeriv||[]).filter(b=>String(b.tableauId)===String(te.id)).forEach(b=>{sortants.push({wcode:bdCode(b),from:center.code,to:bdCode(b)+(b.nom?' '+b.nom:''),conds:this._condsFor(1),sec:'?',bornes:'BD',edit:{type:'bd',id:b.id},statutKey:'bd'+b.id+'feed'});});
       return{entrants,sortants,center};
     }
     if(kind==='bd'){
       const bd=(s.boitesDeriv||[]).find(b=>b.id===id);if(!bd)return{entrants,sortants,center:null};
       const center={code:bdCode(bd),nom:bd.nom||'',type:'BD'};
       const te=(s.tableauxElec||[]).find(t=>String(t.id)===String(bd.tableauId));
-      if(te)entrants.push({wcode:'',from:teCode(te)+(te.nom?' '+te.nom:''),to:center.code,conds:this._condsFor(1),sec:'?mm²',bornes:'',edit:{type:'bd',id:bd.id}});
-      (s.pieces||[]).forEach(p=>(p.fonctions||[]).forEach(fn=>{if(fn.departType==='boite'&&String(fn.departId)===String(bd.id)){const fi=this.FNS[fn.type]||{};sortants.push({wcode:fn.ref||'',from:center.code,to:(fi.label||fn.type)+(fn.ref?' '+fn.ref:'')+' · '+(p.nom||''),conds:this._condsFor(1),sec:(fn.cableSection||'1.5')+'mm²',bornes:fn.ref||'',edit:{type:'fn',pieceId:p.id,fnId:fn.id}});}}));
+      if(te)entrants.push({wcode:'',from:teCode(te)+(te.nom?' '+te.nom:''),to:center.code,conds:this._condsFor(1),sec:'?mm²',bornes:'',edit:{type:'bd',id:bd.id},statutKey:'bd'+bd.id+'feed'});
+      (s.pieces||[]).forEach(p=>(p.fonctions||[]).forEach(fn=>{if(fn.departType==='boite'&&String(fn.departId)===String(bd.id)){const fi=this.FNS[fn.type]||{};sortants.push({wcode:fn.ref||'',from:center.code,to:(fi.label||fn.type)+(fn.ref?' '+fn.ref:'')+' · '+(p.nom||''),conds:this._condsFor(1),sec:(fn.cableSection||'1.5')+'mm²',bornes:fn.ref||'',edit:{type:'fn',pieceId:p.id,fnId:fn.id},statutKey:'fn'+fn.id});}}));
       return{entrants,sortants,center};
     }
     return{entrants,sortants,center:null};
@@ -6704,8 +6707,9 @@ class Component extends DCLogic {
       r('span',{style:{fontSize:8,color:c.muted,fontFamily:c.mono,minWidth:34,textAlign:'right'}},sec))));
     const lbl=(rep,txt,brn,align)=>r('div',{style:{minWidth:96,maxWidth:150,fontSize:9,textAlign:align||'left'}},rep?r('div',{style:{fontFamily:c.mono,fontWeight:700,color:c.accent}},rep):null,r('div',{style:{color:c.text2,whiteSpace:'normal'}},txt),brn?r('div',{style:{color:c.muted,fontFamily:c.mono}},'bornes: '+brn):null);
     const rowSt={display:'flex',alignItems:'center',gap:8,padding:'7px 9px',background:c.surf,border:'1px solid '+c.bdr,borderRadius:8,marginBottom:6,boxShadow:c.elev1,cursor:'pointer'};
-    const inRow=(cab,k)=>r('div',{key:'in'+k,onClick:()=>this._openCableEdit(cab.edit),title:'Modifier ce câble / cet équipement',style:rowSt},lbl(cab.wcode,cab.from,cab.bornes,'left'),bars(cab.conds,cab.sec),r('span',{style:{color:c.success,fontSize:13}},'→'));
-    const outRow=(cab,k)=>r('div',{key:'out'+k,onClick:()=>this._openCableEdit(cab.edit),title:'Modifier ce câble / cet équipement',style:rowSt},r('span',{style:{color:c.accent,fontSize:13}},'→'),bars(cab.conds,cab.sec),lbl(cab.wcode,cab.to,cab.bornes,'right'));
+    const poseBadge=(key)=>{const st=this._poseState(key);return r('button',{onClick:(e)=>{e.stopPropagation();this._cyclePose(key);},title:'Statut de pose — cliquer pour changer',style:{flexShrink:0,fontSize:8,fontWeight:700,color:st.col,background:st.col+'18',border:'1px solid '+st.col+'66',borderRadius:5,padding:'2px 6px',cursor:'pointer',whiteSpace:'nowrap'}},st.l);};
+    const inRow=(cab,k)=>r('div',{key:'in'+k,onClick:()=>this._openCableEdit(cab.edit),title:'Modifier ce câble / cet équipement',style:rowSt},lbl(cab.wcode,cab.from,cab.bornes,'left'),bars(cab.conds,cab.sec),poseBadge(cab.statutKey),r('span',{style:{color:c.success,fontSize:13}},'→'));
+    const outRow=(cab,k)=>r('div',{key:'out'+k,onClick:()=>this._openCableEdit(cab.edit),title:'Modifier ce câble / cet équipement',style:rowSt},r('span',{style:{color:c.accent,fontSize:13}},'→'),poseBadge(cab.statutKey),bars(cab.conds,cab.sec),lbl(cab.wcode,cab.to,cab.bornes,'right'));
     const centerCol=data.center?r('div',{style:{flexShrink:0,width:96,alignSelf:'center',background:'linear-gradient(180deg,#0288CE,#0277BD)',borderRadius:10,padding:'16px 8px',textAlign:'center',color:'#fff',boxShadow:c.elev2}},
       r('div',{style:{fontSize:8,fontWeight:700,opacity:.8,letterSpacing:'.1em'}},data.center.type),
       r('div',{style:{fontSize:15,fontWeight:900,fontFamily:c.mono,margin:'2px 0'}},data.center.code),
@@ -6715,6 +6719,7 @@ class Component extends DCLogic {
         r('span',{style:{fontSize:10,fontWeight:700,color:c.muted,textTransform:'uppercase',letterSpacing:'.06em'}},'Équipement'),
         r('select',{value:sel.val,onChange:e=>this.setState({nomencEquip:e.target.value}),style:{background:c.surf3,border:'1px solid '+c.bdr2,borderRadius:6,padding:'6px 9px',fontSize:12,color:c.text,outline:'none'}},...opts.map(o=>r('option',{key:o.val,value:o.val},o.label))),
         r('span',{style:{fontSize:10,color:c.muted}},data.entrants.length+' entrant(s) · '+data.sortants.length+' sortant(s)'),
+        (()=>{const all=[...data.entrants,...data.sortants];const done=all.filter(cb=>((s.poseStatuts||{})[cb.statutKey]||'')==='pose').length;const ko=all.filter(cb=>((s.poseStatuts||{})[cb.statutKey]||'')==='nc').length;return r('span',{style:{fontSize:10,fontWeight:700,color:done===all.length&&all.length?c.success:ko?c.danger:c.muted,fontFamily:c.mono}},'posés '+done+'/'+all.length+(ko?' · '+ko+' anomalie(s)':''));})(),
         r('div',{style:{flex:1}}),this.Btn('Imprimer',()=>this.printVueCable(),'sec','sm')),
       r('div',{style:{display:'flex',gap:14,alignItems:'flex-start'}},
         r('div',{style:{flex:1,minWidth:220}},r('div',{style:{fontSize:10,fontWeight:800,color:c.success,textTransform:'uppercase',letterSpacing:'.06em',marginBottom:8}},'Entrants (amont)'),data.entrants.length?data.entrants.map(inRow):r('div',{style:{fontSize:11,color:c.muted,fontStyle:'italic'}},'Aucun câble entrant')),
@@ -6740,7 +6745,8 @@ class Component extends DCLogic {
       const esc=t=>String(t==null?'':t).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
       const barH=(conds,sec)=>conds.map(x=>{const col=x[1]==='grad'?'repeating-linear-gradient(45deg,#43a047 0 4px,#fdd835 4px 8px)':x[1];return '<div style="display:flex;align-items:center;gap:4px;margin-bottom:1px"><span style="width:22px;font:700 8px monospace;color:'+(x[1]==='grad'?'#43a047':x[1])+'">'+x[0]+'</span><div style="flex:1;height:4px;border-radius:2px;background:'+col+'"></div><span style="font:8px monospace;color:#888">'+esc(sec)+'</span></div>';}).join('');
       const lblH=(rep,txt,brn,align)=>'<div style="min-width:120px;font-size:9px;text-align:'+(align||'left')+'">'+(rep?'<b style="font-family:monospace;color:#0277BD">'+esc(rep)+'</b>':'')+'<div>'+esc(txt)+'</div>'+(brn?'<div style="color:#888;font-family:monospace">bornes: '+esc(brn)+'</div>':'')+'</div>';
-      const rowH=(cab,dir)=>'<div style="display:flex;align-items:center;gap:8px;padding:6px 8px;border:1px solid #ddd;border-radius:6px;margin-bottom:5px;page-break-inside:avoid">'+(dir==='in'?lblH(cab.wcode,cab.from,cab.bornes,'left'):'')+'<div style="flex:1;min-width:90px">'+barH(cab.conds,cab.sec)+'</div>'+(dir==='out'?lblH(cab.wcode,cab.to,cab.bornes,'right'):'')+'</div>';
+      const poseH=(key)=>{const st=this._poseState(key);return '<span style="font:700 8px sans-serif;color:'+st.col+';border:1px solid '+st.col+';border-radius:4px;padding:1px 5px;white-space:nowrap">'+esc(st.l)+'</span>';};
+      const rowH=(cab,dir)=>'<div style="display:flex;align-items:center;gap:8px;padding:6px 8px;border:1px solid #ddd;border-radius:6px;margin-bottom:5px;page-break-inside:avoid">'+(dir==='in'?lblH(cab.wcode,cab.from,cab.bornes,'left'):'')+'<div style="flex:1;min-width:90px">'+barH(cab.conds,cab.sec)+'</div>'+poseH(cab.statutKey)+(dir==='out'?lblH(cab.wcode,cab.to,cab.bornes,'right'):'')+'</div>';
       const cen=data.center||{type:'',code:'',nom:''};
       const html='<div style="font-family:Arial,sans-serif;padding:8mm;color:#111"><h2 style="margin:0 0 2mm">Vue câble — '+esc(cen.code)+(cen.nom?' '+esc(cen.nom):'')+'</h2><div style="font-size:9pt;color:#555;margin-bottom:4mm">'+esc((s.project||{}).nom||'')+' — entrants (amont) / sortants (aval)</div>'
         +'<div style="display:flex;gap:14px;align-items:flex-start">'
