@@ -7544,14 +7544,20 @@ class Component extends DCLogic {
     const upDj=(id,patch)=>this.setState(st=>({disjoncteurs:st.disjoncteurs.map(d=>d.id===id?{...d,...patch}:d)}));
     const unassign=(ref)=>this.setState(st=>({disjoncteurs:st.disjoncteurs.map(d=>(d.recepteurs||[]).includes(ref)?{...d,recepteurs:(d.recepteurs||[]).filter(x=>x!==ref)}:d)}));
     const delDj=(id)=>this.setState(st=>({disjoncteurs:st.disjoncteurs.filter(d=>d.id!==id),feuilleSelCircuit:null}));
-    const assignSelTo=(djId)=>{if(!selFn||assignOf[selFn])return;this.setState(st=>({disjoncteurs:st.disjoncteurs.map(d=>d.id===djId?{...d,recepteurs:[...(d.recepteurs||[]),selFn]}:d),feuilleSelFn:null}));};
+    const moveOrAssign=(ref,djId)=>{if(!ref)return;this.setState(st=>({disjoncteurs:st.disjoncteurs.map(d=>{
+      if(d.id===djId)return (d.recepteurs||[]).includes(ref)?d:{...d,recepteurs:[...(d.recepteurs||[]),ref]};
+      if((d.recepteurs||[]).includes(ref))return{...d,recepteurs:(d.recepteurs||[]).filter(x=>x!==ref)};
+      return d;}),feuilleSelFn:null,feuilleDragFn:null,feuilleDropTarget:null}));};
+    const assignSelTo=(djId)=>moveOrAssign(selFn,djId);
     const createFromSel=()=>{if(!selFn||assignOf[selFn])return;const rule=this._circuitRule(refType[selFn]);const teId=(tes[0]||{}).id||null;const nd={id:s.nextElemId,code:this.genDjCode(djs,teId),recepteurs:[selFn],pieceId:null,calibre:rule.calibre,courbe:rule.courbe,poles:'1',ddr:rule.ddr,section:rule.section,tableauId:teId};this.setState(st=>({disjoncteurs:[...st.disjoncteurs,nd],nextElemId:st.nextElemId+1,feuilleSelFn:null}));};
     const addEmpty=()=>{const teId=(tes[0]||{}).id||null;const nd={id:s.nextElemId,code:this.genDjCode(djs,teId),recepteurs:[],pieceId:null,calibre:16,courbe:'C',poles:'1',ddr:30,section:1.5,tableauId:teId};this.setState(st=>({disjoncteurs:[...st.disjoncteurs,nd],nextElemId:st.nextElemId+1,feuilleSelCircuit:nd.id}));};
     const dotOf=(t)=>r('span',{style:{width:9,height:9,borderRadius:5,background:(FNS[t]||{}).color||'#94a3b8',display:'inline-block',flexShrink:0}});
     const colHeader=(t,right)=>r('div',{style:{display:'flex',alignItems:'center',gap:8,marginBottom:8,paddingBottom:6,borderBottom:'2px solid '+c.bdr}},r('span',{style:{fontSize:11,fontWeight:800,color:c.text,textTransform:'uppercase',letterSpacing:'.06em'}},t),r('div',{style:{flex:1}}),right||null);
     // LEFT — pièces & fonctions
     const fnRow=(fn)=>{const ref=fn.ref;const dj=assignOf[ref];const sel=selFn===ref;const q=+fn.quantite>1?' ×'+fn.quantite:'';
-      return r('div',{key:ref,onClick:()=>{if(!dj)this.setState({feuilleSelFn:sel?null:ref});},style:{display:'flex',alignItems:'center',gap:7,padding:'5px 8px',borderRadius:6,cursor:dj?'default':'pointer',background:sel?'rgba(2,119,189,.14)':(dj?'transparent':c.surf3),border:'1px solid '+(sel?c.accent:'transparent'),marginBottom:3}},
+      const dragging=s.feuilleDragFn===ref;
+      return r('div',{key:ref,draggable:true,onDragStart:(e)=>{try{e.dataTransfer.setData('text/plain',ref);e.dataTransfer.effectAllowed='move';}catch(_){}this.setState({feuilleSelFn:ref,feuilleDragFn:ref});},onDragEnd:()=>this.setState({feuilleDragFn:null,feuilleDropTarget:null}),onClick:()=>{if(!dj)this.setState({feuilleSelFn:sel?null:ref});},style:{display:'flex',alignItems:'center',gap:7,padding:'5px 8px',borderRadius:6,cursor:'grab',opacity:dragging?0.45:1,background:sel?'rgba(2,119,189,.14)':(dj?'transparent':c.surf3),border:'1px solid '+(sel?c.accent:'transparent'),marginBottom:3}},
+        r('span',{style:{color:c.muted,fontSize:11,cursor:'grab',userSelect:'none'},title:'Glisser vers un circuit'},'⠿'),
         dotOf(fn.type),
         r('div',{style:{flex:1,minWidth:0}},r('div',{style:{fontSize:11,fontWeight:600,color:c.text,fontFamily:c.mono}},ref+q),r('div',{style:{fontSize:9,color:c.muted,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}},(FNS[fn.type]||{label:fn.type}).label)),
         dj?r('span',{onClick:(e)=>{e.stopPropagation();this.setState({feuilleSelCircuit:dj.id});},title:'Voir le circuit',style:{fontSize:9,fontFamily:c.mono,fontWeight:700,color:'#0277BD',cursor:'pointer'}},dj.code):r('span',{style:{fontSize:8,fontWeight:700,color:c.warn,textTransform:'uppercase'}},'à affecter'),
@@ -7573,7 +7579,12 @@ class Component extends DCLogic {
       const canAssign=selFn&&!assignOf[selFn];
       const teName=(tes.find(t=>t.id===d.tableauId)||{}).code||'';
       const isSel=s.feuilleSelCircuit===d.id;
-      return r('div',{key:d.id,onClick:()=>this.setState({feuilleSelCircuit:d.id}),style:{border:'2px solid '+(isSel?c.accent:over?c.danger:c.bdr),borderRadius:9,padding:'9px 11px',marginBottom:8,background:c.surf}},
+      const isDropT=s.feuilleDropTarget===d.id;const dragActive=!!s.feuilleDragFn;
+      return r('div',{key:d.id,onClick:()=>this.setState({feuilleSelCircuit:d.id}),
+        onDragOver:(e)=>{e.preventDefault();try{e.dataTransfer.dropEffect='move';}catch(_){}if(s.feuilleDropTarget!==d.id)this.setState({feuilleDropTarget:d.id});},
+        onDragLeave:()=>{if(s.feuilleDropTarget===d.id)this.setState({feuilleDropTarget:null});},
+        onDrop:(e)=>{e.preventDefault();let ref='';try{ref=e.dataTransfer.getData('text/plain');}catch(_){}moveOrAssign(ref||s.feuilleDragFn,d.id);},
+        style:{border:'2px solid '+(isDropT?c.accent:isSel?c.accent:over?c.danger:(dragActive?c.bdr2:c.bdr)),borderStyle:isDropT?'dashed':'solid',borderRadius:9,padding:'9px 11px',marginBottom:8,background:isDropT?'rgba(2,119,189,.07)':c.surf,transition:'border-color .12s,background .12s'}},
         r('div',{style:{display:'flex',alignItems:'center',gap:6,marginBottom:7,flexWrap:'wrap'}},
           r('span',{style:{fontFamily:c.mono,fontWeight:900,fontSize:14,color:'#0277BD'}},d.code),
           teName?r('span',{style:{fontSize:9,color:c.muted,fontFamily:c.mono}},teName):null,
