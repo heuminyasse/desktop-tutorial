@@ -6775,38 +6775,37 @@ html body[class] #vac-gantt td.emp .nm{font-weight:500 !important;}</style>
 })();
 </script>
 <script id="__FCR_ARTICLES_CLEAR_v1__">
-/* Nettoyage unique de la base Articles (IDB + localStorage flags FCR).
-   Se marque dans localStorage pour ne tourner qu'une seule fois. */
+/* Vide la base Articles en utilisant le mécanisme intégré epilot_pending_wipe
+   (déclenché au prochain chargement avant que restoreArticlesDB ne lise l'IDB).
+   Une bannière rouge propose le reset ; le rechargement fait le vrai vidage. */
 (function(){
   var DONE_KEY='fcr_articles_cleared_v1';
-  try{ if(localStorage.getItem(DONE_KEY)==='1') return; }catch(_){}
+  var PENDING='epilot_pending_wipe';
 
-  /* Effacer l'IDB articles */
-  try{
-    var r=indexedDB.open('fcr_db',1);
-    r.onupgradeneeded=function(e){ e.target.result.createObjectStore('articles',{keyPath:'_k'}); };
-    r.onsuccess=function(e){
-      var db=e.target.result;
-      if(db.objectStoreNames.contains('articles')){
-        var tx=db.transaction('articles','readwrite');
-        tx.objectStore('articles').clear();
-        tx.oncomplete=function(){ db.close(); };
-      } else { db.close(); }
-    };
-  }catch(_){}
+  /* Si déjà validé (flag posé ET reload déjà fait), ne rien faire */
+  var cleared=false;
+  try{ cleared=(localStorage.getItem(DONE_KEY)==='1'&&!localStorage.getItem(PENDING)); }catch(_){}
+  if(cleared) return;
 
-  /* Effacer les flags localStorage FCR */
-  ['epilot_cat_v3','epilot_svc_v1','fcr_fix_reload_v2','fcr_boot_reload'].forEach(function(k){
-    try{ localStorage.removeItem(k); }catch(_){}
-  });
+  /* Marquer le wipe pour le prochain chargement + effacer les flags FCR résiduels */
+  try{ localStorage.setItem(PENDING,'1'); }catch(_){}
+  ['epilot_cat_v3','epilot_svc_v1','fcr_fix_reload_v2','fcr_boot_reload',
+   'fcr_articles_cleared_v1'].forEach(function(k){ try{ localStorage.removeItem(k); }catch(_){} });
 
-  /* Vider FCR_DB en mémoire */
-  try{ if(Array.isArray(window.FCR_DB)) window.FCR_DB.length=0; }catch(_){}
-
-  /* Marquer comme fait */
+  /* Marquer comme fait (après le reload suivant la page sera propre) */
   try{ localStorage.setItem(DONE_KEY,'1'); }catch(_){}
 
-  console.info('[FCR Clear] Base articles vidée. Nouvelle session propre.');
+  /* Afficher une bannière et recharger pour que epilot_pending_wipe s'exécute */
+  try{
+    var b=document.createElement('div');
+    b.style.cssText='position:fixed;top:0;left:0;right:0;z-index:99999;'
+      +'background:#B5000A;color:#fff;text-align:center;padding:14px;'
+      +'font:700 14px/1.4 sans-serif;';
+    b.textContent='Réinitialisation de la base articles…';
+    document.body.appendChild(b);
+  }catch(_){}
+
+  setTimeout(function(){ location.reload(); }, 600);
 })();
 </script>
 
