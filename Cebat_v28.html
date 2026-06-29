@@ -2928,15 +2928,21 @@ class Component extends DCLogic {
     return issues;
   }
   _fnPowerW(fn){const q=fn.quantite||1;if(fn.type==='eclairage')return (fn.puissance||10)*q;if(fn.type==='prises'||fn.type==='prises_sdb')return 460*q;return ({four:6000,lave_vaisselle:2200,lave_linge:2500,seche_linge:2400,chauffe_eau:3000,climatisation:2500,borne_ve:7400,hotte:300,vmc:200,portail:500,piscine:1500}[fn.type]||500)*q;}
+  phaseAssign(){
+    const djs=this.state.disjoncteurs||[];const pcs=this.state.pieces||[];const ph=[0,0,0];const map={};
+    djs.forEach(d=>{const pp=+d.phase;if(pp>=1&&pp<=3){let w=0;try{w=this.calcDjPower(d,pcs);}catch(e){}map[d.id]=pp;ph[pp-1]+=w;}});
+    djs.filter(d=>!(+d.phase>=1&&+d.phase<=3)).map(d=>{let w=0;try{w=this.calcDjPower(d,pcs);}catch(e){}return{d,w};}).sort((a,b)=>b.w-a.w).forEach(it=>{let mi=0;if(ph[1]<ph[mi])mi=1;if(ph[2]<ph[mi])mi=2;ph[mi]+=it.w;map[it.d.id]=mi+1;});
+    return{map,ph};
+  }
   phaseBalance(){
     if(((this.state.project&&this.state.project.typeAlim)||'monophase')!=='triphase')return null;
-    const djs=this.state.disjoncteurs||[];const pcs=this.state.pieces||[];const ph=[0,0,0];
-    const items=djs.map(d=>{let p=0;try{p=this.calcDjPower(d,pcs);}catch(e){}return{d,p};}).sort((a,b)=>b.p-a.p);
-    items.forEach(it=>{let mi=0;if(ph[1]<ph[mi])mi=1;if(ph[2]<ph[mi])mi=2;ph[mi]+=it.p;});
+    const{ph}=this.phaseAssign();
     const max=Math.max(ph[0],ph[1],ph[2]),min=Math.min(ph[0],ph[1],ph[2]);
     const imbalance=max>0?Math.round((max-min)/max*100):0;
     return{L1:ph[0],L2:ph[1],L3:ph[2],max,min,tot:ph[0]+ph[1]+ph[2],imbalance};
   }
+  dropPhase(cbId,phase){if(!cbId)return;this.setState(s=>({disjoncteurs:s.disjoncteurs.map(d=>d.id===cbId?{...d,phase}:d)}));this.showToast('Phase L'+phase+' assignee');}
+  autoBalancePhases(){const pcs=this.state.pieces||[];const ph=[0,0,0];const map={};(this.state.disjoncteurs||[]).map(d=>{let w=0;try{w=this.calcDjPower(d,pcs);}catch(e){}return{d,w};}).sort((a,b)=>b.w-a.w).forEach(it=>{let mi=0;if(ph[1]<ph[mi])mi=1;if(ph[2]<ph[mi])mi=2;ph[mi]+=it.w;map[it.d.id]=mi+1;});this.setState(s=>({disjoncteurs:s.disjoncteurs.map(d=>map[d.id]?{...d,phase:map[d.id]}:d)}));this.showToast('Phases equilibrees');}
   bilanPuissance(appId){
     const FAM=[{label:'Eclairage',types:['eclairage'],coef:1},{label:'Prises',types:['prises','prises_sdb'],coef:0.2},{label:'Cuisson',types:['four','hotte'],coef:0.7},{label:'Lavage',types:['lave_vaisselle','lave_linge','seche_linge'],coef:0.75},{label:'Eau chaude (ECS)',types:['chauffe_eau'],coef:1},{label:'Chauffage / Clim',types:['climatisation','vmc'],coef:1},{label:'Autres',types:['borne_ve','portail','piscine','camera','tv','rj45','sono','alarme_intrusion','detecteur_fumee','detecteur_co','visiophone','domotique','solaire','inverseur_source','controleur_tension','afficheur'],coef:0.6}];
     const pcs=(this.state.pieces||[]).filter(p=>appId==null||p.appId===appId);
@@ -6045,10 +6051,20 @@ class Component extends DCLogic {
       r('span',{style:{flex:1}}),
       teId?this.Btn('Exporter ce tableau',()=>this.exportBoardTemplate(teId),'sec','sm'):null,
       this.Btn('Importer JSON',()=>this.importBoardTemplate(),'sec','sm'));
+    const _tri=((s.project&&s.project.typeAlim)||'')==='triphase';
+    const phasePanel=(_tri&&teId)?(()=>{const pa=this.phaseAssign();const tdjs=(disjoncteurs||[]).filter(d=>d.tableauId===teId);const cc={1:'#6d4c41',2:'#212121',3:'#9e9e9e'};const pw=p2=>tdjs.filter(d=>pa.map[d.id]===p2).reduce((a,d)=>{let w=0;try{w=this.calcDjPower(d,s.pieces||[]);}catch(e){}return a+w;},0);
+      return r('div',{style:{marginBottom:14}},
+        r('div',{style:{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:6}},r('span',{style:{fontSize:10,fontWeight:700,color:c.muted,textTransform:'uppercase',letterSpacing:'.06em'}},'Repartition des phases (glisser-deposer)'),this.Btn('Equilibrer auto',()=>this.autoBalancePhases(),'sec','sm')),
+        r('div',{style:{display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap:8}},
+          ...[1,2,3].map(p2=>r('div',{key:p2,onDragOver:e=>e.preventDefault(),onDrop:e=>{e.preventDefault();const dc=this.state.dragCb;if(dc)this.dropPhase(dc,p2);this.setState({dragCb:null});},style:{border:'1px solid '+cc[p2],borderRadius:8,padding:'8px',minHeight:64,background:cc[p2]+'0d'}},
+            r('div',{style:{fontSize:11,fontWeight:800,color:cc[p2],marginBottom:6,fontFamily:c.mono}},'L'+p2+' · '+(pw(p2)/1000).toFixed(1)+'kW'),
+            r('div',{style:{display:'flex',flexWrap:'wrap',gap:4}},
+              ...tdjs.filter(d=>pa.map[d.id]===p2).map(d=>r('div',{key:d.id,draggable:true,onDragStart:()=>this.setState({dragCb:d.id}),title:'Glisser vers une autre phase',style:{fontSize:9,fontFamily:c.mono,fontWeight:700,padding:'3px 6px',borderRadius:5,background:c.surf,border:'1px solid '+c.bdr2,cursor:'grab'}},d.code||('CB'+d.id))))))));
+    })():null;
     return r('div',{style:{padding:'24px 28px',animation:'fadeIn .3s ease',overflowY:'auto',height:'100%'}},
       this.SH('Composition du tableau','Glisser-deposer les disjoncteurs entre rangees (1 rangee = '+ROW+' modules, ID compris)',r('div',{style:{display:'flex',alignItems:'center',gap:8}},r('div',{style:{display:'flex',alignItems:'center',gap:5}},r('span',{style:{fontSize:10,color:c.muted}},'Modules/rangee'),r('select',{value:String(ROW),onChange:e=>this.setState(st=>({project:{...st.project,modulesParRangee:+e.target.value}})),style:{background:c.surf3,border:'1px solid '+c.bdr2,borderRadius:6,padding:'4px 7px',fontSize:11,color:c.text,outline:'none'}},...[12,13,18,24].map(n=>r('option',{key:n,value:String(n)},n)))),teId?this.Btn('Compacter',()=>this.compactRangees(teId),'sec','sm'):null)),
       tableauxElec.length>1?r('div',{style:{display:'flex',gap:6,marginBottom:14,flexWrap:'wrap'}},...tableauxElec.map(t=>r('button',{key:t.id,onClick:()=>this.setState({rangeeTeId:t.id}),style:{padding:'5px 12px',borderRadius:7,fontSize:11,fontWeight:t.id===teId?700:400,border:'1px solid '+(t.id===teId?c.accent:c.bdr2),background:t.id===teId?'rgba(2,119,189,.1)':'transparent',color:t.id===teId?c.accent:c.text2,cursor:'pointer'}},t.code||t.nom))):null,
-      lib,
+      lib,phasePanel,
       rows.length===0?r('div',{style:{fontSize:12,color:c.muted,padding:'16px 0'}},'Aucun disjoncteur dans ce tableau.'):r('div',null,...rows.map(rowEl)),
       r('div',{onDragOver:e=>e.preventDefault(),onDrop:e=>{e.preventDefault();const dc=this.state.dragCb;if(dc)this.dropCb(dc,maxR+1,null);this.setState({dragCb:null,dragOverCb:null});},
         style:{border:'2px dashed '+c.bdr3,borderRadius:9,padding:'14px',textAlign:'center',fontSize:11,color:c.muted,cursor:'copy',marginTop:4}},'+ Deposer ici pour creer une nouvelle rangee'));
