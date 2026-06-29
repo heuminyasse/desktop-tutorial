@@ -6657,6 +6657,68 @@ class Component extends DCLogic {
             })));
       }));
   }
+  _nomencTabsBar(){
+    const c=this.C;const r=this.r;const v=this.state.nomencView||'table';
+    const b=(id,lbl)=>r('button',{onClick:()=>this.setState({nomencView:id}),style:{padding:'6px 14px',borderRadius:7,fontSize:12,fontWeight:v===id?700:400,cursor:'pointer',border:'1px solid '+(v===id?c.accent:c.bdr2),background:v===id?'rgba(2,119,189,.1)':'transparent',color:v===id?c.accent:c.text2,fontFamily:c.font}},lbl);
+    return r('div',{style:{display:'flex',gap:6,marginBottom:14}},b('table','Tableau'),b('cable','Vue Câble'));
+  }
+  _condsFor(poles){return poles>=3?[['L1','#6d4c41'],['L2','#212121'],['L3','#9e9e9e'],['N','#42a5f5'],['PE','grad']]:[['L','#6d4c41'],['N','#42a5f5'],['PE','grad']];}
+  _vueCableData(kind,id){
+    const s=this.state;const entrants=[],sortants=[];
+    const teCode=t=>{try{return this.genTECode(t,s);}catch(e){return t.code||('TE'+t.id);}};
+    const bdCode=b=>{try{return this.genBDCode(b,s);}catch(e){return b.nom||('BD'+b.id);}};
+    const refPiece={};(s.pieces||[]).forEach(p=>(p.fonctions||[]).forEach(fn=>{refPiece[fn.ref]=p.nom;}));
+    const triAlim=((s.project&&s.project.typeAlim)||'')==='triphase';
+    if(kind==='te'){
+      const te=(s.tableauxElec||[]).find(t=>t.id===id);if(!te)return{entrants,sortants,center:null};
+      const center={code:teCode(te),nom:te.nom||'',type:'TE'};
+      const parentTe=(s.tableauxElec||[]).find(t=>t.id===te.departId);
+      if(parentTe){entrants.push({wcode:'',from:teCode(parentTe)+(parentTe.nom?' '+parentTe.nom:''),to:center.code,conds:this._condsFor(triAlim?3:1),sec:(te.feederSection||'?')+'mm²',bornes:(te.cb0Code||'CB0')});}
+      else{const dep=(s.departs||[]).find(d=>d.id===te.departId)||(s.departs||[]).find(d=>d.type==='comptage');if(dep){let sc='';try{sc=this.genSourceCode(dep,s);}catch(e){sc=dep.code||'SRC';}const tri=dep.tension==='tri'||dep.tension==='tri_it'||(+dep.poles>=3);entrants.push({wcode:dep.dbCode||'DB',from:sc+(dep.nom?' '+dep.nom:''),to:center.code,conds:this._condsFor(tri?3:1),sec:(dep.section||'16')+'mm²',bornes:(te.cb0Code||'CB0')});}}
+      (s.disjoncteurs||[]).filter(d=>d.tableauId===te.id).forEach(d=>{const refs=d.recepteurs||[];const room=refs.map(rf=>refPiece[rf]).filter(Boolean)[0]||'';let wc='';try{wc=this.genCableCBCode(d,s);}catch(e){}sortants.push({wcode:wc||d.code||'',from:center.code+(d.code?' '+d.code:''),to:(refs.join(' ')||'(libre)')+(room?' · '+room:''),conds:this._condsFor(this._poles(d)),sec:(d.section||'1.5')+'mm²',bornes:d.code||''});});
+      (s.boitesDeriv||[]).filter(b=>String(b.tableauId)===String(te.id)).forEach(b=>{sortants.push({wcode:bdCode(b),from:center.code,to:bdCode(b)+(b.nom?' '+b.nom:''),conds:this._condsFor(1),sec:'?',bornes:'BD'});});
+      return{entrants,sortants,center};
+    }
+    if(kind==='bd'){
+      const bd=(s.boitesDeriv||[]).find(b=>b.id===id);if(!bd)return{entrants,sortants,center:null};
+      const center={code:bdCode(bd),nom:bd.nom||'',type:'BD'};
+      const te=(s.tableauxElec||[]).find(t=>String(t.id)===String(bd.tableauId));
+      if(te)entrants.push({wcode:'',from:teCode(te)+(te.nom?' '+te.nom:''),to:center.code,conds:this._condsFor(1),sec:'?mm²',bornes:''});
+      (s.pieces||[]).forEach(p=>(p.fonctions||[]).forEach(fn=>{if(fn.departType==='boite'&&String(fn.departId)===String(bd.id)){const fi=this.FNS[fn.type]||{};sortants.push({wcode:fn.ref||'',from:center.code,to:(fi.label||fn.type)+(fn.ref?' '+fn.ref:'')+' · '+(p.nom||''),conds:this._condsFor(1),sec:(fn.cableSection||'1.5')+'mm²',bornes:fn.ref||''});}}));
+      return{entrants,sortants,center};
+    }
+    return{entrants,sortants,center:null};
+  }
+  renderVueCable(){
+    const s=this.state;const c=this.C;const r=this.r;
+    const tes=s.tableauxElec||[];const bds=s.boitesDeriv||[];
+    const tc=t=>{try{return this.genTECode(t,s);}catch(e){return t.code||('TE'+t.id);}};
+    const bc=b=>{try{return this.genBDCode(b,s);}catch(e){return b.nom||('BD'+b.id);}};
+    const opts=[...tes.map(t=>({val:'te:'+t.id,label:tc(t)+(t.nom?' — '+t.nom:''),kind:'te',id:t.id})),...bds.map(b=>({val:'bd:'+b.id,label:bc(b)+(b.nom?' — '+b.nom:''),kind:'bd',id:b.id}))];
+    if(opts.length===0)return r('div',{style:{fontSize:13,color:c.muted,fontStyle:'italic',padding:'20px 0'}},'Aucun tableau ni boîte de dérivation — à créer dans « Circuits électriques ».');
+    const sel=opts.find(o=>o.val===s.nomencEquip)||opts[0];
+    const data=this._vueCableData(sel.kind,sel.id);
+    const bars=(conds,sec)=>r('div',{style:{display:'flex',flexDirection:'column',gap:2,flex:1,minWidth:80}},...conds.map((x,k)=>r('div',{key:k,style:{display:'flex',alignItems:'center',gap:4}},
+      r('span',{style:{width:22,fontSize:8,fontWeight:700,color:x[1]==='grad'?'#43a047':x[1],fontFamily:c.mono}},x[0]),
+      r('div',{style:{flex:1,height:4,borderRadius:2,background:x[1]==='grad'?'repeating-linear-gradient(45deg,#43a047 0 4px,#fdd835 4px 8px)':x[1]}}),
+      r('span',{style:{fontSize:8,color:c.muted,fontFamily:c.mono,minWidth:34,textAlign:'right'}},sec))));
+    const lbl=(rep,txt,brn,align)=>r('div',{style:{minWidth:96,maxWidth:150,fontSize:9,textAlign:align||'left'}},rep?r('div',{style:{fontFamily:c.mono,fontWeight:700,color:c.accent}},rep):null,r('div',{style:{color:c.text2,whiteSpace:'normal'}},txt),brn?r('div',{style:{color:c.muted,fontFamily:c.mono}},'bornes: '+brn):null);
+    const inRow=(cab,k)=>r('div',{key:'in'+k,style:{display:'flex',alignItems:'center',gap:8,padding:'7px 9px',background:c.surf,border:'1px solid '+c.bdr,borderRadius:8,marginBottom:6,boxShadow:c.elev1}},lbl(cab.wcode,cab.from,cab.bornes,'left'),bars(cab.conds,cab.sec),r('span',{style:{color:c.success,fontSize:13}},'→'));
+    const outRow=(cab,k)=>r('div',{key:'out'+k,style:{display:'flex',alignItems:'center',gap:8,padding:'7px 9px',background:c.surf,border:'1px solid '+c.bdr,borderRadius:8,marginBottom:6,boxShadow:c.elev1}},r('span',{style:{color:c.accent,fontSize:13}},'→'),bars(cab.conds,cab.sec),lbl(cab.wcode,cab.to,cab.bornes,'right'));
+    const centerCol=data.center?r('div',{style:{flexShrink:0,width:96,alignSelf:'center',background:'linear-gradient(180deg,#0288CE,#0277BD)',borderRadius:10,padding:'16px 8px',textAlign:'center',color:'#fff',boxShadow:c.elev2}},
+      r('div',{style:{fontSize:8,fontWeight:700,opacity:.8,letterSpacing:'.1em'}},data.center.type),
+      r('div',{style:{fontSize:15,fontWeight:900,fontFamily:c.mono,margin:'2px 0'}},data.center.code),
+      r('div',{style:{fontSize:9,opacity:.85}},data.center.nom)):null;
+    return r('div',{style:{padding:'2px 0'}},
+      r('div',{style:{display:'flex',alignItems:'center',gap:8,marginBottom:14,flexWrap:'wrap'}},
+        r('span',{style:{fontSize:10,fontWeight:700,color:c.muted,textTransform:'uppercase',letterSpacing:'.06em'}},'Équipement'),
+        r('select',{value:sel.val,onChange:e=>this.setState({nomencEquip:e.target.value}),style:{background:c.surf3,border:'1px solid '+c.bdr2,borderRadius:6,padding:'6px 9px',fontSize:12,color:c.text,outline:'none'}},...opts.map(o=>r('option',{key:o.val,value:o.val},o.label))),
+        r('span',{style:{fontSize:10,color:c.muted}},data.entrants.length+' entrant(s) · '+data.sortants.length+' sortant(s)')),
+      r('div',{style:{display:'flex',gap:14,alignItems:'flex-start'}},
+        r('div',{style:{flex:1,minWidth:220}},r('div',{style:{fontSize:10,fontWeight:800,color:c.success,textTransform:'uppercase',letterSpacing:'.06em',marginBottom:8}},'Entrants (amont)'),data.entrants.length?data.entrants.map(inRow):r('div',{style:{fontSize:11,color:c.muted,fontStyle:'italic'}},'Aucun câble entrant')),
+        centerCol,
+        r('div',{style:{flex:1,minWidth:220}},r('div',{style:{fontSize:10,fontWeight:800,color:c.accent,textTransform:'uppercase',letterSpacing:'.06em',marginBottom:8,textAlign:'right'}},'Sortants (aval)'),data.sortants.length?data.sortants.map(outRow):r('div',{style:{fontSize:11,color:c.muted,fontStyle:'italic',textAlign:'right'}},'Aucun câble sortant'))));
+  }
   ARMOIRE_COMP={voyant:{label:'Voyant Ø22',shape:'circle',w:22,h:22,color:'#ef4444'},bouton:{label:'Bouton Ø22',shape:'circle',w:22,h:22,color:'#22c55e'},afficheur:{label:'Afficheur 92x45',shape:'rect',w:92,h:45,color:'#0277BD'},presse_etoupe:{label:'Presse-etoupe Ø20',shape:'circle',w:20,h:20,color:'#94a3b8'},ventilation:{label:'Ventilation 100x100',shape:'square',w:100,h:100,color:'#06b6d4'},passage:{label:'Passage cable 60x30',shape:'rect',w:60,h:30,color:'#f59e0b'},decoupe:{label:'Decoupe libre',shape:'rect',w:50,h:50,color:'#7c3aed'}};
   ARMOIRE_FACES=[['porte','Porte'],['platine','Platine'],['couvercle','Couvercle'],['gauche','Cote gauche'],['droit','Cote droit'],['haut','Dessus'],['derriere','Derriere']];
   faceDims(a,face){const L=+a.L||600,H=+a.H||800,P=+a.P||250;if(face==='platine')return{w:Math.max(50,L-40),h:Math.max(50,H-40)};if(face==='gauche'||face==='droit')return{w:P,h:H};if(face==='haut')return{w:L,h:P};return{w:L,h:H};}
@@ -7318,6 +7380,7 @@ class Component extends DCLogic {
 
 
     const tabNomenclature=()=>{
+      if((this.state.nomencView||'table')==='cable')return r('div',{style:{padding:'18px 22px',animation:'fadeIn .3s ease',height:'100%',overflowY:'auto'}},this._nomencTabsBar(),this.renderVueCable());
       const{nomenclatureOverrides}=this.state;
       const setOvr=(key,upd2)=>this.setState(s=>({nomenclatureOverrides:{...s.nomenclatureOverrides,[key]:{...(s.nomenclatureOverrides[key]||{}),...upd2}}}));
 
@@ -7575,6 +7638,7 @@ class Component extends DCLogic {
       };
 
       return r('div',{style:{padding:'18px 22px',animation:'fadeIn .3s ease',height:'100%',overflowY:'auto',overflowX:'auto',minWidth:0}},
+        this._nomencTabsBar(),
         // Stats bar
         r('div',{style:{display:'flex',gap:8,flexWrap:'wrap',marginBottom:14}},
           [{v:totalCables,l:'Cables',col:'#0277BD'},{v:allFils.length,l:'Conducteurs',col:'#7c3aed'},{v:conf,l:'Conformes',col:'#16a34a'},{v:nc,l:'Non conf.',col:'#dc2626'},{v:res,l:'Reserves',col:'#d97706'},{v:pending,l:'En attente',col:'#94a3b8'}]
