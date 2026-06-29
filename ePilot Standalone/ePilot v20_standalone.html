@@ -6862,5 +6862,316 @@ html body[class] #vac-gantt td.emp .nm{font-weight:500 !important;}</style>
   })();
 })();
 </script>
+<script id="__FCR_IMPORT_v1__">
+(function(){
+'use strict';
+
+function nn(s){
+  if(!s) return '';
+  return String(s).normalize('NFD').replace(/[̀-ͯ]/g,'')
+    .toLowerCase().replace(/[^a-z0-9\s]/g,' ').replace(/\s+/g,' ').trim();
+}
+
+function loadXLSX(cb){
+  if(window.XLSX){ cb(); return; }
+  var s=document.createElement('script');
+  s.src='https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js';
+  s.onload=cb;
+  s.onerror=function(){ alert('Impossible de charger SheetJS. Vérifiez votre connexion.'); };
+  document.head.appendChild(s);
+}
+
+function parsePIFile(ab, piName){
+  var wb=XLSX.read(new Uint8Array(ab),{type:'array',cellText:true,raw:false});
+  var result={rows:[],piName:piName,client:'',vendeur:''};
+
+  var piSht=null, dataSht=null;
+  wb.SheetNames.forEach(function(n){
+    var nu=n.toUpperCase();
+    if((nu==='PI'||nu.indexOf('PI')===0)&&!piSht) piSht=wb.Sheets[n];
+    if((nu==='DATA'||nu==='DONNEES'||nu==='DONNÉES')&&!dataSht) dataSht=wb.Sheets[n];
+  });
+  if(!piSht) piSht=wb.Sheets[wb.SheetNames[0]];
+  if(!dataSht&&wb.SheetNames.length>1) dataSht=wb.Sheets[wb.SheetNames[1]];
+
+  var piRaw=XLSX.utils.sheet_to_json(piSht,{header:1,defval:'',raw:false});
+  var dataRaw=dataSht?XLSX.utils.sheet_to_json(dataSht,{header:1,defval:'',raw:false}):null;
+
+  for(var ri=0;ri<Math.min(20,piRaw.length);ri++){
+    var row=piRaw[ri];
+    for(var ci=0;ci<row.length-1;ci++){
+      var lbl=nn(String(row[ci]||''));
+      if(lbl==='client'||lbl==='chantier'||lbl==='imputation'){
+        var val=String(row[ci+1]||'').trim();
+        if(!val||val.length<2) val=String(row[ci+2]||'').trim();
+        if(val&&val.length>1){ result.client=val; break; }
+      }
+    }
+    if(result.client) break;
+  }
+
+  var hdrIdx=-1, descIdx=-1, puIdx=7;
+  for(var ri=0;ri<Math.min(30,piRaw.length);ri++){
+    var row=piRaw[ri];
+    for(var ci=0;ci<row.length;ci++){
+      var t=nn(String(row[ci]||''));
+      if(t==='designation'||t==='libelle'||t==='description'||t==='produit'||t==='article'){
+        hdrIdx=ri; descIdx=ci; break;
+      }
+    }
+    if(hdrIdx>=0) break;
+  }
+  if(hdrIdx<0) return result;
+
+  var hrow=piRaw[hdrIdx];
+  for(var ci=0;ci<hrow.length;ci++){
+    var t=nn(String(hrow[ci]||''));
+    if(t==='pu'||t.indexOf('pu ')===0||t==='prix unitaire'||t==='p.u'||t==='montant unitaire'){
+      puIdx=ci; break;
+    }
+  }
+
+  if(dataRaw){
+    for(var ri=0;ri<=Math.min(hdrIdx+1,dataRaw.length-1);ri++){
+      var vnd=String((dataRaw[ri]||[])[13]||'').trim();
+      if(vnd&&vnd.length>2&&nn(vnd)!=='vendeur'&&nn(vnd)!=='fournisseur'){
+        result.vendeur=vnd; break;
+      }
+    }
+  }
+
+  for(var ri=hdrIdx+1;ri<piRaw.length;ri++){
+    var row=piRaw[ri];
+    var desc=String(row[descIdx]||'').trim();
+    if(!desc||desc.length<2) continue;
+    var nd=nn(desc);
+    if(nd==='total'||nd.indexOf('sous-total')===0||nd.indexOf('sous total')===0) continue;
+
+    var pu=parseFloat(String(row[puIdx]||'0').replace(/\s/g,'').replace(/,/g,'.'))||0;
+    var puFour=0, devise='XAF', vendeur=result.vendeur;
+
+    if(dataRaw&&dataRaw[ri]){
+      var dr=dataRaw[ri];
+      var pf=parseFloat(String(dr[11]||'0').replace(/\s/g,'').replace(/,/g,'.'))||0;
+      if(pf>0) puFour=pf;
+      var dv=String(dr[12]||'').trim();
+      if(dv&&dv.length>=2&&dv.length<=5) devise=dv;
+      var vn=String(dr[13]||'').trim();
+      if(vn&&vn.length>2&&nn(vn)!=='vendeur'&&nn(vn)!=='fournisseur') vendeur=vn;
+    }
+
+    result.rows.push({desc:desc,pu:pu,puFour:puFour,devise:devise,vendeur:vendeur});
+  }
+
+  return result;
+}
+
+function nextACode(db){
+  var max=0;
+  (db||[]).forEach(function(a){
+    var m=(a.code||'').match(/^A(\d{5})$/);
+    if(m){ var n=parseInt(m[1],10); if(n>max) max=n; }
+  });
+  return 'A'+String(max+1).padStart(5,'0');
+}
+
+function mergeRows(parsed, db){
+  var today=new Date().toISOString().slice(0,10);
+  var byDesc={};
+  db.forEach(function(a){
+    var k=nn(a.desc||a.designation||a.libelle||'');
+    if(k) byDesc[k]=a;
+  });
+
+  var newItems=[], updated=[];
+
+  parsed.rows.forEach(function(row){
+    var key=nn(row.desc);
+    if(!key) return;
+    var ref={pi:parsed.piName,client:parsed.client,vendeur:row.vendeur,pu:row.pu,puF:row.puFour,devise:row.devise,date:today};
+    var existing=byDesc[key];
+
+    if(existing){
+      if(row.pu>0) existing.pu=row.pu;
+      if(row.puFour>0) existing.puFour=row.puFour;
+      if(row.devise) existing.devise=row.devise;
+      if(row.vendeur) existing.vendeur=row.vendeur;
+      if(parsed.client&&!existing.client) existing.client=parsed.client;
+      if(!existing.refs) existing.refs=[];
+      existing.refs.push(ref);
+      updated.push(existing);
+    } else {
+      var code=nextACode(db.concat(newItems));
+      var art={
+        code:code,codeA:code,
+        desc:row.desc,designation:row.desc,
+        'ref-pi':parsed.piName,refPi:parsed.piName,
+        client:parsed.client,
+        type:'Article',unite:'U',
+        pu:row.pu,puFour:row.puFour,
+        devise:row.devise,vendeur:row.vendeur,
+        sub:'',qte:0,refs:[ref]
+      };
+      newItems.push(art);
+      db.push(art);
+      byDesc[key]=art;
+    }
+  });
+
+  return {newItems:newItems,updated:updated};
+}
+
+function saveToIDB(db, cb){
+  var req=indexedDB.open('fcr_db',1);
+  req.onupgradeneeded=function(e){ e.target.result.createObjectStore('articles',{keyPath:'_k'}); };
+  req.onsuccess=function(e){
+    var idb=e.target.result;
+    var clr=idb.transaction('articles','readwrite');
+    clr.objectStore('articles').clear();
+    clr.oncomplete=function(){
+      var PAGE=200,idx=0;
+      function writePage(){
+        if(idx>=db.length){ idb.close(); if(cb)cb(); return; }
+        var chunk=db.slice(idx,idx+PAGE),base=idx; idx+=PAGE;
+        var tx=idb.transaction('articles','readwrite'),st=tx.objectStore('articles');
+        chunk.forEach(function(a,j){ st.put(Object.assign({},a,{_k:(base+j)+'|'+(a.code||'')+'|'+(a['ref-pi']||'')})); });
+        tx.oncomplete=writePage; tx.onerror=function(){ idb.close(); };
+      }
+      writePage();
+    };
+    clr.onerror=function(){ idb.close(); };
+  };
+  req.onerror=function(){ if(cb)cb(); };
+}
+
+function showModal(parsed, stat, onConfirm){
+  var old=document.getElementById('__fcrImpModal__');
+  if(old) old.remove();
+
+  var previewRows=parsed.rows.slice(0,15).map(function(r){
+    var key=nn(r.desc);
+    var isNew=!stat.updated.find(function(u){ return nn(u.desc||u.designation||u.libelle||'')=== key; });
+    var bg=isNew?'#ecfaec':'#fffbea';
+    var badge=isNew
+      ?'<span style="background:#1e7b1e;color:#fff;border-radius:3px;padding:1px 5px;font-size:10px">NEW</span>'
+      :'<span style="background:#b57800;color:#fff;border-radius:3px;padding:1px 5px;font-size:10px">MAJ</span>';
+    var puStr=r.pu>0?r.pu.toLocaleString('fr-FR'):'—';
+    var safeDesc=r.desc.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;');
+    return '<tr style="background:'+bg+'"><td style="padding:4px 6px">'+badge+'</td>'
+      +'<td style="padding:4px 6px;max-width:260px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="'+safeDesc+'">'+safeDesc+'</td>'
+      +'<td style="padding:4px 6px;text-align:right;white-space:nowrap">'+puStr+'</td>'
+      +'<td style="padding:4px 6px">'+r.devise+'</td>'
+      +'<td style="padding:4px 6px;max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+r.vendeur+'</td></tr>';
+  }).join('');
+
+  if(parsed.rows.length>15) previewRows+='<tr><td colspan="5" style="padding:5px 8px;color:#888;font-style:italic;text-align:center">... et '+(parsed.rows.length-15)+' autre(s) ligne(s)</td></tr>';
+
+  var clientHtml=parsed.client?'<div style="margin-bottom:12px;font-size:13px;color:#444">Client : <b>'+parsed.client+'</b></div>':'';
+
+  var modal=document.createElement('div');
+  modal.id='__fcrImpModal__';
+  modal.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:100000;display:flex;align-items:center;justify-content:center;font-family:system-ui,sans-serif;font-size:13px';
+  modal.innerHTML='<div style="background:#fff;border-radius:10px;padding:26px;max-width:720px;width:95%;max-height:85vh;overflow:auto;box-shadow:0 12px 40px rgba(0,0,0,.3)">'
+    +'<h3 style="margin:0 0 14px;color:#B5000A;font-size:16px">📥 Import PI — <span style="font-weight:400">'+parsed.piName+'</span></h3>'
+    +'<div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px">'
+    +'<span style="background:#e8f5e8;border:1px solid #1e7b1e;color:#1e7b1e;padding:4px 12px;border-radius:20px">✚ '+stat.newItems.length+' nouveaux</span>'
+    +'<span style="background:#fff8e0;border:1px solid #b57800;color:#b57800;padding:4px 12px;border-radius:20px">↻ '+stat.updated.length+' mis à jour</span>'
+    +'<span style="background:#f2f2f2;border:1px solid #aaa;color:#555;padding:4px 12px;border-radius:20px">'+parsed.rows.length+' lignes au total</span>'
+    +'</div>'
+    +clientHtml
+    +'<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;min-width:480px">'
+    +'<thead><tr style="background:#f5f5f5;color:#444"><th style="padding:6px;text-align:left">Type</th><th style="padding:6px;text-align:left">Désignation</th><th style="padding:6px;text-align:right">PU vendu</th><th style="padding:6px">Devise</th><th style="padding:6px">Vendeur</th></tr></thead>'
+    +'<tbody>'+previewRows+'</tbody></table></div>'
+    +'<div style="display:flex;gap:10px;justify-content:flex-end;margin-top:18px">'
+    +'<button id="__fcrImpCancel__" style="padding:8px 20px;border:1px solid #ccc;background:#fff;border-radius:6px;cursor:pointer;font-size:13px">Annuler</button>'
+    +'<button id="__fcrImpConfirm__" style="padding:8px 22px;background:#B5000A;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:14px;font-weight:600">✅ Confirmer l\'import</button>'
+    +'</div></div>';
+
+  document.body.appendChild(modal);
+  document.getElementById('__fcrImpCancel__').onclick=function(){ modal.remove(); };
+  modal.addEventListener('click',function(e){ if(e.target===modal) modal.remove(); });
+  document.getElementById('__fcrImpConfirm__').onclick=function(){ modal.remove(); onConfirm(); };
+}
+
+function handleFile(file){
+  var piName=(file.name||'PI').replace(/\.[a-z]+$/i,'');
+  loadXLSX(function(){
+    var reader=new FileReader();
+    reader.onload=function(ev){
+      try{
+        var parsed=parsePIFile(ev.target.result,piName);
+        if(!parsed.rows.length){
+          alert('Aucune ligne de données trouvée dans «'+file.name+'».\nVérifiez que la feuille PI contient les colonnes DESIGNATION et PU.');
+          return;
+        }
+        var db=(window.FCR_DB||[]).slice();
+        var stat=mergeRows(parsed,db);
+        showModal(parsed,stat,function(){
+          var saving=document.createElement('div');
+          saving.style.cssText='position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#444;color:#fff;padding:10px 20px;border-radius:8px;z-index:100001;font-size:13px';
+          saving.textContent='Enregistrement…';
+          document.body.appendChild(saving);
+          saveToIDB(db,function(){
+            saving.remove();
+            window.FCR_DB=db;
+            if(typeof window.renderArticles==='function') window.renderArticles();
+            var toast=document.createElement('div');
+            toast.style.cssText='position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#1e7b1e;color:#fff;padding:12px 24px;border-radius:8px;z-index:100001;font-size:14px;box-shadow:0 4px 20px rgba(0,0,0,.3)';
+            toast.textContent='✅ '+stat.newItems.length+' nouveaux · '+stat.updated.length+' mis à jour';
+            document.body.appendChild(toast);
+            setTimeout(function(){ toast.remove(); },4000);
+          });
+        });
+      } catch(err){
+        console.error('[FCR Import v1]',err);
+        alert('Erreur lors de la lecture du fichier :\n'+err.message);
+      }
+    };
+    reader.onerror=function(){ alert('Impossible de lire le fichier.'); };
+    reader.readAsArrayBuffer(file);
+  });
+}
+
+function injectBtn(){
+  if(document.getElementById('__fcrImpBtn__')) return true;
+  var allBtns=document.querySelectorAll('button');
+  var anchor=null;
+  for(var i=0;i<allBtns.length;i++){
+    var txt=(allBtns[i].textContent||'').trim();
+    if(/nouveau.*(produit|article)/i.test(txt)||/add.*product/i.test(txt)){
+      anchor=allBtns[i]; break;
+    }
+  }
+  if(!anchor) return false;
+
+  var fi=document.createElement('input');
+  fi.type='file'; fi.accept='.xlsm,.xlsx,.xls'; fi.style.display='none';
+  fi.id='__fcrImpFI__';
+  fi.addEventListener('change',function(){
+    if(fi.files&&fi.files[0]){ handleFile(fi.files[0]); fi.value=''; }
+  });
+  document.body.appendChild(fi);
+
+  var btn=document.createElement('button');
+  btn.id='__fcrImpBtn__';
+  btn.textContent='📥 Importer PI';
+  btn.title='Importer des articles depuis un fichier PI FCR (.xlsm)';
+  btn.style.cssText=anchor.getAttribute('style')||'';
+  btn.style.marginRight='8px';
+  btn.addEventListener('click',function(e){ e.preventDefault(); e.stopPropagation(); fi.click(); });
+
+  anchor.parentNode.insertBefore(btn,anchor);
+  return true;
+}
+
+if(window.__epKeepApplying){
+  window.__epKeepApplying(injectBtn,{interval:700,tries:80});
+} else {
+  var _t=0;
+  (function poll(){ if(injectBtn()) return; if(++_t<80) setTimeout(poll,700); })();
+}
+
+})();
+</script>
 </body>
 </html>
