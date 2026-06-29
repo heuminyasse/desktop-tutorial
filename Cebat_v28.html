@@ -2960,17 +2960,33 @@ class Component extends DCLogic {
     return issues;
   }
   _fnPowerW(fn){const q=fn.quantite||1;if(fn.type==='eclairage')return (fn.puissance||10)*q;if(fn.type==='prises'||fn.type==='prises_sdb')return 460*q;return ({four:6000,lave_vaisselle:2200,lave_linge:2500,seche_linge:2400,chauffe_eau:3000,climatisation:2500,borne_ve:7400,hotte:300,vmc:200,portail:500,piscine:1500}[fn.type]||500)*q;}
-  boardFeederDrop(tableauId){
-    // Chute de tension de la liaison amont (source/depart -> tableau)
+  boardFeederDrop(tableauId,_seen){
+    // Chute de tension de la liaison amont (source ou tableau parent -> tableau), recursive en cascade
+    _seen=_seen||{};
+    if(_seen[tableauId])return{du:0,pct:0,I:0,S:0,L:0,est:true,found:false};
+    _seen[tableauId]=1;
     const tes=this.state.tableauxElec||[];const deps=this.state.departs||[];const djs=this.state.disjoncteurs||[];const pcs=this.state.pieces||[];
     const te=tes.find(t=>t.id===tableauId);
-    const dep=te?(deps.find(d=>d.id===te.departId)||deps.find(d=>d.type==='comptage')):null;
+    if(!te)return{du:0,pct:0,I:0,S:0,L:0,est:true,found:false};
     let I=0;djs.filter(d=>d.tableauId===tableauId).forEach(d=>{try{I+=this.calcDjPower(d,pcs)/230;}catch(e){}});
+    const triAlim=((this.state.project&&this.state.project.typeAlim)||'')==='triphase';
+    const parentTe=tes.find(t=>t.id===te.departId);
+    if(parentTe){
+      // Tableau divisionnaire : chute du cable d'alimentation depuis le tableau parent + chute amont du parent
+      const cal=+te.feederCalibre||0;
+      const S=(+te.feederSection>0)?+te.feederSection:(cal?this.sectionMinForCalibre(cal):10);
+      const L=(+te.feederLongueur>0)?+te.feederLongueur:8;
+      const duFeeder=(triAlim?1.732:2)*0.0225*L*I/(S||1);
+      const up=this.boardFeederDrop(parentTe.id,_seen);
+      const du=Math.round((duFeeder+up.du)*100)/100;
+      return{du,pct:Math.round(du/230*1000)/10,I:Math.round(I*10)/10,S,L,est:!(+te.feederLongueur>0),found:true,parent:parentTe.id};
+    }
+    const dep=deps.find(d=>d.id===te.departId)||deps.find(d=>d.type==='comptage');
     const cal=dep?(+dep.calibre||0):0;
     const S=(dep&&+dep.section>0)?+dep.section:(cal?this.sectionMinForCalibre(cal):10);
     const Ldef=(this.state.project&&+this.state.project.longArrivee>0)?+this.state.project.longArrivee:8;
     const L=(dep&&+dep.longueur>0)?+dep.longueur:Ldef;
-    const tri=((this.state.project&&this.state.project.typeAlim)||'')==='triphase'&&dep&&(+dep.poles>=3);
+    const tri=triAlim&&dep&&(+dep.poles>=3);
     const du=(tri?1.732:2)*0.0225*L*I/(S||1);
     return{du:Math.round(du*100)/100,pct:Math.round(du/230*1000)/10,I:Math.round(I*10)/10,S,L,est:!(dep&&+dep.longueur>0),found:!!dep};
   }
@@ -3071,9 +3087,16 @@ class Component extends DCLogic {
   selectivityTable(){
     const s=this.state;const tes=s.tableauxElec||[];const deps=s.departs||[];const djs=s.disjoncteurs||[];const rows=[];
     tes.forEach(te=>{
-      const dep=deps.find(d=>d.id===te.departId)||deps.find(d=>d.type==='comptage');
       const tdjs=djs.filter(d=>d.tableauId===te.id);
-      if(dep){const up=+dep.calibre||0;tdjs.forEach(d=>{const dn=+d.calibre||0;if(!up||!dn)return;const ratio=up/dn;rows.push({te:te.code||te.nom||'TE',up:(dep.code||'SRC')+' '+up+'A',down:(d.code||'CB')+' '+dn+'A',type:'Ampèremétrique',ratio:Math.round(ratio*100)/100,ok:ratio>=1.6,note:ratio>=1.6?'Sélectif (rapport ≥1,6)':(ratio>=1?'Partiel — vérifier les courbes':'Non sélectif (calibre amont ≤ aval)')});});}
+      const parentTe=tes.find(t=>t.id===te.departId);
+      const ampNote=ratio=>ratio>=1.6?'Sélectif (rapport ≥1,6)':(ratio>=1?'Partiel — vérifier les courbes':'Non sélectif (calibre amont ≤ aval)');
+      if(parentTe){
+        const up=+te.feederCalibre||0;const upLbl='Liaison '+(parentTe.code||parentTe.nom||'TP')+(up?' '+up+'A':'');
+        if(up)tdjs.forEach(d=>{const dn=+d.calibre||0;if(!dn)return;const ratio=up/dn;rows.push({te:te.code||te.nom||'TE',up:upLbl,down:(d.code||'CB')+' '+dn+'A',type:'Ampèremétrique',ratio:Math.round(ratio*100)/100,ok:ratio>=1.6,note:ampNote(ratio)});});
+        return;
+      }
+      const dep=deps.find(d=>d.id===te.departId)||deps.find(d=>d.type==='comptage');
+      if(dep){const up=+dep.calibre||0;tdjs.forEach(d=>{const dn=+d.calibre||0;if(!up||!dn)return;const ratio=up/dn;rows.push({te:te.code||te.nom||'TE',up:(dep.code||'SRC')+' '+up+'A',down:(d.code||'CB')+' '+dn+'A',type:'Ampèremétrique',ratio:Math.round(ratio*100)/100,ok:ratio>=1.6,note:ampNote(ratio)});});}
       if(dep&&+dep.ddr>0){const upd=+dep.ddr;tdjs.filter(d=>+d.ddr>0).forEach(d=>{const dnd=+d.ddr;const ratio=upd/dnd;const sel=ratio>=3;rows.push({te:te.code||te.nom||'TE',up:(dep.code||'SRC')+' '+upd+'mA',down:(d.code||'CB')+' '+dnd+'mA',type:'Différentielle',ratio:Math.round(ratio*100)/100,ok:sel,note:sel?'Sélectif (rapport ≥3 + type S amont)':'Non sélectif (rapport <3)'});});}
     });
     return rows;
@@ -5053,7 +5076,7 @@ class Component extends DCLogic {
       if(!editId&&!form.departId&&isPrinc){alert('Un tableau principal doit etre lie a une source.');return;}
       if(!editId&&!form.departId&&!isPrinc){alert('Un tableau secondaire doit etre lie a un tableau principal.');return;}
       if(!form.pieceId){alert('La piece est obligatoire.');return;}
-      const selPc=form.pieceId?this.state.pieces.find(p=>String(p.id)===String(form.pieceId)):null;const selAp=selPc?this.state.appartements.find(a=>a.id===selPc.appId):null;const autoNom=selPc?(selAp?selAp.nom+' — ':'')+selPc.nom:'Tableau';const obj={nom:autoNom,type:form.type||'principal',description:form.description||'',pieceId:form.pieceId?+form.pieceId:null,appId:selPc?selPc.appId:(form.appId?+form.appId:null),departId:form.departId?+form.departId:null,code:autoCode,raccordType:form.raccordType||'bornier',raccordIdx:form.raccordIdx||1};
+      const selPc=form.pieceId?this.state.pieces.find(p=>String(p.id)===String(form.pieceId)):null;const selAp=selPc?this.state.appartements.find(a=>a.id===selPc.appId):null;const autoNom=selPc?(selAp?selAp.nom+' — ':'')+selPc.nom:'Tableau';const obj={nom:autoNom,type:form.type||'principal',description:form.description||'',pieceId:form.pieceId?+form.pieceId:null,appId:selPc?selPc.appId:(form.appId?+form.appId:null),departId:form.departId?+form.departId:null,code:autoCode,raccordType:form.raccordType||'bornier',raccordIdx:form.raccordIdx||1,feederCalibre:form.feederCalibre?+form.feederCalibre:null,feederSection:form.feederSection?+form.feederSection:null,feederLongueur:form.feederLongueur?+form.feederLongueur:null};
       if(editId!==null)this.setState(s=>({tableauxElec:s.tableauxElec.map(t=>t.id===editId?{...t,...obj}:t),showModal:false,editId:null}));
       else {
         const newNomOvr={...this.state.nomenclatureOverrides};
@@ -5117,7 +5140,14 @@ class Component extends DCLogic {
                 r('select',{value:String(form.departId||''),onChange:e=>sf({departId:e.target.value}),style:{width:'100%',background:c.surf3,border:'1px solid '+(form.departId?c.bdr2:c.danger),borderRadius:7,padding:'8px 12px',color:c.text,fontSize:12,outline:'none',appearance:'auto'}},
                   r('option',{value:''},'-- Choisir --'),...srcOpts.map(([v,l])=>r('option',{key:v,value:v},l))
                 )
-            )
+            ),
+            (!isPrinc)?r('div',null,
+              Lbl('Liaison depuis le tableau parent'),
+              r('div',{style:{display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap:'0 10px'}},
+                r('select',{value:String(form.feederCalibre||''),onChange:e=>sf({feederCalibre:e.target.value}),title:'Calibre de la protection amont (A)',style:{width:'100%',background:c.surf3,border:'1px solid '+c.bdr2,borderRadius:7,padding:'8px 8px',color:c.text,fontSize:12,outline:'none',appearance:'auto'}},r('option',{value:''},'Calibre'),...['16','20','25','32','40','63'].map(v=>r('option',{key:v,value:v},v+'A'))),
+                r('select',{value:String(form.feederSection||''),onChange:e=>sf({feederSection:e.target.value}),title:'Section du câble de liaison (mm²)',style:{width:'100%',background:c.surf3,border:'1px solid '+c.bdr2,borderRadius:7,padding:'8px 8px',color:c.text,fontSize:12,outline:'none',appearance:'auto'}},r('option',{value:''},'Section'),...['2.5','4','6','10','16','25'].map(v=>r('option',{key:v,value:v},v+'mm²'))),
+                r('input',{type:'number',min:0,value:form.feederLongueur||'',onChange:e=>sf({feederLongueur:e.target.value}),placeholder:'Long. m',title:'Longueur de la liaison (m)',style:{width:'100%',background:c.surf3,border:'1px solid '+c.bdr2,borderRadius:7,padding:'8px 8px',color:c.text,fontSize:12,outline:'none'}}))
+            ):null
           )
         )
       ),
@@ -6690,6 +6720,7 @@ class Component extends DCLogic {
               r('div',{style:{display:'flex',alignItems:'center',gap:10,padding:'10px 14px',background:c.surf3,borderBottom:'1px solid '+c.bdr}},
                 r('span',{style:{fontSize:12,fontWeight:800,color:c.accent,fontFamily:c.mono}},teCode),
                 r('span',{style:{fontSize:12,color:c.text,fontWeight:600}},te.nom||''),
+                (()=>{const pt=(this.state.tableauxElec||[]).find(t=>t.id===te.departId);return pt?r('span',{style:{fontSize:9,fontFamily:c.mono,color:c.purple,background:c.purple+'18',border:'1px solid '+c.purple+'44',borderRadius:5,padding:'1px 6px'}},'⇡ alimenté par '+(pt.code||pt.nom||'TP')):null;})(),
                 r('div',{style:{marginLeft:'auto',display:'flex',alignItems:'center',gap:8}},r('span',{style:{fontSize:9,color:c.muted}},br.usedModules+' mod · '+br.nbRangees+' rangée'+(br.nbRangees>1?'s':'')+' · '+djs.length+' dép.'),r('button',{onClick:()=>this.exportSchemaSVG(te.id),title:'Exporter ce tableau en SVG',style:{fontSize:9,fontWeight:700,color:c.accent,background:'transparent',border:'1px solid '+c.bdr2,borderRadius:5,padding:'2px 7px',cursor:'pointer'}},'SVG'),r('button',{onClick:()=>this.exportSchemaDXF(te.id),title:'Exporter ce tableau en DXF',style:{fontSize:9,fontWeight:700,color:c.accent,background:'transparent',border:'1px solid '+c.bdr2,borderRadius:5,padding:'2px 7px',cursor:'pointer'}},'DXF'),r('button',{onClick:()=>this.exportSchemaPNG(te.id),title:'Exporter ce tableau en PNG',style:{fontSize:9,fontWeight:700,color:c.accent,background:'transparent',border:'1px solid '+c.bdr2,borderRadius:5,padding:'2px 7px',cursor:'pointer'}},'PNG'))),
               r('div',{style:{padding:'14px 16px',overflowX:'auto'}},
                 r('div',{style:{display:'inline-flex',alignItems:'flex-start',gap:0}},
