@@ -2226,14 +2226,14 @@ class Component extends DCLogic {
     boiteForm:{nom:'',label:'',pieceId:'',type:'encastre',tableauId:'',position:'',hauteurPlafond:30,cote:'plafond',description:'',raccordType:'connecteur',raccordIdx:1,retourDepart:false,retourEditFonction:false},
     interForm:{nom:'',pieceId:'',type:'simple',circuitRef:'',zoneId:''},
     zoneForm:{nom:'',pieceId:'',position:'',hauteur:120,cote:'gauche',retourEditFonction:false,retourInter:false},
-    expandedPiece:null,tests:{},realisationTab:'bord',realisationFilter:{appId:null,pieceId:null,teId:null,bdId:null},realisationChecks:{},mesures:{},nomenclatureOverrides:{},toast:null,circuitFilter:'all',circuitsTab:'distribution',circuitsSel:{srcId:null,teId:null,cbId:null,bdId:null},editFonctionForm:{type:'eclairage',typeLampe:'led_plafond',puissance:12,quantite:1,distance:0,cmdType:'simple',cmdZoneId:'',cmdZone2Id:'',newZoneNom:'',showNewZone:false,djCalibre:10,djCourbe:'B',djPoles:'1',djDDR:30,djTableauId:'',djSection:1.5,departType:'tableau',departId:'',departDist:0,cableLongueur:0,cableSection:'1.5',cableType:'H07VU',cableRepere:'',nbConducteursConn:0,repBagues:false},editFonctionPieceId:null,editFonctionId:null,
+    expandedPiece:null,tests:{},armoire:{L:600,H:800,P:250,ip:'IP55',cutouts:[]},armoireFace:'porte',armoireSel:null,armoireShape:'voyant',armoireDrag:null,realisationTab:'bord',realisationFilter:{appId:null,pieceId:null,teId:null,bdId:null},realisationChecks:{},mesures:{},nomenclatureOverrides:{},toast:null,circuitFilter:'all',circuitsTab:'distribution',circuitsSel:{srcId:null,teId:null,cbId:null,bdId:null},editFonctionForm:{type:'eclairage',typeLampe:'led_plafond',puissance:12,quantite:1,distance:0,cmdType:'simple',cmdZoneId:'',cmdZone2Id:'',newZoneNom:'',showNewZone:false,djCalibre:10,djCourbe:'B',djPoles:'1',djDDR:30,djTableauId:'',djSection:1.5,departType:'tableau',departId:'',departDist:0,cableLongueur:0,cableSection:'1.5',cableType:'H07VU',cableRepere:'',nbConducteursConn:0,repBagues:false},editFonctionPieceId:null,editFonctionId:null,
   };
 
   // ═══ PERSISTANCE (localStorage + export/import JSON) ═══
   _STORE_KEY='cebat_v28_state';
   _PROJ_INDEX='cebat_v28_projects';
   _PROJ_CUR='cebat_v28_current';
-  _PERSIST_KEYS=['project','niveaux','appartements','pieces','tableauxElec','departs','inverseurs','boitesDeriv','disjoncteurs','interrupteurs','zonesCommande','nextNivId','nextAppId','nextPieceId','nextFonctionId','nextElemId','theme','view','nomenclatureOverrides','realisationChecks','mesures','tests'];
+  _PERSIST_KEYS=['project','niveaux','appartements','pieces','tableauxElec','departs','inverseurs','boitesDeriv','disjoncteurs','interrupteurs','zonesCommande','nextNivId','nextAppId','nextPieceId','nextFonctionId','nextElemId','theme','view','nomenclatureOverrides','realisationChecks','mesures','tests','armoire'];
   _projKey(id){return 'cebat_v28_p_'+id;}
   _snapshot(){const o={};for(const k of this._PERSIST_KEYS)if(this.state[k]!==undefined)o[k]=this.state[k];return o;}
   _pickPersist(d){const o={};for(const k of this._PERSIST_KEYS)if(d&&d[k]!==undefined)o[k]=d[k];return o;}
@@ -2804,6 +2804,7 @@ class Component extends DCLogic {
     {id:'logements',label:'Appartements & Pièces',cat:'Structure'},
     {id:'circuits',label:'Circuits',cat:'Dimensionnement'},
     {id:'schema',label:'Schéma unifilaire',cat:'Dimensionnement'},
+    {id:'armoire',label:'Armoire électrique',cat:'Dimensionnement'},
     {id:'rangees',label:'Composition tableau',cat:'Dimensionnement'},
     
     {id:'realisation',label:'Réalisation & Contrôle',cat:'Processus'},
@@ -6208,6 +6209,78 @@ class Component extends DCLogic {
             })));
       }));
   }
+  ARMOIRE_COMP={voyant:{label:'Voyant Ø22',shape:'circle',w:22,h:22,color:'#ef4444'},bouton:{label:'Bouton Ø22',shape:'circle',w:22,h:22,color:'#22c55e'},afficheur:{label:'Afficheur 92x45',shape:'rect',w:92,h:45,color:'#0277BD'},presse_etoupe:{label:'Presse-etoupe Ø20',shape:'circle',w:20,h:20,color:'#94a3b8'},ventilation:{label:'Ventilation 100x100',shape:'square',w:100,h:100,color:'#06b6d4'},passage:{label:'Passage cable 60x30',shape:'rect',w:60,h:30,color:'#f59e0b'},decoupe:{label:'Decoupe libre',shape:'rect',w:50,h:50,color:'#7c3aed'}};
+  ARMOIRE_FACES=[['porte','Porte'],['platine','Platine'],['couvercle','Couvercle'],['gauche','Cote gauche'],['droit','Cote droit'],['haut','Dessus'],['derriere','Derriere']];
+  faceDims(a,face){const L=+a.L||600,H=+a.H||800,P=+a.P||250;if(face==='platine')return{w:Math.max(50,L-40),h:Math.max(50,H-40)};if(face==='gauche'||face==='droit')return{w:P,h:H};if(face==='haut')return{w:L,h:P};return{w:L,h:H};}
+  armoireConflicts(a){
+    const cuts=a.cutouts||[];const conf={};const msgs=[];
+    const ov=(c1,c2)=>!(c1.x+c1.w<=c2.x||c2.x+c2.w<=c1.x||c1.y+c1.h<=c2.y||c2.y+c2.h<=c1.y);
+    for(let i=0;i<cuts.length;i++)for(let j=i+1;j<cuts.length;j++){if(cuts[i].face===cuts[j].face&&ov(cuts[i],cuts[j])){conf[cuts[i].id]=1;conf[cuts[j].id]=1;}}
+    const porte=cuts.filter(c=>c.face==='porte'),plat=cuts.filter(c=>c.face==='platine');
+    porte.forEach(p=>plat.forEach(q=>{if(ov({x:p.x,y:p.y,w:p.w,h:p.h},{x:q.x+20,y:q.y+20,w:q.w,h:q.h})){conf[p.id]=2;conf[q.id]=2;msgs.push('« '+(p.label||'Porte')+' » (porte) en conflit avec « '+(q.label||'Platine')+' » (platine) — meme emplacement.');}}));
+    cuts.forEach(c=>{const fd=this.faceDims(a,c.face);if(c.x<0||c.y<0||c.x+c.w>fd.w||c.y+c.h>fd.h){conf[c.id]=conf[c.id]||3;msgs.push('« '+(c.label||c.shape)+' » sort du gabarit de la face '+c.face+'.');}});
+    return{conf,msgs};
+  }
+  vArmoire(){
+    const s=this.state;const c=this.C;const r=this.r;
+    const a=s.armoire||{L:600,H:800,P:250,ip:'IP55',cutouts:[]};
+    const face=s.armoireFace||'porte';const fd=this.faceDims(a,face);
+    const SCALE=Math.min(520/Math.max(fd.w,1),560/Math.max(fd.h,1));const W=fd.w*SCALE,Hpx=fd.h*SCALE;
+    const allCuts=a.cutouts||[];const cuts=allCuts.filter(x=>x.face===face);
+    const cc=this.armoireConflicts(a);const conf=cc.conf;
+    const selId=s.armoireSel;const selCut=allCuts.find(x=>x.id===selId);
+    const upCut=(id,patch)=>this.setState(st=>({armoire:{...st.armoire,cutouts:st.armoire.cutouts.map(x=>x.id===id?{...x,...patch}:x)}}));
+    const ni=(lbl,val,onch,w)=>r('div',{style:{display:'flex',flexDirection:'column',gap:2}},r('label',{style:{fontSize:9,color:c.muted}},lbl),r('input',{type:'number',value:val,onChange:e=>onch(+e.target.value),style:{width:w||62,background:c.surf3,border:'1px solid '+c.bdr2,borderRadius:5,padding:'4px 6px',color:c.text,fontSize:12,outline:'none'}}));
+    const dims=r('div',{style:{display:'flex',gap:10,flexWrap:'wrap',alignItems:'flex-end',marginBottom:12}},
+      ni('Largeur (mm)',a.L,v=>this.setState(st=>({armoire:{...st.armoire,L:v}})),70),
+      ni('Hauteur (mm)',a.H,v=>this.setState(st=>({armoire:{...st.armoire,H:v}})),70),
+      ni('Profondeur (mm)',a.P,v=>this.setState(st=>({armoire:{...st.armoire,P:v}})),70),
+      r('div',{style:{display:'flex',flexDirection:'column',gap:2}},r('label',{style:{fontSize:9,color:c.muted}},'Indice IP'),r('select',{value:a.ip||'IP55',onChange:e=>this.setState(st=>({armoire:{...st.armoire,ip:e.target.value}})),style:{background:c.surf3,border:'1px solid '+c.bdr2,borderRadius:5,padding:'5px 6px',color:c.text,fontSize:12}},...['IP20','IP30','IP44','IP55','IP65','IP66'].map(x=>r('option',{key:x,value:x},x)))),
+      r('div',{style:{flex:1}}),this.Btn('Imprimer calques',()=>this.printArmoire(),'sec','sm'));
+    const tabs=r('div',{style:{display:'flex',gap:5,flexWrap:'wrap',marginBottom:12}},...this.ARMOIRE_FACES.map(f=>{const n=allCuts.filter(x=>x.face===f[0]).length;const on=f[0]===face;return r('button',{key:f[0],onClick:()=>this.setState({armoireFace:f[0],armoireSel:null}),style:{padding:'5px 11px',borderRadius:7,fontSize:11,fontWeight:on?700:400,border:'1px solid '+(on?c.accent:c.bdr2),background:on?'rgba(2,119,189,.1)':'transparent',color:on?c.accent:c.text2,cursor:'pointer',fontFamily:c.font}},f[1]+(n?' ('+n+')':''));}));
+    const addbar=r('div',{style:{display:'flex',gap:8,alignItems:'center',marginBottom:12,flexWrap:'wrap'}},
+      r('span',{style:{fontSize:10,fontWeight:700,color:c.muted,textTransform:'uppercase',letterSpacing:'.06em'}},'Ajouter'),
+      r('select',{value:s.armoireShape||'voyant',onChange:e=>this.setState({armoireShape:e.target.value}),style:{background:c.surf3,border:'1px solid '+c.bdr2,borderRadius:6,padding:'4px 7px',fontSize:11,color:c.text}},...Object.keys(this.ARMOIRE_COMP).map(k=>r('option',{key:k,value:k},this.ARMOIRE_COMP[k].label))),
+      this.Btn('+ Decoupe',()=>{const comp=this.ARMOIRE_COMP[s.armoireShape||'voyant'];const id='K'+Date.now().toString(36)+Math.floor(Math.random()*100);const nc={id,face,shape:comp.shape,x:Math.max(0,Math.round(fd.w/2-comp.w/2)),y:Math.max(0,Math.round(fd.h/2-comp.h/2)),w:comp.w,h:comp.h,label:(comp.label||'').split(' ')[0],comp:s.armoireShape||'voyant'};this.setState(st=>({armoire:{...st.armoire,cutouts:[...(st.armoire.cutouts||[]),nc]},armoireSel:id}));},'primary','sm'));
+    const grid=[];for(let gx=50;gx<fd.w;gx+=50)grid.push(r('line',{key:'gx'+gx,x1:gx*SCALE,y1:0,x2:gx*SCALE,y2:Hpx,stroke:c.bdr,strokeWidth:0.5}));for(let gy=50;gy<fd.h;gy+=50)grid.push(r('line',{key:'gy'+gy,x1:0,y1:gy*SCALE,x2:W,y2:gy*SCALE,stroke:c.bdr,strokeWidth:0.5}));
+    const onMove=(e)=>{const d=s.armoireDrag;if(!d)return;const dx=(e.clientX-d.cx)/SCALE,dy=(e.clientY-d.cy)/SCALE;upCut(d.id,{x:Math.max(0,Math.round(d.ox+dx)),y:Math.max(0,Math.round(d.oy+dy))});};
+    const shapeEl=(ct)=>{const comp=this.ARMOIRE_COMP[ct.comp]||{};const isC=conf[ct.id];const col=isC?'#dc2626':(comp.color||c.accent);const seld=ct.id===selId;const common={onMouseDown:(e)=>{this.setState({armoireSel:ct.id,armoireDrag:{id:ct.id,cx:e.clientX,cy:e.clientY,ox:ct.x,oy:ct.y}});},fill:col+'33',stroke:col,strokeWidth:seld?2.5:1.3,style:{cursor:'move'}};if(ct.shape==='circle')return r('circle',{key:ct.id,cx:(ct.x+ct.w/2)*SCALE,cy:(ct.y+ct.h/2)*SCALE,r:Math.max(2,ct.w/2*SCALE),...common});return r('rect',{key:ct.id,x:ct.x*SCALE,y:ct.y*SCALE,width:ct.w*SCALE,height:ct.h*SCALE,...common});};
+    const svg=r('svg',{width:W,height:Hpx,viewBox:'0 0 '+W+' '+Hpx,onMouseMove:onMove,onMouseUp:()=>this.setState({armoireDrag:null}),onMouseLeave:()=>this.setState({armoireDrag:null}),style:{background:c.surf,border:'2px solid '+c.bdr3,borderRadius:6,maxWidth:'100%'}},...grid,...cuts.map(shapeEl),...cuts.map(ct=>r('text',{key:'t'+ct.id,x:(ct.x+ct.w/2)*SCALE,y:(ct.y+ct.h/2)*SCALE+3,fontSize:9,textAnchor:'middle',fill:c.text,style:{pointerEvents:'none'}},ct.label||'')));
+    const linkWH=(ct)=>ct.shape==='circle'||ct.shape==='square';
+    const editor=selCut?r('div',{style:{border:'1px solid '+c.bdr2,borderRadius:9,padding:12,marginBottom:12}},
+      r('div',{style:{fontSize:11,fontWeight:700,color:c.text,marginBottom:8}},'Decoupe selectionnee — '+(this.ARMOIRE_COMP[selCut.comp]||{label:selCut.shape}).label),
+      r('div',{style:{display:'flex',gap:8,flexWrap:'wrap',alignItems:'flex-end'}},
+        ni('X (mm)',selCut.x,v=>upCut(selCut.id,{x:v})),ni('Y (mm)',selCut.y,v=>upCut(selCut.id,{y:v})),
+        ni(linkWH(selCut)?'Ø/Cote (mm)':'Largeur (mm)',selCut.w,v=>upCut(selCut.id,linkWH(selCut)?{w:v,h:v}:{w:v})),
+        linkWH(selCut)?null:ni('Hauteur (mm)',selCut.h,v=>upCut(selCut.id,{h:v})),
+        r('div',{style:{display:'flex',flexDirection:'column',gap:2}},r('label',{style:{fontSize:9,color:c.muted}},'Libelle'),r('input',{value:selCut.label||'',onChange:e=>upCut(selCut.id,{label:e.target.value}),style:{width:96,background:c.surf3,border:'1px solid '+c.bdr2,borderRadius:5,padding:'4px 6px',color:c.text,fontSize:12,outline:'none'}})),
+        this.Btn('Supprimer',()=>this.setState(st=>({armoire:{...st.armoire,cutouts:st.armoire.cutouts.filter(x=>x.id!==selCut.id)},armoireSel:null})),'danger','sm'))
+    ):r('div',{style:{fontSize:11,color:c.muted,fontStyle:'italic',marginBottom:12}},'Cliquez une decoupe pour l\'editer (ou glissez-la), ou ajoutez-en une.');
+    const confCount=Object.keys(conf).length;
+    const confBox=confCount>0?r('div',{style:{border:'1px solid rgba(220,38,38,.3)',background:'rgba(220,38,38,.06)',borderRadius:9,padding:'10px 12px'}},
+      r('div',{style:{fontSize:11,fontWeight:700,color:c.danger,marginBottom:6}},'⚠️ '+confCount+' decoupe(s) en conflit / hors-limites'),
+      ...cc.msgs.slice(0,12).map((m,k)=>r('div',{key:k,style:{fontSize:10,color:c.text2,marginBottom:2}},'• '+m))
+    ):r('div',{style:{fontSize:11,color:c.success,fontWeight:600}},'✓ Aucun conflit d\'encombrement');
+    return r('div',{style:{padding:'24px 28px',animation:'fadeIn .3s ease',overflowY:'auto',height:'100%'}},
+      this.SH('Armoire electrique','Dimensionnement et plan de percage par face — '+a.L+'×'+a.H+'×'+a.P+' mm · '+(a.ip||'IP55')),
+      dims,tabs,addbar,
+      r('div',{style:{display:'flex',gap:18,flexWrap:'wrap',alignItems:'flex-start'}},
+        r('div',{style:{flexShrink:0}},r('div',{style:{fontSize:10,color:c.muted,marginBottom:4,fontFamily:c.mono}},(this.ARMOIRE_FACES.find(f=>f[0]===face)||[0,face])[1]+' — '+fd.w+'×'+fd.h+' mm'),svg),
+        r('div',{style:{flex:1,minWidth:260}},editor,confBox)));
+  }
+  printArmoire(){
+    try{
+      const a=this.state.armoire||{};const esc=t=>String(t==null?'':t).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+      const sheets=this.ARMOIRE_FACES.map(f=>{const fd=this.faceDims(a,f[0]);const SC=Math.min(170/Math.max(fd.w,1),240/Math.max(fd.h,1));const W=fd.w*SC,H=fd.h*SC;const cuts=(a.cutouts||[]).filter(x=>x.face===f[0]);
+        let sh='';cuts.forEach(ct=>{if(ct.shape==='circle')sh+='<circle cx="'+((ct.x+ct.w/2)*SC)+'" cy="'+((ct.y+ct.h/2)*SC)+'" r="'+(ct.w/2*SC)+'" fill="none" stroke="#111" stroke-width="1"/>';else sh+='<rect x="'+(ct.x*SC)+'" y="'+(ct.y*SC)+'" width="'+(ct.w*SC)+'" height="'+(ct.h*SC)+'" fill="none" stroke="#111" stroke-width="1"/>';sh+='<text x="'+((ct.x+ct.w/2)*SC)+'" y="'+((ct.y+ct.h/2)*SC+3)+'" font-size="7" text-anchor="middle" fill="#333">'+esc(ct.label||'')+'</text>';});
+        return '<div style="display:inline-block;margin:6mm;vertical-align:top;page-break-inside:avoid"><div style="font:bold 10pt monospace;color:#0277BD;margin-bottom:2mm">'+esc(f[1])+' — '+fd.w+'x'+fd.h+' mm</div><svg width="'+W+'" height="'+H+'" viewBox="0 0 '+W+' '+H+'"><rect x="0" y="0" width="'+W+'" height="'+H+'" fill="#fff" stroke="#111" stroke-width="1.5"/>'+sh+'</svg></div>';}).join('');
+      const html='<div style="font-family:Arial,sans-serif;padding:6mm"><h2 style="margin:0 0 3mm">Plan de percage armoire — '+esc((this.state.project||{}).nom||'')+'</h2><div style="font-size:9pt;color:#555;margin-bottom:4mm">Armoire '+a.L+'x'+a.H+'x'+a.P+' mm · '+esc(a.ip||'IP55')+' — calques par face</div>'+sheets+'</div>';
+      const cont=document.createElement('div');cont.id='cebat-armoire';cont.setAttribute('data-print','main');cont.style.position='absolute';cont.style.left='-99999px';cont.style.top='0';cont.innerHTML=html;document.body.appendChild(cont);
+      const main=document.querySelector('main');const prev=main?main.getAttribute('data-print'):null;if(main)main.setAttribute('data-print','hide');
+      const cleanup=()=>{cont.remove();if(main){if(prev)main.setAttribute('data-print',prev);else main.removeAttribute('data-print');}window.removeEventListener('afterprint',cleanup);};
+      window.addEventListener('afterprint',cleanup);window.print();
+    }catch(e){this.showToast('Echec impression calques');}
+  }
   vSchema(circuits){
     const s=this.state;const c=this.C;const r=this.r;
     const{departs,tableauxElec,disjoncteurs,inverseurs,boitesDeriv,interrupteurs,zonesCommande,pieces}=s;
@@ -7317,6 +7390,7 @@ class Component extends DCLogic {
       logements:()=>this.vLogements(circuits),
       circuits:()=>this.vCircuits(circuits),
       schema:()=>this.vSchema(circuits),
+      armoire:()=>this.vArmoire(),
       rangees:()=>this.vRangees(circuits),
       realisation:()=>this.vRealisation(circuits),cablage:()=>this.vCablage(circuits),
       domotique:()=>this.vDomotique(),devis:()=>this.vDevis(circuits),
