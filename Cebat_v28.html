@@ -6144,6 +6144,32 @@ class Component extends DCLogic {
       r('div',{onDragOver:e=>e.preventDefault(),onDrop:e=>{e.preventDefault();const dc=this.state.dragCb;if(dc)this.dropCb(dc,maxR+1,null);this.setState({dragCb:null,dragOverCb:null});},
         style:{border:'2px dashed '+c.bdr3,borderRadius:9,padding:'14px',textAlign:'center',fontSize:11,color:c.muted,cursor:'copy',marginTop:4}},'+ Deposer ici pour creer une nouvelle rangee'));
   }
+  renderBoitesRaccord(){
+    const s=this.state;const c=this.C;const r=this.r;const{boitesDeriv,pieces,disjoncteurs,tableauxElec}=s;
+    if(!boitesDeriv||boitesDeriv.length===0)return null;
+    const refPiece={};pieces.forEach(p=>(p.fonctions||[]).forEach(fn=>{refPiece[fn.ref]=p.nom;}));
+    const teCode=id=>{const t=tableauxElec.find(x=>x.id===id);return t?(t.code||t.nom||''):'';};
+    return r('div',{style:{marginTop:16}},this.Card('Boites de derivation — raccordements internes',
+      r('div',{style:{display:'flex',flexDirection:'column',gap:10}},
+        ...boitesDeriv.map(bd=>{
+          let bdCode=bd.nom;try{bdCode=this.genBDCode?this.genBDCode(bd,s):bd.nom;}catch(e){}
+          const served=[];pieces.forEach(p=>(p.fonctions||[]).forEach(fn=>{if(fn.departType==='boite'&&String(fn.departId)===String(bd.id))served.push(fn.ref);}));
+          let feeder='';for(const rf of served){const dj=disjoncteurs.find(d=>(d.recepteurs||[]).includes(rf));if(dj){feeder=dj.code;break;}}
+          if(!feeder)feeder=teCode(bd.tableauId);
+          const pc=(pieces.find(p=>p.id===bd.pieceId)||{}).nom||'';
+          const conn=Math.max(served.length+1,2);
+          return r('div',{key:bd.id,style:{display:'flex',alignItems:'center',gap:10,flexWrap:'wrap',padding:'8px 0',borderBottom:'1px solid '+c.bdr}},
+            r('div',{style:{border:'1px solid '+c.accent+'66',borderRadius:6,padding:'5px 9px',background:c.accent+'10',fontSize:10,fontFamily:c.mono,color:c.accent,fontWeight:700}},feeder||'TE'),
+            r('span',{style:{color:c.bdr3,fontSize:13}},'→'),
+            r('div',{style:{border:'1px solid '+c.cyan+'66',borderRadius:8,padding:'6px 11px',background:c.cyan+'14',minWidth:130}},
+              r('div',{style:{fontSize:11,fontWeight:800,color:c.cyan,fontFamily:c.mono}},(bdCode||'BD')+(bd.label?' · '+bd.label:'')),
+              r('div',{style:{fontSize:8,color:c.muted}},(pc?pc+' · ':'')+(({encastre:'Encastree',saillie:'Saillie',etanche:'IP55',plafond:'DCL'}[bd.type]||bd.type||''))+' · '+conn+' connexions')),
+            r('span',{style:{color:c.bdr3,fontSize:13}},'→'),
+            r('div',{style:{display:'flex',flexWrap:'wrap',gap:4}},
+              served.length===0?r('span',{style:{fontSize:10,color:c.muted,fontStyle:'italic'}},'(aucun depart routé)'):null,
+              ...served.map(rf=>r('span',{key:rf,style:{fontSize:9,fontFamily:c.mono,padding:'2px 6px',borderRadius:5,background:c.surf3,border:'1px solid '+c.bdr2,color:c.text2}},rf+(refPiece[rf]?' '+refPiece[rf]:'')))));
+        }))));
+  }
   renderMultifilaire(){
     const s=this.state;const c=this.C;const r=this.r;const{tableauxElec,disjoncteurs,pieces}=s;
     const refPiece={};pieces.forEach(p=>(p.fonctions||[]).forEach(fn=>{refPiece[fn.ref]=p.nom;}));
@@ -6276,6 +6302,7 @@ class Component extends DCLogic {
         r('div',{style:{fontSize:10,fontWeight:700,color:c.muted,textTransform:'uppercase',letterSpacing:'.08em',marginBottom:10}},'Alimentation générale'),
         sources),
       (this.state.schemaMode==='multi')?this.renderMultifilaire():boards,
+      (this.state.schemaMode==='multi')?null:this.renderBoitesRaccord(),
       (this.state.schemaMode==='multi')?null:cmdSection);
   }
   vCircuits(circuits){
