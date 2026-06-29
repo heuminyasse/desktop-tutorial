@@ -3374,6 +3374,10 @@ class Component extends DCLogic {
       html+='<table style="width:100%;border-collapse:collapse;font-size:9pt"><thead><tr style="background:#eef"><th style="text-align:left;padding:1mm 2mm">Mesure</th><th style="text-align:left;padding:1mm 2mm">Valeur relevee</th><th style="text-align:left;padding:1mm 2mm">Unite</th><th style="text-align:left;padding:1mm 2mm">Critere</th></tr></thead><tbody>';
       mrows.forEach(m=>{const val=mesures[m[1]]||mesures['m_'+m[1]]||'';html+='<tr><td style="padding:1mm 2mm;border-bottom:1px solid #ddd">'+esc(m[0])+'</td><td style="padding:1mm 2mm;border-bottom:1px solid #ddd;font-weight:700">'+(val?esc(val):'____________')+'</td><td style="padding:1mm 2mm;border-bottom:1px solid #ddd">'+esc(m[2])+'</td><td style="padding:1mm 2mm;border-bottom:1px solid #ddd;color:#666">'+esc(m[3])+'</td></tr>';});
       html+='</tbody></table>';
+      const _pp=this.poseProgress();
+      if(_pp.total>0){html+=sec('Avancement du cablage (pose)');
+        html+='<div style="font-size:10pt;margin-bottom:2mm">'+_pp.done+' / '+_pp.total+' cables poses ('+_pp.pct+'%)'+(_pp.nc?' &middot; '+_pp.nc+' anomalie(s)':'')+'</div>';
+        if(_pp.perTe.length)html+='<table style="width:100%;border-collapse:collapse;font-size:9pt"><thead><tr style="background:#eef"><th style="text-align:left;padding:1mm 2mm">Tableau</th><th style="text-align:right;padding:1mm 2mm">Poses</th><th style="text-align:right;padding:1mm 2mm">%</th></tr></thead><tbody>'+_pp.perTe.map(t=>'<tr><td style="padding:.8mm 2mm;border-bottom:1px solid #ddd">'+esc(t.code+(t.nom?' '+t.nom:''))+'</td><td style="text-align:right;padding:.8mm 2mm;border-bottom:1px solid #ddd">'+t.done+'/'+t.total+'</td><td style="text-align:right;padding:.8mm 2mm;border-bottom:1px solid #ddd">'+t.pct+'%</td></tr>').join('')+'</tbody></table>';}
       html+=sec('Points de controle visuels');
       const cks=['Identification et reperage des circuits','Serrage des connexions','Section des conducteurs conforme aux calibres','Differentiel 30 mA sur tous les circuits terminaux','Liaison equipotentielle de la salle de bains','Presence du parafoudre si requis','GTL/ETEL conforme et reserve 20%'];
       html+='<div style="font-size:9pt">'+cks.map(t=>'<div style="padding:.6mm 0">&#9744; '+esc(t)+'</div>').join('')+'</div>';
@@ -5960,6 +5964,7 @@ class Component extends DCLogic {
         ))
       ),
       r('div',{style:{marginTop:14}},this.Card('Charge par appartement',r('div',{style:{paddingTop:4}},appartements.length===0?r('div',{style:{fontSize:12,color:c.muted,padding:'8px 0'}},'Aucun appartement'):(()=>{const ap=appartements.map(a=>({a,w:pieces.filter(p=>p.appId===a.id).reduce((s,p)=>s+(p.fonctions||[]).reduce((ss,fn)=>ss+this._fnPowerW(fn),0),0)}));const max=Math.max(1,...ap.map(x=>x.w));return ap.map(({a,w})=>r('div',{key:a.id,style:{marginBottom:10}},r('div',{style:{display:'flex',justifyContent:'space-between',marginBottom:4}},r('span',{style:{fontSize:12,color:c.text,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}},a.nom),r('span',{style:{fontSize:12,fontWeight:700,color:c.accent,fontFamily:c.mono}},w>=1000?(w/1000).toFixed(1)+' kW':w+' W')),r('div',{style:{height:6,background:c.bdr2,borderRadius:3}},r('div',{style:{height:'100%',width:(w/max*100)+'%',background:'linear-gradient(90deg,#0277BD,#0EA5E9)',borderRadius:3}}))));})()))),
+      this.renderPoseCard(),
       this.renderConfCard(),
       this.renderBilanCard(),
       this.renderChiffrageCard()
@@ -6665,6 +6670,29 @@ class Component extends DCLogic {
   POSE_STATES=[{k:'',l:'À poser',col:'#94a3b8'},{k:'pose',l:'Posé ✓',col:'#16a34a'},{k:'nc',l:'Anomalie ✗',col:'#dc2626'}];
   _poseState(key){const v=((this.state.poseStatuts||{})[key])||'';return this.POSE_STATES.find(x=>x.k===v)||this.POSE_STATES[0];}
   _cyclePose(key){const cur=((this.state.poseStatuts||{})[key])||'';const i=this.POSE_STATES.findIndex(x=>x.k===cur);const next=this.POSE_STATES[(i+1)%this.POSE_STATES.length].k;this.setState(s=>({poseStatuts:{...(s.poseStatuts||{}),[key]:next}}));}
+  poseProgress(){
+    const s=this.state;const ps=s.poseStatuts||{};const perTe=[];const allKeys=new Set();
+    (s.tableauxElec||[]).forEach(te=>{const d=this._vueCableData('te',te.id);const cables=[...d.entrants,...d.sortants];
+      let done=0,nc=0;cables.forEach(cb=>{const v=ps[cb.statutKey]||'';if(v==='pose')done++;else if(v==='nc')nc++;allKeys.add(cb.statutKey);});
+      perTe.push({code:(d.center&&d.center.code)||te.code||('TE'+te.id),nom:te.nom||'',total:cables.length,done,nc,pct:cables.length?Math.round(done/cables.length*100):0});});
+    (s.boitesDeriv||[]).forEach(bd=>{const d=this._vueCableData('bd',bd.id);[...d.entrants,...d.sortants].forEach(cb=>allKeys.add(cb.statutKey));});
+    let total=0,done=0,nc=0;allKeys.forEach(k=>{total++;const v=ps[k]||'';if(v==='pose')done++;else if(v==='nc')nc++;});
+    return{perTe,total,done,nc,pct:total?Math.round(done/total*100):0};
+  }
+  renderPoseCard(){
+    const c=this.C;const r=this.r;const pp=this.poseProgress();
+    if(pp.total===0)return null;
+    const bar=(pct,col)=>r('div',{style:{height:7,background:c.bdr2,borderRadius:4,overflow:'hidden'}},r('div',{style:{height:'100%',width:Math.min(100,pct)+'%',background:col,borderRadius:4}}));
+    return r('div',{style:{marginTop:14}},this.Card('Avancement du câblage (pose)',r('div',{style:{paddingTop:2}},
+      r('div',{style:{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:6}},
+        r('span',{style:{fontSize:12,color:c.text2}},pp.done+' / '+pp.total+' câbles posés'+(pp.nc?' · '+pp.nc+' anomalie(s)':'')),
+        r('span',{style:{fontSize:14,fontWeight:800,color:pp.pct>=100?c.success:c.accent,fontFamily:c.mono}},pp.pct+'%')),
+      bar(pp.pct,pp.nc?c.warn:'linear-gradient(90deg,#0277BD,#0EA5E9)'),
+      pp.perTe.length>1?r('div',{style:{marginTop:10}},...pp.perTe.map((t,k)=>r('div',{key:k,style:{marginBottom:8}},
+        r('div',{style:{display:'flex',justifyContent:'space-between',fontSize:11,marginBottom:3}},r('span',{style:{color:c.text,fontFamily:c.mono,fontWeight:700}},t.code+(t.nom?' · '+t.nom:'')),r('span',{style:{fontFamily:c.mono,color:c.muted}},t.done+'/'+t.total+' · '+t.pct+'%'+(t.nc?' · '+t.nc+' NC':''))),
+        bar(t.pct,t.nc?c.warn:c.accent)))):null
+    )));
+  }
   _condsFor(poles){return poles>=3?[['L1','#6d4c41'],['L2','#212121'],['L3','#9e9e9e'],['N','#42a5f5'],['PE','grad']]:[['L','#6d4c41'],['N','#42a5f5'],['PE','grad']];}
   _vueCableData(kind,id){
     const s=this.state;const entrants=[],sortants=[];
