@@ -3275,7 +3275,13 @@ class Component extends DCLogic {
           r('div',{style:{fontSize:22,fontWeight:800,color:c.accent,fontFamily:c.mono}},bc.calibre+'A'));})(),
         apps.length>1?r('div',{style:{marginTop:12}},
           r('div',{style:{fontSize:9,fontWeight:700,color:c.muted,textTransform:'uppercase',letterSpacing:'.06em',marginBottom:5}},'Repartition par appartement'),
-          ...apps.map(ap=>{const ba=this.bilanPuissance(ap.id);return r('div',{key:ap.id,style:{display:'flex',fontSize:11,padding:'3px 0',borderBottom:'1px solid '+c.bdr}},r('span',{style:{flex:1,color:c.text2}},ap.nom),r('span',{style:{fontFamily:c.mono,color:c.accent,fontWeight:700}},ba.kvaFoisonne.toFixed(1)+' kVA'))})):null)));
+          ...apps.map(ap=>{const ba=this.bilanPuissance(ap.id);return r('div',{key:ap.id,style:{display:'flex',fontSize:11,padding:'3px 0',borderBottom:'1px solid '+c.bdr}},r('span',{style:{flex:1,color:c.text2}},ap.nom),r('span',{style:{fontFamily:c.mono,color:c.accent,fontWeight:700}},ba.kvaFoisonne.toFixed(1)+' kVA'))})):null,
+        (()=>{const ec=this.earthConductorSizing();const ck=this.earthingCheck();const row=(l,v)=>r('div',{style:{display:'flex',fontSize:11,padding:'3px 0',borderBottom:'1px solid '+c.bdr}},r('span',{style:{flex:1,color:c.text2}},l),r('span',{style:{fontFamily:c.mono,color:c.text,fontWeight:700}},v));return r('div',{style:{marginTop:12}},
+          r('div',{style:{fontSize:9,fontWeight:700,color:c.muted,textTransform:'uppercase',letterSpacing:'.06em',marginBottom:5}},'Terre & conducteurs de protection (IEC 60364-5-54)'),
+          row('Conducteur PE principal',(ec.pe?ec.pe+' mm²':'—')+(ec.phase?' (phase '+ec.phase+' mm²)':'')),
+          row('Liaison équipotentielle principale',ec.lep+' mm²'),
+          row('Conducteur de terre',ec.terreNu+' mm² Cu nu / '+ec.terreIsole+' mm² isolé'),
+          ck.RA>0?r('div',{style:{display:'flex',alignItems:'center',fontSize:11,padding:'3px 0'}},r('span',{style:{flex:1,color:c.text2}},'Prise de terre ('+ck.regime+', IΔn '+ck.Idn+' mA)'),r('span',{style:{fontFamily:c.mono,fontWeight:700,color:ck.ulOk?c.success:c.danger}},'RA '+ck.RA+' Ω '+(ck.ulOk?'≤ '+ck.limitRA+' Ω ✓':'> '+ck.limitRA+' Ω ✗'))):r('div',{style:{fontSize:10,color:c.muted,fontStyle:'italic',paddingTop:3}},'Saisir la résistance/longueur de terre dans le projet pour vérifier RA·IΔn ≤ 50 V.'));})())));
   }
   FABRICANTS=['Generique','Schneider','Hager','Legrand'];
   _mfgRef(ref,fab){
