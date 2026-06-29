@@ -4724,7 +4724,7 @@ class Component extends DCLogic {
               r('div',{style:{display:'flex',alignItems:'center',gap:6,marginBottom:8}},
                 r('span',{style:{fontSize:11,fontWeight:700,color:c.text,flex:1,display:'flex',alignItems:'center',gap:5}},this.ico('interrupteur',12),' Commandes',cmdsLinked.length>0&&r('span',{style:{fontSize:9,color:c.muted,fontWeight:400}},'('+cmdsLinked.length+')')),
                 r('button',{
-                  onClick:()=>this.setState({showModal:true,modalType:'addInter',editId:null,interForm:{nom:'',pieceId:String(piece.id),type:form.cmdType||'simple',circuitRef:fn.ref,zoneId:form.cmdZoneId?+form.cmdZoneId:''}}),
+                  onClick:()=>this.setState({showModal:true,modalType:'addInter',editId:null,interForm:{nom:'',pieceId:String(piece.id),type:form.cmdType||'simple',circuitRef:fn.ref,zoneId:form.cmdZoneId?+form.cmdZoneId:'',retourEditFonction:true}}),
                   style:{background:sky,color:'#fff',border:'none',borderRadius:6,padding:'5px 10px',fontSize:10,fontWeight:700,cursor:'pointer',display:'flex',alignItems:'center',gap:4}
                 },this.ico('interrupteur',11),' + Interrupteur')
               ),
@@ -5712,6 +5712,8 @@ class Component extends DCLogic {
         }
       }
       const obj={nom:form.nom,pieceId:form.pieceId?+form.pieceId:null,type:form.type,circuitRef:form.circuitRef,zoneId:form.zoneId?+form.zoneId:null,...inheritedDept};
+      // Retour au formulaire de fonction si l'interrupteur a ete ouvert depuis celui-ci
+      const back=form.retourEditFonction?{showModal:true,modalType:'editFonction',editId:null}:{showModal:false};
       if(editId!==null){
         const oldInter=this.state.interrupteurs.find(i=>i.id===editId);
         if(oldInter&&oldInter.type!==form.type){
@@ -5719,7 +5721,7 @@ class Component extends DCLogic {
           const oldWCode=this.getInterWCode(oldInter,this.state);
           if(oldWCode)this.purgeNomOverridesForCode(oldWCode);
         }
-        this.setState(s=>({interrupteurs:s.interrupteurs.map(i=>i.id===editId?{...i,...obj}:i),showModal:false,editId:null}));
+        this.setState(s=>({interrupteurs:s.interrupteurs.map(i=>i.id===editId?{...i,...obj}:i),...back}));
       } else {
         if(form.type==='va_vient'){
           // Creer automatiquement la paire VV1.1 + VV1.2
@@ -5734,11 +5736,11 @@ class Component extends DCLogic {
               nom:(form.nom||'VV')+' 2',
               zoneId:zone2?zone2.id:+(form.zoneId), // 2e zone si dispo, sinon meme zone
             };
-            return{interrupteurs:[...s.interrupteurs,inter1,inter2],nextElemId:id2+1,showModal:false};
+            return{interrupteurs:[...s.interrupteurs,inter1,inter2],nextElemId:id2+1,...back};
           });
           this.showToast('Paire VV créée automatiquement ✓');
         } else {
-          this.setState(s=>({interrupteurs:[...s.interrupteurs,{...obj,id:s.nextElemId}],nextElemId:s.nextElemId+1,showModal:false}));
+          this.setState(s=>({interrupteurs:[...s.interrupteurs,{...obj,id:s.nextElemId}],nextElemId:s.nextElemId+1,...back}));
           this.showToast('Interrupteur ajouté ✓');
         }
       }
