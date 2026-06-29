@@ -1468,7 +1468,6 @@ document.addEventListener('DOMContentLoaded', async function() {
   <script src="epdata.js"></script>
 <script id="__FCR_CATALOGUE_SEED_v1__">
 (function(){
-  /* Clé v2 — évite l'ancien flag périmé */
   var FLAG='epilot_cat_v2';
   try{ if(localStorage.getItem(FLAG)==='1') return; }catch(_){}
   if(window.__fcrCatalogueSeedDone) return;
@@ -1482,49 +1481,34 @@ document.addEventListener('DOMContentLoaded', async function() {
     return new Response(new Blob([u8]).stream().pipeThrough(new DecompressionStream('gzip'))).text();
   }
 
-  function mergeAndWrite(catalogue,tries){
-    var p=indexedDB.open('fcr_db');
-    p.onsuccess=function(e){
-      var db=e.target.result;
-      if(!db.objectStoreNames.contains('articles')){
-        db.close();
-        if(tries>0) setTimeout(function(){ mergeAndWrite(catalogue,tries-1); },1000);
-        return;
-      }
-      /* Lire les articles existants pour déduplication */
-      var req=db.transaction('articles','readonly').objectStore('articles').getAll();
-      req.onsuccess=function(){
-        var existing=req.result||[];
-        var seen={};
-        existing.forEach(function(a){ if(a&&a.codeA) seen[a.codeA]=true; });
-        var toAdd=catalogue.filter(function(a){ return a&&a.codeA&&!seen[a.codeA]; });
-        if(toAdd.length===0){
-          try{ localStorage.setItem(FLAG,'1'); }catch(_){}
-          db.close(); return;
-        }
-        var base=existing.length;
-        var tx=db.transaction('articles','readwrite'),st=tx.objectStore('articles');
-        toAdd.forEach(function(a,i){
-          st.put(Object.assign({},a,{_k:(base+i)+'|'+(a.codeA||'')+'|'+(a.refPi||'')}));
-        });
-        tx.oncomplete=function(){
-          try{ localStorage.setItem(FLAG,'1'); }catch(_){}
-          try{
-            var fcr=window.FCR_DB;
-            if(Array.isArray(fcr)) toAdd.forEach(function(x){ fcr.push(x); });
-            if(typeof window.renderArticles==='function') window.renderArticles();
-          }catch(_){}
-          db.close();
-        };
-        tx.onerror=function(){ db.close(); };
-      };
-      req.onerror=function(){ db.close(); };
-    };
-    p.onerror=function(){ if(tries>0) setTimeout(function(){ mergeAndWrite(catalogue,tries-1); },1000); };
+  function merge(catalogue){
+    var fcr=window.FCR_DB;
+    if(!Array.isArray(fcr)||typeof window.idbSaveAll!=='function') return false;
+    var seen={};
+    fcr.forEach(function(a){ if(a&&a.codeA) seen[a.codeA]=true; });
+    var added=0;
+    catalogue.forEach(function(a){
+      if(a&&a.codeA&&!seen[a.codeA]){ seen[a.codeA]=true; fcr.push(a); added++; }
+    });
+    try{ window.idbSaveAll(fcr); }catch(_){}
+    try{ localStorage.setItem(FLAG,'1'); }catch(_){}
+    if(added>0) try{ if(typeof window.renderArticles==='function') window.renderArticles(); }catch(_){}
+    return true;
   }
 
   decompress(B64).then(function(json){
-    try{ mergeAndWrite(JSON.parse(json),30); }catch(e){ console.warn('[Seed FCR]',e); }
+    var catalogue=JSON.parse(json);
+    /* Attendre que idbSaveAll soit prêt ET que l'app ait fini son chargement IDB
+       (4 ticks × 500ms = 2 secondes de stabilité) */
+    var ticks=0, iv=setInterval(function(){
+      if(typeof window.idbSaveAll!=='function'||!Array.isArray(window.FCR_DB)){
+        ticks=0; return;
+      }
+      if(++ticks<4) return;
+      clearInterval(iv);
+      merge(catalogue);
+    },500);
+    setTimeout(function(){ clearInterval(iv); },60000);
   }).catch(function(e){ console.warn('[Seed FCR]',e); });
 })();
 </script>
