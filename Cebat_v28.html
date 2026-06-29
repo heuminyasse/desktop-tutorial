@@ -3188,11 +3188,17 @@ class Component extends DCLogic {
   FABRICANTS=['Generique','Schneider','Hager','Legrand'];
   _mfgRef(ref,fab){
     if(!fab||fab==='Generique')return ref;
-    const P={Schneider:{DJ:'R9F',ID:'R9R',COF:'R9H'},Hager:{DJ:'MFN',ID:'CDA',COF:'VED'},Legrand:{DJ:'DX3',ID:'DXID',COF:'XL3'}}[fab];
-    if(!P)return ref;const parts=ref.split('-');const kind=parts[0];
-    if(kind==='DJ')return P.DJ+parts[1]+parts[2];
-    if(kind==='ID')return P.ID+(parts[2]||'').replace('mA','')+(parts[3]||'');
-    if(kind==='COF')return P.COF+parts[1];
+    const parts=ref.split('-');const kind=parts[0];
+    // poles ex "1P", courbe+cal ex "C16", ddr ex "30mA", type "A"/"AC", rows ex "3R"
+    const poles=parts[1]||'';const RANGE={
+      Schneider:{dj:'Acti9 iC60N',id:'Acti9 iID',cof:'Resi9'},
+      Hager:{dj:'Hager MFN',id:'Hager CDC',cof:'Hager Gamma'},
+      Legrand:{dj:'Legrand DX³ 6000',id:'Legrand DX³-ID',cof:'Legrand Drivia'}
+    }[fab];
+    if(!RANGE)return ref;
+    if(kind==='DJ')return RANGE.dj+' '+(parts[2]||'')+' '+poles;
+    if(kind==='ID')return RANGE.id+' '+poles+' '+(parts[2]||'')+' Type '+(parts[3]||'AC');
+    if(kind==='COF')return RANGE.cof+' '+(parts[1]||'')+'×13';
     return ref;
   }
   _price(ref,base){const ov=(this.state.project&&this.state.project.priceOverrides)||{};return ov[ref]!=null?ov[ref]:base;}
