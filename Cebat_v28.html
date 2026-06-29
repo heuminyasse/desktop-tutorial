@@ -2961,6 +2961,20 @@ class Component extends DCLogic {
     if(_pf.required&&!_pf.installed)add('error','Parafoudre Type 2 obligatoire : '+_pf.reason+'. Ajouter un parafoudre en tete d\'installation.');
     else if(_pf.recommended&&!_pf.installed)add('warn','Parafoudre Type 2 recommande (ligne aerienne / zone exposee) — a confirmer selon le niveau keraunique.');
     else if(_pf.installed)add('info','Parafoudre declare en tete d\'installation.');
+    // Regime de neutre (SLT) et prise de terre
+    const _ec=this.earthingCheck();
+    if(_ec.regime==='TT'){if(_ec.RA>0&&!_ec.ulOk)add('error','Regime TT : RA '+_ec.RA+'ohm x '+_ec.Idn+'mA depasse 50V — RA doit etre <= '+_ec.limitRA+'ohm (ou differentiel plus sensible).');else if(_ec.RA>0)add('info','Regime TT : RA '+_ec.RA+'ohm conforme (<= '+_ec.limitRA+'ohm pour '+_ec.Idn+'mA).');}
+    else if(_ec.regime==='IT')add('warn','Regime IT : controleur permanent d\'isolement (CPI) et limiteur de surtension requis — verifier leur presence.');
+    else if(_ec.regime==='TN')add('info','Regime TN : protection des contacts indirects par les disjoncteurs (verifier Zs / longueurs maximales protegees).');
+    // Equipement minimal du logement (NF C 15-100 §771)
+    const _eq=this.equipmentChecklist();
+    _eq.rooms.forEach(rm=>add('warn','Equipement minimal « '+rm.piece+' » : manque '+rm.manque.join(', ')+' (NF C 15-100 §771).'));
+    _eq.specMissing.forEach(sp=>add('warn','Circuit specialise manquant : '+sp+' — 1 circuit dedie requis.'));
+    // Salle de bains : volumes, LES, IP
+    this.bathroomChecks().forEach(b=>{
+      if(b.hasPriseStd)add('error','Salle de bains « '+b.piece+' » : prise standard interdite en volumes — hors volumes (>=0,6 m), IPX4 mini, DDR 30 mA. Utiliser le type « Prises SDB ».');
+      add('info','Salle de bains « '+b.piece+' » : liaison equipotentielle supplementaire (LES) obligatoire · volume 0 interdit, V1 TBTS 12V/IPX4, V2 classe II/IPX4.');
+    });
     return issues;
   }
   _fnPowerW(fn){const q=fn.quantite||1;if(fn.type==='eclairage')return (fn.puissance||10)*q;if(fn.type==='prises'||fn.type==='prises_sdb')return 460*q;return ({four:6000,lave_vaisselle:2200,lave_linge:2500,seche_linge:2400,chauffe_eau:3000,climatisation:2500,borne_ve:7400,hotte:300,vmc:200,portail:500,piscine:1500}[fn.type]||500)*q;}
@@ -3099,6 +3113,39 @@ class Component extends DCLogic {
     const heightMM=Math.max(2000,rowsTotal*250+300);
     const reservePct=usedModules>0&&capacity>0?Math.round((capacity-usedModules)/capacity*100):20;
     return{usedModules,rangees,rowsComm,rowsTotal,capacity,etelWidth,etelDepth,heightMM,ROW,reservePct,boards:tes.length};
+  }
+  _soilRho(){return (this.state.project&&+this.state.project.rhoSol>0)?+this.state.project.rhoSol:150;}
+  resistanceTerreEstimee(){
+    const pr=this.state.project||{};const L=+pr.terreLongueur||0;if(L<=0)return null;
+    const rho=this._soilRho();const type=pr.terreType||'boucle';
+    const RA=type==='piquet'?rho/L:(2*rho/L);// piquet vertical ~ rho/L ; boucle fond de fouille ~ 2rho/L
+    return Math.round(RA);
+  }
+  earthingCheck(){
+    const pr=this.state.project||{};const regime=pr.regimeNeutre||'TT';
+    const RAm=+pr.resistanceTerre||0;const RAest=this.resistanceTerreEstimee();
+    const RA=RAm>0?RAm:(RAest||0);
+    const deps=this.state.departs||[];
+    const headDdr=Math.min.apply(null,[500].concat(deps.filter(d=>+d.ddr>0).map(d=>+d.ddr)));
+    const IdnA=headDdr/1000;const limitRA=RA>0?Math.round(50/IdnA):0;const ulOk=RA>0?(RA*IdnA<=50):true;
+    return{regime,RA,RAest,RAm,Idn:headDdr,limitRA,ulOk};
+  }
+  _EQUIP_MIN={sejour:{prises:5,ecl:1},cuisine:{prises:6,ecl:1},chambre:{prises:3,ecl:1},bureau:{prises:3,ecl:1},sdb:{prises:1,ecl:1},wc:{prises:0,ecl:1},couloir:{prises:1,ecl:1},garage:{prises:1,ecl:1},cave:{prises:0,ecl:1},exterieur:{prises:0,ecl:1}};
+  equipmentChecklist(){
+    const pcs=this.state.pieces||[];const rooms=[];
+    pcs.forEach(p=>{const min=this._EQUIP_MIN[p.type];if(!min)return;let prises=0,ecl=0;
+      (p.fonctions||[]).forEach(fn=>{const q=+fn.quantite||1;if(fn.type==='prises'||fn.type==='prises_sdb')prises+=q;if(fn.type==='eclairage')ecl+=q;});
+      const manque=[];if(prises<min.prises)manque.push((min.prises-prises)+' prise(s)');if(ecl<min.ecl)manque.push('1 point lumineux');
+      if(manque.length)rooms.push({piece:p.nom,type:p.type,manque});});
+    const types=new Set();pcs.forEach(p=>(p.fonctions||[]).forEach(fn=>types.add(fn.type)));
+    const specMissing=[];if(pcs.some(p=>p.type==='cuisine')&&!types.has('four'))specMissing.push('cuisson (four / plaque)');if(!types.has('lave_linge'))specMissing.push('lave-linge');
+    return{rooms,specMissing};
+  }
+  bathroomChecks(){
+    const pcs=this.state.pieces||[];const out=[];
+    pcs.forEach(p=>{if(p.type!=='sdb')return;const fns=p.fonctions||[];
+      out.push({piece:p.nom,hasPriseStd:fns.some(fn=>fn.type==='prises'),prisesSdb:fns.filter(fn=>fn.type==='prises_sdb').length});});
+    return out;
   }
   parafoudreRequis(){
     // NF C 15-100 §534 (simplifie) — obligation du parafoudre Type 2
@@ -5952,7 +5999,16 @@ class Component extends DCLogic {
             r('div',{style:{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'0 14px'}},
               se('tempAmbiante','Température ambiante',[['30','30 °C'],['35','35 °C'],['40','40 °C'],['45','45 °C'],['50','50 °C']]),
               se('groupement','Circuits groupés',[['1','1'],['2','2'],['3','3'],['4','4'],['5','5'],['6','6'],['8','8']])),
-            r('div',{style:{fontSize:9,color:c.muted,marginTop:6,fontStyle:'italic'}},'Iz = Iz(table) × K1 (température) × K2 (groupement). La protection doit vérifier In ≤ Iz.')),null,18)
+            r('div',{style:{fontSize:9,color:c.muted,marginTop:6,fontStyle:'italic'}},'Iz = Iz(table) × K1 (température) × K2 (groupement). La protection doit vérifier In ≤ Iz.')),null,18),
+          this.Card('Régime de neutre & mise à la terre',r('div',null,
+            se('regimeNeutre','Régime de neutre (SLT)',[['TT','TT — neutre à la terre (domestique)'],['TN','TN — masses au neutre'],['IT','IT — neutre isolé']]),
+            r('div',{style:{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'0 14px'}},
+              se('terreType','Type de prise de terre',[['boucle','Boucle fond de fouille'],['piquet','Piquet vertical']]),
+              fi('terreLongueur','Longueur électrode (m)','number',{min:0,step:0.5})),
+            r('div',{style:{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'0 14px'}},
+              fi('rhoSol','Résistivité sol ρ (Ω·m)','number',{min:0,step:10}),
+              fi('resistanceTerre','RA mesurée (Ω, sinon estimée)','number',{min:0,step:1})),
+            (()=>{const ec=this.earthingCheck();if(ec.regime!=='TT')return r('div',{style:{fontSize:10,color:c.muted,marginTop:6,fontStyle:'italic'}},ec.regime==='IT'?'IT : CPI + limiteur de surtension requis.':'TN : vérifier les longueurs maximales protégées.');if(ec.RA<=0)return r('div',{style:{fontSize:10,color:c.muted,marginTop:6,fontStyle:'italic'}},'Renseignez la longueur d\'électrode ou la RA mesurée.');return r('div',{style:{fontSize:11,fontWeight:700,marginTop:6,color:ec.ulOk?c.success:c.danger}},'RA '+ec.RA+' Ω '+(ec.RAm>0?'(mesurée)':'(estimée)')+' — '+(ec.ulOk?'✓ ≤ '+ec.limitRA+' Ω':'⚠ > '+ec.limitRA+' Ω pour '+ec.Idn+' mA (UL 50V)'));})()),null,18)
         ),
 
         // ── COL 3 : Niveaux du bâtiment ──
