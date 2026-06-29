@@ -6673,18 +6673,18 @@ class Component extends DCLogic {
       const te=(s.tableauxElec||[]).find(t=>t.id===id);if(!te)return{entrants,sortants,center:null};
       const center={code:teCode(te),nom:te.nom||'',type:'TE'};
       const parentTe=(s.tableauxElec||[]).find(t=>t.id===te.departId);
-      if(parentTe){entrants.push({wcode:'',from:teCode(parentTe)+(parentTe.nom?' '+parentTe.nom:''),to:center.code,conds:this._condsFor(triAlim?3:1),sec:(te.feederSection||'?')+'mm²',bornes:(te.cb0Code||'CB0')});}
-      else{const dep=(s.departs||[]).find(d=>d.id===te.departId)||(s.departs||[]).find(d=>d.type==='comptage');if(dep){let sc='';try{sc=this.genSourceCode(dep,s);}catch(e){sc=dep.code||'SRC';}const tri=dep.tension==='tri'||dep.tension==='tri_it'||(+dep.poles>=3);entrants.push({wcode:dep.dbCode||'DB',from:sc+(dep.nom?' '+dep.nom:''),to:center.code,conds:this._condsFor(tri?3:1),sec:(dep.section||'16')+'mm²',bornes:(te.cb0Code||'CB0')});}}
-      (s.disjoncteurs||[]).filter(d=>d.tableauId===te.id).forEach(d=>{const refs=d.recepteurs||[];const room=refs.map(rf=>refPiece[rf]).filter(Boolean)[0]||'';let wc='';try{wc=this.genCableCBCode(d,s);}catch(e){}sortants.push({wcode:wc||d.code||'',from:center.code+(d.code?' '+d.code:''),to:(refs.join(' ')||'(libre)')+(room?' · '+room:''),conds:this._condsFor(this._poles(d)),sec:(d.section||'1.5')+'mm²',bornes:d.code||''});});
-      (s.boitesDeriv||[]).filter(b=>String(b.tableauId)===String(te.id)).forEach(b=>{sortants.push({wcode:bdCode(b),from:center.code,to:bdCode(b)+(b.nom?' '+b.nom:''),conds:this._condsFor(1),sec:'?',bornes:'BD'});});
+      if(parentTe){entrants.push({wcode:'',from:teCode(parentTe)+(parentTe.nom?' '+parentTe.nom:''),to:center.code,conds:this._condsFor(triAlim?3:1),sec:(te.feederSection||'?')+'mm²',bornes:(te.cb0Code||'CB0'),edit:{type:'te',id:te.id}});}
+      else{const dep=(s.departs||[]).find(d=>d.id===te.departId)||(s.departs||[]).find(d=>d.type==='comptage');if(dep){let sc='';try{sc=this.genSourceCode(dep,s);}catch(e){sc=dep.code||'SRC';}const tri=dep.tension==='tri'||dep.tension==='tri_it'||(+dep.poles>=3);entrants.push({wcode:dep.dbCode||'DB',from:sc+(dep.nom?' '+dep.nom:''),to:center.code,conds:this._condsFor(tri?3:1),sec:(dep.section||'16')+'mm²',bornes:(te.cb0Code||'CB0'),edit:{type:'dep',id:dep.id}});}}
+      (s.disjoncteurs||[]).filter(d=>d.tableauId===te.id).forEach(d=>{const refs=d.recepteurs||[];const room=refs.map(rf=>refPiece[rf]).filter(Boolean)[0]||'';let wc='';try{wc=this.genCableCBCode(d,s);}catch(e){}sortants.push({wcode:wc||d.code||'',from:center.code+(d.code?' '+d.code:''),to:(refs.join(' ')||'(libre)')+(room?' · '+room:''),conds:this._condsFor(this._poles(d)),sec:(d.section||'1.5')+'mm²',bornes:d.code||'',edit:{type:'dj',id:d.id}});});
+      (s.boitesDeriv||[]).filter(b=>String(b.tableauId)===String(te.id)).forEach(b=>{sortants.push({wcode:bdCode(b),from:center.code,to:bdCode(b)+(b.nom?' '+b.nom:''),conds:this._condsFor(1),sec:'?',bornes:'BD',edit:{type:'bd',id:b.id}});});
       return{entrants,sortants,center};
     }
     if(kind==='bd'){
       const bd=(s.boitesDeriv||[]).find(b=>b.id===id);if(!bd)return{entrants,sortants,center:null};
       const center={code:bdCode(bd),nom:bd.nom||'',type:'BD'};
       const te=(s.tableauxElec||[]).find(t=>String(t.id)===String(bd.tableauId));
-      if(te)entrants.push({wcode:'',from:teCode(te)+(te.nom?' '+te.nom:''),to:center.code,conds:this._condsFor(1),sec:'?mm²',bornes:''});
-      (s.pieces||[]).forEach(p=>(p.fonctions||[]).forEach(fn=>{if(fn.departType==='boite'&&String(fn.departId)===String(bd.id)){const fi=this.FNS[fn.type]||{};sortants.push({wcode:fn.ref||'',from:center.code,to:(fi.label||fn.type)+(fn.ref?' '+fn.ref:'')+' · '+(p.nom||''),conds:this._condsFor(1),sec:(fn.cableSection||'1.5')+'mm²',bornes:fn.ref||''});}}));
+      if(te)entrants.push({wcode:'',from:teCode(te)+(te.nom?' '+te.nom:''),to:center.code,conds:this._condsFor(1),sec:'?mm²',bornes:'',edit:{type:'bd',id:bd.id}});
+      (s.pieces||[]).forEach(p=>(p.fonctions||[]).forEach(fn=>{if(fn.departType==='boite'&&String(fn.departId)===String(bd.id)){const fi=this.FNS[fn.type]||{};sortants.push({wcode:fn.ref||'',from:center.code,to:(fi.label||fn.type)+(fn.ref?' '+fn.ref:'')+' · '+(p.nom||''),conds:this._condsFor(1),sec:(fn.cableSection||'1.5')+'mm²',bornes:fn.ref||'',edit:{type:'fn',pieceId:p.id,fnId:fn.id}});}}));
       return{entrants,sortants,center};
     }
     return{entrants,sortants,center:null};
@@ -6703,8 +6703,9 @@ class Component extends DCLogic {
       r('div',{style:{flex:1,height:4,borderRadius:2,background:x[1]==='grad'?'repeating-linear-gradient(45deg,#43a047 0 4px,#fdd835 4px 8px)':x[1]}}),
       r('span',{style:{fontSize:8,color:c.muted,fontFamily:c.mono,minWidth:34,textAlign:'right'}},sec))));
     const lbl=(rep,txt,brn,align)=>r('div',{style:{minWidth:96,maxWidth:150,fontSize:9,textAlign:align||'left'}},rep?r('div',{style:{fontFamily:c.mono,fontWeight:700,color:c.accent}},rep):null,r('div',{style:{color:c.text2,whiteSpace:'normal'}},txt),brn?r('div',{style:{color:c.muted,fontFamily:c.mono}},'bornes: '+brn):null);
-    const inRow=(cab,k)=>r('div',{key:'in'+k,style:{display:'flex',alignItems:'center',gap:8,padding:'7px 9px',background:c.surf,border:'1px solid '+c.bdr,borderRadius:8,marginBottom:6,boxShadow:c.elev1}},lbl(cab.wcode,cab.from,cab.bornes,'left'),bars(cab.conds,cab.sec),r('span',{style:{color:c.success,fontSize:13}},'→'));
-    const outRow=(cab,k)=>r('div',{key:'out'+k,style:{display:'flex',alignItems:'center',gap:8,padding:'7px 9px',background:c.surf,border:'1px solid '+c.bdr,borderRadius:8,marginBottom:6,boxShadow:c.elev1}},r('span',{style:{color:c.accent,fontSize:13}},'→'),bars(cab.conds,cab.sec),lbl(cab.wcode,cab.to,cab.bornes,'right'));
+    const rowSt={display:'flex',alignItems:'center',gap:8,padding:'7px 9px',background:c.surf,border:'1px solid '+c.bdr,borderRadius:8,marginBottom:6,boxShadow:c.elev1,cursor:'pointer'};
+    const inRow=(cab,k)=>r('div',{key:'in'+k,onClick:()=>this._openCableEdit(cab.edit),title:'Modifier ce câble / cet équipement',style:rowSt},lbl(cab.wcode,cab.from,cab.bornes,'left'),bars(cab.conds,cab.sec),r('span',{style:{color:c.success,fontSize:13}},'→'));
+    const outRow=(cab,k)=>r('div',{key:'out'+k,onClick:()=>this._openCableEdit(cab.edit),title:'Modifier ce câble / cet équipement',style:rowSt},r('span',{style:{color:c.accent,fontSize:13}},'→'),bars(cab.conds,cab.sec),lbl(cab.wcode,cab.to,cab.bornes,'right'));
     const centerCol=data.center?r('div',{style:{flexShrink:0,width:96,alignSelf:'center',background:'linear-gradient(180deg,#0288CE,#0277BD)',borderRadius:10,padding:'16px 8px',textAlign:'center',color:'#fff',boxShadow:c.elev2}},
       r('div',{style:{fontSize:8,fontWeight:700,opacity:.8,letterSpacing:'.1em'}},data.center.type),
       r('div',{style:{fontSize:15,fontWeight:900,fontFamily:c.mono,margin:'2px 0'}},data.center.code),
@@ -6713,11 +6714,46 @@ class Component extends DCLogic {
       r('div',{style:{display:'flex',alignItems:'center',gap:8,marginBottom:14,flexWrap:'wrap'}},
         r('span',{style:{fontSize:10,fontWeight:700,color:c.muted,textTransform:'uppercase',letterSpacing:'.06em'}},'Équipement'),
         r('select',{value:sel.val,onChange:e=>this.setState({nomencEquip:e.target.value}),style:{background:c.surf3,border:'1px solid '+c.bdr2,borderRadius:6,padding:'6px 9px',fontSize:12,color:c.text,outline:'none'}},...opts.map(o=>r('option',{key:o.val,value:o.val},o.label))),
-        r('span',{style:{fontSize:10,color:c.muted}},data.entrants.length+' entrant(s) · '+data.sortants.length+' sortant(s)')),
+        r('span',{style:{fontSize:10,color:c.muted}},data.entrants.length+' entrant(s) · '+data.sortants.length+' sortant(s)'),
+        r('div',{style:{flex:1}}),this.Btn('Imprimer',()=>this.printVueCable(),'sec','sm')),
       r('div',{style:{display:'flex',gap:14,alignItems:'flex-start'}},
         r('div',{style:{flex:1,minWidth:220}},r('div',{style:{fontSize:10,fontWeight:800,color:c.success,textTransform:'uppercase',letterSpacing:'.06em',marginBottom:8}},'Entrants (amont)'),data.entrants.length?data.entrants.map(inRow):r('div',{style:{fontSize:11,color:c.muted,fontStyle:'italic'}},'Aucun câble entrant')),
         centerCol,
         r('div',{style:{flex:1,minWidth:220}},r('div',{style:{fontSize:10,fontWeight:800,color:c.accent,textTransform:'uppercase',letterSpacing:'.06em',marginBottom:8,textAlign:'right'}},'Sortants (aval)'),data.sortants.length?data.sortants.map(outRow):r('div',{style:{fontSize:11,color:c.muted,fontStyle:'italic',textAlign:'right'}},'Aucun câble sortant'))));
+  }
+  _openCableEdit(edit){
+    if(!edit)return;const s=this.state;
+    if(edit.type==='dj'){this.setState({showModal:true,modalType:'editDisjoncteur',editId:edit.id});return;}
+    if(edit.type==='dep'){const d=(s.departs||[]).find(x=>x.id===edit.id);if(!d)return;this.setState({showModal:true,modalType:'editDepart',editDepartId:d.id,departForm:{nom:d.nom,type:d.type,calibre:d.calibre,poles:d.poles,courbe:d.courbe,tableauElecId:d.tableauElecId?String(d.tableauElecId):'',pieceId:d.pieceId?String(d.pieceId):'',description:d.description||'',emplacement:d.emplacement||'',tension:d.tension||'mono',ddr:d.ddr!=null?d.ddr:300}});return;}
+    if(edit.type==='fn'){const p=(s.pieces||[]).find(x=>x.id===edit.pieceId);const fn=p&&(p.fonctions||[]).find(f=>f.id===edit.fnId);if(!fn)return;this.setState({showModal:true,modalType:'editFonction',editFonctionPieceId:p.id,editFonctionId:fn.id,editFonctionForm:{type:fn.type,typeLampe:fn.typeLampe||'led_plafond',puissance:fn.puissance||12,quantite:fn.quantite||1,distance:fn.distance||0,cmdType:'simple',cmdZoneId:'',cmdZone2Id:'',newZoneNom:'',showNewZone:false,djCalibre:10,djCourbe:'B',djPoles:'1',djDDR:30,djTableauId:'',djSection:1.5,departType:fn.departType||'tableau',departId:fn.departId?String(fn.departId):'',departDist:fn.departDist||0,cableLongueur:fn.cableLongueur||0,cableSection:fn.cableSection||'1.5',cableType:fn.cableType||'H07VU'}});return;}
+    if(edit.type==='bd'){const b=(s.boitesDeriv||[]).find(x=>x.id===edit.id);if(!b)return;this.openEdit('addBoite',b,'boiteForm',{nom:b.nom,label:b.label||'',pieceId:b.pieceId?String(b.pieceId):'',type:b.type||'encastre',tableauId:b.tableauId?String(b.tableauId):'',position:b.position||'',hauteurPlafond:b.hauteurPlafond||30,cote:b.cote||'plafond',description:b.description||''});return;}
+    if(edit.type==='te'){const t=(s.tableauxElec||[]).find(x=>x.id===edit.id);if(!t)return;const pc=(s.pieces||[]).find(p=>p.id===t.pieceId);this.openEdit('addTableauElec',t,'tableauElecForm',{nom:t.nom,pieceId:t.pieceId?String(t.pieceId):'',description:t.description||'',type:t.type||'principal',appId:pc?String(pc.appId):'',departId:t.departId?String(t.departId):''});return;}
+  }
+  printVueCable(){
+    try{
+      const s=this.state;const tes=s.tableauxElec||[];const bds=s.boitesDeriv||[];
+      const tc=t=>{try{return this.genTECode(t,s);}catch(e){return t.code||('TE'+t.id);}};
+      const bc=b=>{try{return this.genBDCode(b,s);}catch(e){return b.nom||('BD'+b.id);}};
+      const opts=[...tes.map(t=>({val:'te:'+t.id,kind:'te',id:t.id})),...bds.map(b=>({val:'bd:'+b.id,kind:'bd',id:b.id}))];
+      if(opts.length===0){this.showToast('Aucun équipement');return;}
+      const sel=opts.find(o=>o.val===s.nomencEquip)||opts[0];const data=this._vueCableData(sel.kind,sel.id);
+      const esc=t=>String(t==null?'':t).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+      const barH=(conds,sec)=>conds.map(x=>{const col=x[1]==='grad'?'repeating-linear-gradient(45deg,#43a047 0 4px,#fdd835 4px 8px)':x[1];return '<div style="display:flex;align-items:center;gap:4px;margin-bottom:1px"><span style="width:22px;font:700 8px monospace;color:'+(x[1]==='grad'?'#43a047':x[1])+'">'+x[0]+'</span><div style="flex:1;height:4px;border-radius:2px;background:'+col+'"></div><span style="font:8px monospace;color:#888">'+esc(sec)+'</span></div>';}).join('');
+      const lblH=(rep,txt,brn,align)=>'<div style="min-width:120px;font-size:9px;text-align:'+(align||'left')+'">'+(rep?'<b style="font-family:monospace;color:#0277BD">'+esc(rep)+'</b>':'')+'<div>'+esc(txt)+'</div>'+(brn?'<div style="color:#888;font-family:monospace">bornes: '+esc(brn)+'</div>':'')+'</div>';
+      const rowH=(cab,dir)=>'<div style="display:flex;align-items:center;gap:8px;padding:6px 8px;border:1px solid #ddd;border-radius:6px;margin-bottom:5px;page-break-inside:avoid">'+(dir==='in'?lblH(cab.wcode,cab.from,cab.bornes,'left'):'')+'<div style="flex:1;min-width:90px">'+barH(cab.conds,cab.sec)+'</div>'+(dir==='out'?lblH(cab.wcode,cab.to,cab.bornes,'right'):'')+'</div>';
+      const cen=data.center||{type:'',code:'',nom:''};
+      const html='<div style="font-family:Arial,sans-serif;padding:8mm;color:#111"><h2 style="margin:0 0 2mm">Vue câble — '+esc(cen.code)+(cen.nom?' '+esc(cen.nom):'')+'</h2><div style="font-size:9pt;color:#555;margin-bottom:4mm">'+esc((s.project||{}).nom||'')+' — entrants (amont) / sortants (aval)</div>'
+        +'<div style="display:flex;gap:14px;align-items:flex-start">'
+        +'<div style="flex:1"><div style="font:700 10px sans-serif;color:#16a34a;text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px">Entrants (amont)</div>'+(data.entrants.map(cb=>rowH(cb,'in')).join('')||'<i style="color:#888;font-size:10px">Aucun</i>')+'</div>'
+        +'<div style="width:96px;text-align:center;background:#0277BD;color:#fff;border-radius:8px;padding:14px 6px;align-self:center"><div style="font:700 8px sans-serif;opacity:.85;letter-spacing:.1em">'+esc(cen.type)+'</div><div style="font:900 14px monospace;margin:2px 0">'+esc(cen.code)+'</div><div style="font-size:8px;opacity:.85">'+esc(cen.nom)+'</div></div>'
+        +'<div style="flex:1"><div style="font:700 10px sans-serif;color:#0277BD;text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px;text-align:right">Sortants (aval)</div>'+(data.sortants.map(cb=>rowH(cb,'out')).join('')||'<i style="color:#888;font-size:10px">Aucun</i>')+'</div>'
+        +'</div></div>';
+      const cont=document.createElement('div');cont.id='cebat-vuecable';cont.setAttribute('data-print','main');cont.style.position='absolute';cont.style.left='-99999px';cont.style.top='0';cont.innerHTML=html;document.body.appendChild(cont);
+      const main=document.querySelector('main');const prev=main?main.getAttribute('data-print'):null;if(main)main.setAttribute('data-print','hide');
+      if(!document.getElementById('cebat-vccss')){const st=document.createElement('style');st.id='cebat-vccss';st.textContent='@media print{@page{size:A4 landscape;margin:10mm;}}';document.head.appendChild(st);}
+      const cleanup=()=>{const e=document.getElementById('cebat-vccss');if(e)e.remove();cont.remove();if(main){if(prev)main.setAttribute('data-print',prev);else main.removeAttribute('data-print');}window.removeEventListener('afterprint',cleanup);};
+      window.addEventListener('afterprint',cleanup);window.print();
+    }catch(e){this.showToast('Echec impression vue câble');}
   }
   ARMOIRE_COMP={voyant:{label:'Voyant Ø22',shape:'circle',w:22,h:22,color:'#ef4444'},bouton:{label:'Bouton Ø22',shape:'circle',w:22,h:22,color:'#22c55e'},afficheur:{label:'Afficheur 92x45',shape:'rect',w:92,h:45,color:'#0277BD'},presse_etoupe:{label:'Presse-etoupe Ø20',shape:'circle',w:20,h:20,color:'#94a3b8'},ventilation:{label:'Ventilation 100x100',shape:'square',w:100,h:100,color:'#06b6d4'},passage:{label:'Passage cable 60x30',shape:'rect',w:60,h:30,color:'#f59e0b'},decoupe:{label:'Decoupe libre',shape:'rect',w:50,h:50,color:'#7c3aed'}};
   ARMOIRE_FACES=[['porte','Porte'],['platine','Platine'],['couvercle','Couvercle'],['gauche','Cote gauche'],['droit','Cote droit'],['haut','Dessus'],['derriere','Derriere']];
