@@ -2952,6 +2952,11 @@ class Component extends DCLogic {
     const _icc=+((s.project||{}).iccTableau)||0;const _pdc=+((s.project||{}).pdcDisjoncteurs)||0;
     if(_icc>0&&_pdc>0&&_pdc<_icc)add('error','Pouvoir de coupure insuffisant : disjoncteurs '+_pdc+' kA < Icc presume au tableau '+_icc+' kA. Choisir des disjoncteurs '+_icc+' kA (ou superieur) ou prevoir une filiation.');
     else if(_icc>0&&_pdc>0)add('info','Pouvoir de coupure OK : disjoncteurs '+_pdc+' kA >= Icc presume '+_icc+' kA.');
+    // Parafoudre (NF C 15-100 §534)
+    const _pf=this.parafoudreRequis();
+    if(_pf.required&&!_pf.installed)add('error','Parafoudre Type 2 obligatoire : '+_pf.reason+'. Ajouter un parafoudre en tete d\'installation.');
+    else if(_pf.recommended&&!_pf.installed)add('warn','Parafoudre Type 2 recommande (ligne aerienne / zone exposee) — a confirmer selon le niveau keraunique.');
+    else if(_pf.installed)add('info','Parafoudre declare en tete d\'installation.');
     return issues;
   }
   _fnPowerW(fn){const q=fn.quantite||1;if(fn.type==='eclairage')return (fn.puissance||10)*q;if(fn.type==='prises'||fn.type==='prises_sdb')return 460*q;return ({four:6000,lave_vaisselle:2200,lave_linge:2500,seche_linge:2400,chauffe_eau:3000,climatisation:2500,borne_ve:7400,hotte:300,vmc:200,portail:500,piscine:1500}[fn.type]||500)*q;}
@@ -3050,6 +3055,18 @@ class Component extends DCLogic {
     const heightMM=Math.max(2000,rowsTotal*250+300);
     const reservePct=usedModules>0&&capacity>0?Math.round((capacity-usedModules)/capacity*100):20;
     return{usedModules,rangees,rowsComm,rowsTotal,capacity,etelWidth,etelDepth,heightMM,ROW,reservePct,boards:tes.length};
+  }
+  parafoudreRequis(){
+    // NF C 15-100 §534 (simplifie) — obligation du parafoudre Type 2
+    const pr=this.state.project||{};
+    const aerien=(pr.alimReseau||'souterrain')==='aerien';
+    const para=!!pr.paratonnerre;
+    const ng=+pr.densiteFoudre||0; // densite de foudroiement Ng (coups/km2/an)
+    let required=false,reason='';
+    if(para){required=true;reason='presence d\'un paratonnerre sur le batiment';}
+    else if(aerien&&ng>=2.5){required=true;reason='ligne aerienne en zone AQ2 (Ng '+ng+' >= 2,5)';}
+    const recommended=!required&&(aerien||ng>=1.5);
+    return{required,recommended,reason,aerien,para,ng,installed:!!pr.parafoudre};
   }
   selectivityTable(){
     const s=this.state;const tes=s.tableauxElec||[];const deps=s.departs||[];const djs=s.disjoncteurs||[];const rows=[];
@@ -3255,6 +3272,40 @@ class Component extends DCLogic {
       const cleanup=()=>{const e=document.getElementById('cebat-autocss');if(e)e.remove();cont.remove();if(main){if(prev)main.setAttribute('data-print',prev);else main.removeAttribute('data-print');}window.removeEventListener('afterprint',cleanup);};
       window.addEventListener('afterprint',cleanup);window.print();
     }catch(e){this.showToast('Echec fiche autocontrole');}
+  }
+  _autocontroleData(){
+    const s=this.state;const pr=s.project||{};const bc=this.branchCurrent();let issues=[];try{issues=this.checkConformite();}catch(e){}
+    let genere='';try{genere=new Date().toISOString();}catch(e){}
+    return{
+      meta:{outil:'Cebat',norme:'NF C 15-100',genere},
+      projet:{nom:pr.nom||'',client:pr.client||'',adresse:pr.adresse||'',installateur:pr.bureau||'',typeAlim:pr.typeAlim||'',puissanceSouscrite:pr.puissanceSouscrite||'',iccTableau:pr.iccTableau||'',pdcDisjoncteurs:pr.pdcDisjoncteurs||'',parafoudre:!!pr.parafoudre},
+      branchement:{type:bc.tri?'triphase':'monophase',calibreConseille:bc.calibre,courant:Math.round((bc.Imax||bc.I||0)*10)/10},
+      mesures:s.mesures||{},
+      conformite:{erreurs:issues.filter(i=>i.level==='error').length,avertissements:issues.filter(i=>i.level==='warn').length,details:issues},
+      circuits:(s.disjoncteurs||[]).map(d=>({code:d.code||'',calibre:d.calibre,courbe:d.courbe,section:d.section,ddr:d.ddr,recepteurs:d.recepteurs||[]}))
+    };
+  }
+  _downloadBlob(content,type,name){
+    const blob=new Blob([content],{type});const url=URL.createObjectURL(blob);const a=document.createElement('a');
+    a.href=url;a.download=name;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);
+  }
+  _slug(){return (((this.state.project||{}).nom)||'projet').replace(/[^a-z0-9]+/gi,'_').replace(/^_+|_+$/g,'').toLowerCase()||'projet';}
+  exportAutocontroleJSON(){
+    try{this._downloadBlob(JSON.stringify(this._autocontroleData(),null,2),'application/json','cebat_autocontrole_'+this._slug()+'.json');this.showToast('Autocontrôle JSON exporté');}catch(e){this.showToast('Echec export JSON');}
+  }
+  exportAutocontroleCSV(){
+    try{
+      const d=this._autocontroleData();const esc=v=>{const t=v==null?'':String(v);return /[";\n]/.test(t)?'"'+t.replace(/"/g,'""')+'"':t;};
+      const L=[['Section','Champ','Valeur'].join(';')];
+      const add=(sec,k,v)=>L.push([sec,k,v].map(esc).join(';'));
+      add('Projet','Nom',d.projet.nom);add('Projet','Client',d.projet.client);add('Projet','Adresse',d.projet.adresse);add('Projet','Installateur',d.projet.installateur);
+      add('Alimentation','Type',d.projet.typeAlim);add('Alimentation','Puissance souscrite (kVA)',d.projet.puissanceSouscrite);add('Alimentation','Icc (kA)',d.projet.iccTableau);add('Alimentation','PdC (kA)',d.projet.pdcDisjoncteurs);add('Alimentation','Parafoudre',d.projet.parafoudre?'oui':'non');
+      add('Branchement','Type',d.branchement.type);add('Branchement','Calibre conseillé (A)',d.branchement.calibreConseille);add('Branchement','Courant (A)',d.branchement.courant);
+      Object.keys(d.mesures).forEach(k=>add('Mesures',k,d.mesures[k]));
+      add('Conformité','Erreurs',d.conformite.erreurs);add('Conformité','Avertissements',d.conformite.avertissements);
+      d.conformite.details.forEach(i=>add('Conformité — '+i.level,'',i.msg));
+      this._downloadBlob('﻿'+L.join('\r\n'),'text/csv;charset=utf-8','cebat_autocontrole_'+this._slug()+'.csv');this.showToast('Autocontrôle CSV exporté');
+    }catch(e){this.showToast('Echec export CSV');}
   }
   chiffrage(){
     const TYPEA=new Set(['prises_sdb','lave_linge','four','borne_ve','climatisation','chauffe_eau']);
@@ -5809,6 +5860,14 @@ class Component extends DCLogic {
             r('div',{style:{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'0 14px'}},
               se('iccTableau','Icc présumé au tableau',[['','— non défini —'],['1.5','1,5 kA'],['3','3 kA'],['4.5','4,5 kA'],['6','6 kA'],['10','10 kA'],['15','15 kA'],['25','25 kA']]),
               se('pdcDisjoncteurs','Pouvoir de coupure (PdC)',[['','— non défini —'],['3','3 kA'],['4.5','4,5 kA'],['6','6 kA (standard)'],['10','10 kA'],['15','15 kA'],['25','25 kA']])),
+            r('div',{style:{marginTop:4,padding:'11px 13px',border:`1px solid ${c.bdr2}`,borderRadius:8}},
+              r('div',{style:{fontSize:10,fontWeight:700,color:c.muted,textTransform:'uppercase',letterSpacing:'.05em',marginBottom:8}},'Protection foudre (parafoudre)'),
+              r('div',{style:{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'0 14px'}},
+                se('alimReseau','Raccordement réseau',[['souterrain','Souterrain'],['aerien','Aérien']]),
+                se('densiteFoudre','Densité foudroiement Ng',[['','— inconnu —'],['1','1 (faible)'],['1.5','1,5'],['2','2'],['2.5','2,5 (AQ2)'],['3','3'],['4','4 (élevé)']])),
+              r('label',{style:{display:'flex',alignItems:'center',gap:7,fontSize:11,color:c.text2,marginTop:6,cursor:'pointer'}},r('input',{type:'checkbox',checked:!!d.paratonnerre,onChange:e=>upd('paratonnerre',e.target.checked)}),'Bâtiment équipé d\'un paratonnerre'),
+              r('label',{style:{display:'flex',alignItems:'center',gap:7,fontSize:11,color:c.text2,marginTop:4,cursor:'pointer'}},r('input',{type:'checkbox',checked:!!d.parafoudre,onChange:e=>upd('parafoudre',e.target.checked)}),'Parafoudre Type 2 installé'),
+              (()=>{const aerien=(d.alimReseau||'souterrain')==='aerien';const ng=+d.densiteFoudre||0;const para=!!d.paratonnerre;const req=para||(aerien&&ng>=2.5);const reco=!req&&(aerien||ng>=1.5);const st=req?'Obligatoire':reco?'Recommandé':'Non requis';const col=req?c.danger:reco?c.warn:c.success;return r('div',{style:{marginTop:8,fontSize:11,fontWeight:700,color:col}},'Parafoudre : '+st+(req&&!d.parafoudre?' — à ajouter':d.parafoudre?' ✓ déclaré':''));})()),
             r('div',{style:{background:'rgba(2,132,199,.07)',border:`1px solid rgba(2,132,199,.2)`,borderRadius:7,padding:'11px 13px',marginTop:4}},
               r('div',{style:{fontSize:10,color:c.acBlue,fontWeight:700,marginBottom:2,textTransform:'uppercase',letterSpacing:'.06em'}},'Disjoncteur général auto-calculé'),
               r('div',{style:{fontSize:26,fontWeight:800,color:c.text,fontFamily:c.mono}},cdg+'A'),
@@ -7869,7 +7928,7 @@ class Component extends DCLogic {
       {cat:'Appareillage',color:c.success,items:[{d:'Prises 2P+T 16A',q:nP,pu:6.5,u:'u'},{d:'Interrupteurs simples / va-et-vient',q:nL,pu:8.0,u:'u'},{d:'Boîtes encastrement Ø67mm',q:nP+nL,pu:1.5,u:'u'},{d:'DCL douilles E27/E14',q:nL,pu:2.80,u:'u'}]},
     ];
     return r('div',{style:{padding:'24px 28px',animation:'fadeIn .3s ease'}},
-      this.SH('Devis estimatif','Estimation indicative — '+today,r('div',{style:{display:'flex',gap:8}},this.Btn('⤓ Export CSV',()=>this.exportCSV(),'sec','md'),this.Btn(r('span',{style:{display:'inline-flex',alignItems:'center',gap:5}},this.ico('print_ico',13),'Dossier complet'),()=>this.printDossier(),'primary','md'),this.Btn(r('span',{style:{display:'inline-flex',alignItems:'center',gap:5}},this.ico('print_ico',13),'Fiche autocontrôle'),()=>this.printAutocontrole(),'sec','md'),this.Btn(r('span',{style:{display:'inline-flex',alignItems:'center',gap:5}},this.ico('print_ico',13),'Imprimer / PDF'),()=>window.print(),'ghost','md'))),
+      this.SH('Devis estimatif','Estimation indicative — '+today,r('div',{style:{display:'flex',gap:8}},this.Btn('⤓ Export CSV',()=>this.exportCSV(),'sec','md'),this.Btn(r('span',{style:{display:'inline-flex',alignItems:'center',gap:5}},this.ico('print_ico',13),'Dossier complet'),()=>this.printDossier(),'primary','md'),this.Btn(r('span',{style:{display:'inline-flex',alignItems:'center',gap:5}},this.ico('print_ico',13),'Fiche autocontrôle'),()=>this.printAutocontrole(),'sec','md'),this.Btn('⤓ Autoctrl JSON',()=>this.exportAutocontroleJSON(),'sec','sm'),this.Btn('⤓ Autoctrl CSV',()=>this.exportAutocontroleCSV(),'sec','sm'),this.Btn(r('span',{style:{display:'inline-flex',alignItems:'center',gap:5}},this.ico('print_ico',13),'Imprimer / PDF'),()=>window.print(),'ghost','md'))),
       r('div',{className:'cbt-card',style:{background:c.surf2,border:`1px solid ${c.bdr}`,borderRadius:12,padding:'12px 16px',marginBottom:14,display:'grid',gridTemplateColumns:'repeat(2,1fr)',gap:4,fontSize:11,boxShadow:c.elev1}},
         r('span',{style:{color:c.muted}},'Projet :'),r('span',{style:{color:c.text,fontWeight:500}},project.nom),
         r('span',{style:{color:c.muted}},'Niveaux / Apparts. / Pièces :'),r('span',{style:{color:c.text}},niveaux.length+' / '+appartements.length+' / '+pieces.length),
