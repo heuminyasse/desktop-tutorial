@@ -2580,12 +2580,16 @@ class Component extends DCLogic {
   genPieceCode(existingPieces){const n=existingPieces.length+1;return 'PC'+String(n).padStart(3,'0');}
   genZoneCode(existingZones){const n=existingZones.length+1;return 'ZC'+String(n).padStart(2,'0');}
   genDjCode(existingDj,tableauId){
-    const allTE=this.state.tableauxElec;
-    const te=allTE.find(t=>t.id===tableauId);
+    const allTE=this.state.tableauxElec||[];
+    const te=tableauId!=null?allTE.find(t=>t.id===tableauId):null;
     const teGlobalIdx=te?allTE.indexOf(te)+1:1;
-    // Compter uniquement les CB du meme tableau pour l'index
-    const sameTE=existingDj.filter(d=>d.tableauId===tableauId);
-    const n=sameTE.length+1;
+    const existing=existingDj||[];
+    // Compter les CB du meme tableau (null/undefined = "a assigner" regroupes)
+    const sameTE=existing.filter(d=>tableauId!=null?d.tableauId===tableauId:d.tableauId==null);
+    let n=sameTE.length+1;
+    // Garde anti-collision : ne jamais reutiliser un code existant
+    const codes=new Set(existing.map(d=>d.code));
+    while(codes.has(teGlobalIdx+'CB'+n))n++;
     return teGlobalIdx+'CB'+n;
   }
   genDepartCode(type,existingDeparts,editId){const prefix={comptage:'AR',electrogene:'GE',solaire:'PV'}[type]||'DP';const n=existingDeparts.filter(d=>d.type===type&&d.id!==editId).length+1;return prefix+String(n).padStart(2,'0');}
