@@ -2197,6 +2197,8 @@ function(a,b,c){if(!Vd(b))throw Error(m(200));return Wd(null,a,b,!1,c)};Q.unmoun
     .cbt-card:hover{box-shadow:var(--elev2,0 8px 20px rgba(0,0,0,.1))}
     .cbt-stat{transition:box-shadow .17s ease,transform .17s ease}
     .cbt-stat:hover{box-shadow:var(--elev2,0 8px 20px rgba(0,0,0,.1));transform:translateY(-2px)}
+    .cbt-sidebar{transition:width .28s cubic-bezier(.4,0,.2,1)}
+    .cbt-sidebar.cbt-focus{width:0 !important;min-width:0 !important;border-right-color:transparent !important}
     @keyframes fadeIn{from{opacity:0;transform:translateY(7px)}to{opacity:1;transform:none}}
     @keyframes appear{from{opacity:0;transform:scale(.97)}to{opacity:1;transform:scale(1)}}
     @keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
@@ -3407,7 +3409,8 @@ class Component extends DCLogic {
     const elemTotal=tableauxElec.length+boitesDeriv.length+interrupteurs.length+zonesCommande.length;
     const bdgMap={appartements:appartements.length,pieces:pieces.length,circuits:circuits.length+elemTotal};
     const red='#0277BD';
-    return r('aside',{'data-print':'hide',className:'cbt-sidebar'+(this.state.sidebarOpen?' cbt-sb-open':''),style:{width:220,background:c.surf,borderRight:`1px solid ${c.bdr}`,display:'flex',flexDirection:'column',flexShrink:0,overflow:'hidden'}},
+    return r('aside',{'data-print':'hide',className:'cbt-sidebar'+(this.state.sidebarOpen?' cbt-sb-open':'')+(this.state.focusMode?' cbt-focus':''),style:{width:220,background:c.surf,borderRight:`1px solid ${c.bdr}`,display:'flex',flexDirection:'column',flexShrink:0,overflow:'hidden'}},
+      r('div',{style:{width:220,minWidth:220,height:'100%',display:'flex',flexDirection:'column'}},
       // Project card
       r('div',{style:{padding:'14px 16px',borderBottom:`1px solid ${c.bdr}`}},
         r('div',{style:{fontSize:9,color:c.muted,fontWeight:700,textTransform:'uppercase',letterSpacing:'.08em',marginBottom:4}},'PROJET ACTIF'),
@@ -3436,7 +3439,7 @@ class Component extends DCLogic {
         ))
       ),
       r('div',{style:{padding:'10px 16px',borderTop:`1px solid ${c.bdr}`}},
-        r('div',{style:{fontSize:9,color:c.muted,fontFamily:c.mono,textAlign:'center'}},'CEBAT by HBO · 2024'))
+        r('div',{style:{fontSize:9,color:c.muted,fontFamily:c.mono,textAlign:'center'}},'CEBAT by HBO · 2024')))
     );
   }
 
@@ -6214,8 +6217,8 @@ class Component extends DCLogic {
     };
     const rowEl=(row)=>{
       const used=row.brs.reduce((a,d)=>a+this._poles(d),0)+2;const over=used>ROW;
-      return r('div',{key:row.rangee,onDragOver:e=>e.preventDefault(),onDrop:e=>{e.preventDefault();const dc=this.state.dragCb;if(dc)this.dropCb(dc,row.rangee,null);this.setState({dragCb:null,dragOverCb:null});},
-        style:{border:'1px solid '+(over?c.danger:c.bdr2),borderRadius:9,padding:'8px 10px',marginBottom:10,background:c.surf}},
+      return r('div',{key:row.rangee,className:'cbt-card',onDragOver:e=>e.preventDefault(),onDrop:e=>{e.preventDefault();const dc=this.state.dragCb;if(dc)this.dropCb(dc,row.rangee,null);this.setState({dragCb:null,dragOverCb:null});},
+        style:{border:'1px solid '+(over?c.danger:c.bdr2),borderRadius:11,padding:'8px 10px',marginBottom:10,background:c.surf,boxShadow:c.elev1}},
         r('div',{style:{display:'flex',alignItems:'center',gap:8,marginBottom:6}},
           r('span',{style:{fontSize:11,fontWeight:800,color:c.accent}},'Rangee '+row.rangee),
           r('span',{style:{fontSize:9,fontFamily:c.mono,color:over?c.danger:c.muted}},used+'/'+ROW+' modules'+(over?' — surcharge':''))),
@@ -6507,7 +6510,7 @@ class Component extends DCLogic {
                 r('div',{onDragOver:e=>e.preventDefault(),onDrop:e=>{e.preventDefault();const dc=this.state.dragCb;if(dc)this.dropCb(dc,g.rangee,null);this.setState({dragCb:null});},style:{borderLeft:'3px solid '+c.accent,paddingLeft:14,display:'flex',flexDirection:'column',gap:2,minHeight:30}},
                   ...g.brs.map(d=>breakerRow(d,g.rangee))));
             };
-            return r('div',{key:te.id,style:{border:'1px solid '+c.bdr2,borderRadius:10,background:c.surf,boxShadow:'0 1px 4px '+c.shadow,overflow:'hidden'}},
+            return r('div',{key:te.id,className:'cbt-card',style:{border:'1px solid '+c.bdr2,borderRadius:12,background:c.surf,boxShadow:c.elev1,overflow:'hidden'}},
               r('div',{style:{display:'flex',alignItems:'center',gap:10,padding:'10px 14px',background:c.surf3,borderBottom:'1px solid '+c.bdr}},
                 r('span',{style:{fontSize:12,fontWeight:800,color:c.accent,fontFamily:c.mono}},teCode),
                 r('span',{style:{fontSize:12,color:c.text,fontWeight:600}},te.nom||''),
@@ -6544,7 +6547,7 @@ class Component extends DCLogic {
       this.SH('Schéma unifilaire','Source → AGCP → Tête → Différentiel → Disjoncteur divisionnaire → Récepteur',r('div',{style:{display:'flex',gap:8}},this.Btn('DXF',()=>this.exportSchemaDXF(),'sec','md'),this.Btn('SVG',()=>this.exportSchemaSVG(),'sec','md'),this.Btn('PNG',()=>this.exportSchemaPNG(),'sec','md'),this.Btn('PDF feuilles',()=>this.printSchemaSheets(),'sec','md'),this.Btn('Étiquettes',()=>this.printLabels(),'sec','md'),this.Btn(r('span',{style:{display:'inline-flex',alignItems:'center',gap:5}},this.ico('print_ico',13),'PDF paysage'),()=>this.printLandscape(),'ghost','md'))),
       r('div',{style:{display:'flex',gap:6,marginBottom:12}},...[['uni','Unifilaire'],['multi','Multifilaire']].map(m2=>r('button',{key:m2[0],onClick:()=>this.setState({schemaMode:m2[0]}),style:{padding:'5px 14px',borderRadius:7,fontSize:12,fontWeight:(this.state.schemaMode||'uni')===m2[0]?700:400,border:'1px solid '+((this.state.schemaMode||'uni')===m2[0]?c.accent:c.bdr2),background:(this.state.schemaMode||'uni')===m2[0]?'rgba(2,119,189,.1)':'transparent',color:(this.state.schemaMode||'uni')===m2[0]?c.accent:c.text2,cursor:'pointer',fontFamily:c.font}},m2[1]))),
       legend,wireLegend,
-      r('div',{style:{background:c.surf2,border:'1px solid '+c.bdr,borderRadius:12,padding:'16px 18px',marginBottom:16}},
+      r('div',{className:'cbt-card',style:{background:c.surf2,border:'1px solid '+c.bdr,borderRadius:12,padding:'16px 18px',marginBottom:16,boxShadow:c.elev1}},
         r('div',{style:{fontSize:10,fontWeight:700,color:c.muted,textTransform:'uppercase',letterSpacing:'.08em',marginBottom:10}},'Alimentation générale'),
         sources),
       (this.state.schemaMode==='multi')?this.renderMultifilaire():boards,
@@ -7788,7 +7791,7 @@ class Component extends DCLogic {
     const app=r('div',{style:{display:'flex',flexDirection:'column',height:'100vh',overflow:'hidden','--elev1':c.elev1,'--elev2':c.elev2,'--elev3':c.elev3}},
       this.renderTopBar(),
       r('div',{style:{display:'flex',flex:1,overflow:'hidden'}},
-        this.state.focusMode?null:this.renderSidebar(circuits),
+        this.renderSidebar(circuits),
         r('main',{'data-print':'main',style:{flex:1,overflowY:'auto',background:c.bg}},(views[view]||views.dashboard)())),
       showModal&&this.renderModal(),
       toast&&r('div',{style:{position:'fixed',bottom:22,right:22,background:c.surf2,border:`1px solid ${c.bdr2}`,borderRadius:9,padding:'10px 16px',display:'flex',alignItems:'center',gap:8,boxShadow:`0 8px 32px ${c.shadow}`,zIndex:300,animation:'appear .2s ease'}},
