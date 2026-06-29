@@ -6679,18 +6679,39 @@ class Component extends DCLogic {
     let total=0,done=0,nc=0;allKeys.forEach(k=>{total++;const v=ps[k]||'';if(v==='pose')done++;else if(v==='nc')nc++;});
     return{perTe,total,done,nc,pct:total?Math.round(done/total*100):0};
   }
+  poseProgressByPiece(){
+    const s=this.state;const ps=s.poseStatuts||{};
+    const refPieceId={};(s.pieces||[]).forEach(p=>(p.fonctions||[]).forEach(fn=>{if(fn.ref)refPieceId[fn.ref]=p.id;}));
+    const acc={};const add=(pid,key)=>{if(pid==null)return;const a=acc[pid]=acc[pid]||{total:0,done:0,nc:0};a.total++;const v=ps[key]||'';if(v==='pose')a.done++;else if(v==='nc')a.nc++;};
+    (s.disjoncteurs||[]).forEach(d=>{[...new Set((d.recepteurs||[]).map(rf=>refPieceId[rf]).filter(x=>x!=null))].forEach(pid=>add(pid,'dj'+d.id));});
+    (s.pieces||[]).forEach(p=>(p.fonctions||[]).forEach(fn=>{if(fn.departType==='boite')add(p.id,'fn'+fn.id);}));
+    const pieces=(s.pieces||[]).filter(p=>acc[p.id]).map(p=>{const a=acc[p.id];const ap=(s.appartements||[]).find(x=>x.id===p.appId);return{nom:p.nom,appNom:ap?ap.nom:'',appId:p.appId,total:a.total,done:a.done,nc:a.nc,pct:a.total?Math.round(a.done/a.total*100):0};});
+    const byApp={};pieces.forEach(p=>{const k=p.appId==null?'_':p.appId;const b=byApp[k]=byApp[k]||{nom:p.appNom||'—',total:0,done:0,nc:0};b.total+=p.total;b.done+=p.done;b.nc+=p.nc;});
+    const apps=Object.keys(byApp).map(k=>{const b=byApp[k];return{nom:b.nom,total:b.total,done:b.done,nc:b.nc,pct:b.total?Math.round(b.done/b.total*100):0};});
+    return{pieces,apps};
+  }
   renderPoseCard(){
     const c=this.C;const r=this.r;const pp=this.poseProgress();
     if(pp.total===0)return null;
     const bar=(pct,col)=>r('div',{style:{height:7,background:c.bdr2,borderRadius:4,overflow:'hidden'}},r('div',{style:{height:'100%',width:Math.min(100,pct)+'%',background:col,borderRadius:4}}));
+    const grpRow=(t,k)=>r('div',{key:k,style:{marginBottom:7}},
+      r('div',{style:{display:'flex',justifyContent:'space-between',fontSize:11,marginBottom:2}},
+        r('span',{style:{color:c.text}},t.label),
+        r('span',{style:{fontFamily:c.mono,color:c.muted}},t.done+'/'+t.total+' · '+t.pct+'%'+(t.nc?' · '+t.nc+' NC':''))),
+      bar(t.pct,t.nc?c.warn:c.accent));
+    const grp=(title,items)=>{if(!items.length)return null;return r('div',{style:{marginTop:10}},r('div',{style:{fontSize:9,fontWeight:700,color:c.muted,textTransform:'uppercase',letterSpacing:'.05em',marginBottom:5}},title),...items.map(grpRow));};
+    const pbp=this.poseProgressByPiece();
+    const teItems=pp.perTe.map(t=>({label:t.code+(t.nom?' · '+t.nom:''),done:t.done,total:t.total,nc:t.nc,pct:t.pct}));
+    const appItems=pbp.apps.map(a=>({label:a.nom,done:a.done,total:a.total,nc:a.nc,pct:a.pct}));
+    const pieceItems=pbp.pieces.map(p=>({label:(p.appNom?p.appNom+' · ':'')+p.nom,done:p.done,total:p.total,nc:p.nc,pct:p.pct}));
     return r('div',{style:{marginTop:14}},this.Card('Avancement du câblage (pose)',r('div',{style:{paddingTop:2}},
       r('div',{style:{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:6}},
         r('span',{style:{fontSize:12,color:c.text2}},pp.done+' / '+pp.total+' câbles posés'+(pp.nc?' · '+pp.nc+' anomalie(s)':'')),
         r('span',{style:{fontSize:14,fontWeight:800,color:pp.pct>=100?c.success:c.accent,fontFamily:c.mono}},pp.pct+'%')),
       bar(pp.pct,pp.nc?c.warn:'linear-gradient(90deg,#0277BD,#0EA5E9)'),
-      pp.perTe.length>1?r('div',{style:{marginTop:10}},...pp.perTe.map((t,k)=>r('div',{key:k,style:{marginBottom:8}},
-        r('div',{style:{display:'flex',justifyContent:'space-between',fontSize:11,marginBottom:3}},r('span',{style:{color:c.text,fontFamily:c.mono,fontWeight:700}},t.code+(t.nom?' · '+t.nom:'')),r('span',{style:{fontFamily:c.mono,color:c.muted}},t.done+'/'+t.total+' · '+t.pct+'%'+(t.nc?' · '+t.nc+' NC':''))),
-        bar(t.pct,t.nc?c.warn:c.accent)))):null
+      teItems.length>1?grp('Par tableau',teItems):null,
+      appItems.length>1?grp('Par appartement',appItems):null,
+      pieceItems.length?grp('Par pièce',pieceItems):null
     )));
   }
   _condsFor(poles){return poles>=3?[['L1','#6d4c41'],['L2','#212121'],['L3','#9e9e9e'],['N','#42a5f5'],['PE','grad']]:[['L','#6d4c41'],['N','#42a5f5'],['PE','grad']];}
@@ -6729,6 +6750,9 @@ class Component extends DCLogic {
     if(opts.length===0)return r('div',{style:{fontSize:13,color:c.muted,fontStyle:'italic',padding:'20px 0'}},'Aucun tableau ni boîte de dérivation — à créer dans « Circuits électriques ».');
     const sel=opts.find(o=>o.val===s.nomencEquip)||opts[0];
     const data=this._vueCableData(sel.kind,sel.id);
+    const filt=s.vueCableFilter||'all';
+    const fmatch=cb=>filt==='all'||((s.poseStatuts||{})[cb.statutKey]||'')===filt;
+    const fEntr=data.entrants.filter(fmatch),fSort=data.sortants.filter(fmatch);
     const bars=(conds,sec)=>r('div',{style:{display:'flex',flexDirection:'column',gap:2,flex:1,minWidth:80}},...conds.map((x,k)=>r('div',{key:k,style:{display:'flex',alignItems:'center',gap:4}},
       r('span',{style:{width:22,fontSize:8,fontWeight:700,color:x[1]==='grad'?'#43a047':x[1],fontFamily:c.mono}},x[0]),
       r('div',{style:{flex:1,height:4,borderRadius:2,background:x[1]==='grad'?'repeating-linear-gradient(45deg,#43a047 0 4px,#fdd835 4px 8px)':x[1]}}),
@@ -6748,11 +6772,13 @@ class Component extends DCLogic {
         r('select',{value:sel.val,onChange:e=>this.setState({nomencEquip:e.target.value}),style:{background:c.surf3,border:'1px solid '+c.bdr2,borderRadius:6,padding:'6px 9px',fontSize:12,color:c.text,outline:'none'}},...opts.map(o=>r('option',{key:o.val,value:o.val},o.label))),
         r('span',{style:{fontSize:10,color:c.muted}},data.entrants.length+' entrant(s) · '+data.sortants.length+' sortant(s)'),
         (()=>{const all=[...data.entrants,...data.sortants];const done=all.filter(cb=>((s.poseStatuts||{})[cb.statutKey]||'')==='pose').length;const ko=all.filter(cb=>((s.poseStatuts||{})[cb.statutKey]||'')==='nc').length;return r('span',{style:{fontSize:10,fontWeight:700,color:done===all.length&&all.length?c.success:ko?c.danger:c.muted,fontFamily:c.mono}},'posés '+done+'/'+all.length+(ko?' · '+ko+' anomalie(s)':''));})(),
-        r('div',{style:{flex:1}}),this.Btn('Imprimer',()=>this.printVueCable(),'sec','sm')),
+        r('div',{style:{flex:1}}),
+        ...[['all','Tous'],['','À poser'],['pose','Posés'],['nc','Anomalies']].map(f=>r('button',{key:f[0]||'todo',onClick:()=>this.setState({vueCableFilter:f[0]}),style:{padding:'4px 9px',borderRadius:6,fontSize:10,fontWeight:filt===f[0]?700:400,cursor:'pointer',border:'1px solid '+(filt===f[0]?c.accent:c.bdr2),background:filt===f[0]?'rgba(2,119,189,.1)':'transparent',color:filt===f[0]?c.accent:c.text2}},f[1])),
+        this.Btn('Imprimer',()=>this.printVueCable(),'sec','sm')),
       r('div',{style:{display:'flex',gap:14,alignItems:'flex-start'}},
-        r('div',{style:{flex:1,minWidth:220}},r('div',{style:{fontSize:10,fontWeight:800,color:c.success,textTransform:'uppercase',letterSpacing:'.06em',marginBottom:8}},'Entrants (amont)'),data.entrants.length?data.entrants.map(inRow):r('div',{style:{fontSize:11,color:c.muted,fontStyle:'italic'}},'Aucun câble entrant')),
+        r('div',{style:{flex:1,minWidth:220}},r('div',{style:{fontSize:10,fontWeight:800,color:c.success,textTransform:'uppercase',letterSpacing:'.06em',marginBottom:8}},'Entrants (amont)'),fEntr.length?fEntr.map(inRow):r('div',{style:{fontSize:11,color:c.muted,fontStyle:'italic'}},data.entrants.length?'Aucun câble dans ce filtre':'Aucun câble entrant')),
         centerCol,
-        r('div',{style:{flex:1,minWidth:220}},r('div',{style:{fontSize:10,fontWeight:800,color:c.accent,textTransform:'uppercase',letterSpacing:'.06em',marginBottom:8,textAlign:'right'}},'Sortants (aval)'),data.sortants.length?data.sortants.map(outRow):r('div',{style:{fontSize:11,color:c.muted,fontStyle:'italic',textAlign:'right'}},'Aucun câble sortant'))));
+        r('div',{style:{flex:1,minWidth:220}},r('div',{style:{fontSize:10,fontWeight:800,color:c.accent,textTransform:'uppercase',letterSpacing:'.06em',marginBottom:8,textAlign:'right'}},'Sortants (aval)'),fSort.length?fSort.map(outRow):r('div',{style:{fontSize:11,color:c.muted,fontStyle:'italic',textAlign:'right'}},data.sortants.length?'Aucun câble dans ce filtre':'Aucun câble sortant'))));
   }
   _openCableEdit(edit){
     if(!edit)return;const s=this.state;
