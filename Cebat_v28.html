@@ -2180,12 +2180,20 @@ function(a,b,c){if(!Vd(b))throw Error(m(200));return Wd(null,a,b,!1,c)};Q.unmoun
   <style>
     *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
     html,body{height:100%;overflow:hidden}
-    body{font-family:'Calibri Light','Calibri',system-ui,sans-serif;font-weight:300}
-    ::-webkit-scrollbar{width:5px;height:5px}
+    body{font-family:'Calibri Light','Calibri',system-ui,sans-serif;font-weight:300;-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-rendering:optimizeLegibility}
+    ::-webkit-scrollbar{width:10px;height:10px}
     ::-webkit-scrollbar-track{background:transparent}
-    ::-webkit-scrollbar-thumb{border-radius:3px}
+    ::-webkit-scrollbar-thumb{border-radius:6px;background:rgba(124,134,158,.38);border:2px solid transparent;background-clip:content-box}
+    ::-webkit-scrollbar-thumb:hover{background:rgba(124,134,158,.62);background-clip:content-box}
+    *{scrollbar-width:thin;scrollbar-color:rgba(124,134,158,.45) transparent}
     input,select,textarea,button{font-family:'Calibri Light','Calibri',sans-serif;font-weight:300}
-    @keyframes fadeIn{from{transform:translateY(5px)}to{transform:none}}
+    button{cursor:pointer;transition:filter .13s ease,box-shadow .13s ease,border-color .13s ease,background .13s ease,transform .08s ease}
+    button:active{transform:translateY(.5px)}
+    input,select,textarea{transition:border-color .13s ease,box-shadow .13s ease}
+    input:focus-visible,select:focus-visible,textarea:focus-visible{outline:none;border-color:#0284C7 !important;box-shadow:0 0 0 3px rgba(2,132,199,.20)}
+    button:focus-visible{outline:none;box-shadow:0 0 0 3px rgba(2,132,199,.28)}
+    [draggable="true"]:active{cursor:grabbing}
+    @keyframes fadeIn{from{opacity:0;transform:translateY(7px)}to{opacity:1;transform:none}}
     @keyframes appear{from{opacity:0;transform:scale(.97)}to{opacity:1;transform:scale(1)}}
     @keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
   </style>
@@ -2819,7 +2827,7 @@ class Component extends DCLogic {
   // ═══ THEME ═══
   getC(theme){
     const shared={font:"'Calibri Light','Calibri',system-ui,sans-serif",mono:"'JetBrains Mono',monospace",accent:'#0284C7',acBlue:'#0EA5E9',success:'#16a34a',warn:'#d97706',danger:'#dc2626',cyan:'#06b6d4',purple:'#7c3aed',brand:'#C62828'};
-    return theme==='dark'?{...shared,bg:'#0e0e14',surf:'#16161f',surf2:'#1c1c27',surf3:'#22222f',bdr:'#2e2e3e',bdr2:'#3a3a4e',bdr3:'#4e4e68',text:'#eaeaf5',text2:'#a0a0c0',muted:'#666680',scrollThumb:'#2e2e3e',shadow:'rgba(0,0,0,.4)'}:{...shared,bg:'#F2F3F6',surf:'#FFFFFF',surf2:'#FFFFFF',surf3:'#F8F9FB',bdr:'#E5E7EB',bdr2:'#D1D5DB',bdr3:'#9CA3AF',text:'#111827',text2:'#374151',muted:'#6B7280',scrollThumb:'#D1D5DB',shadow:'rgba(0,0,0,.06)'};
+    return theme==='dark'?{...shared,bg:'#0B0E17',surf:'#141925',surf2:'#1A2030',surf3:'#202739',bdr:'#283044',bdr2:'#374055',bdr3:'#4C5872',text:'#E8ECF6',text2:'#A7B0C5',muted:'#6B7590',accentSoft:'rgba(2,132,199,.18)',scrollThumb:'#283044',shadow:'rgba(0,0,0,.45)'}:{...shared,bg:'#F1F3F7',surf:'#FFFFFF',surf2:'#FFFFFF',surf3:'#F6F8FB',bdr:'#E8EBF0',bdr2:'#D5DAE2',bdr3:'#9AA3B2',text:'#0F172A',text2:'#334155',muted:'#64748B',accentSoft:'rgba(2,132,199,.10)',scrollThumb:'#D5DAE2',shadow:'rgba(15,23,42,.07)'};
   }
 
   // ═══ HELPERS ═══
