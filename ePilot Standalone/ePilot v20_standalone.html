@@ -6862,6 +6862,90 @@ html body[class] #vac-gantt td.emp .nm{font-weight:500 !important;}</style>
   })();
 })();
 </script>
+<script id="__FCR_UI_v1__">
+(function(){
+'use strict';
+if(window.__fcrUiV1Done) return; window.__fcrUiV1Done=true;
+
+/* ── 1. Move totals-mode-sel to certifs-bar (far right) & -20% size ── */
+function patchDOM(){
+  var sel=document.querySelector('#view-fcr .totals-mode-sel');
+  var certBar=document.querySelector('#view-fcr .certifs-bar');
+  if(!sel||!certBar||certBar.contains(sel)) return !!certBar.contains(sel);
+
+  /* -20% size */
+  sel.style.fontSize='7px';
+  sel.style.padding='2px 18px 2px 7px';
+  sel.style.margin='0';
+  sel.style.display='inline-block';
+
+  /* Append to certifs-bar — flex:space-between puts it at far right */
+  certBar.appendChild(sel);
+  return true;
+}
+
+/* ── 2. Wire id="t-rab" to the Rabais value span ── */
+function patchRabId(){
+  if(document.getElementById('t-rab')) return true;
+  var rows=document.querySelectorAll('#view-fcr .tot-row');
+  for(var i=0;i<rows.length;i++){
+    var lbl=rows[i].querySelector('.tot-lbl');
+    if(lbl&&lbl.textContent.trim()==='Rabais'){
+      var val=rows[i].querySelector('.tot-val');
+      if(val){ val.id='t-rab'; val.style.color='#c62828'; return true; }
+    }
+  }
+  return false;
+}
+
+/* ── 3. Patch recalcTotals: show gross HT + discount amount ── */
+function patchCalc(){
+  if(typeof window.recalcTotals!=='function') return false;
+  if(window.recalcTotals.__fcrUiV1) return true;
+  var orig=window.recalcTotals;
+  window.recalcTotals=function(){
+    orig.apply(this,arguments);
+    try{
+      var htBrut=0, htNet=0;
+      (window.LIGNES_INIT||[]).forEach(function(l){
+        if(l.type==='section') return;
+        var pu=l.pu||0, qty=l.qty||0, rab=l.rabais||0;
+        htBrut+=pu*qty;
+        htNet+=pu*(1-rab/100)*qty;
+      });
+      var rabAmt=htBrut-htNet;
+      /* Montant Hors Taxes → montant BRUT (avant rabais) */
+      var tHT=document.getElementById('t-ht');
+      if(tHT) tHT.textContent=fmt(htBrut)+' FCFA';
+      /* Rabais → montant total du rabais */
+      var tRab=document.getElementById('t-rab');
+      if(tRab) tRab.textContent=(rabAmt>0?'- ':'')+fmt(rabAmt)+' FCFA';
+    }catch(e){ console.warn('[FCR UI]',e); }
+  };
+  window.recalcTotals.__fcrUiV1=true;
+  return true;
+}
+
+var _t=0;
+function boot(){
+  var d=patchDOM(), r=patchRabId(), c=patchCalc();
+  if(d&&r&&c){
+    try{ window.recalcTotals(); }catch(e){}
+    return;
+  }
+  if(++_t<100) setTimeout(boot,600);
+}
+
+if(window.__epOnBodyMut){
+  window.__epOnBodyMut(function(){
+    if(document.querySelector('#view-fcr .certifs-bar')){
+      patchDOM(); patchRabId(); patchCalc();
+    }
+  });
+}
+setTimeout(boot,800);
+})();
+</script>
 <script id="__FCR_SVC_SEED_v1__">
 (function(){
   var FLAG='epilot_svc_v1';
