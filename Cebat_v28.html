@@ -2890,6 +2890,15 @@ class Component extends DCLogic {
       if(br.rows.length>=2){const mods=br.rows.map(rw=>rw.modules);const mx=Math.max.apply(null,mods),mn=Math.min.apply(null,mods);if(mx-mn>=6)add('info','Tableau « '+(t.nom||t.code)+' » : rangees desequilibrees ('+mods.join('/')+' modules) — envisager un reequilibrage.');}
     });
     const _pb=this.phaseBalance();if(_pb&&_pb.imbalance>30)add('warn','Triphase : desequilibre des phases '+_pb.imbalance+'% (L1 '+Math.round(_pb.L1)+'W / L2 '+Math.round(_pb.L2)+'W / L3 '+Math.round(_pb.L3)+'W) — a reequilibrer.');
+    const downDdrs=djs.map(d=>+d.ddr||0).filter(x=>x>0);
+    if(deps.some(d=>+d.ddr>0)&&downDdrs.length){
+      const minDown=Math.min.apply(null,downDdrs);
+      deps.filter(d=>+d.ddr>0).forEach(h=>{if((+h.ddr)<3*minDown)add('warn','Selectivite differentielle : source '+(h.code||h.nom||'')+' '+h.ddr+'mA non selective avec un differentiel aval '+minDown+'mA (rapport >=3 et type S requis).');});
+    }
+    tes.forEach(t=>{
+      const dep=deps.find(d=>d.id===t.departId)||deps.find(d=>d.type==='comptage');if(!dep)return;const dc=+dep.calibre||0;if(!dc)return;
+      djs.filter(d=>d.tableauId===t.id).forEach(d=>{if((+d.calibre||0)>=dc)add('warn','Selectivite amperometrique : '+(d.code||'CB')+' '+d.calibre+'A >= source '+(dep.code||dep.nom||'')+' '+dc+'A (calibre amont insuffisant).');});
+    });
     return issues;
   }
   _fnPowerW(fn){const q=fn.quantite||1;if(fn.type==='eclairage')return (fn.puissance||10)*q;if(fn.type==='prises'||fn.type==='prises_sdb')return 460*q;return ({four:6000,lave_vaisselle:2200,lave_linge:2500,seche_linge:2400,chauffe_eau:3000,climatisation:2500,borne_ve:7400,hotte:300,vmc:200,portail:500,piscine:1500}[fn.type]||500)*q;}
