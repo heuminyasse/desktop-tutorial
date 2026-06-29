@@ -1468,6 +1468,9 @@ document.addEventListener('DOMContentLoaded', async function() {
   <script src="epdata.js"></script>
 <script id="__FCR_CATALOGUE_SEED_v1__">
 (function(){
+  /* Clé v2 — évite l'ancien flag périmé */
+  var FLAG='epilot_cat_v2';
+  try{ if(localStorage.getItem(FLAG)==='1') return; }catch(_){}
   if(window.__fcrCatalogueSeedDone) return;
   window.__fcrCatalogueSeedDone=true;
 
@@ -1479,39 +1482,49 @@ document.addEventListener('DOMContentLoaded', async function() {
     return new Response(new Blob([u8]).stream().pipeThrough(new DecompressionStream('gzip'))).text();
   }
 
-  function writeToIDB(items,tries){
+  function mergeAndWrite(catalogue,tries){
     var p=indexedDB.open('fcr_db');
     p.onsuccess=function(e){
       var db=e.target.result;
       if(!db.objectStoreNames.contains('articles')){
         db.close();
-        if(tries>0) setTimeout(function(){ writeToIDB(items,tries-1); },1000);
+        if(tries>0) setTimeout(function(){ mergeAndWrite(catalogue,tries-1); },1000);
         return;
       }
-      var tx=db.transaction('articles','readonly');
-      var cnt=tx.objectStore('articles').count();
-      cnt.onsuccess=function(){
-        if(cnt.result>0){ db.close(); return; }
-        var tx2=db.transaction('articles','readwrite'),st=tx2.objectStore('articles');
-        items.forEach(function(a,i){
-          st.put(Object.assign({},a,{_k:i+'|'+(a.codeA||'')+'|'+(a.refPi||'')}));
+      /* Lire les articles existants pour déduplication */
+      var req=db.transaction('articles','readonly').objectStore('articles').getAll();
+      req.onsuccess=function(){
+        var existing=req.result||[];
+        var seen={};
+        existing.forEach(function(a){ if(a&&a.codeA) seen[a.codeA]=true; });
+        var toAdd=catalogue.filter(function(a){ return a&&a.codeA&&!seen[a.codeA]; });
+        if(toAdd.length===0){
+          try{ localStorage.setItem(FLAG,'1'); }catch(_){}
+          db.close(); return;
+        }
+        var base=existing.length;
+        var tx=db.transaction('articles','readwrite'),st=tx.objectStore('articles');
+        toAdd.forEach(function(a,i){
+          st.put(Object.assign({},a,{_k:(base+i)+'|'+(a.codeA||'')+'|'+(a.refPi||'')}));
         });
-        tx2.oncomplete=function(){
+        tx.oncomplete=function(){
+          try{ localStorage.setItem(FLAG,'1'); }catch(_){}
           try{
             var fcr=window.FCR_DB;
-            if(Array.isArray(fcr)&&fcr.length===0){ items.forEach(function(x){ fcr.push(x); }); }
+            if(Array.isArray(fcr)) toAdd.forEach(function(x){ fcr.push(x); });
             if(typeof window.renderArticles==='function') window.renderArticles();
           }catch(_){}
           db.close();
         };
-        tx2.onerror=function(){ db.close(); };
+        tx.onerror=function(){ db.close(); };
       };
+      req.onerror=function(){ db.close(); };
     };
-    p.onerror=function(){ if(tries>0) setTimeout(function(){ writeToIDB(items,tries-1); },1000); };
+    p.onerror=function(){ if(tries>0) setTimeout(function(){ mergeAndWrite(catalogue,tries-1); },1000); };
   }
 
   decompress(B64).then(function(json){
-    try{ writeToIDB(JSON.parse(json),30); }catch(e){ console.warn('[Seed FCR]',e); }
+    try{ mergeAndWrite(JSON.parse(json),30); }catch(e){ console.warn('[Seed FCR]',e); }
   }).catch(function(e){ console.warn('[Seed FCR]',e); });
 })();
 </script>
