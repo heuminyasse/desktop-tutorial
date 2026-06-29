@@ -4,6 +4,10 @@
 **Date :** 2026-06-29
 **Périmètre :** bloc applicatif `<script type="text/x-dc">` (≈ lignes 2197 → 8164), une seule classe `Component extends DCLogic` (~6 000 lignes).
 
+> **Statut des correctifs :** ✅ **N2, N5, N6 corrigés** (modèle de puissance unifié via
+> `_fnPowerW`, messages `info` repliables, clés dupliquées supprimées). 🔴 **N1** reste une
+> validation à faire par un professionnel ; 🟠 **N3** et 🟡 **N4** non traités (choix assumés).
+
 > Cet audit remplace l'audit initial (`AUDIT-Cebat.md`, C1–C9) : l'application a très fortement
 > grossi (écran unifié « Feuille de puissance », moteur normatif complet, schéma/armoire/plans,
 > dossier/autocontrôle, refonte visuelle). Les correctifs C1–C9 d'origine restent en place.

@@ -2746,7 +2746,7 @@ class Component extends DCLogic {
     this.setState(st=>({inverseurs:[inv],nextElemId:st.nextElemId+1}));
     this.showToast('Inverseur IS01 cree automatiquement');
   }
-  calcDjPower(dj,allPieces){if(!dj.recepteurs||dj.recepteurs.length===0)return 0;let total=0;for(const ref of dj.recepteurs){for(const p of allPieces){for(const fn of (p.fonctions||[])){if(fn.ref===ref){const q=fn.quantite||1;if(fn.type==='eclairage')total+=(fn.puissance||10)*q;else if(fn.type==='prises'||fn.type==='prises_sdb')total+=460*q;else total+=({four:6000,lave_vaisselle:2200,lave_linge:2500,seche_linge:2400,chauffe_eau:3000,climatisation:2500,borne_ve:7400,hotte:300,vmc:200,portail:500}[fn.type]||500);}}}}return total;}
+  calcDjPower(dj,allPieces){if(!dj.recepteurs||dj.recepteurs.length===0)return 0;const set=new Set(dj.recepteurs);let total=0;(allPieces||[]).forEach(p=>(p.fonctions||[]).forEach(fn=>{if(fn.ref&&set.has(fn.ref))total+=this._fnPowerW(fn);}));return total;}
   djNFCLimit(dj){
     const allPcs=this.state.pieces||[];
     const refs=dj.recepteurs||[];
@@ -3455,9 +3455,9 @@ class Component extends DCLogic {
           (err===0&&wrn===0)?r('div',{style:{fontSize:12,color:c.success,fontWeight:600,marginBottom:8}},'✓ Aucune non-conformite — notes informatives :'):null,
           r('div',{style:{display:'flex',gap:8,marginBottom:10}},
             err>0?r('span',{style:{fontSize:11,fontWeight:700,color:c.danger,background:'rgba(220,38,38,.1)',border:'1px solid rgba(220,38,38,.3)',borderRadius:6,padding:'2px 8px'}},err+' erreur'+(err>1?'s':'')):null,
-            wrn>0?r('span',{style:{fontSize:11,fontWeight:700,color:c.warn,background:'rgba(217,119,6,.1)',border:'1px solid rgba(217,119,6,.3)',borderRadius:6,padding:'2px 8px'}},wrn+' avertissement'+(wrn>1?'s':'')):null,inf>0?r('span',{style:{fontSize:11,fontWeight:700,color:c.accent,background:c.accent+'14',border:'1px solid '+c.accent+'55',borderRadius:6,padding:'2px 8px'}},inf+' info'):null),
+            wrn>0?r('span',{style:{fontSize:11,fontWeight:700,color:c.warn,background:'rgba(217,119,6,.1)',border:'1px solid rgba(217,119,6,.3)',borderRadius:6,padding:'2px 8px'}},wrn+' avertissement'+(wrn>1?'s':'')):null,inf>0?r('button',{onClick:()=>this.setState(st=>({confShowInfo:!st.confShowInfo})),title:'Afficher / masquer les notes informatives',style:{fontSize:11,fontWeight:700,color:c.accent,background:c.accent+'14',border:'1px solid '+c.accent+'55',borderRadius:6,padding:'2px 8px',cursor:'pointer'}},inf+' info '+(this.state.confShowInfo?'▾':'▸')):null),
           r('div',{style:{display:'flex',flexDirection:'column',gap:5,maxHeight:240,overflowY:'auto'}},
-            ...iss.map((i,k)=>r('div',{key:k,style:{display:'flex',alignItems:'flex-start',gap:7,fontSize:11,color:c.text2,padding:'5px 8px',background:i.level==='error'?'rgba(220,38,38,.05)':i.level==='warn'?'rgba(217,119,6,.05)':c.accent+'0d',borderRadius:6,borderLeft:'3px solid '+(i.level==='error'?c.danger:i.level==='warn'?c.warn:c.accent)}},
+            ...iss.filter(i=>i.level!=='info'||this.state.confShowInfo).map((i,k)=>r('div',{key:k,style:{display:'flex',alignItems:'flex-start',gap:7,fontSize:11,color:c.text2,padding:'5px 8px',background:i.level==='error'?'rgba(220,38,38,.05)':i.level==='warn'?'rgba(217,119,6,.05)':c.accent+'0d',borderRadius:6,borderLeft:'3px solid '+(i.level==='error'?c.danger:i.level==='warn'?c.warn:c.accent)}},
               r('span',{style:{flexShrink:0}},i.level==='error'?'⛔':i.level==='warn'?'⚠️':'ℹ️'),
               r('span',null,i.msg)))));
     return r('div',{style:{marginTop:14}},this.Card('Conformite NF C 15-100 — indicatif',
@@ -4252,7 +4252,7 @@ class Component extends DCLogic {
     const fnPuissanceLive=spec.puissance; // fixe pour specialises
     const fnPuissanceSaved=fn.puissance||spec.puissance;
     const save=()=>{
-      const updated={...fn,quantite:1,puissance:spec.puissance,departType:form.departType||'tableau',departId:form.departId?+form.departId:null,departDist:+form.departDist||0,cableLongueur:+form.cableLongueur||0,cableSection:form.cableSection||spec.section,cableType:form.cableType||'H07VU',cableRepere:form.cableRepere||'',nbConducteursConn:+form.nbConducteursConn||0,repBagues:!!form.repBagues,cableRepere:form.cableRepere||'',nbConducteursConn:+form.nbConducteursConn||0,repBagues:!!form.repBagues};
+      const updated={...fn,quantite:1,puissance:spec.puissance,departType:form.departType||'tableau',departId:form.departId?+form.departId:null,departDist:+form.departDist||0,cableLongueur:+form.cableLongueur||0,cableSection:form.cableSection||spec.section,cableType:form.cableType||'H07VU',cableRepere:form.cableRepere||'',nbConducteursConn:+form.nbConducteursConn||0,repBagues:!!form.repBagues};
       (()=>{
       if(fn.type!==updated.type||fn.departType!==updated.departType||String(fn.departId)!==String(updated.departId)){
         // Type change: purge cable overrides for this fn
@@ -4338,7 +4338,7 @@ class Component extends DCLogic {
     const fnPuissanceLive=Math.abs(+form.puissance||td.puissance)*(+form.quantite||1);
     const fnPuissanceSaved=Math.abs(fn.puissance||td.puissance)*(fn.quantite||1);
     const save=()=>{
-      const updated={...fn,quantite:+form.quantite||1,puissance:Math.abs(+form.puissance||td.puissance),departType:form.departType||'tableau',departId:form.departId?+form.departId:null,departDist:+form.departDist||0,cableLongueur:+form.cableLongueur||0,cableSection:form.cableSection||td.section,cableType:form.cableType||'H07VU',cableRepere:form.cableRepere||'',nbConducteursConn:+form.nbConducteursConn||0,repBagues:!!form.repBagues,cableRepere:form.cableRepere||'',nbConducteursConn:+form.nbConducteursConn||0,repBagues:!!form.repBagues};
+      const updated={...fn,quantite:+form.quantite||1,puissance:Math.abs(+form.puissance||td.puissance),departType:form.departType||'tableau',departId:form.departId?+form.departId:null,departDist:+form.departDist||0,cableLongueur:+form.cableLongueur||0,cableSection:form.cableSection||td.section,cableType:form.cableType||'H07VU',cableRepere:form.cableRepere||'',nbConducteursConn:+form.nbConducteursConn||0,repBagues:!!form.repBagues};
       (()=>{
       if(fn.type!==updated.type||fn.departType!==updated.departType||String(fn.departId)!==String(updated.departId)){
         // Type change: purge cable overrides for this fn
@@ -5000,7 +5000,7 @@ class Component extends DCLogic {
     // Puissance cumulee: somme des fonctions de toutes les pieces
     const allFns=allPieces.flatMap(p=>p.fonctions||[]);
     const puissanceCumulee=allFns.reduce((s,fn)=>{
-      const p=fn.type==='eclairage'?(fn.puissance||10)*(fn.quantite||1):fn.type==='prises'||fn.type==='prises_sdb'?460*(fn.quantite||1):({four:6000,lave_vaisselle:2200,lave_linge:2500,seche_linge:2400,chauffe_eau:3000,climatisation:2500,borne_ve:7400,hotte:300,vmc:200}[fn.type]||500);
+      const p=this._fnPowerW(fn);
       return s+p;
     },0);
     const puissMax=(()=>{const cal=+form.calibre||60;const t=form.tension||'mono';if(t==='tri'||t==='tri_it')return cal*(t==='tri'?400:220)*1.73;return cal*230;})();
@@ -5940,7 +5940,7 @@ class Component extends DCLogic {
             r('div',{style:{height:5,background:c.bdr2,borderRadius:3}},r('div',{style:{height:'100%',width:(circuits.length?circuits.filter(ci=>ci.type===s.type).length/circuits.length*100:0)+'%',background:s.color,borderRadius:3}}))))
         ))
       ),
-      r('div',{style:{marginTop:14}},this.Card('Charge par appartement',r('div',{style:{paddingTop:4}},appartements.length===0?r('div',{style:{fontSize:12,color:c.muted,padding:'8px 0'}},'Aucun appartement'):(()=>{const ap=appartements.map(a=>({a,w:pieces.filter(p=>p.appId===a.id).reduce((s,p)=>s+(p.fonctions||[]).reduce((ss,fn)=>{const q=fn.quantite||1;return ss+(fn.type==='eclairage'?(fn.puissance||10)*q:fn.type==='prises'||fn.type==='prises_sdb'?460*q:({four:6000,lave_vaisselle:2200,lave_linge:2500,seche_linge:2400,chauffe_eau:3000,climatisation:2500,borne_ve:7400,hotte:300,vmc:200,portail:500}[fn.type]||0));},0),0)}));const max=Math.max(1,...ap.map(x=>x.w));return ap.map(({a,w})=>r('div',{key:a.id,style:{marginBottom:10}},r('div',{style:{display:'flex',justifyContent:'space-between',marginBottom:4}},r('span',{style:{fontSize:12,color:c.text,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}},a.nom),r('span',{style:{fontSize:12,fontWeight:700,color:c.accent,fontFamily:c.mono}},w>=1000?(w/1000).toFixed(1)+' kW':w+' W')),r('div',{style:{height:6,background:c.bdr2,borderRadius:3}},r('div',{style:{height:'100%',width:(w/max*100)+'%',background:'linear-gradient(90deg,#0277BD,#0EA5E9)',borderRadius:3}}))));})()))),
+      r('div',{style:{marginTop:14}},this.Card('Charge par appartement',r('div',{style:{paddingTop:4}},appartements.length===0?r('div',{style:{fontSize:12,color:c.muted,padding:'8px 0'}},'Aucun appartement'):(()=>{const ap=appartements.map(a=>({a,w:pieces.filter(p=>p.appId===a.id).reduce((s,p)=>s+(p.fonctions||[]).reduce((ss,fn)=>ss+this._fnPowerW(fn),0),0)}));const max=Math.max(1,...ap.map(x=>x.w));return ap.map(({a,w})=>r('div',{key:a.id,style:{marginBottom:10}},r('div',{style:{display:'flex',justifyContent:'space-between',marginBottom:4}},r('span',{style:{fontSize:12,color:c.text,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}},a.nom),r('span',{style:{fontSize:12,fontWeight:700,color:c.accent,fontFamily:c.mono}},w>=1000?(w/1000).toFixed(1)+' kW':w+' W')),r('div',{style:{height:6,background:c.bdr2,borderRadius:3}},r('div',{style:{height:'100%',width:(w/max*100)+'%',background:'linear-gradient(90deg,#0277BD,#0EA5E9)',borderRadius:3}}))));})()))),
       this.renderConfCard(),
       this.renderBilanCard(),
       this.renderChiffrageCard()
@@ -6065,7 +6065,7 @@ class Component extends DCLogic {
     const openAddApp=()=>this.setState({showModal:true,modalType:'addAppart',editId:null,appForm:{nom:'',type:'appartement',surface:80,niveauId:niveaux[0]?.id||1}});
     const openAddPiece=()=>this.setState({showModal:true,modalType:'addPiece',editId:null,pieceForm:{nom:'',type:'sejour',surface:20,niveau:'standard',loadMode:'default',appId:selAppId||1,couleur:'#FFFFFF',typePlafond:'standard',typeMur:'enduit',typeSol:'carrelage'}});
     const openAddFn=()=>this.setState({showModal:true,modalType:'addFonction',selectedPieceId:selPiece?.id,fonctionForm:{type:'eclairage',typeLampe:'led_plafond',puissance:12,quantite:1}});
-    const getPow=(p)=>(p.fonctions||[]).reduce((s,fn)=>{const q=fn.quantite||1;const pw=fn.type==='eclairage'?(fn.puissance||10)*q:fn.type==='prises'||fn.type==='prises_sdb'?460*q:{four:6000,lave_vaisselle:2200,lave_linge:2500,seche_linge:2400,chauffe_eau:3000,climatisation:2500,portail:500,borne_ve:7400,hotte:300,vmc:200}[fn.type]||0;return s+pw;},0);
+    const getPow=(p)=>(p.fonctions||[]).reduce((s,fn)=>s+this._fnPowerW(fn),0);
     const fmtW=(w)=>w>=1000?(w/1000).toFixed(1)+' kW':w+' W';
     const getAppPow=(app)=>pieces.filter(p=>p.appId===app.id).reduce((s,p)=>s+getPow(p),0);
     const colHdr=(label,btn)=>r('div',{style:{padding:'11px 14px',borderBottom:`1px solid ${c.bdr}`,display:'flex',justifyContent:'space-between',alignItems:'center',flexShrink:0,background:c.surf}},r('span',{style:{fontSize:9,fontWeight:700,color:c.muted,textTransform:'uppercase',letterSpacing:'.1em'}},label),btn);
