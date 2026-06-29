@@ -1468,7 +1468,7 @@ document.addEventListener('DOMContentLoaded', async function() {
   <script src="epdata.js"></script>
 <script id="__FCR_CATALOGUE_SEED_v1__">
 (function(){
-  var FLAG='epilot_cat_v2';
+  var FLAG='epilot_cat_v3';
   try{ if(localStorage.getItem(FLAG)==='1') return; }catch(_){}
   if(window.__fcrCatalogueSeedDone) return;
   window.__fcrCatalogueSeedDone=true;
@@ -1481,77 +1481,77 @@ document.addEventListener('DOMContentLoaded', async function() {
     return new Response(new Blob([u8]).stream().pipeThrough(new DecompressionStream('gzip'))).text();
   }
 
-  /* Convertit les champs de notre catalogue vers le schema de l'app :
-     codeA → code, refPi → ref-pi (requis par restoreArticlesDB) */
-  function toAppFormat(a,idx){
-    return Object.assign({},a,{
-      code: a.codeA||a.code||'',
-      'ref-pi': a.refPi||a['ref-pi']||'',
-      sub: a.sub||'',
-      qte: a.qte||0,
-      _k: idx+'|'+(a.codeA||a.code||'')+'|'+(a.refPi||a['ref-pi']||'')
-    });
-  }
+  /* Format catalogue → schema app : code=codeA, ref-pi=refPi */
+  function fmt(a){ return Object.assign({},a,{code:a.codeA||a.code||'','ref-pi':a.refPi||a['ref-pi']||'',sub:a.sub||'',qte:a.qte||0}); }
 
-  function writeToIDB(catalogue,tries){
-    /* Version 1, keyPath _k — correspond exactement au schema de l'app */
+  /* Code catalogue : A##### ou S##### (5 chiffres) */
+  function isCat(code){ return /^[AS]\d{5}$/.test(code||''); }
+
+  function run(catalogue,tries){
     var p=indexedDB.open('fcr_db',1);
     p.onupgradeneeded=function(e){ e.target.result.createObjectStore('articles',{keyPath:'_k'}); };
     p.onsuccess=function(e){
       var db=e.target.result;
-      if(!db.objectStoreNames.contains('articles')){ db.close(); retry(catalogue,tries); return; }
-      /* Lire les items existants pour déduplication par 'code' */
+      if(!db.objectStoreNames.contains('articles')){ db.close(); sched(catalogue,tries); return; }
       var req=db.transaction('articles','readonly').objectStore('articles').getAll();
       req.onsuccess=function(){
         var existing=req.result||[];
-        var seen={};
-        existing.forEach(function(a){ if(a&&(a.code||a.codeA)) seen[(a.code||a.codeA).toLowerCase()]=true; });
-        /* Garder uniquement les items du catalogue absents */
-        var toAdd=[];
-        var base=existing.length;
-        catalogue.forEach(function(a){
-          var c=(a.codeA||a.code||'').toLowerCase();
-          if(c&&!seen[c]){ seen[c]=true; toAdd.push(toAppFormat(a,base+toAdd.length)); }
+        /* Déjà semé correctement ? */
+        var ok=existing.filter(function(a){ return a&&isCat(a.code); });
+        if(ok.length>100){ try{localStorage.setItem(FLAG,'1');}catch(_){} db.close(); return; }
+        /* Garder articles utilisateur (code non-catalogue) */
+        var userArt=existing.filter(function(a){ return a&&a.code&&!isCat(a.code); });
+        /* Catalogue formaté */
+        var seenC={};
+        userArt.forEach(function(a){ if(a.code) seenC[a.code.toLowerCase()]=true; });
+        var catFmt=catalogue.map(fmt).filter(function(a){
+          var c=(a.code||'').toLowerCase();
+          if(!c||seenC[c]) return false;
+          seenC[c]=true; return true;
         });
-        if(!toAdd.length){
-          try{ localStorage.setItem(FLAG,'1'); }catch(_){}
-          db.close(); return;
-        }
-        /* Ecriture par pages de 200 */
-        var PAGE=200,offset=0;
-        function nextPage(){
-          if(offset>=toAdd.length){
-            try{ localStorage.setItem(FLAG,'1'); }catch(_){}
-            try{
-              var fcr=window.FCR_DB;
-              if(Array.isArray(fcr)){
-                var sc={};
-                fcr.forEach(function(a){ if(a) sc[(a.code||a.codeA||'').toLowerCase()]=true; });
-                toAdd.forEach(function(a){ if(!sc[(a.code||'').toLowerCase()]) fcr.push(a); });
-              }
-              if(typeof window.renderArticles==='function') window.renderArticles();
-            }catch(_){}
-            db.close(); return;
+        var all=userArt.concat(catFmt);
+        /* Réécriture complète : clear + write par pages */
+        var PAGE=200,idx=0;
+        var txC=db.transaction('articles','readwrite');
+        txC.objectStore('articles').clear();
+        txC.oncomplete=function(){
+          function writePage(){
+            if(idx>=all.length){
+              try{localStorage.setItem(FLAG,'1');}catch(_){}
+              /* Mettre FCR_DB à jour immédiatement */
+              try{
+                window.FCR_DB=all.slice();
+                if(typeof window.renderArticles==='function') window.renderArticles();
+              }catch(_){}
+              /* Ré-appliquer dans 3s au cas où restoreArticlesDB l'écrase */
+              setTimeout(function(){
+                try{
+                  if(!window.FCR_DB||window.FCR_DB.length<all.length){
+                    window.FCR_DB=all.slice();
+                    if(typeof window.renderArticles==='function') window.renderArticles();
+                  }
+                }catch(_){}
+              },3000);
+              db.close(); return;
+            }
+            var page=all.slice(idx,idx+PAGE),base=idx; idx+=PAGE;
+            var tx=db.transaction('articles','readwrite'),st=tx.objectStore('articles');
+            page.forEach(function(a,j){ st.put(Object.assign({},a,{_k:(base+j)+'|'+(a.code||'')+'|'+(a['ref-pi']||'')})); });
+            tx.oncomplete=writePage;
+            tx.onerror=function(){ db.close(); };
           }
-          var page=toAdd.slice(offset,offset+PAGE); offset+=PAGE;
-          var tx=db.transaction('articles','readwrite'),st=tx.objectStore('articles');
-          page.forEach(function(a){ st.put(a); });
-          tx.oncomplete=nextPage;
-          tx.onerror=function(){ db.close(); };
-        }
-        nextPage();
+          writePage();
+        };
+        txC.onerror=function(){ db.close(); };
       };
-      req.onerror=function(){ db.close(); retry(catalogue,tries); };
+      req.onerror=function(){ db.close(); sched(catalogue,tries); };
     };
-    p.onerror=function(){ retry(catalogue,tries); };
+    p.onerror=function(){ sched(catalogue,tries); };
   }
-
-  function retry(catalogue,tries){
-    if(tries>0) setTimeout(function(){ writeToIDB(catalogue,tries-1); },1000);
-  }
+  function sched(c,t){ if(t>0) setTimeout(function(){ run(c,t-1); },1000); }
 
   decompress(B64).then(function(json){
-    try{ writeToIDB(JSON.parse(json),30); }catch(e){ console.warn('[Seed FCR]',e); }
+    try{ run(JSON.parse(json),30); }catch(e){ console.warn('[Seed FCR]',e); }
   }).catch(function(e){ console.warn('[Seed FCR]',e); });
 })();
 </script>
