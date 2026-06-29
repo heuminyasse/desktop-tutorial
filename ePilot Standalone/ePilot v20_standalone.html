@@ -7541,8 +7541,34 @@ function patchAcPILoad(){
   if(window.acPILoad.__fixV2) return true;
   var orig=window.acPILoad;
   window.acPILoad=function(ref){
+    // Pré-enrichissement : propager client/vendeur/refs des items importés
+    // vers les items catalogue (qui n'ont pas ces champs) pour le même ref-pi.
+    // acPILoad lit arts[0] pour remplir les champs d'en-tête — si arts[0] est
+    // un item catalogue sans client, l'en-tête reste vide.
+    try{
+      var arts=(window.FCR_DB||[]).filter(function(a){
+        return a&&(a['ref-pi']||'').trim()===ref;
+      });
+      if(arts.length>1){
+        var bestCli='',bestVend='',bestRefs=null,bestObjet='',bestDev='';
+        arts.forEach(function(a){
+          if(!bestCli){ bestCli=a.client||(a.refs&&a.refs[0]&&a.refs[0].client)||''; }
+          if(!bestVend){ bestVend=a.vendeur||(a.refs&&a.refs[0]&&a.refs[0].vendeur)||''; }
+          if(!bestRefs&&a.refs&&a.refs.length) bestRefs=a.refs;
+          if(!bestObjet) bestObjet=a.objet||a.libelle||'';
+          if(!bestDev) bestDev=a.devise||(a.refs&&a.refs[0]&&a.refs[0].devise)||'';
+        });
+        arts.forEach(function(a){
+          if(!a.client&&bestCli) a.client=bestCli;
+          if(!a.vendeur&&bestVend) a.vendeur=bestVend;
+          if((!a.refs||!a.refs.length)&&bestRefs) a.refs=bestRefs;
+          if(!a.objet&&bestObjet) a.objet=bestObjet;
+          if(!a.devise&&bestDev) a.devise=bestDev;
+        });
+      }
+    }catch(_){}
     orig.apply(this,arguments);
-    // Dédup les lignes par desc normalisée (garde la 1re occurrence = article catalogue)
+    // Post-dédup LIGNES_INIT par desc normalisée (évite doublon catalogue+import)
     try{
       var lignes=window.LIGNES_INIT;
       if(!lignes||lignes.length<2) return;
