@@ -2926,16 +2926,54 @@ class Component extends DCLogic {
       const dep=deps.find(d=>d.id===t.departId)||deps.find(d=>d.type==='comptage');if(!dep)return;const dc=+dep.calibre||0;if(!dc)return;
       djs.filter(d=>d.tableauId===t.id).forEach(d=>{if((+d.calibre||0)>=dc)add('warn','Selectivite amperometrique : '+(d.code||'CB')+' '+d.calibre+'A >= source '+(dep.code||dep.nom||'')+' '+dc+'A (calibre amont insuffisant).');});
     });
-    (djs||[]).forEach(d=>{const refs=d.recepteurs||[];if(refs.length===0)return;const vd=this.voltageDropOf(d);if(vd.I<=0)return;const isEcl=refs.every(rf=>refType[rf]==='eclairage');const lim=isEcl?3:5;if(vd.pct>lim)add('warn','Chute de tension '+(d.code||'CB')+' : '+vd.pct.toFixed(1)+'% > '+lim+'% (L='+vd.L+'m'+(vd.est?' est.':'')+', S='+vd.S+'mm2, I='+vd.I.toFixed(1)+'A).');});
+    (djs||[]).forEach(d=>{const refs=d.recepteurs||[];if(refs.length===0)return;const vd=this.voltageDropOf(d);if(vd.I<=0)return;const isEcl=refs.every(rf=>refType[rf]==='eclairage');const lim=isEcl?3:5;if(vd.pctCumul>lim){const rec=this.recommendedSection(d);const fix=rec.pct!=null&&rec.S>vd.S?' — section conseillee '+rec.S+'mm2 ('+rec.pct.toFixed(1)+'%).':'';add('warn','Chute de tension cumulee '+(d.code||'CB')+' : '+vd.pctCumul.toFixed(1)+'% > '+lim+'% (amont '+vd.pctMain.toFixed(1)+'% + circuit '+vd.pct.toFixed(1)+'%, L='+vd.L+'m'+(vd.est?' est.':'')+', S='+vd.S+'mm2, I='+vd.I.toFixed(1)+'A).'+fix);}});
     return issues;
   }
   _fnPowerW(fn){const q=fn.quantite||1;if(fn.type==='eclairage')return (fn.puissance||10)*q;if(fn.type==='prises'||fn.type==='prises_sdb')return 460*q;return ({four:6000,lave_vaisselle:2200,lave_linge:2500,seche_linge:2400,chauffe_eau:3000,climatisation:2500,borne_ve:7400,hotte:300,vmc:200,portail:500,piscine:1500}[fn.type]||500)*q;}
+  boardFeederDrop(tableauId){
+    // Chute de tension de la liaison amont (source/depart -> tableau)
+    const tes=this.state.tableauxElec||[];const deps=this.state.departs||[];const djs=this.state.disjoncteurs||[];const pcs=this.state.pieces||[];
+    const te=tes.find(t=>t.id===tableauId);
+    const dep=te?(deps.find(d=>d.id===te.departId)||deps.find(d=>d.type==='comptage')):null;
+    let I=0;djs.filter(d=>d.tableauId===tableauId).forEach(d=>{try{I+=this.calcDjPower(d,pcs)/230;}catch(e){}});
+    const cal=dep?(+dep.calibre||0):0;
+    const S=(dep&&+dep.section>0)?+dep.section:(cal?this.sectionMinForCalibre(cal):10);
+    const Ldef=(this.state.project&&+this.state.project.longArrivee>0)?+this.state.project.longArrivee:8;
+    const L=(dep&&+dep.longueur>0)?+dep.longueur:Ldef;
+    const tri=((this.state.project&&this.state.project.typeAlim)||'')==='triphase'&&dep&&(+dep.poles>=3);
+    const du=(tri?1.732:2)*0.0225*L*I/(S||1);
+    return{du:Math.round(du*100)/100,pct:Math.round(du/230*1000)/10,I:Math.round(I*10)/10,S,L,est:!(dep&&+dep.longueur>0),found:!!dep};
+  }
   voltageDropOf(d){
     let I=0;try{I=this.calcDjPower(d,this.state.pieces||[])/230;}catch(e){}
     const S=parseFloat(d.section)||1.5;const L=(+d.longueur>0)?+d.longueur:20;
     const tri=((this.state.project&&this.state.project.typeAlim)||'')==='triphase'&&this._poles(d)>=3;
     const du=(tri?1.732:2)*0.0225*L*I/S;
-    return{I,S,L,du:Math.round(du*100)/100,pct:Math.round(du/230*1000)/10,est:!(+d.longueur>0)};
+    let duMain=0;try{duMain=this.boardFeederDrop(d.tableauId).du;}catch(e){}
+    const duCumul=Math.round((du+duMain)*100)/100;
+    return{I,S,L,du:Math.round(du*100)/100,pct:Math.round(du/230*1000)/10,
+      duMain,pctMain:Math.round(duMain/230*1000)/10,
+      duCumul,pctCumul:Math.round(duCumul/230*1000)/10,est:!(+d.longueur>0)};
+  }
+  _circuitIsEcl(d){
+    const refType={};(this.state.pieces||[]).forEach(p=>(p.fonctions||[]).forEach(fn=>{refType[fn.ref]=fn.type;}));
+    const refs=d.recepteurs||[];return refs.length>0&&refs.every(rf=>refType[rf]==='eclairage');
+  }
+  recommendedSection(d){
+    // Plus petite section normalisee respectant la chute de tension cumulee + le calibre
+    const lim=this._circuitIsEcl(d)?3:5;
+    const smin=this.sectionMinForCalibre(+d.calibre||16);
+    let I=0;try{I=this.calcDjPower(d,this.state.pieces||[])/230;}catch(e){}
+    const L=(+d.longueur>0)?+d.longueur:20;
+    const tri=((this.state.project&&this.state.project.typeAlim)||'')==='triphase'&&this._poles(d)>=3;
+    let duMain=0;try{duMain=this.boardFeederDrop(d.tableauId).du;}catch(e){}
+    const SECTIONS=[1.5,2.5,4,6,10,16,25,35,50,70,95];
+    for(let i=0;i<SECTIONS.length;i++){
+      const S=SECTIONS[i];if(S<smin)continue;
+      const du=(tri?1.732:2)*0.0225*L*I/S;const pct=(du+duMain)/230*100;
+      if(pct<=lim)return{S,pct:Math.round(pct*10)/10,lim,smin,I,L};
+    }
+    return{S:SECTIONS[SECTIONS.length-1],pct:null,lim,smin,I,L};
   }
   phaseAssign(){
     const djs=this.state.disjoncteurs||[];const pcs=this.state.pieces||[];const ph=[0,0,0];const map={};
@@ -6203,7 +6241,8 @@ class Component extends DCLogic {
               const conductors=[...phs,['N','#42a5f5'],['PE','grad']];
               let wc='';try{wc=this.genCableCBCode(d,s);}catch(e){}
               return r('div',{key:d.id,style:{display:'flex',alignItems:'center',gap:12,padding:'8px 0',borderBottom:'1px solid '+c.bdr}},
-                r('div',{style:{minWidth:120}},r('div',{style:{fontSize:11,fontWeight:800,color:col,fontFamily:c.mono}},d.code||('CB'+d.id)),r('div',{style:{fontSize:9,color:c.muted}},(d.calibre||'?')+'A '+(d.courbe||'')),wc?r('div',{style:{fontSize:8,color:c.purple,fontFamily:c.mono,fontWeight:700}},wc):null,r('div',{style:{display:'flex',alignItems:'center',gap:4,marginTop:2}},r('input',{type:'number',min:0,step:1,value:d.longueur||'',placeholder:'L m',onChange:e=>{const v=+e.target.value;this.setState(st=>({disjoncteurs:st.disjoncteurs.map(x=>x.id===d.id?{...x,longueur:(Number.isFinite(v)&&v>0)?v:undefined}:x)}));},title:'Longueur du circuit (m)',style:{width:42,fontSize:8,padding:'1px 3px',border:'1px solid '+c.bdr2,borderRadius:3,background:c.surf3,color:c.text,outline:'none'}}),(()=>{const v=this.voltageDropOf(d);return r('span',{style:{fontSize:8,fontFamily:c.mono,fontWeight:700,color:v.pct>5?c.danger:c.muted},title:v.est?'longueur estimee':'longueur saisie'},'ΔU '+v.pct.toFixed(1)+'%');})())),
+                r('div',{style:{minWidth:120}},r('div',{style:{fontSize:11,fontWeight:800,color:col,fontFamily:c.mono}},d.code||('CB'+d.id)),r('div',{style:{fontSize:9,color:c.muted}},(d.calibre||'?')+'A '+(d.courbe||'')),wc?r('div',{style:{fontSize:8,color:c.purple,fontFamily:c.mono,fontWeight:700}},wc):null,r('div',{style:{display:'flex',alignItems:'center',gap:4,marginTop:2}},r('input',{type:'number',min:0,step:1,value:d.longueur||'',placeholder:'L m',onChange:e=>{const v=+e.target.value;this.setState(st=>({disjoncteurs:st.disjoncteurs.map(x=>x.id===d.id?{...x,longueur:(Number.isFinite(v)&&v>0)?v:undefined}:x)}));},title:'Longueur du circuit (m)',style:{width:42,fontSize:8,padding:'1px 3px',border:'1px solid '+c.bdr2,borderRadius:3,background:c.surf3,color:c.text,outline:'none'}}),(()=>{const v=this.voltageDropOf(d);const lim=this._circuitIsEcl(d)?3:5;return r('span',{style:{fontSize:8,fontFamily:c.mono,fontWeight:700,color:v.pctCumul>lim?c.danger:c.muted},title:(v.est?'longueur estimee. ':'')+'cumulee = amont '+v.pctMain.toFixed(1)+'% + circuit '+v.pct.toFixed(1)+'% (limite '+lim+'%)'},'ΔU '+v.pctCumul.toFixed(1)+'%');})(),
+                  (()=>{const v=this.voltageDropOf(d);const lim=this._circuitIsEcl(d)?3:5;if(v.pctCumul<=lim)return null;const rec=this.recommendedSection(d);if(rec.pct==null||!(rec.S>v.S))return null;return r('button',{onClick:()=>{this.setState(st=>({disjoncteurs:st.disjoncteurs.map(x=>x.id===d.id?{...x,section:String(rec.S)}:x)}));},title:'Appliquer la section conseillee ('+rec.pct.toFixed(1)+'% cumule)',style:{fontSize:8,fontFamily:c.mono,fontWeight:700,color:'#fff',background:c.purple,border:'none',borderRadius:3,padding:'1px 4px',cursor:'pointer'}},'→'+rec.S);})())),
                 r('div',{style:{flex:1,maxWidth:300}},...conductors.map(x=>wire(x[0],x[1],sec))),
                 r('div',{style:{minWidth:130,fontSize:10,color:c.text2,fontFamily:c.mono}},(refs.join(' ')||'(aucun)')+(room?' · '+room:'')));
             })));
