@@ -7809,7 +7809,8 @@ class Component extends DCLogic {
         const bdC=this.genBDCode(bd,this.state);
         const teC=this.genTECode(te,this.state);
         const wCodeB=bdC;
-        const tenantB=teC+(te.nom?' — '+te.nom:'');
+        const feedDj=(this.state.disjoncteurs||[]).find(d=>d.tableauId===te.id&&(d.recepteurs||[]).some(rf=>{const e=allFns.find(f=>f.ref===rf);return e&&e.departType==='boite'&&String(e.departId)===String(bd.id);}));
+        const tenantB=feedDj?teC+' '+(feedDj.code||''):teC+(te.nom?' — '+te.nom:'');
         const aboutissantB=bdC+(bd.nom?' — '+bd.nom:'');
         const schemaB=[{k:'L',bt:'L',ba:'L'},{k:'N',bt:'N',ba:'N'},{k:'PE',bt:'PE',ba:'PE'}];
         const cableTypeB='U1000 R2V 3G2.5 mm²';
