@@ -6764,6 +6764,7 @@ class Component extends DCLogic {
     const teCode=t=>{try{return this.genTECode(t,s);}catch(e){return t.code||('TE'+t.id);}};
     const bdCode=b=>{try{return this.genBDCode(b,s);}catch(e){return b.nom||('BD'+b.id);}};
     const refPiece={};(s.pieces||[]).forEach(p=>(p.fonctions||[]).forEach(fn=>{refPiece[fn.ref]=p.nom;}));
+    const fnByRef={};(s.pieces||[]).forEach(p=>(p.fonctions||[]).forEach(fn=>{fnByRef[fn.ref]={fn,piece:p};}));
     const triAlim=((s.project&&s.project.typeAlim)||'')==='triphase';
     if(kind==='te'){
       const te=(s.tableauxElec||[]).find(t=>t.id===id);if(!te)return{entrants,sortants,center:null};
@@ -6771,8 +6772,16 @@ class Component extends DCLogic {
       const parentTe=(s.tableauxElec||[]).find(t=>t.id===te.departId);
       if(parentTe){entrants.push({wcode:'',from:teCode(parentTe)+(parentTe.nom?' '+parentTe.nom:''),to:center.code,conds:this._condsFor(triAlim?3:1),sec:(te.feederSection||'?')+'mm²',bornes:(te.cb0Code||'CB0'),edit:{type:'te',id:te.id},statutKey:'te'+te.id+'feed'});}
       else{const dep=(s.departs||[]).find(d=>d.id===te.departId)||(s.departs||[]).find(d=>d.type==='comptage');if(dep){let sc='';try{sc=this.genSourceCode(dep,s);}catch(e){sc=dep.code||'SRC';}const tri=dep.tension==='tri'||dep.tension==='tri_it'||(+dep.poles>=3);entrants.push({wcode:dep.dbCode||'DB',from:sc+(dep.nom?' '+dep.nom:''),to:center.code,conds:this._condsFor(tri?3:1),sec:(dep.section||'16')+'mm²',bornes:(te.cb0Code||'CB0'),edit:{type:'dep',id:dep.id},statutKey:'dep'+dep.id+'te'+te.id});}}
-      (s.disjoncteurs||[]).filter(d=>d.tableauId===te.id).forEach(d=>{const refs=d.recepteurs||[];const room=refs.map(rf=>refPiece[rf]).filter(Boolean)[0]||'';let wc='';try{wc=this.genCableCBCode(d,s);}catch(e){}sortants.push({wcode:wc||d.code||'',from:center.code+(d.code?' '+d.code:''),to:(refs.join(' ')||'(libre)')+(room?' · '+room:''),conds:this._condsFor(this._poles(d)),sec:(d.section||'1.5')+'mm²',bornes:d.code||'',edit:{type:'dj',id:d.id},statutKey:'dj'+d.id});});
-      (s.boitesDeriv||[]).filter(b=>String(b.tableauId)===String(te.id)).forEach(b=>{sortants.push({wcode:bdCode(b),from:center.code,to:bdCode(b)+(b.nom?' '+b.nom:''),conds:this._condsFor(1),sec:'?',bornes:'BD',edit:{type:'bd',id:b.id},statutKey:'bd'+b.id+'feed'});});
+      const fedBd=new Set();
+      (s.disjoncteurs||[]).filter(d=>d.tableauId===te.id).forEach(d=>{
+        const refs=d.recepteurs||[];const room=refs.map(rf=>refPiece[rf]).filter(Boolean)[0]||'';
+        let wc='';try{wc=this.genCableCBCode(d,s);}catch(e){}
+        const bdIds=[];const directRefs=[];
+        refs.forEach(rf=>{const e=fnByRef[rf];if(e&&e.fn.departType==='boite'&&e.fn.departId!=null){const k=String(e.fn.departId);if(bdIds.indexOf(k)<0)bdIds.push(k);}else{directRefs.push(rf);}});
+        bdIds.forEach(k=>{const bd=(s.boitesDeriv||[]).find(b=>String(b.id)===k);if(!bd)return;fedBd.add(k);sortants.push({wcode:wc||d.code||'',from:center.code+(d.code?' '+d.code:''),to:bdCode(bd)+(bd.nom?' '+bd.nom:''),conds:this._condsFor(this._poles(d)),sec:(d.section||'1.5')+'mm²',bornes:d.code||'',edit:{type:'dj',id:d.id},statutKey:'bd'+bd.id+'feed'});});
+        if(directRefs.length){sortants.push({wcode:wc||d.code||'',from:center.code+(d.code?' '+d.code:''),to:directRefs.join(' ')+(room?' · '+room:''),conds:this._condsFor(this._poles(d)),sec:(d.section||'1.5')+'mm²',bornes:d.code||'',edit:{type:'dj',id:d.id},statutKey:'dj'+d.id});}
+      });
+      (s.boitesDeriv||[]).filter(b=>String(b.tableauId)===String(te.id)).forEach(b=>{if(fedBd.has(String(b.id)))return;sortants.push({wcode:bdCode(b),from:center.code,to:bdCode(b)+(b.nom?' '+b.nom:''),conds:this._condsFor(1),sec:'?',bornes:'BD',edit:{type:'bd',id:b.id},statutKey:'bd'+b.id+'feed'});});
       return{entrants,sortants,center};
     }
     if(kind==='bd'){
@@ -6780,7 +6789,9 @@ class Component extends DCLogic {
       const center={code:bdCode(bd),nom:bd.nom||'',type:'BD'};
       const te=(s.tableauxElec||[]).find(t=>String(t.id)===String(bd.tableauId));
       if(te)entrants.push({wcode:'',from:teCode(te)+(te.nom?' '+te.nom:''),to:center.code,conds:this._condsFor(1),sec:'?mm²',bornes:'',edit:{type:'bd',id:bd.id},statutKey:'bd'+bd.id+'feed'});
-      (s.pieces||[]).forEach(p=>(p.fonctions||[]).forEach(fn=>{if(fn.departType==='boite'&&String(fn.departId)===String(bd.id)){const fi=this.FNS[fn.type]||{};sortants.push({wcode:fn.ref||'',from:center.code,to:(fi.label||fn.type)+(fn.ref?' '+fn.ref:'')+' · '+(p.nom||''),conds:this._condsFor(1),sec:(fn.cableSection||'1.5')+'mm²',bornes:fn.ref||'',edit:{type:'fn',pieceId:p.id,fnId:fn.id},statutKey:'fn'+fn.id});}}));
+      (s.pieces||[]).forEach(p=>(p.fonctions||[]).forEach(fn=>{if(fn.departType==='boite'&&String(fn.departId)===String(bd.id)){const fi=this.FNS[fn.type]||{};sortants.push({wcode:fn.ref||'',from:center.code,to:(fi.label||fn.type)+(fn.ref?' '+fn.ref:'')+' · '+(p.nom||''),conds:this._condsFor(1),sec:(fn.cableSection||'1.5')+'mm²',bornes:fn.ref||'',edit:{type:'fn',pieceId:p.id,fnId:fn.id},statutKey:'fn'+fn.id});
+        (s.interrupteurs||[]).filter(it=>it.circuitRef===fn.ref).forEach(it=>{const itDt=it.departType||fn.departType;const itDi=it.departId!=null?it.departId:fn.departId;if(itDt==='boite'&&String(itDi)===String(bd.id)){let ic='';try{ic=this.genInterCode(it,s);}catch(e){ic=it.nom||'SA';}sortants.push({wcode:ic,from:center.code,to:ic+(it.nom?' — '+it.nom:''),conds:this._condsFor(1),sec:'1.5mm²',bornes:ic,edit:{type:'inter',id:it.id},statutKey:'int'+it.id});}});
+      }}));
       return{entrants,sortants,center};
     }
     return{entrants,sortants,center:null};
@@ -6839,6 +6850,7 @@ class Component extends DCLogic {
     if(edit.type==='dep'){const d=(s.departs||[]).find(x=>x.id===edit.id);if(!d)return;this.setState({showModal:true,modalType:'editDepart',editDepartId:d.id,departForm:{nom:d.nom,type:d.type,calibre:d.calibre,poles:d.poles,courbe:d.courbe,tableauElecId:d.tableauElecId?String(d.tableauElecId):'',pieceId:d.pieceId?String(d.pieceId):'',description:d.description||'',emplacement:d.emplacement||'',tension:d.tension||'mono',ddr:d.ddr!=null?d.ddr:300}});return;}
     if(edit.type==='fn'){const p=(s.pieces||[]).find(x=>x.id===edit.pieceId);const fn=p&&(p.fonctions||[]).find(f=>f.id===edit.fnId);if(!fn)return;this.setState({showModal:true,modalType:'editFonction',editFonctionPieceId:p.id,editFonctionId:fn.id,editFonctionForm:{type:fn.type,typeLampe:fn.typeLampe||'led_plafond',puissance:fn.puissance||12,quantite:fn.quantite||1,distance:fn.distance||0,cmdType:'simple',cmdZoneId:'',cmdZone2Id:'',newZoneNom:'',showNewZone:false,djCalibre:10,djCourbe:'B',djPoles:'1',djDDR:30,djTableauId:'',djSection:1.5,departType:fn.departType||'tableau',departId:fn.departId?String(fn.departId):'',departDist:fn.departDist||0,cableLongueur:fn.cableLongueur||0,cableSection:fn.cableSection||'1.5',cableType:fn.cableType||'H07VU'}});return;}
     if(edit.type==='bd'){const b=(s.boitesDeriv||[]).find(x=>x.id===edit.id);if(!b)return;this.openEdit('addBoite',b,'boiteForm',{nom:b.nom,label:b.label||'',pieceId:b.pieceId?String(b.pieceId):'',type:b.type||'encastre',tableauId:b.tableauId?String(b.tableauId):'',position:b.position||'',hauteurPlafond:b.hauteurPlafond||30,cote:b.cote||'plafond',description:b.description||''});return;}
+    if(edit.type==='inter'){const it=(s.interrupteurs||[]).find(x=>x.id===edit.id);if(!it)return;this.openEdit('addInter',it,'interForm',{nom:it.nom||'',pieceId:it.pieceId?String(it.pieceId):'',type:it.type||'simple',circuitRef:it.circuitRef||'',zoneId:it.zoneId?String(it.zoneId):''});return;}
     if(edit.type==='te'){const t=(s.tableauxElec||[]).find(x=>x.id===edit.id);if(!t)return;const pc=(s.pieces||[]).find(p=>p.id===t.pieceId);this.openEdit('addTableauElec',t,'tableauElecForm',{nom:t.nom,pieceId:t.pieceId?String(t.pieceId):'',description:t.description||'',type:t.type||'principal',appId:pc?String(pc.appId):'',departId:t.departId?String(t.departId):''});return;}
   }
   _vueCableSheetHtml(kind,id){
