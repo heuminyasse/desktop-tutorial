@@ -7583,5 +7583,222 @@ if(document.readyState==='loading'){
 
 })();
 </script>
+<script id="__FCR_MERGE_v1__">
+/* Fusion des doublons FCR_DB — même ref-pi + description similaire → merge en mémoire + IDB
+   Expose : window.fcrMergeDupes(opts) — opts.silent=true pour sans alerte
+   Auto-run après chaque import (intercepte window.FCR_DB via __FCR_FIX_v2__).
+   Bouton "Fusionner doublons" injecté à côté de "Importer PI". */
+(function(){
+'use strict';
+if(window.__fcrMergeV1) return; window.__fcrMergeV1=true;
+
+function nn(s){ return (s||'').toLowerCase().replace(/[,;\-\/\(\)\.]/g,' ').replace(/\s+/g,' ').trim(); }
+
+/* ── Similarité mots (containment max des deux sens) ── */
+function wordSim(a,b){
+  var wa=nn(a).split(' ').filter(Boolean);
+  var wb=nn(b).split(' ').filter(Boolean);
+  if(!wa.length||!wb.length) return 0;
+  var setB={};
+  wb.forEach(function(w){ setB[w]=true; });
+  var matchAinB=wa.filter(function(w){ return setB[w]; }).length;
+  var setA={};
+  wa.forEach(function(w){ setA[w]=true; });
+  var matchBinA=wb.filter(function(w){ return setA[w]; }).length;
+  var contAB=matchAinB/wa.length; // fraction de A trouvée dans B
+  var contBA=matchBinA/wb.length; // fraction de B trouvée dans A
+  return Math.max(contAB,contBA);
+}
+
+/* ── Choix du "primary" entre deux items ── */
+function scoreItem(a){
+  var s=0;
+  if(a.codeA) s+=3;
+  if((a.desc||a.designation||'').length>20) s+=2;
+  if(a.pu&&+a.pu>0) s+=1;
+  if(a.refs&&a.refs.length) s+=1;
+  if(a.vendeur) s+=1;
+  return s;
+}
+
+/* ── Fusionne secondary dans primary ── */
+function mergeInto(primary,secondary){
+  // pu / puFour : prend la valeur non nulle la plus récente
+  if((!primary.pu||+primary.pu===0)&&secondary.pu&&+secondary.pu>0)
+    primary.pu=secondary.pu;
+  if((!primary.puFour||+primary.puFour===0)&&secondary.puFour&&+secondary.puFour>0)
+    primary.puFour=secondary.puFour;
+  // devise / vendeur
+  if(!primary.devise&&secondary.devise) primary.devise=secondary.devise;
+  if(!primary.vendeur&&secondary.vendeur) primary.vendeur=secondary.vendeur;
+  if(!primary.client&&secondary.client) primary.client=secondary.client;
+  // refs : union
+  if(secondary.refs&&secondary.refs.length){
+    if(!primary.refs) primary.refs=[];
+    secondary.refs.forEach(function(r){
+      var alreadyIn=primary.refs.some(function(e){
+        return e.pi===r.pi&&e.date===r.date;
+      });
+      if(!alreadyIn) primary.refs.push(r);
+    });
+  }
+  // description : garder la plus longue
+  var da=(primary.desc||primary.designation||'');
+  var db=(secondary.desc||secondary.designation||'');
+  if(db.length>da.length){ primary.desc=secondary.desc||secondary.designation||da; primary.designation=primary.desc; }
+}
+
+/* ── Algorithme principal ── */
+function mergeDuplicates(db){
+  if(!db||db.length<2) return {db:db,merged:0,removed:[]};
+
+  // 1. Grouper par ref-pi
+  var byPI={};
+  db.forEach(function(a,i){
+    if(!a) return;
+    var k=(a['ref-pi']||'').trim().toUpperCase();
+    if(!k) return;
+    if(!byPI[k]) byPI[k]=[];
+    byPI[k].push({item:a,idx:i});
+  });
+
+  var toRemove={}; // idx → true
+  var mergeCount=0;
+
+  Object.keys(byPI).forEach(function(pi){
+    var group=byPI[pi];
+    if(group.length<2) return;
+
+    // 2. Comparer toutes les paires du groupe
+    for(var i=0;i<group.length;i++){
+      if(toRemove[group[i].idx]) continue;
+      for(var j=i+1;j<group.length;j++){
+        if(toRemove[group[j].idx]) continue;
+        var a=group[i].item, b=group[j].item;
+        var da=a.desc||a.designation||'';
+        var db2=b.desc||b.designation||'';
+        if(!da||!db2) continue;
+        var sim=wordSim(da,db2);
+        if(sim<0.50) continue; // pas assez similaires
+
+        // 3. Choisir primary / secondary
+        var sa=scoreItem(a), sb=scoreItem(b);
+        var primary,secondary,pidx,sidx;
+        if(sa>=sb){ primary=a;secondary=b;pidx=group[i].idx;sidx=group[j].idx; }
+        else       { primary=b;secondary=a;pidx=group[j].idx;sidx=group[i].idx; }
+
+        mergeInto(primary,secondary);
+        toRemove[sidx]=true;
+        mergeCount++;
+      }
+    }
+  });
+
+  if(mergeCount===0) return {db:db,merged:0,removed:[]};
+
+  // 4. Construire le nouveau tableau sans les supprimés
+  var cleaned=db.filter(function(_,i){ return !toRemove[i]; });
+  return {db:cleaned,merged:mergeCount,removed:Object.keys(toRemove).map(Number)};
+}
+
+/* ── Sauvegarde IDB ── */
+function saveAndRefresh(cleanDb,silent,cb){
+  window.FCR_DB=cleanDb; // settera aussi _db via intercepteur de __FCR_FIX_v2__
+  try{ if(typeof window.idbSaveAll==='function') window.idbSaveAll(cleanDb); }catch(e){}
+  setTimeout(function(){
+    try{ if(window.HubViews&&window.HubViews.refresh) window.HubViews.refresh(); }catch(_){}
+    try{ if(typeof window.renderArticles==='function') window.renderArticles(); }catch(_){}
+    if(cb) cb();
+  },400);
+}
+
+/* ── API publique ── */
+window.fcrMergeDupes=function(opts){
+  opts=opts||{};
+  var db=window.FCR_DB;
+  if(!db||!db.length){
+    if(!opts.silent) alert('FCR_DB vide — rien à fusionner.');
+    return;
+  }
+  var res=mergeDuplicates(db.slice());
+  if(res.merged===0){
+    if(!opts.silent) alert('Aucun doublon détecté (similarité desc ≥ 50%).');
+    return;
+  }
+  saveAndRefresh(res.db,opts.silent,function(){
+    if(!opts.silent){
+      alert('✅ '+res.merged+' doublon(s) fusionné(s). FCR_DB : '+db.length+' → '+res.db.length+' articles.');
+    } else {
+      console.info('[FCR Merge] '+res.merged+' doublons fusionnés. '+db.length+'→'+res.db.length);
+    }
+  });
+};
+
+/* ── Auto-run discret 2s après chaque mise à jour de FCR_DB (>50 items) ── */
+var _lastLen=0;
+var _autoTimer=null;
+function scheduleAutoMerge(n){
+  if(n<50||n===_lastLen) return;
+  clearTimeout(_autoTimer);
+  _autoTimer=setTimeout(function(){
+    _lastLen=n;
+    var db=window.FCR_DB;
+    if(!db||db.length<50) return;
+    var res=mergeDuplicates(db.slice());
+    if(res.merged===0) return;
+    saveAndRefresh(res.db,true);
+  },2000);
+}
+
+/* Surveille FCR_DB via polling léger (complète l'intercepteur de __FCR_FIX_v2__) */
+setInterval(function(){
+  var db=window.FCR_DB;
+  if(db&&db.length) scheduleAutoMerge(db.length);
+},3000);
+
+/* ── Bouton "Fusionner doublons" dans la vue Articles ── */
+function injectMergeBtn(){
+  // Injecter à côté du bouton "Importer PI" (s'il existe)
+  var impBtn=document.getElementById('__fcrImpBtn__');
+  if(impBtn&&!document.getElementById('__fcrMergeBtn__')){
+    var btn=document.createElement('button');
+    btn.id='__fcrMergeBtn__';
+    btn.textContent='🔗 Fusionner doublons';
+    btn.title='Détecter et fusionner les doublons (même ref-pi, description similaire)';
+    btn.style.cssText=impBtn.style.cssText;
+    btn.style.background='#0f766e';
+    btn.addEventListener('click',function(){ window.fcrMergeDupes({}); });
+    impBtn.parentNode.insertBefore(btn,impBtn.nextSibling);
+    return true;
+  }
+  // Sinon dans view-articles
+  var v=document.getElementById('view-articles');
+  if(v&&!document.getElementById('__fcrMergeBtn__')){
+    var head=v.querySelector('.view-head')||v.firstElementChild;
+    if(head){
+      var btn=document.createElement('button');
+      btn.id='__fcrMergeBtn__';
+      btn.textContent='🔗 Fusionner doublons';
+      btn.title='Détecter et fusionner les doublons (même ref-pi, description similaire)';
+      btn.style.cssText='padding:8px 16px;border-radius:8px;background:#0f766e;color:#fff;border:0;cursor:pointer;font-family:inherit;font-size:13px;font-weight:700;margin-left:8px';
+      btn.addEventListener('click',function(){ window.fcrMergeDupes({}); });
+      var actions=head.querySelector('.actions')||head.querySelector('.view-actions');
+      if(actions) actions.appendChild(btn);
+      else head.appendChild(btn);
+      return true;
+    }
+  }
+  return false;
+}
+
+var _btnTries=0;
+function tryInjectBtn(){
+  if(injectMergeBtn()) return;
+  if(++_btnTries<30) setTimeout(tryInjectBtn,600);
+}
+setTimeout(tryInjectBtn,2000);
+
+})();
+</script>
 </body>
 </html>
