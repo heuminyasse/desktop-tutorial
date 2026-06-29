@@ -3029,6 +3029,54 @@ class Component extends DCLogic {
   }
   dropPhase(cbId,phase){if(!cbId)return;this.setState(s=>({disjoncteurs:s.disjoncteurs.map(d=>d.id===cbId?{...d,phase}:d)}));this.showToast('Phase L'+phase+' assignee');}
   autoBalancePhases(){const pcs=this.state.pieces||[];const ph=[0,0,0];const map={};(this.state.disjoncteurs||[]).map(d=>{let w=0;try{w=this.calcDjPower(d,pcs);}catch(e){}return{d,w};}).sort((a,b)=>b.w-a.w).forEach(it=>{let mi=0;if(ph[1]<ph[mi])mi=1;if(ph[2]<ph[mi])mi=2;ph[mi]+=it.w;map[it.d.id]=mi+1;});this.setState(s=>({disjoncteurs:s.disjoncteurs.map(d=>map[d.id]?{...d,phase:map[d.id]}:d)}));this.showToast('Phases equilibrees');}
+  _nextBranchCalibre(I,tri){const std=tri?[10,15,30,45,60]:[15,30,45,60,90];for(let i=0;i<std.length;i++)if(std[i]>=I)return std[i];return std[std.length-1];}
+  branchCurrent(){
+    const pr=this.state.project||{};const tri=(pr.typeAlim==='triphase');const ks=(+pr.coefSimul||1);
+    const bil=this.bilanPuissance();const W=bil.totalFoisonneW*ks;
+    if(tri){
+      const pb=this.phaseBalance();
+      const I1=pb?pb.L1/230:0,I2=pb?pb.L2/230:0,I3=pb?pb.L3/230:0;const Imax=Math.max(I1,I2,I3);
+      return{tri:true,W,I1,I2,I3,Imax,Itheo:W/(Math.sqrt(3)*400),calibre:this._nextBranchCalibre(Imax,true),imbalance:pb?pb.imbalance:0};
+    }
+    const I=W/230;return{tri:false,W,I,Imax:I,calibre:this._nextBranchCalibre(I,false)};
+  }
+  gtlDimensions(){
+    // Gaine Technique Logement / ETEL — dimensionnement indicatif NF C 15-100
+    const tes=this.state.tableauxElec||[];let usedModules=0,rangees=0,capacity=0;
+    tes.forEach(t=>{const br=this._boardRows(t);usedModules+=br.usedModules;rangees+=br.nbRangees;capacity+=br.capacity;});
+    const ROW=((this.state.project&&this.state.project.modulesParRangee)||13);
+    const rowsComm=1;const rowsTotal=rangees+rowsComm;
+    const etelWidth=600,etelDepth=200;// mm — largeur et profondeur mini ETEL
+    const heightMM=Math.max(2000,rowsTotal*250+300);
+    const reservePct=usedModules>0&&capacity>0?Math.round((capacity-usedModules)/capacity*100):20;
+    return{usedModules,rangees,rowsComm,rowsTotal,capacity,etelWidth,etelDepth,heightMM,ROW,reservePct,boards:tes.length};
+  }
+  selectivityTable(){
+    const s=this.state;const tes=s.tableauxElec||[];const deps=s.departs||[];const djs=s.disjoncteurs||[];const rows=[];
+    tes.forEach(te=>{
+      const dep=deps.find(d=>d.id===te.departId)||deps.find(d=>d.type==='comptage');
+      const tdjs=djs.filter(d=>d.tableauId===te.id);
+      if(dep){const up=+dep.calibre||0;tdjs.forEach(d=>{const dn=+d.calibre||0;if(!up||!dn)return;const ratio=up/dn;rows.push({te:te.code||te.nom||'TE',up:(dep.code||'SRC')+' '+up+'A',down:(d.code||'CB')+' '+dn+'A',type:'Ampèremétrique',ratio:Math.round(ratio*100)/100,ok:ratio>=1.6,note:ratio>=1.6?'Sélectif (rapport ≥1,6)':(ratio>=1?'Partiel — vérifier les courbes':'Non sélectif (calibre amont ≤ aval)')});});}
+      if(dep&&+dep.ddr>0){const upd=+dep.ddr;tdjs.filter(d=>+d.ddr>0).forEach(d=>{const dnd=+d.ddr;const ratio=upd/dnd;const sel=ratio>=3;rows.push({te:te.code||te.nom||'TE',up:(dep.code||'SRC')+' '+upd+'mA',down:(d.code||'CB')+' '+dnd+'mA',type:'Différentielle',ratio:Math.round(ratio*100)/100,ok:sel,note:sel?'Sélectif (rapport ≥3 + type S amont)':'Non sélectif (rapport <3)'});});}
+    });
+    return rows;
+  }
+  renderSelectivityCard(){
+    const c=this.C;const r=this.r;const rows=this.selectivityTable();
+    if(rows.length===0)return null;
+    const head=r('div',{style:{display:'flex',fontSize:9,fontWeight:700,color:c.muted,textTransform:'uppercase',letterSpacing:'.05em',paddingBottom:4,borderBottom:'2px solid '+c.bdr2}},
+      r('span',{style:{width:90}},'Type'),r('span',{style:{flex:1}},'Amont'),r('span',{style:{flex:1}},'Aval'),r('span',{style:{width:48,textAlign:'right'}},'Ratio'),r('span',{style:{width:150}},'Verdict'));
+    return r('div',{style:{marginTop:16}},this.Card('Sélectivité & filiation',
+      r('div',{style:{paddingTop:2}},
+        r('div',{style:{fontSize:10,color:c.muted,marginBottom:8,fontStyle:'italic'}},'Indicatif — sélectivité ampèremétrique (rapport ≥1,6) et différentielle (rapport ≥3, type S amont).'),
+        head,
+        ...rows.map((x,k)=>r('div',{key:k,style:{display:'flex',alignItems:'center',fontSize:11,padding:'4px 0',borderBottom:'1px solid '+c.bdr}},
+          r('span',{style:{width:90,fontSize:9,color:c.text2}},x.type),
+          r('span',{style:{flex:1,fontFamily:c.mono,color:c.text}},x.up),
+          r('span',{style:{flex:1,fontFamily:c.mono,color:c.text2}},x.down),
+          r('span',{style:{width:48,textAlign:'right',fontFamily:c.mono,color:c.muted}},x.ratio),
+          r('span',{style:{width:150,fontSize:10,fontWeight:600,color:x.ok?c.success:c.warn}},(x.ok?'✓ ':'⚠ ')+x.note))))));
+  }
   bilanPuissance(appId){
     const FAM=[{label:'Eclairage',types:['eclairage'],coef:1},{label:'Prises',types:['prises','prises_sdb'],coef:0.2},{label:'Cuisson',types:['four','hotte'],coef:0.7},{label:'Lavage',types:['lave_vaisselle','lave_linge','seche_linge'],coef:0.75},{label:'Eau chaude (ECS)',types:['chauffe_eau'],coef:1},{label:'Chauffage / Clim',types:['climatisation','vmc'],coef:1},{label:'Autres',types:['borne_ve','portail','piscine','camera','tv','rj45','sono','alarme_intrusion','detecteur_fumee','detecteur_co','visiophone','domotique','solaire','inverseur_source','controleur_tension','afficheur'],coef:0.6}];
     const pcs=(this.state.pieces||[]).filter(p=>appId==null||p.appId===appId);
@@ -3073,7 +3121,10 @@ class Component extends DCLogic {
             r('span',null,'Puissance souscrite : '+b.souscriteKva+' kVA'),
             r('span',{style:{fontWeight:700,color:over?c.danger:c.success}},over?'Depassement !':pct+'% utilises')),
           r('div',{style:{height:7,background:c.bdr2,borderRadius:4,overflow:'hidden'}},r('div',{style:{height:'100%',width:Math.min(100,pct)+'%',background:over?c.danger:'linear-gradient(90deg,#0277BD,#0EA5E9)',borderRadius:4}}))):null,
-        (()=>{const pb=this.phaseBalance();if(!pb)return null;const mx=Math.max(pb.L1,pb.L2,pb.L3,1);return r('div',{style:{marginTop:12}},r('div',{style:{fontSize:9,fontWeight:700,color:pb.imbalance>30?c.warn:c.muted,textTransform:'uppercase',letterSpacing:'.06em',marginBottom:6}},'Equilibrage triphase ('+pb.imbalance+'%'+(pb.imbalance>30?' — a reequilibrer':'')+')'),...[['L1',pb.L1,'#6d4c41'],['L2',pb.L2,'#212121'],['L3',pb.L3,'#9e9e9e']].map((x,k)=>r('div',{key:k,style:{display:'flex',alignItems:'center',gap:8,marginBottom:4}},r('span',{style:{width:22,fontSize:10,fontWeight:700,color:x[2],fontFamily:c.mono}},x[0]),r('div',{style:{flex:1,height:7,background:c.bdr2,borderRadius:4,overflow:'hidden'}},r('div',{style:{height:'100%',width:(x[1]/mx*100)+'%',background:x[2],borderRadius:4}})),r('span',{style:{width:58,textAlign:'right',fontSize:10,fontFamily:c.mono,color:c.text2}},(x[1]/1000).toFixed(1)+'kW'))));})(),
+        (()=>{const pb=this.phaseBalance();if(!pb)return null;const mx=Math.max(pb.L1,pb.L2,pb.L3,1);return r('div',{style:{marginTop:12}},r('div',{style:{fontSize:9,fontWeight:700,color:pb.imbalance>30?c.warn:c.muted,textTransform:'uppercase',letterSpacing:'.06em',marginBottom:6}},'Equilibrage triphase ('+pb.imbalance+'%'+(pb.imbalance>30?' — a reequilibrer':'')+')'),...[['L1',pb.L1,'#6d4c41'],['L2',pb.L2,'#212121'],['L3',pb.L3,'#9e9e9e']].map((x,k)=>r('div',{key:k,style:{display:'flex',alignItems:'center',gap:8,marginBottom:4}},r('span',{style:{width:22,fontSize:10,fontWeight:700,color:x[2],fontFamily:c.mono}},x[0]),r('div',{style:{flex:1,height:7,background:c.bdr2,borderRadius:4,overflow:'hidden'}},r('div',{style:{height:'100%',width:(x[1]/mx*100)+'%',background:x[2],borderRadius:4}})),r('span',{style:{width:48,textAlign:'right',fontSize:10,fontFamily:c.mono,color:c.text2}},(x[1]/1000).toFixed(1)+'kW'),r('span',{style:{width:42,textAlign:'right',fontSize:10,fontFamily:c.mono,color:c.muted}},Math.round(x[1]/230)+'A'))));})(),
+        (()=>{const bc=this.branchCurrent();return r('div',{style:{marginTop:12,display:'flex',alignItems:'center',gap:10,padding:'9px 12px',background:c.accentSoft||'rgba(2,132,199,.08)',border:'1px solid '+c.bdr,borderRadius:9}},
+          r('div',{style:{flex:1}},r('div',{style:{fontSize:9,fontWeight:700,color:c.muted,textTransform:'uppercase',letterSpacing:'.05em'}},'Disjoncteur de branchement conseille ('+(bc.tri?'triphase':'monophase')+')'),r('div',{style:{fontSize:10,color:c.muted,marginTop:1}},bc.tri?('phase la plus chargee '+Math.round(bc.Imax)+'A · theo. '+Math.round(bc.Itheo)+'A'):('courant total '+Math.round(bc.I)+'A'))),
+          r('div',{style:{fontSize:22,fontWeight:800,color:c.accent,fontFamily:c.mono}},bc.calibre+'A'));})(),
         apps.length>1?r('div',{style:{marginTop:12}},
           r('div',{style:{fontSize:9,fontWeight:700,color:c.muted,textTransform:'uppercase',letterSpacing:'.06em',marginBottom:5}},'Repartition par appartement'),
           ...apps.map(ap=>{const ba=this.bilanPuissance(ap.id);return r('div',{key:ap.id,style:{display:'flex',fontSize:11,padding:'3px 0',borderBottom:'1px solid '+c.bdr}},r('span',{style:{flex:1,color:c.text2}},ap.nom),r('span',{style:{fontFamily:c.mono,color:c.accent,fontWeight:700}},ba.kvaFoisonne.toFixed(1)+' kVA'))})):null)));
@@ -3169,6 +3220,41 @@ class Component extends DCLogic {
       const cleanup=()=>{const e=document.getElementById('cebat-doscss');if(e)e.remove();cont.remove();if(main){if(prev)main.setAttribute('data-print',prev);else main.removeAttribute('data-print');}window.removeEventListener('afterprint',cleanup);};
       window.addEventListener('afterprint',cleanup);window.print();
     }catch(e){this.showToast('Echec dossier complet');}
+  }
+  printAutocontrole(){
+    try{
+      const s=this.state;const pr=s.project||{};const esc=t=>String(t==null?'':t).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+      let dateStr='';try{dateStr=new Date().toLocaleDateString('fr-FR');}catch(e){}
+      const bc=this.branchCurrent();let issues=[];try{issues=this.checkConformite();}catch(e){}
+      const nErr=issues.filter(i=>i.level==='error').length;const nWarn=issues.filter(i=>i.level==='warn').length;
+      const mesures=s.mesures||{};
+      const sec=t=>'<h3 style="margin:5mm 0 2mm;font-size:12pt;color:#0277BD;border-bottom:1px solid #0277BD;padding-bottom:1mm">'+esc(t)+'</h3>';
+      let html='<div style="font-family:Arial,sans-serif;padding:8mm;color:#111;font-size:10pt">';
+      html+='<div style="display:flex;justify-content:space-between;align-items:flex-start"><div><div style="font-size:18pt;font-weight:800;color:#0277BD">Fiche d\'autocontrole</div><div style="font-size:11pt">'+esc(pr.nom||'')+'</div></div><div style="text-align:right;font-size:9pt;color:#555">NF C 15-100<br>'+esc(dateStr)+'</div></div>';
+      html+=sec('Identification');
+      const idf=[['Client',pr.client],['Adresse',pr.adresse],['Installateur / Bureau',pr.bureau],['Alimentation',(pr.typeAlim==='triphase'?'Triphase 400V':'Monophase 230V')],['Disjoncteur de branchement','env. '+bc.calibre+' A'],['Puissance souscrite',(pr.puissanceSouscrite||'-')+' kVA'],['Pouvoir de coupure',(pr.pdcDisjoncteurs?pr.pdcDisjoncteurs+' kA':'-')+' (Icc '+(pr.iccTableau?pr.iccTableau+' kA':'-')+')']];
+      html+='<table style="width:100%;border-collapse:collapse">'+idf.map(p=>'<tr><td style="padding:1mm 2mm;color:#666;width:55mm">'+esc(p[0])+'</td><td style="padding:1mm 2mm;font-weight:600">'+esc(p[1]==null||p[1]===''?'-':p[1])+'</td></tr>').join('')+'</table>';
+      html+=sec('Mesures de controle');
+      const mrows=[['Resistance de prise de terre','terre','ohm','<= 100 ohm (avec DDR 30 mA)'],['Isolement (500 V DC)','isolement','Mohm','>= 0,5 Mohm'],['Continuite des conducteurs PE','continuite','ohm','< 2 ohm']];
+      html+='<table style="width:100%;border-collapse:collapse;font-size:9pt"><thead><tr style="background:#eef"><th style="text-align:left;padding:1mm 2mm">Mesure</th><th style="text-align:left;padding:1mm 2mm">Valeur relevee</th><th style="text-align:left;padding:1mm 2mm">Unite</th><th style="text-align:left;padding:1mm 2mm">Critere</th></tr></thead><tbody>';
+      mrows.forEach(m=>{const val=mesures[m[1]]||mesures['m_'+m[1]]||'';html+='<tr><td style="padding:1mm 2mm;border-bottom:1px solid #ddd">'+esc(m[0])+'</td><td style="padding:1mm 2mm;border-bottom:1px solid #ddd;font-weight:700">'+(val?esc(val):'____________')+'</td><td style="padding:1mm 2mm;border-bottom:1px solid #ddd">'+esc(m[2])+'</td><td style="padding:1mm 2mm;border-bottom:1px solid #ddd;color:#666">'+esc(m[3])+'</td></tr>';});
+      html+='</tbody></table>';
+      html+=sec('Points de controle visuels');
+      const cks=['Identification et reperage des circuits','Serrage des connexions','Section des conducteurs conforme aux calibres','Differentiel 30 mA sur tous les circuits terminaux','Liaison equipotentielle de la salle de bains','Presence du parafoudre si requis','GTL/ETEL conforme et reserve 20%'];
+      html+='<div style="font-size:9pt">'+cks.map(t=>'<div style="padding:.6mm 0">&#9744; '+esc(t)+'</div>').join('')+'</div>';
+      html+=sec('Synthese conformite (auto)');
+      html+='<div style="font-size:10pt;margin-bottom:2mm">'+(nErr===0?'<span style="color:#16a34a;font-weight:700">Aucune non-conformite bloquante detectee par l\'outil.</span>':'<span style="color:#dc2626;font-weight:700">'+nErr+' non-conformite(s) a lever</span>')+(nWarn?' &middot; <span style="color:#d97706">'+nWarn+' avertissement(s)</span>':'')+'</div>';
+      html+='<div style="font-size:8.5pt;color:#444">'+issues.slice(0,12).map(i=>'<div>['+({error:'NC',warn:'!',info:'i'}[i.level]||'')+'] '+esc(i.msg)+'</div>').join('')+'</div>';
+      html+=sec('Attestation');
+      html+='<div style="font-size:9pt;margin-bottom:6mm">Je soussigne(e) atteste avoir realise les controles ci-dessus conformement a la norme NF C 15-100. Document d\'autocontrole interne — ne se substitue pas a l\'attestation de conformite Consuel.</div>';
+      html+='<div style="display:flex;gap:18mm;margin-top:10mm"><div style="flex:1"><div style="border-top:1px solid #333;padding-top:1mm;font-size:9pt;color:#666">Nom &amp; signature</div></div><div style="flex:1"><div style="border-top:1px solid #333;padding-top:1mm;font-size:9pt;color:#666">Date</div></div><div style="flex:1"><div style="border-top:1px solid #333;padding-top:1mm;font-size:9pt;color:#666">Cachet</div></div></div>';
+      html+='</div>';
+      const cont=document.createElement('div');cont.id='cebat-auto';cont.setAttribute('data-print','main');cont.style.position='absolute';cont.style.left='-99999px';cont.style.top='0';cont.innerHTML=html;document.body.appendChild(cont);
+      const main=document.querySelector('main');const prev=main?main.getAttribute('data-print'):null;if(main)main.setAttribute('data-print','hide');
+      if(!document.getElementById('cebat-autocss')){const st=document.createElement('style');st.id='cebat-autocss';st.textContent='@media print{@page{size:A4 portrait;margin:10mm;}}';document.head.appendChild(st);}
+      const cleanup=()=>{const e=document.getElementById('cebat-autocss');if(e)e.remove();cont.remove();if(main){if(prev)main.setAttribute('data-print',prev);else main.removeAttribute('data-print');}window.removeEventListener('afterprint',cleanup);};
+      window.addEventListener('afterprint',cleanup);window.print();
+    }catch(e){this.showToast('Echec fiche autocontrole');}
   }
   chiffrage(){
     const TYPEA=new Set(['prises_sdb','lave_linge','four','borne_ve','climatisation','chauffe_eau']);
@@ -6277,7 +6363,12 @@ class Component extends DCLogic {
       lib,phasePanel,
       rows.length===0?r('div',{style:{fontSize:12,color:c.muted,padding:'16px 0'}},'Aucun disjoncteur dans ce tableau.'):r('div',null,...rows.map(rowEl)),
       r('div',{onDragOver:e=>e.preventDefault(),onDrop:e=>{e.preventDefault();const dc=this.state.dragCb;if(dc)this.dropCb(dc,maxR+1,null);this.setState({dragCb:null,dragOverCb:null});},
-        style:{border:'2px dashed '+c.bdr3,borderRadius:9,padding:'14px',textAlign:'center',fontSize:11,color:c.muted,cursor:'copy',marginTop:4}},'+ Deposer ici pour creer une nouvelle rangee'));
+        style:{border:'2px dashed '+c.bdr3,borderRadius:9,padding:'14px',textAlign:'center',fontSize:11,color:c.muted,cursor:'copy',marginTop:4}},'+ Deposer ici pour creer une nouvelle rangee'),
+      (()=>{const g=this.gtlDimensions();return r('div',{className:'cbt-card',style:{marginTop:14,background:c.surf,border:'1px solid '+c.bdr,borderRadius:12,padding:'12px 16px',boxShadow:c.elev1}},
+        r('div',{style:{fontSize:11,fontWeight:800,color:c.text,marginBottom:8}},'GTL / ETEL — dimensionnement indicatif'),
+        r('div',{style:{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:10}},
+          ...[['Modules utilises',g.usedModules],['Rangees tableau',g.rangees],['+ Rangee comm. VDI',g.rowsComm],['Reserve','~'+g.reservePct+'%'],['Largeur ETEL',g.etelWidth+' mm'],['Profondeur ETEL',g.etelDepth+' mm'],['Hauteur indicative',g.heightMM+' mm'],['Rangees totales',g.rowsTotal]].map((x,k)=>r('div',{key:k},r('div',{style:{fontSize:9,color:c.muted,textTransform:'uppercase',letterSpacing:'.04em'}},x[0]),r('div',{style:{fontSize:15,fontWeight:800,color:c.accent,fontFamily:c.mono}},String(x[1]))))),
+        r('div',{style:{fontSize:9,color:c.muted,marginTop:8,fontStyle:'italic'}},'ETEL 600×200 mm mini (NF C 15-100) · prevoir une rangee pour la GTL communication (VDI) et 20% de reserve.'));})());
   }
   renderBoitesRaccord(){
     const s=this.state;const c=this.C;const r=this.r;const{boitesDeriv,pieces,disjoncteurs,tableauxElec}=s;
@@ -6578,7 +6669,8 @@ class Component extends DCLogic {
         sources),
       (this.state.schemaMode==='multi')?this.renderMultifilaire():boards,
       (this.state.schemaMode==='multi')?null:this.renderBoitesRaccord(),
-      (this.state.schemaMode==='multi')?null:cmdSection);
+      (this.state.schemaMode==='multi')?null:cmdSection,
+      (this.state.schemaMode==='multi')?null:this.renderSelectivityCard());
   }
   vCircuits(circuits){
     const{circuitsTab,tableauxElec,boitesDeriv,interrupteurs,zonesCommande,pieces,circuitFilter,departs}=this.state;const c=this.C;const r=this.r;
@@ -7777,7 +7869,7 @@ class Component extends DCLogic {
       {cat:'Appareillage',color:c.success,items:[{d:'Prises 2P+T 16A',q:nP,pu:6.5,u:'u'},{d:'Interrupteurs simples / va-et-vient',q:nL,pu:8.0,u:'u'},{d:'Boîtes encastrement Ø67mm',q:nP+nL,pu:1.5,u:'u'},{d:'DCL douilles E27/E14',q:nL,pu:2.80,u:'u'}]},
     ];
     return r('div',{style:{padding:'24px 28px',animation:'fadeIn .3s ease'}},
-      this.SH('Devis estimatif','Estimation indicative — '+today,r('div',{style:{display:'flex',gap:8}},this.Btn('⤓ Export CSV',()=>this.exportCSV(),'sec','md'),this.Btn(r('span',{style:{display:'inline-flex',alignItems:'center',gap:5}},this.ico('print_ico',13),'Dossier complet'),()=>this.printDossier(),'primary','md'),this.Btn(r('span',{style:{display:'inline-flex',alignItems:'center',gap:5}},this.ico('print_ico',13),'Imprimer / PDF'),()=>window.print(),'ghost','md'))),
+      this.SH('Devis estimatif','Estimation indicative — '+today,r('div',{style:{display:'flex',gap:8}},this.Btn('⤓ Export CSV',()=>this.exportCSV(),'sec','md'),this.Btn(r('span',{style:{display:'inline-flex',alignItems:'center',gap:5}},this.ico('print_ico',13),'Dossier complet'),()=>this.printDossier(),'primary','md'),this.Btn(r('span',{style:{display:'inline-flex',alignItems:'center',gap:5}},this.ico('print_ico',13),'Fiche autocontrôle'),()=>this.printAutocontrole(),'sec','md'),this.Btn(r('span',{style:{display:'inline-flex',alignItems:'center',gap:5}},this.ico('print_ico',13),'Imprimer / PDF'),()=>window.print(),'ghost','md'))),
       r('div',{className:'cbt-card',style:{background:c.surf2,border:`1px solid ${c.bdr}`,borderRadius:12,padding:'12px 16px',marginBottom:14,display:'grid',gridTemplateColumns:'repeat(2,1fr)',gap:4,fontSize:11,boxShadow:c.elev1}},
         r('span',{style:{color:c.muted}},'Projet :'),r('span',{style:{color:c.text,fontWeight:500}},project.nom),
         r('span',{style:{color:c.muted}},'Niveaux / Apparts. / Pièces :'),r('span',{style:{color:c.text}},niveaux.length+' / '+appartements.length+' / '+pieces.length),
