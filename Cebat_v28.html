@@ -8037,10 +8037,44 @@ class Component extends DCLogic {
   }
 
 
+  cableMetre(){
+    const s=this.state;const djs=s.disjoncteurs||[];
+    const marge=(s.project&&Number.isFinite(+s.project.margeCable)&&+s.project.margeCable>=0)?+s.project.margeCable:10;
+    const bySec={};let totalKnown=0,nNoLen=0,nTot=0;
+    djs.forEach(d=>{if((d.recepteurs||[]).length===0)return;nTot++;const L=+d.longueur>0?+d.longueur:0;if(L<=0){nNoLen++;return;}const sec=parseFloat(d.section)||1.5;bySec[sec]=(bySec[sec]||0)+L;totalKnown+=L;});
+    const rows=Object.keys(bySec).map(k=>+k).sort((a,b)=>a-b).map(sec=>{const m=bySec[sec];return{sec,metres:Math.round(m),aCommander:Math.ceil(m*(1+marge/100))};});
+    return{rows,marge,totalKnown:Math.round(totalKnown),gaineICTA:Math.ceil(totalKnown*(1+marge/100)),nNoLen,nTot};
+  }
+  exportMetreCSV(){
+    try{const mt=this.cableMetre();const esc=v=>{const t=v==null?'':String(v);return /[";\n]/.test(t)?'"'+t.replace(/"/g,'""')+'"':t;};
+      const L=[['Section (mm2)','Longueur (m)','A commander (+'+mt.marge+'%)'].join(';')];
+      mt.rows.forEach(x=>L.push([x.sec,x.metres,x.aCommander].map(esc).join(';')));
+      L.push('');L.push(['Gaine ICTA (m)','',mt.gaineICTA].map(esc).join(';'));L.push(['Total cable (m)',mt.totalKnown,''].map(esc).join(';'));
+      this._downloadBlob('﻿'+L.join('\r\n'),'text/csv;charset=utf-8','cebat_metre_cables_'+this._slug()+'.csv');this.showToast('Métré câbles exporté');
+    }catch(e){this.showToast('Echec export métré');}
+  }
   vCablage(circuits){
     const c=this.C;const r=this.r;
     const cT={1.5:{type:'H07VU 3G1.5mm²',color:'#f59e0b',use:'Éclairage'},2.5:{type:'H07VU 3G2.5mm²',color:'#3b82f6',use:'Prises & spécialisés'},6:{type:'H07RNF 3G6mm²',color:'#ef4444',use:'Haute puissance'}};
     const grp={};for(const ci of circuits){if(!grp[ci.section])grp[ci.section]=[];grp[ci.section].push(ci);}
+    const mt=this.cableMetre();
+    const metreCard=this.Card('Métré câbles à commander',
+      r('div',null,
+        r('div',{style:{display:'flex',alignItems:'center',gap:6,marginBottom:8}},
+          r('span',{style:{fontSize:11,color:c.muted}},'Marge'),
+          r('input',{type:'number',min:0,max:100,step:1,value:mt.marge,onChange:e=>{const v=+e.target.value;this.setState(s=>({project:{...s.project,margeCable:(Number.isFinite(v)&&v>=0)?v:10}}));},style:{width:60,background:c.surf3,border:'1px solid '+c.bdr2,borderRadius:6,padding:'4px 8px',color:c.text,fontSize:12,fontFamily:c.mono,textAlign:'right'}}),
+          r('span',{style:{fontSize:11,color:c.muted}},'%')),
+        mt.rows.length===0?r('div',{style:{fontSize:11,color:c.muted,fontStyle:'italic'}},'Renseigner la longueur des circuits pour obtenir le métré.'):
+          r('div',null,...mt.rows.map(x=>r('div',{key:x.sec,style:{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'5px 0',borderBottom:`1px solid ${c.bdr}`}},
+            r('span',{style:{fontSize:11,color:c.text,fontFamily:c.mono,fontWeight:600}},x.sec+' mm²'),
+            r('span',{style:{fontSize:10,color:c.muted,fontFamily:c.mono}},x.metres+' m'),
+            r('span',{style:{fontSize:11,color:c.warn,fontFamily:c.mono,fontWeight:700}},'→ '+x.aCommander+' m')))),
+        r('div',{style:{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'6px 0 2px',marginTop:4,borderTop:`1px solid ${c.bdr2}`}},
+          r('span',{style:{fontSize:11,color:c.text2,fontWeight:600}},'Gaine ICTA'),
+          r('span',{style:{fontSize:11,color:c.accent,fontFamily:c.mono,fontWeight:700}},mt.gaineICTA+' m')),
+        mt.nNoLen>0?r('div',{style:{fontSize:10,color:c.warn,marginTop:6}},'⚠ '+mt.nNoLen+' circuit(s) sans longueur — exclus du métré'):null,
+        r('div',{style:{fontSize:9,color:c.muted,marginTop:6,fontStyle:'italic'}},'Quantités indicatives — vérifier au plan avant commande.')),
+      this.Btn('⤓ CSV',()=>this.exportMetreCSV(),'sec','sm'),14);
     return r('div',{style:{padding:'24px 28px',animation:'fadeIn .3s ease'}},
       this.SH('Câblage & Nomenclature','Types, sections, couleurs — NF C 15-100 et IEC 60446'),
       r('div',{style:{display:'grid',gridTemplateColumns:'1fr 270px',gap:14}},
@@ -8059,6 +8093,7 @@ class Component extends DCLogic {
                   r('td',{style:{padding:'6px 11px',color:c.warn,fontWeight:600}},Math.ceil(ci.len*1.15)+' m')))))));
         })),
         r('div',{style:{display:'flex',flexDirection:'column',gap:12}},
+          metreCard,
           this.Card('Code couleurs IEC 60446',r('div',null,...[{l:'Phase (L)',code:'ROUGE / MARRON',hex:'#dc2626'},{l:'Neutre (N)',code:'BLEU',hex:'#2563eb'},{l:'Terre (PE)',code:'VERT / JAUNE',hex:'#65a30d'}].map(cc=>r('div',{key:cc.l,style:{display:'flex',alignItems:'center',gap:8,padding:'7px 0',borderBottom:`1px solid ${c.bdr}`}},r('div',{style:{width:24,height:10,borderRadius:2,background:cc.hex}}),r('div',null,r('div',{style:{fontSize:11,color:c.text,fontWeight:600}},cc.l),r('div',{style:{fontSize:10,color:cc.hex,fontWeight:700}},cc.code))))),null,14))
     ));
   }
