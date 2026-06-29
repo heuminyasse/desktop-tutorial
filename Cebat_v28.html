@@ -2925,6 +2925,7 @@ class Component extends DCLogic {
       const dep=deps.find(d=>d.id===t.departId)||deps.find(d=>d.type==='comptage');if(!dep)return;const dc=+dep.calibre||0;if(!dc)return;
       djs.filter(d=>d.tableauId===t.id).forEach(d=>{if((+d.calibre||0)>=dc)add('warn','Selectivite amperometrique : '+(d.code||'CB')+' '+d.calibre+'A >= source '+(dep.code||dep.nom||'')+' '+dc+'A (calibre amont insuffisant).');});
     });
+    try{const _ci=this.calcCircuits();const _rho=0.0225;_ci.forEach(c2=>{const I=(c2.puissance||0)/230;const S=parseFloat(c2.section)||1.5;const L=c2.len||0;if(I<=0||L<=0)return;const du=2*_rho*L*I/S;const pct=du/230*100;const lim=c2.type==='eclairage'?3:5;if(pct>lim)add('warn','Chute de tension '+(c2.nom||'circuit')+' : '+pct.toFixed(1)+'% > '+lim+'% (L='+L+'m, S='+S+'mm2, I='+I.toFixed(1)+'A).');});}catch(e){}
     return issues;
   }
   _fnPowerW(fn){const q=fn.quantite||1;if(fn.type==='eclairage')return (fn.puissance||10)*q;if(fn.type==='prises'||fn.type==='prises_sdb')return 460*q;return ({four:6000,lave_vaisselle:2200,lave_linge:2500,seche_linge:2400,chauffe_eau:3000,climatisation:2500,borne_ve:7400,hotte:300,vmc:200,portail:500,piscine:1500}[fn.type]||500)*q;}
