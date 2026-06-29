@@ -3131,18 +3131,18 @@ class Component extends DCLogic {
   r=React.createElement;
   Btn(text,onClick,v='primary',sz='md',ico=null,disabled=false){
     const c=this.C;
-    const vs={primary:{background:'#0284C7',color:'#fff',border:'none'},sec:{background:'#fff',color:c.text,border:`1px solid ${c.bdr2}`},ghost:{background:'transparent',color:c.text2,border:`1px solid ${c.bdr}`},danger:{background:'rgba(220,38,38,.08)',color:c.danger,border:'1px solid rgba(220,38,38,.25)'},success:{background:'rgba(22,163,74,.1)',color:c.success,border:'1px solid rgba(22,163,74,.3)'}};
+    const vs={primary:{background:'#0284C7',color:'#fff',border:'none'},sec:{background:c.surf,color:c.text,border:`1px solid ${c.bdr2}`},ghost:{background:'transparent',color:c.text2,border:`1px solid ${c.bdr}`},danger:{background:'rgba(220,38,38,.08)',color:c.danger,border:'1px solid rgba(220,38,38,.25)'},success:{background:'rgba(22,163,74,.1)',color:c.success,border:'1px solid rgba(22,163,74,.3)'}};
     const ss={sm:{fontSize:11,padding:'4px 10px',borderRadius:6},md:{fontSize:13,padding:'7px 14px',borderRadius:8},lg:{fontSize:14,padding:'10px 20px',borderRadius:9}};
     return this.r('button',{onClick:disabled?undefined:onClick,style:{...(vs[v]||vs.primary),...(ss[sz]||ss.md),fontFamily:c.font,fontWeight:600,cursor:disabled?'not-allowed':'pointer',opacity:disabled?0.5:1,display:'inline-flex',alignItems:'center',gap:6,transition:'all .15s',flexShrink:0}},ico&&this.r('span',null,ico),text);
   }
   Card(title,children,extra=null,p=20){
     const c=this.C;
-    return this.r('div',{style:{background:'#fff',border:`1px solid ${c.bdr}`,borderRadius:10,padding:p,boxShadow:`0 1px 4px ${c.shadow}`}},
+    return this.r('div',{style:{background:c.surf,border:`1px solid ${c.bdr}`,borderRadius:10,padding:p,boxShadow:`0 1px 4px ${c.shadow}`}},
       title&&this.r('div',{style:{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:14}},
         this.r('h3',{style:{fontSize:11,fontWeight:700,color:c.text2,textTransform:'uppercase',letterSpacing:'.07em'}},title),extra),children);
   }
   Bdg(text,color='#0284C7'){return this.r('span',{style:{display:'inline-block',fontSize:10,fontWeight:700,padding:'2px 7px',borderRadius:8,background:color+'22',color,border:`1px solid ${color}44`,fontFamily:this.C.mono,whiteSpace:'nowrap'}},text);}
-  Stat(val,label,color='#0284C7',sub=''){const c=this.C;return this.r('div',{style:{background:'#fff',border:`1px solid ${c.bdr}`,borderRadius:10,padding:'16px 18px',boxShadow:`0 1px 4px ${c.shadow}`}},this.r('div',{style:{fontSize:10,color:c.muted,marginBottom:5,textTransform:'uppercase',letterSpacing:'.05em',fontWeight:600}},label),this.r('div',{style:{fontSize:24,fontWeight:800,color,fontFamily:c.mono}},val),sub&&this.r('div',{style:{fontSize:10,color:c.muted,marginTop:3}},sub));}
+  Stat(val,label,color='#0284C7',sub=''){const c=this.C;return this.r('div',{style:{background:c.surf,border:`1px solid ${c.bdr}`,borderRadius:10,padding:'16px 18px',boxShadow:`0 1px 4px ${c.shadow}`}},this.r('div',{style:{fontSize:10,color:c.muted,marginBottom:5,textTransform:'uppercase',letterSpacing:'.05em',fontWeight:600}},label),this.r('div',{style:{fontSize:24,fontWeight:800,color,fontFamily:c.mono}},val),sub&&this.r('div',{style:{fontSize:10,color:c.muted,marginTop:3}},sub));}
   SH(title,sub='',extra=null){const c=this.C;return this.r('div',{style:{marginBottom:24}},this.r('div',{style:{display:'flex',justifyContent:'space-between',alignItems:'flex-start'}},this.r('div',null,this.r('h1',{style:{fontSize:21,fontWeight:800,color:c.text,marginBottom:3,letterSpacing:'-.4px'}},title),sub&&this.r('p',{style:{fontSize:13,color:c.muted}},sub)),extra));}
   showToast(msg){this.setState({toast:msg});clearTimeout(this._tt);this._tt=setTimeout(()=>this.setState({toast:null}),3000);}
   Inp(field,label,type='text',form,setForm,opts={}){const c=this.C;return this.r('div',{style:{marginBottom:14}},this.r('label',{style:{display:'block',fontSize:11,color:c.text2,marginBottom:5,fontWeight:600}},label),this.r('input',{type,value:form[field]??'',onChange:e=>setForm(f=>({...f,[field]:type==='number'?(e.target.value===''?'':(Number.isFinite(+e.target.value)?+e.target.value:f[field])):e.target.value})),...opts,style:{width:'100%',background:c.surf3,border:`1px solid ${c.bdr2}`,borderRadius:7,padding:'8px 11px',color:c.text,fontSize:13,outline:'none',fontFamily:c.font,...(opts.style||{})}}));}
@@ -3313,7 +3313,7 @@ class Component extends DCLogic {
     const elemTotal=tableauxElec.length+boitesDeriv.length+interrupteurs.length+zonesCommande.length;
     const bdgMap={appartements:appartements.length,pieces:pieces.length,circuits:circuits.length+elemTotal};
     const red='#0277BD';
-    return r('aside',{'data-print':'hide',className:'cbt-sidebar'+(this.state.sidebarOpen?' cbt-sb-open':''),style:{width:220,background:'#FFFFFF',borderRight:`1px solid ${c.bdr}`,display:'flex',flexDirection:'column',flexShrink:0,overflow:'hidden'}},
+    return r('aside',{'data-print':'hide',className:'cbt-sidebar'+(this.state.sidebarOpen?' cbt-sb-open':''),style:{width:220,background:c.surf,borderRight:`1px solid ${c.bdr}`,display:'flex',flexDirection:'column',flexShrink:0,overflow:'hidden'}},
       // Project card
       r('div',{style:{padding:'14px 16px',borderBottom:`1px solid ${c.bdr}`}},
         r('div',{style:{fontSize:9,color:c.muted,fontWeight:700,textTransform:'uppercase',letterSpacing:'.08em',marginBottom:4}},'PROJET ACTIF'),
@@ -3593,19 +3593,19 @@ class Component extends DCLogic {
       r('div',{style:{fontSize:11,fontWeight:700,color:c.text,marginBottom:10}},'Cable'),
       r('div',{style:{display:'flex',alignItems:'center',gap:8,marginBottom:10}},
         r('label',{style:{fontSize:10,color:c.text2,fontWeight:600,minWidth:70}},'Longueur'),
-        r('input',{type:'number',value:form.cableLongueur||0,min:0,max:500,step:0.5,onChange:e=>setForm({cableLongueur:+e.target.value}),style:{width:70,background:'#fff',border:'1px solid '+c.bdr2,borderRadius:6,padding:'5px 8px',color:c.text,fontSize:13,fontWeight:700,outline:'none',fontFamily:c.mono}}),
+        r('input',{type:'number',value:form.cableLongueur||0,min:0,max:500,step:0.5,onChange:e=>setForm({cableLongueur:+e.target.value}),style:{width:70,background:c.surf,border:'1px solid '+c.bdr2,borderRadius:6,padding:'5px 8px',color:c.text,fontSize:13,fontWeight:700,outline:'none',fontFamily:c.mono}}),
         r('span',{style:{fontSize:10,color:c.muted}},'m'),
         form.cableLongueur>0&&r('span',{style:{fontSize:9,color:c.muted,marginLeft:4}},'~'+Math.round((form.cableLongueur||0)*1.15)+' m pose')
       ),
       r('div',{style:{display:'flex',alignItems:'center',gap:8,marginBottom:10}},
         r('label',{style:{fontSize:10,color:c.text2,fontWeight:600,minWidth:70}},'Section'),
-        r('select',{value:form.cableSection||'1.5',onChange:e=>setForm({cableSection:e.target.value}),style:{flex:1,background:'#fff',border:'2px solid '+(sectionInsuf?c.danger:(djSection&&form.cableSection!==djSection)?c.danger:(djCalibre&&this.sectionOkForCalibre(form.cableSection,djCalibre)&&(!djSection||form.cableSection===djSection))?'#22c55e':c.bdr2),borderRadius:6,padding:'5px 8px',color:c.text,fontSize:12,fontWeight:600,outline:'none',fontFamily:c.mono}},
+        r('select',{value:form.cableSection||'1.5',onChange:e=>setForm({cableSection:e.target.value}),style:{flex:1,background:c.surf,border:'2px solid '+(sectionInsuf?c.danger:(djSection&&form.cableSection!==djSection)?c.danger:(djCalibre&&this.sectionOkForCalibre(form.cableSection,djCalibre)&&(!djSection||form.cableSection===djSection))?'#22c55e':c.bdr2),borderRadius:6,padding:'5px 8px',color:c.text,fontSize:12,fontWeight:600,outline:'none',fontFamily:c.mono}},
           ...selType.sections.map(s=>{const tooSmall=djCalibre&&!this.sectionOkForCalibre(s,djCalibre);const isGood=djCalibre&&this.sectionOkForCalibre(s,djCalibre)&&(!djSection||s===djSection);return r('option',{key:s,value:s},s+'mm2'+(tooSmall?' (trop petit)':'')+(isGood?' ok':''));})
         )
       ),
       r('div',{style:{display:'flex',alignItems:'center',gap:8,marginBottom:8}},
         r('label',{style:{fontSize:10,color:c.text2,fontWeight:600,minWidth:70}},'Type'),
-        r('select',{value:form.cableType||'H07VU',onChange:e=>{const t=cableTypes.find(x=>x.v===e.target.value);setForm({cableType:e.target.value,cableSection:t&&t.sections.includes(form.cableSection)?form.cableSection:t?t.sections[0]:'1.5'});},style:{flex:1,background:'#fff',border:'1px solid '+c.bdr2,borderRadius:5,padding:'5px 7px',color:c.text,fontSize:11,outline:'none',appearance:'auto'}},
+        r('select',{value:form.cableType||'H07VU',onChange:e=>{const t=cableTypes.find(x=>x.v===e.target.value);setForm({cableType:e.target.value,cableSection:t&&t.sections.includes(form.cableSection)?form.cableSection:t?t.sections[0]:'1.5'});},style:{flex:1,background:c.surf,border:'1px solid '+c.bdr2,borderRadius:5,padding:'5px 7px',color:c.text,fontSize:11,outline:'none',appearance:'auto'}},
           ...cableTypes.map(t=>r('option',{key:t.v,value:t.v},t.l))
         )
       ),
@@ -3629,7 +3629,7 @@ class Component extends DCLogic {
       ),
       r('div',{style:{marginBottom:7}},
         r('label',{style:{display:'block',fontSize:9,color:c.text2,marginBottom:3,fontWeight:600}},'Type'),
-        r('select',{value:dType,onChange:e=>setForm({departType:e.target.value,departId:'',departDist:0}),style:{width:'100%',background:'#fff',border:'1px solid '+c.bdr2,borderRadius:5,padding:'5px 8px',color:c.text,fontSize:11,outline:'none',appearance:'auto'}},
+        r('select',{value:dType,onChange:e=>setForm({departType:e.target.value,departId:'',departDist:0}),style:{width:'100%',background:c.surf,border:'1px solid '+c.bdr2,borderRadius:5,padding:'5px 8px',color:c.text,fontSize:11,outline:'none',appearance:'auto'}},
           r('option',{value:'tableau'},'Tableau electrique'),
           r('option',{value:'boite'},'Boite de derivation'),
           r('option',{value:'zone'},'Zone de commande')
@@ -3638,14 +3638,14 @@ class Component extends DCLogic {
       r('div',{style:{marginBottom:7}},
         dType==='boite'&&allBoites.length===0?
           r('div',{style:{padding:'8px 10px',background:'rgba(0,0,0,.03)',border:'1px dashed '+c.bdr2,borderRadius:6,textAlign:'center',fontSize:10,color:c.muted,fontStyle:'italic'}},'Aucune boite'):
-          r('select',{value:form.departId||'',onChange:e=>setForm({departId:e.target.value}),style:{width:'100%',background:'#fff',border:'1px solid '+c.bdr2,borderRadius:5,padding:'5px 8px',color:c.text,fontSize:11,outline:'none'}},
+          r('select',{value:form.departId||'',onChange:e=>setForm({departId:e.target.value}),style:{width:'100%',background:c.surf,border:'1px solid '+c.bdr2,borderRadius:5,padding:'5px 8px',color:c.text,fontSize:11,outline:'none'}},
             r('option',{value:''},'-- Choisir --'),
             ...(dType==='tableau'?allTabx:dType==='boite'?allBoites:allZones).map(x=>r('option',{key:x.id,value:String(x.id)},dType==='zone'?((x.zoneCode||'')+(x.zoneCode?' — ':'')+x.nom):(x.nom||(x.id+''))))
           )
       ),
       r('div',{style:{display:'flex',alignItems:'center',gap:6}},
         r('label',{style:{fontSize:9,color:c.text2,fontWeight:600,flexShrink:0}},'Distance (m)'),
-        r('input',{type:'number',min:0,max:300,step:0.5,value:dDist,onChange:e=>setForm({departDist:+e.target.value}),style:{width:60,background:'#fff',border:'1px solid '+c.bdr2,borderRadius:5,padding:'4px 7px',color:c.text,fontSize:12,fontWeight:700,outline:'none',fontFamily:c.mono}})
+        r('input',{type:'number',min:0,max:300,step:0.5,value:dDist,onChange:e=>setForm({departDist:+e.target.value}),style:{width:60,background:c.surf,border:'1px solid '+c.bdr2,borderRadius:5,padding:'4px 7px',color:c.text,fontSize:12,fontWeight:700,outline:'none',fontFamily:c.mono}})
       )
     );
   }
@@ -3735,9 +3735,9 @@ class Component extends DCLogic {
             r('div',{style:{background:c.surf3,borderRadius:9,border:'1px solid '+c.bdr,padding:'12px 14px'}},
               r('div',{style:{fontSize:11,fontWeight:700,color:c.text,marginBottom:10}},'Quantite de prises'),
               r('div',{style:{display:'flex',alignItems:'center',gap:6,marginBottom:8}},
-                r('button',{onClick:()=>setForm({quantite:Math.max(1,(form.quantite||1)-1)}),style:{width:26,height:26,borderRadius:5,border:'1px solid '+c.bdr2,background:'#fff',cursor:'pointer',fontSize:15,display:'flex',alignItems:'center',justifyContent:'center',color:c.text}},'-'),
+                r('button',{onClick:()=>setForm({quantite:Math.max(1,(form.quantite||1)-1)}),style:{width:26,height:26,borderRadius:5,border:'1px solid '+c.bdr2,background:c.surf,cursor:'pointer',fontSize:15,display:'flex',alignItems:'center',justifyContent:'center',color:c.text}},'-'),
                 r('span',{style:{fontSize:18,fontWeight:800,color:c.text,fontFamily:c.mono,minWidth:28,textAlign:'center'}},form.quantite||1),
-                r('button',{onClick:()=>setForm({quantite:(form.quantite||1)+1}),style:{width:26,height:26,borderRadius:5,border:'1px solid '+c.bdr2,background:'#fff',cursor:'pointer',fontSize:15,display:'flex',alignItems:'center',justifyContent:'center',color:c.text}},'+'),
+                r('button',{onClick:()=>setForm({quantite:(form.quantite||1)+1}),style:{width:26,height:26,borderRadius:5,border:'1px solid '+c.bdr2,background:c.surf,cursor:'pointer',fontSize:15,display:'flex',alignItems:'center',justifyContent:'center',color:c.text}},'+'),
                 r('span',{style:{fontSize:10,color:c.muted,marginLeft:4}},'prises 2P+T 16A')
               ),
               r('div',{style:{display:'flex',justifyContent:'space-between',padding:'5px 8px',background:'rgba(59,130,246,.06)',borderRadius:6,border:'1px solid rgba(59,130,246,.15)'}},
@@ -3753,10 +3753,10 @@ class Component extends DCLogic {
             r('div',{style:{background:c.surf3,borderRadius:9,border:'1px solid '+c.bdr,padding:'12px 14px'}},
               r('div',{style:{fontSize:11,fontWeight:700,color:c.text,marginBottom:8}},'Specifications prises'),
               r('div',{style:{display:'grid',gridTemplateColumns:'1fr 1fr',gap:6,fontSize:10}},
-                r('div',{style:{padding:'6px 8px',background:'#fff',borderRadius:6,border:'1px solid '+c.bdr}},r('div',{style:{color:c.muted,marginBottom:2}},'Norme'),r('div',{style:{fontWeight:700,color:c.text}},'NF C 15-100')),
-                r('div',{style:{padding:'6px 8px',background:'#fff',borderRadius:6,border:'1px solid '+c.bdr}},r('div',{style:{color:c.muted,marginBottom:2}},'Calibre'),r('div',{style:{fontWeight:700,color:c.text}},'16A / 2P+T')),
-                r('div',{style:{padding:'6px 8px',background:'#fff',borderRadius:6,border:'1px solid '+c.bdr}},r('div',{style:{color:c.muted,marginBottom:2}},'Section min.'),r('div',{style:{fontWeight:700,color:c.text}},'2.5mm²')),
-                r('div',{style:{padding:'6px 8px',background:'#fff',borderRadius:6,border:'1px solid '+c.bdr}},r('div',{style:{color:c.muted,marginBottom:2}},'DDR'),r('div',{style:{fontWeight:700,color:isPriseSDB?'#0284C7':c.text}},isPriseSDB?'30mA type A':'30mA type AC'))
+                r('div',{style:{padding:'6px 8px',background:c.surf,borderRadius:6,border:'1px solid '+c.bdr}},r('div',{style:{color:c.muted,marginBottom:2}},'Norme'),r('div',{style:{fontWeight:700,color:c.text}},'NF C 15-100')),
+                r('div',{style:{padding:'6px 8px',background:c.surf,borderRadius:6,border:'1px solid '+c.bdr}},r('div',{style:{color:c.muted,marginBottom:2}},'Calibre'),r('div',{style:{fontWeight:700,color:c.text}},'16A / 2P+T')),
+                r('div',{style:{padding:'6px 8px',background:c.surf,borderRadius:6,border:'1px solid '+c.bdr}},r('div',{style:{color:c.muted,marginBottom:2}},'Section min.'),r('div',{style:{fontWeight:700,color:c.text}},'2.5mm²')),
+                r('div',{style:{padding:'6px 8px',background:c.surf,borderRadius:6,border:'1px solid '+c.bdr}},r('div',{style:{color:c.muted,marginBottom:2}},'DDR'),r('div',{style:{fontWeight:700,color:isPriseSDB?'#0284C7':c.text}},isPriseSDB?'30mA type A':'30mA type AC'))
               ),
               r('div',{style:{marginTop:8,padding:'6px 10px',background:'rgba(59,130,246,.04)',borderRadius:6,fontSize:9,color:c.muted}},'Hauteur standard: 0.35m · Max 8 prises/circuit · DDR 30mA obligatoire')
             ),
@@ -3814,13 +3814,13 @@ class Component extends DCLogic {
               r('div',{style:{fontSize:11,fontWeight:700,color:c.text,marginBottom:10}},'Quantite & Puissance'),
               r('div',{style:{display:'flex',alignItems:'center',gap:6,marginBottom:8}},
                 r('label',{style:{fontSize:10,color:c.text2,fontWeight:600,minWidth:70}},'Points'),
-                r('button',{onClick:()=>setForm({quantite:Math.max(1,(form.quantite||1)-1)}),style:{width:26,height:26,borderRadius:5,border:'1px solid '+c.bdr2,background:'#fff',cursor:'pointer',fontSize:15,display:'flex',alignItems:'center',justifyContent:'center',color:c.text}},'-'),
+                r('button',{onClick:()=>setForm({quantite:Math.max(1,(form.quantite||1)-1)}),style:{width:26,height:26,borderRadius:5,border:'1px solid '+c.bdr2,background:c.surf,cursor:'pointer',fontSize:15,display:'flex',alignItems:'center',justifyContent:'center',color:c.text}},'-'),
                 r('span',{style:{fontSize:18,fontWeight:800,color:c.text,fontFamily:c.mono,minWidth:28,textAlign:'center'}},form.quantite||1),
-                r('button',{onClick:()=>setForm({quantite:(form.quantite||1)+1}),style:{width:26,height:26,borderRadius:5,border:'1px solid '+c.bdr2,background:'#fff',cursor:'pointer',fontSize:15,display:'flex',alignItems:'center',justifyContent:'center',color:c.text}},'+')
+                r('button',{onClick:()=>setForm({quantite:(form.quantite||1)+1}),style:{width:26,height:26,borderRadius:5,border:'1px solid '+c.bdr2,background:c.surf,cursor:'pointer',fontSize:15,display:'flex',alignItems:'center',justifyContent:'center',color:c.text}},'+')
               ),
               !isDataOnly&&r('div',{style:{display:'flex',alignItems:'center',gap:6,marginBottom:6}},
                 r('label',{style:{fontSize:10,color:c.text2,fontWeight:600,minWidth:70}},'W/unite'),
-                r('input',{type:'number',value:form.puissance||puissanceRef,min:0,max:2000,onChange:e=>setForm({puissance:+e.target.value}),style:{flex:1,background:'#fff',border:'1px solid '+c.bdr2,borderRadius:6,padding:'5px 8px',color:c.text,fontSize:13,fontWeight:700,outline:'none',fontFamily:c.mono}})
+                r('input',{type:'number',value:form.puissance||puissanceRef,min:0,max:2000,onChange:e=>setForm({puissance:+e.target.value}),style:{flex:1,background:c.surf,border:'1px solid '+c.bdr2,borderRadius:6,padding:'5px 8px',color:c.text,fontSize:13,fontWeight:700,outline:'none',fontFamily:c.mono}})
               ),
               r('div',{style:{display:'flex',justifyContent:'space-between',padding:'5px 8px',background:fnInfo?fnInfo.color+'08':'rgba(0,0,0,.04)',borderRadius:6,border:'1px solid '+(fnInfo?fnInfo.color+'25':'#eee')}},
                 r('span',{style:{fontSize:10,color:c.muted,fontWeight:600}},isDataOnly?'Circuit courant faible':'Total'),
@@ -3834,10 +3834,10 @@ class Component extends DCLogic {
             r('div',{style:{background:c.surf3,borderRadius:9,border:'1px solid '+c.bdr,padding:'12px 14px'}},
               r('div',{style:{fontSize:11,fontWeight:700,color:c.text,marginBottom:8}},'Specifications media'),
               r('div',{style:{display:'grid',gridTemplateColumns:'1fr 1fr',gap:6,fontSize:10}},
-                r('div',{style:{padding:'6px 8px',background:'#fff',borderRadius:6,border:'1px solid '+c.bdr}},r('div',{style:{color:c.muted,marginBottom:2}},'Type'),r('div',{style:{fontWeight:700,color:c.text}},mediaLabels[fn.type]||fn.type)),
-                r('div',{style:{padding:'6px 8px',background:'#fff',borderRadius:6,border:'1px solid '+c.bdr}},r('div',{style:{color:c.muted,marginBottom:2}},'Circuit'),r('div',{style:{fontWeight:700,color:c.text}},isDataOnly?'Courant faible':'Courant fort')),
-                r('div',{style:{padding:'6px 8px',background:'#fff',borderRadius:6,border:'1px solid '+c.bdr}},r('div',{style:{color:c.muted,marginBottom:2}},'Section'),r('div',{style:{fontWeight:700,color:c.text}},isDataOnly?'Cable data':'1.5mm2')),
-                r('div',{style:{padding:'6px 8px',background:'#fff',borderRadius:6,border:'1px solid '+c.bdr}},r('div',{style:{color:c.muted,marginBottom:2}},'CB type'),r('div',{style:{fontWeight:700,color:c.text}},isDataOnly?'N/A':'B10A'))
+                r('div',{style:{padding:'6px 8px',background:c.surf,borderRadius:6,border:'1px solid '+c.bdr}},r('div',{style:{color:c.muted,marginBottom:2}},'Type'),r('div',{style:{fontWeight:700,color:c.text}},mediaLabels[fn.type]||fn.type)),
+                r('div',{style:{padding:'6px 8px',background:c.surf,borderRadius:6,border:'1px solid '+c.bdr}},r('div',{style:{color:c.muted,marginBottom:2}},'Circuit'),r('div',{style:{fontWeight:700,color:c.text}},isDataOnly?'Courant faible':'Courant fort')),
+                r('div',{style:{padding:'6px 8px',background:c.surf,borderRadius:6,border:'1px solid '+c.bdr}},r('div',{style:{color:c.muted,marginBottom:2}},'Section'),r('div',{style:{fontWeight:700,color:c.text}},isDataOnly?'Cable data':'1.5mm2')),
+                r('div',{style:{padding:'6px 8px',background:c.surf,borderRadius:6,border:'1px solid '+c.bdr}},r('div',{style:{color:c.muted,marginBottom:2}},'CB type'),r('div',{style:{fontWeight:700,color:c.text}},isDataOnly?'N/A':'B10A'))
               ),
               fn.type==='camera'&&r('div',{style:{marginTop:8,padding:'6px 10px',background:'rgba(148,163,184,.06)',borderRadius:6,fontSize:9,color:c.muted}},'PoE 802.3af — alim. via reseau — prise RJ45 en plus si enregistreur'),
               fn.type==='rj45'&&r('div',{style:{marginTop:8,padding:'6px 10px',background:'rgba(6,182,212,.06)',borderRadius:6,fontSize:9,color:'#06b6d4'}},'Gaine ICTA separee des circuits de puissance (NF C 15-100 sect.444) — distance min 10cm'),
@@ -3907,10 +3907,10 @@ class Component extends DCLogic {
             r('div',{style:{background:c.surf3,borderRadius:9,border:'2px solid '+(fnInfo?fnInfo.color+'40':'#eee'),padding:'12px 14px'}},
               r('div',{style:{fontSize:11,fontWeight:700,color:c.text,marginBottom:10}},'Specifications electriques (NF C 15-100)'),
               r('div',{style:{display:'grid',gridTemplateColumns:'1fr 1fr',gap:6,fontSize:10,marginBottom:10}},
-                r('div',{style:{padding:'7px 10px',background:'#fff',borderRadius:7,border:'1px solid '+c.bdr}},r('div',{style:{color:c.muted,fontSize:8,textTransform:'uppercase',letterSpacing:'.05em',marginBottom:2}},'Puissance nominale'),r('div',{style:{fontWeight:800,color:fnInfo?fnInfo.color:c.text,fontFamily:c.mono,fontSize:14}},spec.puissance+'W')),
-                r('div',{style:{padding:'7px 10px',background:'#fff',borderRadius:7,border:'1px solid '+c.bdr}},r('div',{style:{color:c.muted,fontSize:8,textTransform:'uppercase',letterSpacing:'.05em',marginBottom:2}},'Calibre CB'),r('div',{style:{fontWeight:800,color:'#ef4444',fontFamily:c.mono,fontSize:14}},spec.courbe+spec.calibre+'A')),
-                r('div',{style:{padding:'7px 10px',background:'#fff',borderRadius:7,border:'1px solid '+c.bdr}},r('div',{style:{color:c.muted,fontSize:8,textTransform:'uppercase',letterSpacing:'.05em',marginBottom:2}},'Section min.'),r('div',{style:{fontWeight:800,color:c.text,fontFamily:c.mono,fontSize:14}},spec.section+'mm2')),
-                r('div',{style:{padding:'7px 10px',background:'#fff',borderRadius:7,border:'1px solid '+c.bdr}},r('div',{style:{color:c.muted,fontSize:8,textTransform:'uppercase',letterSpacing:'.05em',marginBottom:2}},'DDR'),r('div',{style:{fontWeight:800,color:'#0284C7',fontFamily:c.mono,fontSize:14}},spec.ddr+'mA '+spec.ddrType))
+                r('div',{style:{padding:'7px 10px',background:c.surf,borderRadius:7,border:'1px solid '+c.bdr}},r('div',{style:{color:c.muted,fontSize:8,textTransform:'uppercase',letterSpacing:'.05em',marginBottom:2}},'Puissance nominale'),r('div',{style:{fontWeight:800,color:fnInfo?fnInfo.color:c.text,fontFamily:c.mono,fontSize:14}},spec.puissance+'W')),
+                r('div',{style:{padding:'7px 10px',background:c.surf,borderRadius:7,border:'1px solid '+c.bdr}},r('div',{style:{color:c.muted,fontSize:8,textTransform:'uppercase',letterSpacing:'.05em',marginBottom:2}},'Calibre CB'),r('div',{style:{fontWeight:800,color:'#ef4444',fontFamily:c.mono,fontSize:14}},spec.courbe+spec.calibre+'A')),
+                r('div',{style:{padding:'7px 10px',background:c.surf,borderRadius:7,border:'1px solid '+c.bdr}},r('div',{style:{color:c.muted,fontSize:8,textTransform:'uppercase',letterSpacing:'.05em',marginBottom:2}},'Section min.'),r('div',{style:{fontWeight:800,color:c.text,fontFamily:c.mono,fontSize:14}},spec.section+'mm2')),
+                r('div',{style:{padding:'7px 10px',background:c.surf,borderRadius:7,border:'1px solid '+c.bdr}},r('div',{style:{color:c.muted,fontSize:8,textTransform:'uppercase',letterSpacing:'.05em',marginBottom:2}},'DDR'),r('div',{style:{fontWeight:800,color:'#0284C7',fontFamily:c.mono,fontSize:14}},spec.ddr+'mA '+spec.ddrType))
               ),
               spec.note&&r('div',{style:{padding:'7px 10px',background:fnInfo?fnInfo.color+'06':'rgba(0,0,0,.03)',border:'1px solid '+(fnInfo?fnInfo.color+'20':'#eee'),borderRadius:6,fontSize:9,color:c.muted,lineHeight:1.6}},spec.note)
             ),
@@ -3994,13 +3994,13 @@ class Component extends DCLogic {
               r('div',{style:{fontSize:11,fontWeight:700,color:c.text,marginBottom:10}},'Quantite & Puissance'),
               r('div',{style:{display:'flex',alignItems:'center',gap:6,marginBottom:8}},
                 r('label',{style:{fontSize:10,color:c.text2,fontWeight:600,minWidth:70}},'Quantite'),
-                r('button',{onClick:()=>setForm({quantite:Math.max(1,(form.quantite||1)-1)}),style:{width:26,height:26,borderRadius:5,border:'1px solid '+c.bdr2,background:'#fff',cursor:'pointer',fontSize:15,display:'flex',alignItems:'center',justifyContent:'center',color:c.text}},'-'),
+                r('button',{onClick:()=>setForm({quantite:Math.max(1,(form.quantite||1)-1)}),style:{width:26,height:26,borderRadius:5,border:'1px solid '+c.bdr2,background:c.surf,cursor:'pointer',fontSize:15,display:'flex',alignItems:'center',justifyContent:'center',color:c.text}},'-'),
                 r('span',{style:{fontSize:18,fontWeight:800,color:c.text,fontFamily:c.mono,minWidth:28,textAlign:'center'}},form.quantite||1),
-                r('button',{onClick:()=>setForm({quantite:(form.quantite||1)+1}),style:{width:26,height:26,borderRadius:5,border:'1px solid '+c.bdr2,background:'#fff',cursor:'pointer',fontSize:15,display:'flex',alignItems:'center',justifyContent:'center',color:c.text}},'+')
+                r('button',{onClick:()=>setForm({quantite:(form.quantite||1)+1}),style:{width:26,height:26,borderRadius:5,border:'1px solid '+c.bdr2,background:c.surf,cursor:'pointer',fontSize:15,display:'flex',alignItems:'center',justifyContent:'center',color:c.text}},'+')
               ),
               r('div',{style:{display:'flex',alignItems:'center',gap:6,marginBottom:6}},
                 r('label',{style:{fontSize:10,color:c.text2,fontWeight:600,minWidth:70}},'W/unite'),
-                r('input',{type:'number',value:Math.abs(+form.puissance||td.puissance),min:0,max:50000,onChange:e=>setForm({puissance:+e.target.value}),style:{flex:1,background:'#fff',border:'1px solid '+c.bdr2,borderRadius:6,padding:'5px 8px',color:c.text,fontSize:13,fontWeight:700,outline:'none',fontFamily:c.mono}})
+                r('input',{type:'number',value:Math.abs(+form.puissance||td.puissance),min:0,max:50000,onChange:e=>setForm({puissance:+e.target.value}),style:{flex:1,background:c.surf,border:'1px solid '+c.bdr2,borderRadius:6,padding:'5px 8px',color:c.text,fontSize:13,fontWeight:700,outline:'none',fontFamily:c.mono}})
               ),
               r('div',{style:{display:'flex',justifyContent:'space-between',padding:'5px 8px',background:fnInfo?fnInfo.color+'08':'rgba(0,0,0,.04)',borderRadius:6,border:'1px solid '+(fnInfo?fnInfo.color+'20':'#eee')}},
                 r('span',{style:{fontSize:10,color:c.muted,fontWeight:600}},isProduction?'Production estimee':'Puissance totale'),
@@ -4015,10 +4015,10 @@ class Component extends DCLogic {
             r('div',{style:{background:c.surf3,borderRadius:9,border:'1px solid '+c.bdr,padding:'12px 14px'}},
               r('div',{style:{fontSize:11,fontWeight:700,color:c.text,marginBottom:8}},'Preconisations NF C 15-100'),
               r('div',{style:{display:'grid',gridTemplateColumns:'1fr 1fr',gap:6,fontSize:10}},
-                r('div',{style:{padding:'7px 10px',background:'#fff',borderRadius:7,border:'1px solid '+c.bdr}},r('div',{style:{color:c.muted,fontSize:8,textTransform:'uppercase',letterSpacing:'.05em',marginBottom:2}},'Section preconisee'),r('div',{style:{fontWeight:800,color:c.text,fontFamily:c.mono,fontSize:13}},td.section+'mm2')),
-                r('div',{style:{padding:'7px 10px',background:'#fff',borderRadius:7,border:'1px solid '+c.bdr}},r('div',{style:{color:c.muted,fontSize:8,textTransform:'uppercase',letterSpacing:'.05em',marginBottom:2}},'Calibre CB'),r('div',{style:{fontWeight:800,color:'#ef4444',fontFamily:c.mono,fontSize:13}},'C'+td.calibre+'A')),
-                r('div',{style:{padding:'7px 10px',background:'#fff',borderRadius:7,border:'1px solid '+c.bdr}},r('div',{style:{color:c.muted,fontSize:8,textTransform:'uppercase',letterSpacing:'.05em',marginBottom:2}},'Protection diff.'),r('div',{style:{fontWeight:800,color:'#0284C7',fontFamily:c.mono,fontSize:13}},'30mA')),
-                r('div',{style:{padding:'7px 10px',background:'#fff',borderRadius:7,border:'1px solid '+c.bdr}},r('div',{style:{color:c.muted,fontSize:8,textTransform:'uppercase',letterSpacing:'.05em',marginBottom:2}},'Categorie'),r('div',{style:{fontWeight:700,color:td.color||fnInfo?.color||c.muted,fontSize:11}},td.tag))
+                r('div',{style:{padding:'7px 10px',background:c.surf,borderRadius:7,border:'1px solid '+c.bdr}},r('div',{style:{color:c.muted,fontSize:8,textTransform:'uppercase',letterSpacing:'.05em',marginBottom:2}},'Section preconisee'),r('div',{style:{fontWeight:800,color:c.text,fontFamily:c.mono,fontSize:13}},td.section+'mm2')),
+                r('div',{style:{padding:'7px 10px',background:c.surf,borderRadius:7,border:'1px solid '+c.bdr}},r('div',{style:{color:c.muted,fontSize:8,textTransform:'uppercase',letterSpacing:'.05em',marginBottom:2}},'Calibre CB'),r('div',{style:{fontWeight:800,color:'#ef4444',fontFamily:c.mono,fontSize:13}},'C'+td.calibre+'A')),
+                r('div',{style:{padding:'7px 10px',background:c.surf,borderRadius:7,border:'1px solid '+c.bdr}},r('div',{style:{color:c.muted,fontSize:8,textTransform:'uppercase',letterSpacing:'.05em',marginBottom:2}},'Protection diff.'),r('div',{style:{fontWeight:800,color:'#0284C7',fontFamily:c.mono,fontSize:13}},'30mA')),
+                r('div',{style:{padding:'7px 10px',background:c.surf,borderRadius:7,border:'1px solid '+c.bdr}},r('div',{style:{color:c.muted,fontSize:8,textTransform:'uppercase',letterSpacing:'.05em',marginBottom:2}},'Categorie'),r('div',{style:{fontWeight:700,color:td.color||fnInfo?.color||c.muted,fontSize:11}},td.tag))
               )
             ),
             this._editFnCBBloc(r,c,fn,form,fnPuissanceLive,fnPuissanceSaved)
@@ -4160,16 +4160,16 @@ class Component extends DCLogic {
               r('div',{style:{fontSize:11,fontWeight:700,color:c.text,marginBottom:10}},'Quantite & Puissance'),
               r('div',{style:{display:'flex',alignItems:'center',gap:6,marginBottom:8}},
                 r('label',{style:{fontSize:10,color:c.text2,fontWeight:600,minWidth:70}},'Luminaires'),
-                r('button',{onClick:()=>setForm({quantite:Math.max(1,(form.quantite||1)-1)}),style:{width:26,height:26,borderRadius:5,border:'1px solid '+c.bdr2,background:'#fff',cursor:'pointer',fontSize:15,display:'flex',alignItems:'center',justifyContent:'center',color:c.text}},'-'),
+                r('button',{onClick:()=>setForm({quantite:Math.max(1,(form.quantite||1)-1)}),style:{width:26,height:26,borderRadius:5,border:'1px solid '+c.bdr2,background:c.surf,cursor:'pointer',fontSize:15,display:'flex',alignItems:'center',justifyContent:'center',color:c.text}},'-'),
                 r('span',{style:{fontSize:18,fontWeight:800,color:c.text,fontFamily:c.mono,minWidth:28,textAlign:'center'}},form.quantite||1),
-                r('button',{onClick:()=>setForm({quantite:(form.quantite||1)+1}),style:{width:26,height:26,borderRadius:5,border:'1px solid '+c.bdr2,background:'#fff',cursor:'pointer',fontSize:15,display:'flex',alignItems:'center',justifyContent:'center',color:c.text}},'+'),
+                r('button',{onClick:()=>setForm({quantite:(form.quantite||1)+1}),style:{width:26,height:26,borderRadius:5,border:'1px solid '+c.bdr2,background:c.surf,cursor:'pointer',fontSize:15,display:'flex',alignItems:'center',justifyContent:'center',color:c.text}},'+'),
                 (form.quantite||1)>1&&r('span',{style:{fontSize:8,color:c.muted,fontFamily:c.mono}},
                   Array.from({length:Math.min(form.quantite,3)},(_,i)=>fn.ref+'.'+(i+1)).join(' ')+(form.quantite>3?' …':'')
                 )
               ),
               r('div',{style:{display:'flex',alignItems:'center',gap:6,marginBottom:6}},
                 r('label',{style:{fontSize:10,color:c.text2,fontWeight:600,minWidth:70}},'W/unite'),
-                r('input',{type:'number',value:form.puissance||12,min:1,max:2000,onChange:e=>setForm({puissance:+e.target.value}),style:{flex:1,background:'#fff',border:'1px solid '+c.bdr2,borderRadius:6,padding:'5px 8px',color:c.text,fontSize:13,fontWeight:700,outline:'none',fontFamily:c.mono}})
+                r('input',{type:'number',value:form.puissance||12,min:1,max:2000,onChange:e=>setForm({puissance:+e.target.value}),style:{flex:1,background:c.surf,border:'1px solid '+c.bdr2,borderRadius:6,padding:'5px 8px',color:c.text,fontSize:13,fontWeight:700,outline:'none',fontFamily:c.mono}})
               ),
               r('div',{style:{display:'flex',justifyContent:'space-between',padding:'5px 8px',background:'rgba(2,119,189,.06)',borderRadius:6,border:'1px solid rgba(2,119,189,.15)'}},
                 r('span',{style:{fontSize:10,color:c.muted,fontWeight:600}},'Total'),
@@ -4202,7 +4202,7 @@ class Component extends DCLogic {
                 // Longueur
                 r('div',{style:{display:'flex',alignItems:'center',gap:8,marginBottom:10}},
                   r('label',{style:{fontSize:10,color:c.text2,fontWeight:600,minWidth:70}},'Longueur'),
-                  r('input',{type:'number',value:form.cableLongueur||0,min:0,max:500,step:0.5,onChange:e=>setForm({cableLongueur:+e.target.value}),style:{width:70,background:'#fff',border:'1px solid '+c.bdr2,borderRadius:6,padding:'5px 8px',color:c.text,fontSize:13,fontWeight:700,outline:'none',fontFamily:c.mono}}),
+                  r('input',{type:'number',value:form.cableLongueur||0,min:0,max:500,step:0.5,onChange:e=>setForm({cableLongueur:+e.target.value}),style:{width:70,background:c.surf,border:'1px solid '+c.bdr2,borderRadius:6,padding:'5px 8px',color:c.text,fontSize:13,fontWeight:700,outline:'none',fontFamily:c.mono}}),
                   r('span',{style:{fontSize:10,color:c.muted}},'m'),
                   form.cableLongueur>0&&r('span',{style:{fontSize:9,color:c.muted,marginLeft:4}},'~'+Math.round((form.cableLongueur||0)*1.15)+' m posé')
                 ),
@@ -4213,7 +4213,7 @@ class Component extends DCLogic {
                     value:form.cableSection||'1.5',
                     onChange:e=>setForm({cableSection:e.target.value}),
                     style:{
-                      flex:1,background:'#fff',
+                      flex:1,background:c.surf,
                       border:'2px solid '+(sectionInsuf?c.danger:(djSection&&form.cableSection!==djSection)?c.danger:(djCalibre&&this.sectionOkForCalibre(form.cableSection,djCalibre)&&(!djSection||form.cableSection===djSection))?'#22c55e':c.bdr2),
                       borderRadius:6,padding:'5px 8px',color:c.text,fontSize:12,fontWeight:600,outline:'none',fontFamily:c.mono
                     }
@@ -4228,7 +4228,7 @@ class Component extends DCLogic {
                 // Type de cable (select compact) - apres section
                 r('div',{style:{display:'flex',alignItems:'center',gap:8,marginBottom:8}},
                   r('label',{style:{fontSize:10,color:c.text2,fontWeight:600,minWidth:70}},'Type'),
-                  r('select',{value:form.cableType||'H07VU',onChange:e=>{const t=cableTypes.find(x=>x.v===e.target.value);setForm({cableType:e.target.value,cableSection:t&&t.sections.includes(form.cableSection)?form.cableSection:t?t.sections[0]:'1.5'});},style:{flex:1,background:'#fff',border:'1px solid '+c.bdr2,borderRadius:5,padding:'5px 7px',color:c.text,fontSize:11,outline:'none',appearance:'auto'}},
+                  r('select',{value:form.cableType||'H07VU',onChange:e=>{const t=cableTypes.find(x=>x.v===e.target.value);setForm({cableType:e.target.value,cableSection:t&&t.sections.includes(form.cableSection)?form.cableSection:t?t.sections[0]:'1.5'});},style:{flex:1,background:c.surf,border:'1px solid '+c.bdr2,borderRadius:5,padding:'5px 7px',color:c.text,fontSize:11,outline:'none',appearance:'auto'}},
                     ...cableTypes.map(t=>r('option',{key:t.v,value:t.v},t.l))
                   )
                 ),
@@ -4255,7 +4255,7 @@ class Component extends DCLogic {
                 ),
                 r('div',{style:{marginBottom:7}},
                   r('label',{style:{display:'block',fontSize:9,color:c.text2,marginBottom:3,fontWeight:600}},'Type'),
-                  r('select',{value:dType,onChange:e=>setForm({departType:e.target.value,departId:'',departDist:0}),style:{width:'100%',background:'#fff',border:'1px solid '+c.bdr2,borderRadius:5,padding:'5px 8px',color:c.text,fontSize:11,outline:'none',appearance:'auto'}},
+                  r('select',{value:dType,onChange:e=>setForm({departType:e.target.value,departId:'',departDist:0}),style:{width:'100%',background:c.surf,border:'1px solid '+c.bdr2,borderRadius:5,padding:'5px 8px',color:c.text,fontSize:11,outline:'none',appearance:'auto'}},
                     r('option',{value:'tableau'},'Tableau electrique'),
                     r('option',{value:'boite'},'Boite de derivation'),
                     r('option',{value:'zone'},'Zone de commande')
@@ -4265,7 +4265,7 @@ class Component extends DCLogic {
                   dType==='boite'&&allBoites.length===0?
                     r('div',{style:{padding:'8px 10px',background:'rgba(0,0,0,.03)',border:'1px dashed '+c.bdr2,borderRadius:6,textAlign:'center',fontSize:10,color:c.muted,fontStyle:'italic'}},'Aucune boite — utilisez le bouton + Boite ci-dessous'):
                     r('div',{style:{display:'flex',gap:5,alignItems:'center'}},
-                      r('select',{value:form.departId||'',onChange:e=>setForm({departId:e.target.value}),style:{flex:1,background:'#fff',border:'1px solid '+c.bdr2,borderRadius:5,padding:'5px 8px',color:c.text,fontSize:11,outline:'none'}},
+                      r('select',{value:form.departId||'',onChange:e=>setForm({departId:e.target.value}),style:{flex:1,background:c.surf,border:'1px solid '+c.bdr2,borderRadius:5,padding:'5px 8px',color:c.text,fontSize:11,outline:'none'}},
                         r('option',{value:''},'-- Choisir --'),
                         ...(dType==='tableau'?allTabx:dType==='boite'?allBoites:allZones).map(x=>r('option',{key:x.id,value:String(x.id)},dType==='zone'?((x.zoneCode||'')+(x.zoneCode?' — ':'')+x.nom):(x.nom||(x.id+''))))
                       ),
@@ -4273,7 +4273,7 @@ class Component extends DCLogic {
                 ),
                 r('div',{style:{display:'flex',alignItems:'center',gap:6}},
                   r('label',{style:{fontSize:9,color:c.text2,fontWeight:600,flexShrink:0}},'Distance (m)'),
-                  r('input',{type:'number',min:0,max:300,step:0.5,value:dDist,onChange:e=>setForm({departDist:+e.target.value}),style:{width:60,background:'#fff',border:'1px solid '+c.bdr2,borderRadius:5,padding:'4px 7px',color:c.text,fontSize:12,fontWeight:700,outline:'none',fontFamily:c.mono}})
+                  r('input',{type:'number',min:0,max:300,step:0.5,value:dDist,onChange:e=>setForm({departDist:+e.target.value}),style:{width:60,background:c.surf,border:'1px solid '+c.bdr2,borderRadius:5,padding:'4px 7px',color:c.text,fontSize:12,fontWeight:700,outline:'none',fontFamily:c.mono}})
                 )
               );
             })()
@@ -4285,7 +4285,7 @@ class Component extends DCLogic {
             // Bloc D: Type de luminaire
             r('div',{style:{background:c.surf3,borderRadius:9,border:'1px solid '+c.bdr,padding:'12px 14px'}},
               r('div',{style:{fontSize:11,fontWeight:700,color:c.text,marginBottom:8}},'Type de luminaire'),
-              r('select',{value:form.typeLampe||'led_plafond',onChange:e=>{const lt=this.LAMP_TYPES[e.target.value];setForm({typeLampe:e.target.value,puissance:lt?lt.puissance:form.puissance});},style:{width:'100%',background:'#fff',border:'1px solid '+c.bdr2,borderRadius:6,padding:'7px 10px',color:c.text,fontSize:12,outline:'none',fontFamily:c.font,appearance:'auto'}},
+              r('select',{value:form.typeLampe||'led_plafond',onChange:e=>{const lt=this.LAMP_TYPES[e.target.value];setForm({typeLampe:e.target.value,puissance:lt?lt.puissance:form.puissance});},style:{width:'100%',background:c.surf,border:'1px solid '+c.bdr2,borderRadius:6,padding:'7px 10px',color:c.text,fontSize:12,outline:'none',fontFamily:c.font,appearance:'auto'}},
                 ...Object.entries(this.LAMP_TYPES).map(([k,lt])=>r('option',{key:k,value:k},lt.label+' — '+lt.puissance+'W'))
               )
             ),
@@ -4357,7 +4357,7 @@ class Component extends DCLogic {
                 r('div',null,
                   ...cmdsLinked.map(i=>{
                     const zone=zonesCommande.find(z=>z.id===i.zoneId);
-                    return r('div',{key:i.id,style:{display:'flex',alignItems:'center',gap:6,padding:'5px 8px',background:'#fff',borderRadius:6,border:'1px solid '+c.bdr,marginBottom:4}},
+                    return r('div',{key:i.id,style:{display:'flex',alignItems:'center',gap:6,padding:'5px 8px',background:c.surf,borderRadius:6,border:'1px solid '+c.bdr,marginBottom:4}},
                       r('div',{style:{flex:1}},
                         r('div',{style:{fontFamily:c.mono,fontSize:10,fontWeight:700,color:sky}},this.genInterCode(i,this.state)),
                         r('div',{style:{fontSize:8,color:c.muted}},i.type+(zone?' · '+(zone.zoneCode||'')+' '+zone.nom:''))
@@ -4394,7 +4394,7 @@ class Component extends DCLogic {
                     ...bdLinked.map(b=>{
                       const bPiece=this.state.pieces.find(p=>p.id===b.pieceId);
                       const typeLabel={encastre:'Encastree',saillie:'En saillie',etanche:'Etanche IP55',plafond:'Plafond DCL'}[b.type]||b.type;
-                      return r('div',{key:b.id,style:{display:'flex',alignItems:'center',gap:6,padding:'5px 8px',background:'#fff',borderRadius:6,border:'1px solid '+c.bdr,marginBottom:4}},
+                      return r('div',{key:b.id,style:{display:'flex',alignItems:'center',gap:6,padding:'5px 8px',background:c.surf,borderRadius:6,border:'1px solid '+c.bdr,marginBottom:4}},
                         r('div',{style:{flex:1}},
                           r('div',{style:{fontFamily:c.mono,fontSize:10,fontWeight:700,color:'#94a3b8'}},b.nom||(b.id+'')),
                           r('div',{style:{fontSize:8,color:c.muted}},typeLabel+(bPiece?' · '+bPiece.nom:'')+(b.hauteurPlafond!=null?' · '+b.hauteurPlafond+'cm plafond':''))
@@ -4472,7 +4472,7 @@ class Component extends DCLogic {
       const mPct=Math.max(pct,nPct);
       const over=totW>lim.maxW||(isCurrent?(d.recepteurs||[]).length:(d.recepteurs||[]).length+1)>lim.maxR;
       const warn=!over&&mPct>80;
-      return r('div',{key:d.id,style:{padding:'10px 12px',background:'#fff',borderRadius:8,border:'2px solid '+(isCurrent?'#ef4444':over?c.danger:warn?c.warn:c.bdr),marginBottom:8}},
+      return r('div',{key:d.id,style:{padding:'10px 12px',background:c.surf,borderRadius:8,border:'2px solid '+(isCurrent?'#ef4444':over?c.danger:warn?c.warn:c.bdr),marginBottom:8}},
         r('div',{style:{display:'flex',alignItems:'center',gap:7,marginBottom:6}},
           r('div',{style:{fontFamily:c.mono,fontSize:14,fontWeight:900,color:'#ef4444',flex:1}},d.code),
           isCurrent&&r('span',{style:{fontSize:8,fontWeight:700,color:'#fff',background:'#ef4444',borderRadius:3,padding:'1px 5px'}},'ASSIGNE'),
@@ -4497,10 +4497,10 @@ class Component extends DCLogic {
         over&&r('div',{style:{marginTop:4,fontSize:9,color:c.danger,fontWeight:700}},'DEPASSE NFC: '+lim.label),
         // Inline edit if current
         isCurrent&&r('div',{style:{marginTop:8,borderTop:'1px solid rgba(239,68,68,.15)',paddingTop:8,display:'grid',gridTemplateColumns:'1fr 1fr',gap:6}},
-          r('div',null,r('label',{style:{display:'block',fontSize:9,color:c.text2,marginBottom:2,fontWeight:600}},'Tableau'),r('select',{value:String(d.tableauId||''),onChange:e=>this.setState(s=>({disjoncteurs:s.disjoncteurs.map(x=>x.id===d.id?{...x,tableauId:e.target.value?+e.target.value:null}:x)})),style:{width:'100%',background:'#fff',border:'1px solid '+c.bdr2,borderRadius:5,padding:'4px 6px',color:c.text,fontSize:10,outline:'none'}},r('option',{value:''},'-- Aucun --'),...this.state.tableauxElec.map(t=>r('option',{key:t.id,value:String(t.id)},(t.type==='secondaire'?'[D] ':'[T] ')+t.nom)))),
-          r('div',null,r('label',{style:{display:'block',fontSize:9,color:c.text2,marginBottom:2,fontWeight:600}},'Section'),r('select',{value:String(d.section||'1.5'),onChange:e=>{this.setState(s=>({disjoncteurs:s.disjoncteurs.map(x=>x.id===d.id?{...x,section:+e.target.value}:x)}));setForm({cableSection:e.target.value});},style:{width:'100%',background:'#fff',border:'1px solid '+c.bdr2,borderRadius:5,padding:'4px 6px',color:c.text,fontSize:10,outline:'none'}},r('option',{value:'1.5'},'1.5mm'),r('option',{value:'2.5'},'2.5mm'),r('option',{value:'4'},'4mm'),r('option',{value:'6'},'6mm'))),
-          r('div',null,r('label',{style:{display:'block',fontSize:9,color:c.text2,marginBottom:2,fontWeight:600}},'Courbe+Cal.'),r('div',{style:{display:'flex',gap:2}},r('select',{value:d.courbe||'B',onChange:e=>this.setState(s=>({disjoncteurs:s.disjoncteurs.map(x=>x.id===d.id?{...x,courbe:e.target.value}:x)})),style:{width:34,background:'#fff',border:'1px solid '+c.bdr2,borderRadius:5,padding:'4px 3px',color:c.text,fontSize:10,outline:'none'}},r('option',{value:'B'},'B'),r('option',{value:'C'},'C'),r('option',{value:'D'},'D')),r('select',{value:d.calibre||10,onChange:e=>{const nc=+e.target.value;this.setState(s=>({disjoncteurs:s.disjoncteurs.map(x=>x.id===d.id?{...x,calibre:nc}:x)}));const ms=this.sectionMinForCalibre(nc);if(parseFloat(form.cableSection)<ms)setForm({cableSection:String(ms)});},style:{flex:1,background:'#fff',border:'1px solid '+c.bdr2,borderRadius:5,padding:'4px 3px',color:c.text,fontSize:10,outline:'none'}},...[6,10,16,20,25,32,40,63].map(v=>r('option',{key:v,value:v},v+'A'))))),
-          r('div',null,r('label',{style:{display:'block',fontSize:9,color:c.text2,marginBottom:2,fontWeight:600}},'DDR'),r('select',{value:d.ddr!=null?d.ddr:30,onChange:e=>this.setState(s=>({disjoncteurs:s.disjoncteurs.map(x=>x.id===d.id?{...x,ddr:+e.target.value}:x)})),style:{width:'100%',background:'#fff',border:'1px solid '+c.bdr2,borderRadius:5,padding:'4px 6px',color:c.text,fontSize:10,outline:'none'}},r('option',{value:0},'Sans'),r('option',{value:30},'30mA'),r('option',{value:100},'100mA'),r('option',{value:300},'300mA')))
+          r('div',null,r('label',{style:{display:'block',fontSize:9,color:c.text2,marginBottom:2,fontWeight:600}},'Tableau'),r('select',{value:String(d.tableauId||''),onChange:e=>this.setState(s=>({disjoncteurs:s.disjoncteurs.map(x=>x.id===d.id?{...x,tableauId:e.target.value?+e.target.value:null}:x)})),style:{width:'100%',background:c.surf,border:'1px solid '+c.bdr2,borderRadius:5,padding:'4px 6px',color:c.text,fontSize:10,outline:'none'}},r('option',{value:''},'-- Aucun --'),...this.state.tableauxElec.map(t=>r('option',{key:t.id,value:String(t.id)},(t.type==='secondaire'?'[D] ':'[T] ')+t.nom)))),
+          r('div',null,r('label',{style:{display:'block',fontSize:9,color:c.text2,marginBottom:2,fontWeight:600}},'Section'),r('select',{value:String(d.section||'1.5'),onChange:e=>{this.setState(s=>({disjoncteurs:s.disjoncteurs.map(x=>x.id===d.id?{...x,section:+e.target.value}:x)}));setForm({cableSection:e.target.value});},style:{width:'100%',background:c.surf,border:'1px solid '+c.bdr2,borderRadius:5,padding:'4px 6px',color:c.text,fontSize:10,outline:'none'}},r('option',{value:'1.5'},'1.5mm'),r('option',{value:'2.5'},'2.5mm'),r('option',{value:'4'},'4mm'),r('option',{value:'6'},'6mm'))),
+          r('div',null,r('label',{style:{display:'block',fontSize:9,color:c.text2,marginBottom:2,fontWeight:600}},'Courbe+Cal.'),r('div',{style:{display:'flex',gap:2}},r('select',{value:d.courbe||'B',onChange:e=>this.setState(s=>({disjoncteurs:s.disjoncteurs.map(x=>x.id===d.id?{...x,courbe:e.target.value}:x)})),style:{width:34,background:c.surf,border:'1px solid '+c.bdr2,borderRadius:5,padding:'4px 3px',color:c.text,fontSize:10,outline:'none'}},r('option',{value:'B'},'B'),r('option',{value:'C'},'C'),r('option',{value:'D'},'D')),r('select',{value:d.calibre||10,onChange:e=>{const nc=+e.target.value;this.setState(s=>({disjoncteurs:s.disjoncteurs.map(x=>x.id===d.id?{...x,calibre:nc}:x)}));const ms=this.sectionMinForCalibre(nc);if(parseFloat(form.cableSection)<ms)setForm({cableSection:String(ms)});},style:{flex:1,background:c.surf,border:'1px solid '+c.bdr2,borderRadius:5,padding:'4px 3px',color:c.text,fontSize:10,outline:'none'}},...[6,10,16,20,25,32,40,63].map(v=>r('option',{key:v,value:v},v+'A'))))),
+          r('div',null,r('label',{style:{display:'block',fontSize:9,color:c.text2,marginBottom:2,fontWeight:600}},'DDR'),r('select',{value:d.ddr!=null?d.ddr:30,onChange:e=>this.setState(s=>({disjoncteurs:s.disjoncteurs.map(x=>x.id===d.id?{...x,ddr:+e.target.value}:x)})),style:{width:'100%',background:c.surf,border:'1px solid '+c.bdr2,borderRadius:5,padding:'4px 6px',color:c.text,fontSize:10,outline:'none'}},r('option',{value:0},'Sans'),r('option',{value:30},'30mA'),r('option',{value:100},'100mA'),r('option',{value:300},'300mA')))
         )
       );
     };
@@ -5393,7 +5393,7 @@ class Component extends DCLogic {
               r('select',{
                 value:String(form.zoneId||''),
                 onChange:e=>setForm(f=>({...f,zoneId:e.target.value})),
-                style:{flex:1,background:'#fff',border:'1px solid '+c.bdr2,borderRadius:7,padding:'8px 12px',color:c.text,fontSize:12,outline:'none'}
+                style:{flex:1,background:c.surf,border:'1px solid '+c.bdr2,borderRadius:7,padding:'8px 12px',color:c.text,fontSize:12,outline:'none'}
               },
                 r('option',{value:''},'-- Choisir une zone --'),
                 ...zonesCommande.map(z=>r('option',{key:z.id,value:String(z.id)},(z.zoneCode?z.zoneCode+' — ':'')+z.nom))
@@ -5661,11 +5661,11 @@ class Component extends DCLogic {
     const getPow=(p)=>(p.fonctions||[]).reduce((s,fn)=>{const q=fn.quantite||1;const pw=fn.type==='eclairage'?(fn.puissance||10)*q:fn.type==='prises'||fn.type==='prises_sdb'?460*q:{four:6000,lave_vaisselle:2200,lave_linge:2500,seche_linge:2400,chauffe_eau:3000,climatisation:2500,portail:500,borne_ve:7400,hotte:300,vmc:200}[fn.type]||0;return s+pw;},0);
     const fmtW=(w)=>w>=1000?(w/1000).toFixed(1)+' kW':w+' W';
     const getAppPow=(app)=>pieces.filter(p=>p.appId===app.id).reduce((s,p)=>s+getPow(p),0);
-    const colHdr=(label,btn)=>r('div',{style:{padding:'11px 14px',borderBottom:`1px solid ${c.bdr}`,display:'flex',justifyContent:'space-between',alignItems:'center',flexShrink:0,background:'#fff'}},r('span',{style:{fontSize:9,fontWeight:700,color:c.muted,textTransform:'uppercase',letterSpacing:'.1em'}},label),btn);
+    const colHdr=(label,btn)=>r('div',{style:{padding:'11px 14px',borderBottom:`1px solid ${c.bdr}`,display:'flex',justifyContent:'space-between',alignItems:'center',flexShrink:0,background:c.surf}},r('span',{style:{fontSize:9,fontWeight:700,color:c.muted,textTransform:'uppercase',letterSpacing:'.1em'}},label),btn);
     const addBtn=(label,onClick)=>r('button',{onClick,style:{background:sky,color:'#fff',border:'none',borderRadius:6,padding:'3px 9px',fontSize:11,fontWeight:700,cursor:'pointer'}},label);
 
     // Col1: Appartements (no icons, with power)
-    const col1=r('div',{style:{width:200,flexShrink:0,borderRight:`1px solid ${c.bdr}`,display:'flex',flexDirection:'column',background:'#fff',overflow:'hidden'}},
+    const col1=r('div',{style:{width:200,flexShrink:0,borderRight:`1px solid ${c.bdr}`,display:'flex',flexDirection:'column',background:c.surf,overflow:'hidden'}},
       colHdr('APPARTEMENTS',r('div',{style:{display:'flex',gap:4,alignItems:'center'}},
         
         addBtn('+',openAddApp)
@@ -5744,7 +5744,7 @@ class Component extends DCLogic {
     const col3=r('div',{style:{flex:1,display:'flex',flexDirection:'column',overflow:'hidden',minWidth:200}},
       !selPiece?
         r('div',{style:{flex:1,display:'flex',flexDirection:'column',overflow:'hidden'}},
-          r('div',{style:{padding:'10px 14px',background:'#fff',borderBottom:`1px solid ${c.bdr}`,fontSize:11,color:c.muted,flexShrink:0,display:'flex',alignItems:'center',gap:6}},
+          r('div',{style:{padding:'10px 14px',background:c.surf,borderBottom:`1px solid ${c.bdr}`,fontSize:11,color:c.muted,flexShrink:0,display:'flex',alignItems:'center',gap:6}},
             this.ico('bulb_ico',13),' Toutes les fonctions — '+(selApp?selApp.nom:'tous les appartements')
           ),
           r('div',{style:{flex:1,overflowY:'auto',padding:'10px 14px',background:c.bg}},
@@ -5761,7 +5761,7 @@ class Component extends DCLogic {
                   r('button',{onClick:()=>this.setState({selectedLogPieceId:p.id}),style:{marginLeft:'auto',fontSize:10,color:'#0277BD',background:'transparent',border:'none',cursor:'pointer',textDecoration:'underline'}},'Détails →')
                 ),
                 r('div',{style:{display:'flex',flexWrap:'wrap',gap:5}},
-                  ...fns.map(fn=>{const fi=this.FNS[fn.type];if(!fi)return null;return r('div',{key:fn.id,style:{display:'inline-flex',alignItems:'center',gap:5,padding:'3px 8px',background:'#fff',border:`1px solid ${c.bdr}`,borderRadius:6,fontSize:11}},
+                  ...fns.map(fn=>{const fi=this.FNS[fn.type];if(!fi)return null;return r('div',{key:fn.id,style:{display:'inline-flex',alignItems:'center',gap:5,padding:'3px 8px',background:c.surf,border:`1px solid ${c.bdr}`,borderRadius:6,fontSize:11}},
                     r('span',{style:{display:'inline-flex',color:fi.color}},this.ico(fi.ico,12)),
                     r('span',{style:{color:c.text}},fi.label),
                     r('span',{style:{color:c.muted,fontFamily:'monospace',fontSize:10}},fn.ref)
@@ -5772,7 +5772,7 @@ class Component extends DCLogic {
           )
         ):
         r('div',{style:{flex:1,display:'flex',flexDirection:'column',overflow:'hidden'}},
-          r('div',{style:{padding:'11px 14px',background:'#fff',borderBottom:`1px solid ${c.bdr}`,display:'flex',alignItems:'center',justifyContent:'space-between',flexShrink:0}},
+          r('div',{style:{padding:'11px 14px',background:c.surf,borderBottom:`1px solid ${c.bdr}`,display:'flex',alignItems:'center',justifyContent:'space-between',flexShrink:0}},
             r('span',{style:{fontSize:9,fontWeight:700,color:c.muted,textTransform:'uppercase',letterSpacing:'.1em'}},'FONCTIONS'),
             r('button',{onClick:openAddFn,style:{background:sky,color:'#fff',border:'none',borderRadius:6,padding:'3px 9px',fontSize:11,fontWeight:700,cursor:'pointer'}},'+')
           ),
@@ -5827,7 +5827,7 @@ class Component extends DCLogic {
     const fnCmds=selFn?interrupteurs.filter(i=>i.circuitRef===selFn.ref):[];
     const fnDjs=selFn?this.state.disjoncteurs.filter(d=>(d.recepteurs||[]).includes(selFn.ref)):[];
 
-    const col4=r('div',{style:{width:276,flexShrink:0,borderLeft:`1px solid ${c.bdr}`,display:'flex',flexDirection:'column',background:'#fff',overflow:'hidden'}},
+    const col4=r('div',{style:{width:276,flexShrink:0,borderLeft:`1px solid ${c.bdr}`,display:'flex',flexDirection:'column',background:c.surf,overflow:'hidden'}},
       // Header
       r('div',{style:{padding:'11px 14px',borderBottom:`1px solid ${c.bdr}`,flexShrink:0,display:'flex',alignItems:'center',justifyContent:'space-between'}},
         r('span',{style:{fontSize:9,fontWeight:700,color:c.muted,textTransform:'uppercase',letterSpacing:'.1em'}},selFn?'DÉTAILS FONCTION':'DISTRIBUTION'),
@@ -5881,7 +5881,7 @@ class Component extends DCLogic {
                   const cs=d.section!=null?d.section:'?';
                   const cd=d.ddr!=null?d.ddr:0;
                   const cp=d.poles||'?';
-                  return r('div',{key:d.id,style:{padding:'8px 10px',marginBottom:4,borderRadius:7,border:'2px solid '+(over?c.danger:warn?c.warn:'rgba(239,68,68,.25)'),background:'#fff'}},
+                  return r('div',{key:d.id,style:{padding:'8px 10px',marginBottom:4,borderRadius:7,border:'2px solid '+(over?c.danger:warn?c.warn:'rgba(239,68,68,.25)'),background:c.surf}},
                     r('div',{style:{display:'flex',alignItems:'center',gap:5,marginBottom:5}},
                       r('div',{style:{fontFamily:c.mono,fontSize:12,fontWeight:900,color:'#ef4444',flex:1}},d.code),
                       this.Bdg(cv+cb+'A','#ef4444'),
@@ -6345,7 +6345,7 @@ class Component extends DCLogic {
           const nPct=Math.min(Math.round((d.recepteurs||[]).length/l.maxR*100),100);
           const over=totW>l.maxW||(d.recepteurs||[]).length>l.maxR;
           const mPct=Math.max(pct,nPct);
-          return r('div',{key:d.id,style:{background:'#fff',border:'1px solid '+(over?c.danger:c.bdr),borderRadius:7,padding:'8px 10px'}},
+          return r('div',{key:d.id,style:{background:c.surf,border:'1px solid '+(over?c.danger:c.bdr),borderRadius:7,padding:'8px 10px'}},
             r('div',{style:{display:'flex',alignItems:'center',gap:5,marginBottom:5}},
               r('div',{style:{fontFamily:c.mono,fontSize:11,fontWeight:800,color:over?c.danger:'#ef4444',flex:1}},d.code),
               this.Bdg(d.courbe+d.calibre+'A','#ef4444'),this.Bdg(d.section+'mm',c.muted),
@@ -6379,7 +6379,7 @@ class Component extends DCLogic {
         const tabCard=(te,col)=>{
           const cbList=djForTab(te.id);
           const totW=cbList.reduce((s,d)=>s+djPwr(d),0);
-          return r('div',{key:te.id,style:{background:'#fff',border:'1px solid '+c.bdr,borderRadius:9,overflow:'hidden',marginBottom:6}},
+          return r('div',{key:te.id,style:{background:c.surf,border:'1px solid '+c.bdr,borderRadius:9,overflow:'hidden',marginBottom:6}},
             r('div',{style:{padding:'9px 12px',borderBottom:'1px solid '+c.bdr,display:'flex',alignItems:'center',gap:9}},
               r('div',{style:{width:30,height:40,background:col==='#0277BD'?'linear-gradient(180deg,#1f3a6e,#0f1f3a)':'linear-gradient(180deg,#2d1f5e,#18103a)',border:'2px solid '+col,borderRadius:4,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',flexShrink:0}},
                 r('div',{style:{fontSize:6,color:col==='#0277BD'?'#6ba3ff':'#c4b5fd',fontWeight:800}},col==='#0277BD'?'TGBT':'DIV'),r('div',{style:{fontSize:5,color:col==='#0277BD'?'#93c5fd':'#a78bfa'}},'|||')
@@ -6451,7 +6451,7 @@ class Component extends DCLogic {
 
         const boiteCardCol=(b)=>{const pc=pieces.find(p=>p.id===b.pieceId);const tab=tableauxElec.find(t=>t.id===b.tableauId);const typeLabel={encastre:'Encastree',saillie:'Saillie',etanche:'IP55',plafond:'DCL'}[b.type]||b.type;if(visibleBdIds&&!visibleBdIds.includes(b.id))return null;const bdOn=filtBdId===b.id;return r('div',{key:b.id,onClick:(e)=>{if(e.target.closest&&e.target.closest('button'))return;toggleSel('bdId',b.id);},style:{margin:'6px 8px',background:bdOn?'rgba(245,158,11,.08)':'#fff',border:'1px solid '+(bdOn?'#f59e0b':c.bdr),borderRadius:7,padding:'8px 10px',cursor:'pointer',outline:selRing(bdOn,'#f59e0b')}},r('div',{style:{display:'flex',alignItems:'center',gap:5,marginBottom:3}},r('span',{style:{fontSize:11,fontWeight:700,color:'#64748b',flex:1,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}},b.nom||(b.id+'')),r('button',{onClick:()=>this.openEdit('addBoite',b,'boiteForm',{nom:b.nom||'',label:'',pieceId:b.pieceId?String(b.pieceId):'',type:b.type,tableauId:b.tableauId?String(b.tableauId):'',position:b.position||'',hauteurPlafond:b.hauteurPlafond||30,cote:b.cote||'plafond',description:b.description||'',retourDepart:false,retourEditFonction:false}),style:{background:'transparent',border:'none',color:c.muted,cursor:'pointer',padding:2}},this.ico('pencil',9)),r('button',{onClick:()=>{this.deleteItem('boitesDeriv',b.id);this.showToast('Supprimee');},style:{background:'transparent',border:'none',color:c.danger,cursor:'pointer',fontSize:11,padding:0}},'x')),r('div',{style:{display:'flex',gap:3,flexWrap:'wrap'}},this.Bdg(typeLabel,'#94a3b8'),pc&&this.Bdg(pc.nom,c.muted),tab&&this.Bdg(tab.nom,'#94a3b8')));};
 
-        const zoneCardCol=(z)=>{const zInters=interrupteurs.filter(i=>i.zoneId===z.id);const pc=pieces.find(p=>p.id===z.pieceId);return r('div',{key:z.id,style:{margin:'6px 8px',background:'#fff',border:'1px solid '+c.bdr,borderRadius:7,overflow:'hidden'}},r('div',{style:{padding:'8px 10px',borderBottom:zInters.length?'1px solid '+c.bdr:'none'}},r('div',{style:{display:'flex',alignItems:'center',gap:5,marginBottom:3}},z.zoneCode&&r('span',{style:{fontSize:8,fontWeight:800,color:'#fff',background:'#7c3aed',borderRadius:3,padding:'1px 4px',flexShrink:0}},z.zoneCode),r('span',{style:{fontSize:11,fontWeight:700,color:c.text,flex:1,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}},z.nom),r('button',{onClick:()=>this.openEdit('addZone',z,'zoneForm',{nom:z.nom,pieceId:z.pieceId?String(z.pieceId):'',position:z.position||'',hauteur:z.hauteur||120,cote:z.cote||'gauche',retourEditFonction:false}),style:{background:'transparent',border:'none',color:c.muted,cursor:'pointer',padding:2}},this.ico('pencil',9)),r('button',{onClick:()=>{this.deleteItem('zonesCommande',z.id);this.showToast('Zone supprimee');},style:{background:'transparent',border:'none',color:c.danger,cursor:'pointer',fontSize:11,padding:0}},'x')),r('div',{style:{display:'flex',gap:3,flexWrap:'wrap'}},pc&&this.Bdg(pc.nom,c.muted),this.Bdg(zInters.length+' inter.','#7c3aed'))),zInters.length>0&&r('div',{style:{padding:'4px 6px',display:'flex',flexDirection:'column',gap:2}},zInters.map(i=>r('div',{key:i.id,style:{display:'flex',alignItems:'center',gap:4,padding:'2px 4px',background:c.surf3,borderRadius:4}},r('span',{style:{fontFamily:c.mono,fontSize:9,fontWeight:700,color:'#0277BD',flex:1}},this.genInterCode(i,this.state)),this.Bdg({simple:'SA',va_vient:'VV',poussoir:'PO',double:'DA',variateur:'VA',detecteur:'DT',domotique:'DM'}[i.type]||i.type,'#0277BD'),r('button',{onClick:()=>{this.deleteItem('interrupteurs',i.id);this.showToast('Supprime');},style:{background:'transparent',border:'none',color:c.danger,cursor:'pointer',fontSize:10,padding:0}},'x')))));};
+        const zoneCardCol=(z)=>{const zInters=interrupteurs.filter(i=>i.zoneId===z.id);const pc=pieces.find(p=>p.id===z.pieceId);return r('div',{key:z.id,style:{margin:'6px 8px',background:c.surf,border:'1px solid '+c.bdr,borderRadius:7,overflow:'hidden'}},r('div',{style:{padding:'8px 10px',borderBottom:zInters.length?'1px solid '+c.bdr:'none'}},r('div',{style:{display:'flex',alignItems:'center',gap:5,marginBottom:3}},z.zoneCode&&r('span',{style:{fontSize:8,fontWeight:800,color:'#fff',background:'#7c3aed',borderRadius:3,padding:'1px 4px',flexShrink:0}},z.zoneCode),r('span',{style:{fontSize:11,fontWeight:700,color:c.text,flex:1,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}},z.nom),r('button',{onClick:()=>this.openEdit('addZone',z,'zoneForm',{nom:z.nom,pieceId:z.pieceId?String(z.pieceId):'',position:z.position||'',hauteur:z.hauteur||120,cote:z.cote||'gauche',retourEditFonction:false}),style:{background:'transparent',border:'none',color:c.muted,cursor:'pointer',padding:2}},this.ico('pencil',9)),r('button',{onClick:()=>{this.deleteItem('zonesCommande',z.id);this.showToast('Zone supprimee');},style:{background:'transparent',border:'none',color:c.danger,cursor:'pointer',fontSize:11,padding:0}},'x')),r('div',{style:{display:'flex',gap:3,flexWrap:'wrap'}},pc&&this.Bdg(pc.nom,c.muted),this.Bdg(zInters.length+' inter.','#7c3aed'))),zInters.length>0&&r('div',{style:{padding:'4px 6px',display:'flex',flexDirection:'column',gap:2}},zInters.map(i=>r('div',{key:i.id,style:{display:'flex',alignItems:'center',gap:4,padding:'2px 4px',background:c.surf3,borderRadius:4}},r('span',{style:{fontFamily:c.mono,fontSize:9,fontWeight:700,color:'#0277BD',flex:1}},this.genInterCode(i,this.state)),this.Bdg({simple:'SA',va_vient:'VV',poussoir:'PO',double:'DA',variateur:'VA',detecteur:'DT',domotique:'DM'}[i.type]||i.type,'#0277BD'),r('button',{onClick:()=>{this.deleteItem('interrupteurs',i.id);this.showToast('Supprime');},style:{background:'transparent',border:'none',color:c.danger,cursor:'pointer',fontSize:10,padding:0}},'x')))));};
 
         const cbColCard2=d=>{
           const tw2=djPwr(d);const l2=this.djNFCLimit(d);const pct2=Math.min(Math.round(tw2/l2.maxW*100),100);const over2=tw2>l2.maxW;
@@ -6537,7 +6537,7 @@ class Component extends DCLogic {
                   const zone=zonesCommande.find(z=>z.id===i.zoneId);
                   const pc=pieces.find(p=>p.id===i.pieceId);
                   const TYPE_LBL={simple:'Simple',va_vient:'Va-et-vient',poussoir:'Poussoir',double:'Double',variateur:'Variateur',detecteur:'Detecteur',domotique:'Domotique'};
-                  return r('div',{key:i.id,style:{margin:'4px 8px',background:'#fff',border:'1px solid '+c.bdr,borderRadius:6,padding:'7px 9px'}},
+                  return r('div',{key:i.id,style:{margin:'4px 8px',background:c.surf,border:'1px solid '+c.bdr,borderRadius:6,padding:'7px 9px'}},
                     r('div',{style:{display:'flex',alignItems:'center',gap:4,marginBottom:2}},
                       r('span',{style:{fontFamily:c.mono,fontSize:11,fontWeight:900,color:'#0891b2',flex:1}},this.genInterCode(i,this.state)),
                       this.Bdg(TYPE_LBL[i.type]||i.type,'#0891b2'),
@@ -6655,11 +6655,11 @@ class Component extends DCLogic {
       const qcNc2=allQCids2.filter(id=>realisationChecks['qc_nc_'+id]).length;
       const qcPct2=allQCids2.length?Math.round(qcOk2/allQCids2.length*100):0;
       const Bar=(pct,col)=>r('div',{style:{height:5,background:'#f1f5f9',borderRadius:3,overflow:'hidden',marginTop:5}},r('div',{style:{height:'100%',width:Math.min(pct,100)+'%',background:col,borderRadius:3}}));
-      const Sec=(title,col,children)=>r('div',{style:{background:'#fff',border:'1px solid #e2e8f0',borderRadius:10,overflow:'hidden',boxShadow:'0 1px 3px rgba(0,0,0,.05)'}},r('div',{style:{padding:'8px 14px',borderBottom:'2px solid '+col,background:col+'08',fontSize:9,fontWeight:800,color:col,textTransform:'uppercase',letterSpacing:'.08em'}},title),r('div',{style:{padding:'10px 14px'}},children));
+      const Sec=(title,col,children)=>r('div',{style:{background:c.surf,border:'1px solid #e2e8f0',borderRadius:10,overflow:'hidden',boxShadow:'0 1px 3px rgba(0,0,0,.05)'}},r('div',{style:{padding:'8px 14px',borderBottom:'2px solid '+col,background:col+'08',fontSize:9,fontWeight:800,color:col,textTransform:'uppercase',letterSpacing:'.08em'}},title),r('div',{style:{padding:'10px 14px'}},children));
       return r('div',null,
         r('div',{className:'cbt-rgrid5',style:{display:'grid',gridTemplateColumns:'repeat(5,1fr)',gap:8,marginBottom:14}},
           [{v:allFnsAll.length,l:'Fonctions',col:'#0277BD'},{v:totalCables,l:'Cables W',col:'#7c3aed'},{v:this.state.disjoncteurs.length,l:'Disjoncteurs',col:'#ef4444'},{v:interrupteurs.length,l:'Interrupteurs',col:'#0891b2'},{v:boitesDeriv.length+tableauxElec.length,l:'BD + TE',col:'#f59e0b'}]
-          .map(s=>r('div',{key:s.l,style:{background:'#fff',border:'1px solid #e2e8f0',borderRadius:9,padding:'10px 13px',boxShadow:'0 1px 3px rgba(0,0,0,.04)'}},r('div',{style:{fontFamily:c.mono,fontSize:20,fontWeight:900,color:s.col}},s.v),r('div',{style:{fontSize:9,fontWeight:700,color:c.muted,textTransform:'uppercase',letterSpacing:'.05em',marginTop:2}},s.l)))
+          .map(s=>r('div',{key:s.l,style:{background:c.surf,border:'1px solid #e2e8f0',borderRadius:9,padding:'10px 13px',boxShadow:'0 1px 3px rgba(0,0,0,.04)'}},r('div',{style:{fontFamily:c.mono,fontSize:20,fontWeight:900,color:s.col}},s.v),r('div',{style:{fontSize:9,fontWeight:700,color:c.muted,textTransform:'uppercase',letterSpacing:'.05em',marginTop:2}},s.l)))
         ),
         r('div',{style:{display:'grid',gridTemplateColumns:'1fr 1fr',gap:12,marginBottom:12}},
           Sec('Nomenclature cables','#7c3aed',r('div',null,
@@ -6680,11 +6680,11 @@ class Component extends DCLogic {
           ))
         ),
         r('div',{style:{display:'grid',gridTemplateColumns:'1fr 1fr',gap:12}},
-          r('div',{style:{background:'#fff',border:'1px solid #e2e8f0',borderRadius:10,overflow:'hidden',boxShadow:'0 1px 3px rgba(0,0,0,.04)'}},
+          r('div',{style:{background:c.surf,border:'1px solid #e2e8f0',borderRadius:10,overflow:'hidden',boxShadow:'0 1px 3px rgba(0,0,0,.04)'}},
             r('div',{style:{padding:'8px 14px',borderBottom:'2px solid #0277BD',background:'#0277BD08',fontSize:9,fontWeight:800,color:'#0277BD',textTransform:'uppercase',letterSpacing:'.08em'}},'Fonctions par appartement'),
             r('div',null,...appartements.map(app=>{const appPcs=pieces.filter(p=>p.appId===app.id);const appFns=appPcs.flatMap(p=>p.fonctions||[]);return r('div',{key:app.id,style:{padding:'6px 14px',borderBottom:'1px solid #f1f5f9'}},r('div',{style:{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:2}},r('span',{style:{fontSize:10,fontWeight:700,color:c.text}},app.nom),r('span',{style:{fontFamily:c.mono,fontSize:9,color:'#0277BD',fontWeight:700}},appFns.length+' fn')),r('div',{style:{display:'flex',gap:3,flexWrap:'wrap'},...appPcs.slice(0,5).map(p=>r('span',{key:p.id,style:{fontSize:8,padding:'1px 5px',borderRadius:3,background:c.surf3,color:c.muted}},p.nom))}));}))
           ),
-          r('div',{style:{background:'#fff',border:'1px solid #e2e8f0',borderRadius:10,overflow:'hidden',boxShadow:'0 1px 3px rgba(0,0,0,.04)'}},
+          r('div',{style:{background:c.surf,border:'1px solid #e2e8f0',borderRadius:10,overflow:'hidden',boxShadow:'0 1px 3px rgba(0,0,0,.04)'}},
             r('div',{style:{padding:'8px 14px',borderBottom:'2px solid #f59e0b',background:'#f59e0b08',fontSize:9,fontWeight:800,color:'#d97706',textTransform:'uppercase',letterSpacing:'.08em'}},'Avancement chantier par phase'),
             r('div',{style:{padding:'8px 14px'}},
               ...[{l:'Gaines posees',k:'gaine',col:'#7c3aed',n:filtFns.length,fn2:(fn)=>realisationChecks['gaine_'+fn.ref]},{l:'Cables tires',k:'cable',col:'#0277BD',n:filtFns.length,fn2:(fn)=>realisationChecks['cable_'+fn.ref]},{l:'BD/TE poses',k:'bdTE',col:'#f59e0b',n:boitesDeriv.length+tableauxElec.length,fn2:null},{l:'Recepteurs raccordes',k:'recep',col:'#16a34a',n:filtFns.length,fn2:(fn)=>realisationChecks['recep_'+fn.ref]},{l:'Interrupteurs poses',k:'inter',col:'#0891b2',n:interrupteurs.length,fn2:null}]
@@ -6967,7 +6967,7 @@ class Component extends DCLogic {
             ))
         ),
         // Table
-        r('div',{style:{background:'#fff',border:'1px solid #e2e8f0',borderRadius:10,overflow:'hidden',boxShadow:'0 1px 4px rgba(0,0,0,.06)'}},
+        r('div',{style:{background:c.surf,border:'1px solid #e2e8f0',borderRadius:10,overflow:'hidden',boxShadow:'0 1px 4px rgba(0,0,0,.06)'}},
           r('div',{style:{overflowX:'auto',WebkitOverflowScrolling:'touch'}},
             r('table',{style:{width:'100%',borderCollapse:'collapse',minWidth:1660,tableLayout:'fixed'}},
               r('thead',null,r('tr',null,
@@ -7163,9 +7163,9 @@ class Component extends DCLogic {
       const qcOk3=allQCids3.filter(id=>realisationChecks['qc_'+id]).length;
       const nomKeys=Object.keys(nomenclatureOverrides).filter(k=>k.includes('_fil'));
       const confNom3=nomKeys.filter(k=>(nomenclatureOverrides[k]||{}).statut==='conf').length;
-      const RB=(lbl,col,sub,icon)=>r('div',{style:{background:'#fff',border:'1px solid #e2e8f0',borderRadius:10,padding:'12px 16px',display:'flex',alignItems:'center',gap:12,marginBottom:8,cursor:'pointer',boxShadow:'0 1px 3px rgba(0,0,0,.04)'},onClick:()=>window.print()},r('div',{style:{width:38,height:38,borderRadius:8,background:col+'15',display:'flex',alignItems:'center',justifyContent:'center',color:col,fontWeight:900,fontSize:15,flexShrink:0}},icon||'R'),r('div',{style:{flex:1}},r('div',{style:{fontSize:12,fontWeight:700,color:c.text,marginBottom:2}},lbl),r('div',{style:{fontSize:9,color:c.muted}},sub)),r('div',{style:{background:col,color:'#fff',border:'none',borderRadius:6,padding:'5px 13px',fontSize:10,fontWeight:700,cursor:'pointer'}},'Imprimer'));
+      const RB=(lbl,col,sub,icon)=>r('div',{style:{background:c.surf,border:'1px solid #e2e8f0',borderRadius:10,padding:'12px 16px',display:'flex',alignItems:'center',gap:12,marginBottom:8,cursor:'pointer',boxShadow:'0 1px 3px rgba(0,0,0,.04)'},onClick:()=>window.print()},r('div',{style:{width:38,height:38,borderRadius:8,background:col+'15',display:'flex',alignItems:'center',justifyContent:'center',color:col,fontWeight:900,fontSize:15,flexShrink:0}},icon||'R'),r('div',{style:{flex:1}},r('div',{style:{fontSize:12,fontWeight:700,color:c.text,marginBottom:2}},lbl),r('div',{style:{fontSize:9,color:c.muted}},sub)),r('div',{style:{background:col,color:'#fff',border:'none',borderRadius:6,padding:'5px 13px',fontSize:10,fontWeight:700,cursor:'pointer'}},'Imprimer'));
       return r('div',null,
-        r('div',{style:{background:'#fff',border:'1px solid #e2e8f0',borderRadius:10,padding:'12px 16px',marginBottom:12,boxShadow:'0 1px 3px rgba(0,0,0,.04)'}},
+        r('div',{style:{background:c.surf,border:'1px solid #e2e8f0',borderRadius:10,padding:'12px 16px',marginBottom:12,boxShadow:'0 1px 3px rgba(0,0,0,.04)'}},
           r('div',{style:{fontSize:11,fontWeight:700,color:c.text,marginBottom:8}},'Informations projet'),
           r('div',{style:{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'4px 20px',fontSize:10}},
             r('span',{style:{color:c.muted}},'Projet'),r('span',{style:{color:c.text,fontWeight:600}},proj?.nom||'CEBAT'),
