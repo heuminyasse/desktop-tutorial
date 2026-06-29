@@ -6790,13 +6790,15 @@ class Component extends DCLogic {
     const tes=s.tableauxElec||[];const bds=s.boitesDeriv||[];
     const tc=t=>{try{return this.genTECode(t,s);}catch(e){return t.code||('TE'+t.id);}};
     const bc=b=>{try{return this.genBDCode(b,s);}catch(e){return b.nom||('BD'+b.id);}};
-    const opts=[...tes.map(t=>({val:'te:'+t.id,label:tc(t)+(t.nom?' — '+t.nom:''),kind:'te',id:t.id})),...bds.map(b=>({val:'bd:'+b.id,label:bc(b)+(b.nom?' — '+b.nom:''),kind:'bd',id:b.id}))];
-    if(opts.length===0)return r('div',{style:{fontSize:13,color:c.muted,fontStyle:'italic',padding:'20px 0'}},'Aucun tableau ni boîte de dérivation — à créer dans « Circuits électriques ».');
+    const equipOpts=[...tes.map(t=>({val:'te:'+t.id,label:tc(t)+(t.nom?' — '+t.nom:''),kind:'te',id:t.id})),...bds.map(b=>({val:'bd:'+b.id,label:bc(b)+(b.nom?' — '+b.nom:''),kind:'bd',id:b.id}))];
+    if(equipOpts.length===0)return r('div',{style:{fontSize:13,color:c.muted,fontStyle:'italic',padding:'20px 0'}},'Aucun tableau ni boîte de dérivation — à créer dans « Circuits électriques ».');
+    const opts=[{val:'all',label:'Tous les équipements',kind:'all',id:null},...equipOpts];
     const sel=opts.find(o=>o.val===s.nomencEquip)||opts[0];
-    const data=this._vueCableData(sel.kind,sel.id);
+    const equips=sel.kind==='all'?equipOpts.map(o=>({kind:o.kind,id:o.id,label:o.label})):[{kind:sel.kind,id:sel.id,label:sel.label}];
+    const datas=equips.map(eq=>({eq,data:this._vueCableData(eq.kind,eq.id)}));
+    const data={entrants:datas.flatMap(d=>d.data.entrants),sortants:datas.flatMap(d=>d.data.sortants)};
     const filt=s.vueCableFilter||'all';
     const fmatch=cb=>filt==='all'||((s.poseStatuts||{})[cb.statutKey]||'')===filt;
-    const fEntr=data.entrants.filter(fmatch),fSort=data.sortants.filter(fmatch);
     const bars=(conds,sec)=>r('div',{style:{display:'flex',flexDirection:'column',gap:2,flex:1,minWidth:80}},...conds.map((x,k)=>r('div',{key:k,style:{display:'flex',alignItems:'center',gap:4}},
       r('span',{style:{width:22,fontSize:8,fontWeight:700,color:x[1]==='grad'?'#43a047':x[1],fontFamily:c.mono}},x[0]),
       r('div',{style:{flex:1,height:4,borderRadius:2,background:x[1]==='grad'?'repeating-linear-gradient(45deg,#43a047 0 4px,#fdd835 4px 8px)':x[1]}}),
@@ -6806,10 +6808,17 @@ class Component extends DCLogic {
     const poseBadge=(key)=>{const st=this._poseState(key);const m=(s.poseMeta||{})[key];const tt='Statut de pose — cliquer pour changer'+(m&&m.at?'\n'+st.l+(m.by?' par '+m.by:'')+' le '+this._fmtStamp(m.at):'');return r('button',{onClick:(e)=>{e.stopPropagation();this._cyclePose(key);},title:tt,style:{flexShrink:0,fontSize:8,fontWeight:700,color:st.col,background:st.col+'18',border:'1px solid '+st.col+'66',borderRadius:5,padding:'2px 6px',cursor:'pointer',whiteSpace:'nowrap'}},st.l);};
     const inRow=(cab,k)=>r('div',{key:'in'+k,onClick:()=>this._openCableEdit(cab.edit),title:'Modifier ce câble / cet équipement',style:rowSt},lbl(cab.wcode,cab.from,cab.bornes,'left'),bars(cab.conds,cab.sec),poseBadge(cab.statutKey),r('span',{style:{color:c.success,fontSize:13}},'→'));
     const outRow=(cab,k)=>r('div',{key:'out'+k,onClick:()=>this._openCableEdit(cab.edit),title:'Modifier ce câble / cet équipement',style:rowSt},r('span',{style:{color:c.accent,fontSize:13}},'→'),poseBadge(cab.statutKey),bars(cab.conds,cab.sec),lbl(cab.wcode,cab.to,cab.bornes,'right'));
-    const centerCol=data.center?r('div',{style:{flexShrink:0,width:96,alignSelf:'center',background:'linear-gradient(180deg,#0288CE,#0277BD)',borderRadius:10,padding:'16px 8px',textAlign:'center',color:'#fff',boxShadow:c.elev2}},
-      r('div',{style:{fontSize:8,fontWeight:700,opacity:.8,letterSpacing:'.1em'}},data.center.type),
-      r('div',{style:{fontSize:15,fontWeight:900,fontFamily:c.mono,margin:'2px 0'}},data.center.code),
-      r('div',{style:{fontSize:9,opacity:.85}},data.center.nom)):null;
+    const equipBlock=(d,key)=>{
+      const dd=d.data;const fE=dd.entrants.filter(fmatch),fS=dd.sortants.filter(fmatch);
+      const centerCol=dd.center?r('div',{style:{flexShrink:0,width:96,alignSelf:'center',background:'linear-gradient(180deg,#0288CE,#0277BD)',borderRadius:10,padding:'16px 8px',textAlign:'center',color:'#fff',boxShadow:c.elev2}},
+        r('div',{style:{fontSize:8,fontWeight:700,opacity:.8,letterSpacing:'.1em'}},dd.center.type),
+        r('div',{style:{fontSize:15,fontWeight:900,fontFamily:c.mono,margin:'2px 0'}},dd.center.code),
+        r('div',{style:{fontSize:9,opacity:.85}},dd.center.nom)):null;
+      return r('div',{key:key,style:{display:'flex',gap:14,alignItems:'flex-start',marginBottom:18}},
+        r('div',{style:{flex:1,minWidth:220}},r('div',{style:{fontSize:10,fontWeight:800,color:c.success,textTransform:'uppercase',letterSpacing:'.06em',marginBottom:8}},'Entrants (amont)'),fE.length?fE.map(inRow):r('div',{style:{fontSize:11,color:c.muted,fontStyle:'italic'}},dd.entrants.length?'Aucun câble dans ce filtre':'Aucun câble entrant')),
+        centerCol,
+        r('div',{style:{flex:1,minWidth:220}},r('div',{style:{fontSize:10,fontWeight:800,color:c.accent,textTransform:'uppercase',letterSpacing:'.06em',marginBottom:8,textAlign:'right'}},'Sortants (aval)'),fS.length?fS.map(outRow):r('div',{style:{fontSize:11,color:c.muted,fontStyle:'italic',textAlign:'right'}},dd.sortants.length?'Aucun câble dans ce filtre':'Aucun câble sortant')));
+    };
     return r('div',{style:{padding:'2px 0'}},
       r('div',{style:{display:'flex',alignItems:'center',gap:8,marginBottom:14,flexWrap:'wrap'}},
         r('span',{style:{fontSize:10,fontWeight:700,color:c.muted,textTransform:'uppercase',letterSpacing:'.06em'}},'Équipement'),
@@ -6820,10 +6829,9 @@ class Component extends DCLogic {
         r('input',{value:s.poseOperator||'',onChange:e=>this.setState({poseOperator:e.target.value}),placeholder:'Opérateur',title:'Nom horodaté sur chaque pose',style:{width:88,background:c.surf3,border:'1px solid '+c.bdr2,borderRadius:6,padding:'5px 8px',fontSize:11,color:c.text,outline:'none'}}),
         ...[['all','Tous'],['','À poser'],['pose','Posés'],['nc','Anomalies']].map(f=>r('button',{key:f[0]||'todo',onClick:()=>this.setState({vueCableFilter:f[0]}),style:{padding:'4px 9px',borderRadius:6,fontSize:10,fontWeight:filt===f[0]?700:400,cursor:'pointer',border:'1px solid '+(filt===f[0]?c.accent:c.bdr2),background:filt===f[0]?'rgba(2,119,189,.1)':'transparent',color:filt===f[0]?c.accent:c.text2}},f[1])),
         this.Btn('⤓ CSV',()=>this.exportPoseCSV(),'sec','sm'),this.Btn('⤒ Import',()=>this.importPoseCSV(),'sec','sm'),this.Btn('Imprimer',()=>this.printVueCable(),'sec','sm'),this.Btn('Carnet',()=>this.printAllVueCable(),'sec','sm'),this.Btn('Repères',()=>this.printCableMarkers(),'sec','sm')),
-      r('div',{style:{display:'flex',gap:14,alignItems:'flex-start'}},
-        r('div',{style:{flex:1,minWidth:220}},r('div',{style:{fontSize:10,fontWeight:800,color:c.success,textTransform:'uppercase',letterSpacing:'.06em',marginBottom:8}},'Entrants (amont)'),fEntr.length?fEntr.map(inRow):r('div',{style:{fontSize:11,color:c.muted,fontStyle:'italic'}},data.entrants.length?'Aucun câble dans ce filtre':'Aucun câble entrant')),
-        centerCol,
-        r('div',{style:{flex:1,minWidth:220}},r('div',{style:{fontSize:10,fontWeight:800,color:c.accent,textTransform:'uppercase',letterSpacing:'.06em',marginBottom:8,textAlign:'right'}},'Sortants (aval)'),fSort.length?fSort.map(outRow):r('div',{style:{fontSize:11,color:c.muted,fontStyle:'italic',textAlign:'right'}},data.sortants.length?'Aucun câble dans ce filtre':'Aucun câble sortant'))));
+      sel.kind==='all'?r('div',null,...datas.map((d,i)=>r('div',{key:i},
+        r('div',{style:{fontSize:11,fontWeight:800,color:c.text,margin:'4px 0 8px',paddingTop:i?10:0,borderTop:i?'1px solid '+c.bdr:'none'}},((d.data.center&&d.data.center.code)||'')+' — '+(equips[i].label||'')),
+        equipBlock(d,i)))):equipBlock(datas[0],0));
   }
   _openCableEdit(edit){
     if(!edit)return;const s=this.state;
@@ -7910,10 +7918,10 @@ class Component extends DCLogic {
                       TD(r('span',{style:{fontSize:10,color:'#64748b',whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis',display:'block'}},
                         ovr.pieceT!==undefined?ovr.pieceT:fil.pieceNom||''
                       ),{width:90}),
-                      TD(r('span',{style:{fontFamily:'monospace',fontSize:10,fontWeight:700,color:'#0277BD',display:'block'}},
+                      TD(r('span',{style:{fontFamily:'monospace',fontSize:10,fontWeight:700,color:'#0277BD',display:'block',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'},title:ovr.tenantLabel||fil.tenant||''},
                         ovr.tenantLabel||fil.tenant||''
                       ),{width:90}),
-                      TD(r('span',{style:{fontFamily:'monospace',fontSize:10,fontWeight:700,color:'#64748b',display:'block'}},equipT),{width:80}),
+                      TD(r('span',{style:{fontFamily:'monospace',fontSize:10,fontWeight:700,color:'#64748b',display:'block',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'},title:equipT},equipT),{width:80}),
                       TD(r('input',{
                         value:borneT,
                         onChange:e=>setOvr(ovrKey,{bt:e.target.value}),
@@ -7942,8 +7950,8 @@ class Component extends DCLogic {
                         onFocus:e=>{e.target.style.borderColor='#0277BD';e.target.style.background='#f0f9ff';},
                         onBlur:e=>{e.target.style.borderColor='transparent';e.target.style.background='transparent';}
                       }),{width:70}),
-                      TD(r('span',{style:{fontFamily:'monospace',fontSize:10,fontWeight:700,color:'#64748b',display:'block'}},equipA),{width:80}),
-                      TD(r('span',{style:{fontSize:10,color:'#1e293b',display:'block',overflow:'hidden',textOverflow:'ellipsis'}},aboutLabel),{width:90}),
+                      TD(r('span',{style:{fontFamily:'monospace',fontSize:10,fontWeight:700,color:'#64748b',display:'block',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'},title:equipA},equipA),{width:80}),
+                      TD(r('span',{style:{fontSize:10,color:'#1e293b',display:'block',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'},title:aboutLabel},aboutLabel),{width:90}),
                       TD(r('span',{style:{fontSize:10,color:'#64748b',whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis',display:'block'}},
                         ovr.pieceA!==undefined?ovr.pieceA:fil.pieceNom||''
                       ),{width:90}),
