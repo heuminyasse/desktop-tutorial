@@ -6794,7 +6794,7 @@ class Component extends DCLogic {
         r('div',{style:{flex:1}}),
         r('input',{value:s.poseOperator||'',onChange:e=>this.setState({poseOperator:e.target.value}),placeholder:'Opérateur',title:'Nom horodaté sur chaque pose',style:{width:88,background:c.surf3,border:'1px solid '+c.bdr2,borderRadius:6,padding:'5px 8px',fontSize:11,color:c.text,outline:'none'}}),
         ...[['all','Tous'],['','À poser'],['pose','Posés'],['nc','Anomalies']].map(f=>r('button',{key:f[0]||'todo',onClick:()=>this.setState({vueCableFilter:f[0]}),style:{padding:'4px 9px',borderRadius:6,fontSize:10,fontWeight:filt===f[0]?700:400,cursor:'pointer',border:'1px solid '+(filt===f[0]?c.accent:c.bdr2),background:filt===f[0]?'rgba(2,119,189,.1)':'transparent',color:filt===f[0]?c.accent:c.text2}},f[1])),
-        this.Btn('⤓ CSV',()=>this.exportPoseCSV(),'sec','sm'),this.Btn('⤒ Import',()=>this.importPoseCSV(),'sec','sm'),this.Btn('Imprimer',()=>this.printVueCable(),'sec','sm'),this.Btn('Carnet',()=>this.printAllVueCable(),'sec','sm')),
+        this.Btn('⤓ CSV',()=>this.exportPoseCSV(),'sec','sm'),this.Btn('⤒ Import',()=>this.importPoseCSV(),'sec','sm'),this.Btn('Imprimer',()=>this.printVueCable(),'sec','sm'),this.Btn('Carnet',()=>this.printAllVueCable(),'sec','sm'),this.Btn('Repères',()=>this.printCableMarkers(),'sec','sm')),
       r('div',{style:{display:'flex',gap:14,alignItems:'flex-start'}},
         r('div',{style:{flex:1,minWidth:220}},r('div',{style:{fontSize:10,fontWeight:800,color:c.success,textTransform:'uppercase',letterSpacing:'.06em',marginBottom:8}},'Entrants (amont)'),fEntr.length?fEntr.map(inRow):r('div',{style:{fontSize:11,color:c.muted,fontStyle:'italic'}},data.entrants.length?'Aucun câble dans ce filtre':'Aucun câble entrant')),
         centerCol,
@@ -6849,6 +6849,30 @@ class Component extends DCLogic {
       const html='<div style="font-family:Arial,sans-serif;padding:8mm;color:#111"><h2 style="margin:0 0 2mm">Carnet de câbles — '+esc((s.project||{}).nom||'')+'</h2><div style="font-size:9pt;color:#555;margin-bottom:5mm">Une vue par équipement (entrants/sortants, statut de pose)</div>'+sheets+'</div>';
       this._printVueCableHtml(html);
     }catch(e){this.showToast('Echec impression carnet');}
+  }
+  printCableMarkers(){
+    try{
+      const s=this.state;const tes=s.tableauxElec||[];const bds=s.boitesDeriv||[];
+      if(tes.length+bds.length===0){this.showToast('Aucun équipement');return;}
+      const esc=t=>String(t==null?'':t).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+      const seen=new Set();const cables=[];
+      const collect=(kind,id)=>{const d=this._vueCableData(kind,id);[...d.entrants,...d.sortants].forEach(cb=>{if(seen.has(cb.statutKey))return;seen.add(cb.statutKey);cables.push(cb);});};
+      tes.forEach(t=>collect('te',t.id));bds.forEach(b=>collect('bd',b.id));
+      if(cables.length===0){this.showToast('Aucun câble à repérer');return;}
+      const marker=(cb,end)=>'<div style="display:inline-block;width:42mm;height:15mm;border:1px solid #333;border-radius:1mm;padding:1.5mm 2mm;margin:1mm;box-sizing:border-box;vertical-align:top;font-family:monospace;overflow:hidden;page-break-inside:avoid">'
+        +'<div style="display:flex;align-items:baseline;justify-content:space-between"><span style="font-size:11pt;font-weight:800;color:#7c3aed">'+esc(cb.wcode||'—')+'</span><span style="font-size:6pt;color:#999">'+esc(end)+'</span></div>'
+        +'<div style="font-size:6.5pt;color:#222;line-height:1.25;margin-top:.5mm">'+esc(cb.from||'')+'</div>'
+        +'<div style="font-size:6.5pt;color:#0277BD;line-height:1.25">→ '+esc(cb.to||'')+'</div>'
+        +'<div style="font-size:6pt;color:#666">'+esc(cb.sec||'')+(cb.bornes?' · bornes '+esc(cb.bornes):'')+'</div>'
+        +'</div>';
+      const body=cables.map(cb=>marker(cb,'origine')+marker(cb,'extrémité')).join('');
+      const html='<div style="font-family:Arial,sans-serif;padding:4mm;color:#111"><div style="font-size:9pt;color:#555;margin-bottom:3mm">Repères de câbles — '+esc((s.project||{}).nom||'')+' · '+cables.length+' câble(s), 2 repères chacun (à poser aux deux extrémités)</div><div>'+body+'</div></div>';
+      const cont=document.createElement('div');cont.id='cebat-markers';cont.setAttribute('data-print','main');cont.style.position='absolute';cont.style.left='-99999px';cont.style.top='0';cont.innerHTML=html;document.body.appendChild(cont);
+      const main=document.querySelector('main');const prev=main?main.getAttribute('data-print'):null;if(main)main.setAttribute('data-print','hide');
+      if(!document.getElementById('cebat-mkcss')){const st=document.createElement('style');st.id='cebat-mkcss';st.textContent='@media print{@page{size:A4 portrait;margin:8mm;}}';document.head.appendChild(st);}
+      const cleanup=()=>{const e=document.getElementById('cebat-mkcss');if(e)e.remove();cont.remove();if(main){if(prev)main.setAttribute('data-print',prev);else main.removeAttribute('data-print');}window.removeEventListener('afterprint',cleanup);};
+      window.addEventListener('afterprint',cleanup);window.print();
+    }catch(e){this.showToast('Echec impression repères');}
   }
   importPoseCSV(){
     const input=document.createElement('input');input.type='file';input.accept='.csv,text/csv';
