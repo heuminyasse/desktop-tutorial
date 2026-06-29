@@ -2188,6 +2188,7 @@ function(a,b,c){if(!Vd(b))throw Error(m(200));return Wd(null,a,b,!1,c)};Q.unmoun
     *{scrollbar-width:thin;scrollbar-color:rgba(124,134,158,.45) transparent}
     input,select,textarea,button{font-family:'Calibri Light','Calibri',sans-serif;font-weight:300}
     button{cursor:pointer;transition:filter .13s ease,box-shadow .13s ease,border-color .13s ease,background .13s ease,transform .08s ease}
+    button:not(:disabled):hover{filter:brightness(1.06)}
     button:active{transform:translateY(.5px)}
     input,select,textarea{transition:border-color .13s ease,box-shadow .13s ease}
     input:focus-visible,select:focus-visible,textarea:focus-visible{outline:none;border-color:#0284C7 !important;box-shadow:0 0 0 3px rgba(2,132,199,.20)}
@@ -2202,6 +2203,8 @@ function(a,b,c){if(!Vd(b))throw Error(m(200));return Wd(null,a,b,!1,c)};Q.unmoun
     @keyframes fadeIn{from{opacity:0;transform:translateY(7px)}to{opacity:1;transform:none}}
     @keyframes appear{from{opacity:0;transform:scale(.97)}to{opacity:1;transform:scale(1)}}
     @keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+    @keyframes bdIn{from{opacity:0}to{opacity:1}}
+    @keyframes modalIn{from{opacity:0;transform:translateY(14px) scale(.965)}to{opacity:1;transform:none}}
   </style>
 
 </helmet>
@@ -3488,8 +3491,8 @@ class Component extends DCLogic {
       addBoite:()=>this.renderBoiteForm(),addInter:()=>this.renderInterForm(),addZone:()=>this.renderZoneForm(),editFonction:()=>{const{editFonctionId,editFonctionPieceId}=this.state;const p=this.state.pieces.find(x=>x.id===editFonctionPieceId);const fn=p&&(p.fonctions||[]).find(f=>f.id===editFonctionId);const cat=fn?this.FNS[fn.type]?.cat:'base';if(cat==='media')return this.renderEditFonctionMedia();if(cat==='spec')return this.renderEditFonctionSpec();if(cat==='ext'||cat==='secu'||cat==='energ'||cat==='dom')return this.renderEditFonctionExtSecuEnerg();if(cat==='base'&&fn?.type!=='eclairage')return this.renderEditFonctionPrises();return this.renderEditFonctionForm();},addDepart:()=>this.renderDepartForm(),editDepart:()=>this.renderDepartForm(),editDisjoncteur:()=>this.renderEditDisjoncteurForm(),selectCB:()=>this.renderSelectCBForm(),deletePiece:()=>this.renderDeletePieceForm(),deleteApp:()=>this.renderDeleteAppForm(),deleteFn:()=>this.renderDeleteFnForm(),
     }[modalType];
     if(!content)return null;
-    return r('div',{style:{position:'fixed',inset:0,background:'rgba(0,0,0,.7)',backdropFilter:'blur(6px)',zIndex:200,display:'flex',alignItems:'center',justifyContent:'center'},onClick:()=>this.setState({showModal:false,selectedPieceId:null})},
-      r('div',{onClick:e=>e.stopPropagation(),style:{background:c.surf2,border:`1px solid ${c.bdr2}`,borderRadius:16,width:640,maxHeight:'88vh',overflowY:'auto',boxShadow:'0 24px 80px rgba(0,0,0,.6)',animation:'appear .2s ease'}},content()));
+    return r('div',{style:{position:'fixed',inset:0,background:'rgba(0,0,0,.7)',backdropFilter:'blur(6px)',zIndex:200,display:'flex',alignItems:'center',justifyContent:'center',animation:'bdIn .18s ease'},onClick:()=>this.setState({showModal:false,selectedPieceId:null})},
+      r('div',{onClick:e=>e.stopPropagation(),style:{background:c.surf2,border:`1px solid ${c.bdr2}`,borderRadius:16,width:640,maxHeight:'88vh',overflowY:'auto',boxShadow:'0 24px 80px rgba(0,0,0,.6)',animation:'modalIn .26s cubic-bezier(.16,1,.3,1)'}},content()));
   }
 
   renderNiveauForm(){
@@ -6894,11 +6897,11 @@ class Component extends DCLogic {
       const qcNc2=allQCids2.filter(id=>realisationChecks['qc_nc_'+id]).length;
       const qcPct2=allQCids2.length?Math.round(qcOk2/allQCids2.length*100):0;
       const Bar=(pct,col)=>r('div',{style:{height:5,background:'#f1f5f9',borderRadius:3,overflow:'hidden',marginTop:5}},r('div',{style:{height:'100%',width:Math.min(pct,100)+'%',background:col,borderRadius:3}}));
-      const Sec=(title,col,children)=>r('div',{style:{background:c.surf,border:'1px solid #e2e8f0',borderRadius:10,overflow:'hidden',boxShadow:'0 1px 3px rgba(0,0,0,.05)'}},r('div',{style:{padding:'8px 14px',borderBottom:'2px solid '+col,background:col+'08',fontSize:9,fontWeight:800,color:col,textTransform:'uppercase',letterSpacing:'.08em'}},title),r('div',{style:{padding:'10px 14px'}},children));
+      const Sec=(title,col,children)=>r('div',{style:{background:c.surf,border:'1px solid '+c.bdr,borderRadius:10,overflow:'hidden',boxShadow:c.elev1}},r('div',{style:{padding:'8px 14px',borderBottom:'2px solid '+col,background:col+'08',fontSize:9,fontWeight:800,color:col,textTransform:'uppercase',letterSpacing:'.08em'}},title),r('div',{style:{padding:'10px 14px'}},children));
       return r('div',null,
         r('div',{className:'cbt-rgrid5',style:{display:'grid',gridTemplateColumns:'repeat(5,1fr)',gap:8,marginBottom:14}},
           [{v:allFnsAll.length,l:'Fonctions',col:'#0277BD'},{v:totalCables,l:'Cables W',col:'#7c3aed'},{v:this.state.disjoncteurs.length,l:'Disjoncteurs',col:'#ef4444'},{v:interrupteurs.length,l:'Interrupteurs',col:'#0891b2'},{v:boitesDeriv.length+tableauxElec.length,l:'BD + TE',col:'#f59e0b'}]
-          .map(s=>r('div',{key:s.l,style:{background:c.surf,border:'1px solid #e2e8f0',borderRadius:9,padding:'10px 13px',boxShadow:'0 1px 3px rgba(0,0,0,.04)'}},r('div',{style:{fontFamily:c.mono,fontSize:20,fontWeight:900,color:s.col}},s.v),r('div',{style:{fontSize:9,fontWeight:700,color:c.muted,textTransform:'uppercase',letterSpacing:'.05em',marginTop:2}},s.l)))
+          .map(s=>r('div',{key:s.l,style:{background:c.surf,border:'1px solid '+c.bdr,borderRadius:9,padding:'10px 13px',boxShadow:c.elev1}},r('div',{style:{fontFamily:c.mono,fontSize:20,fontWeight:900,color:s.col}},s.v),r('div',{style:{fontSize:9,fontWeight:700,color:c.muted,textTransform:'uppercase',letterSpacing:'.05em',marginTop:2}},s.l)))
         ),
         r('div',{style:{display:'grid',gridTemplateColumns:'1fr 1fr',gap:12,marginBottom:12}},
           Sec('Nomenclature cables','#7c3aed',r('div',null,
@@ -6919,11 +6922,11 @@ class Component extends DCLogic {
           ))
         ),
         r('div',{style:{display:'grid',gridTemplateColumns:'1fr 1fr',gap:12}},
-          r('div',{style:{background:c.surf,border:'1px solid #e2e8f0',borderRadius:10,overflow:'hidden',boxShadow:'0 1px 3px rgba(0,0,0,.04)'}},
+          r('div',{style:{background:c.surf,border:'1px solid '+c.bdr,borderRadius:10,overflow:'hidden',boxShadow:c.elev1}},
             r('div',{style:{padding:'8px 14px',borderBottom:'2px solid #0277BD',background:'#0277BD08',fontSize:9,fontWeight:800,color:'#0277BD',textTransform:'uppercase',letterSpacing:'.08em'}},'Fonctions par appartement'),
             r('div',null,...appartements.map(app=>{const appPcs=pieces.filter(p=>p.appId===app.id);const appFns=appPcs.flatMap(p=>p.fonctions||[]);return r('div',{key:app.id,style:{padding:'6px 14px',borderBottom:'1px solid #f1f5f9'}},r('div',{style:{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:2}},r('span',{style:{fontSize:10,fontWeight:700,color:c.text}},app.nom),r('span',{style:{fontFamily:c.mono,fontSize:9,color:'#0277BD',fontWeight:700}},appFns.length+' fn')),r('div',{style:{display:'flex',gap:3,flexWrap:'wrap'},...appPcs.slice(0,5).map(p=>r('span',{key:p.id,style:{fontSize:8,padding:'1px 5px',borderRadius:3,background:c.surf3,color:c.muted}},p.nom))}));}))
           ),
-          r('div',{style:{background:c.surf,border:'1px solid #e2e8f0',borderRadius:10,overflow:'hidden',boxShadow:'0 1px 3px rgba(0,0,0,.04)'}},
+          r('div',{style:{background:c.surf,border:'1px solid '+c.bdr,borderRadius:10,overflow:'hidden',boxShadow:c.elev1}},
             r('div',{style:{padding:'8px 14px',borderBottom:'2px solid #f59e0b',background:'#f59e0b08',fontSize:9,fontWeight:800,color:'#d97706',textTransform:'uppercase',letterSpacing:'.08em'}},'Avancement chantier par phase'),
             r('div',{style:{padding:'8px 14px'}},
               ...[{l:'Gaines posees',k:'gaine',col:'#7c3aed',n:filtFns.length,fn2:(fn)=>realisationChecks['gaine_'+fn.ref]},{l:'Cables tires',k:'cable',col:'#0277BD',n:filtFns.length,fn2:(fn)=>realisationChecks['cable_'+fn.ref]},{l:'BD/TE poses',k:'bdTE',col:'#f59e0b',n:boitesDeriv.length+tableauxElec.length,fn2:null},{l:'Recepteurs raccordes',k:'recep',col:'#16a34a',n:filtFns.length,fn2:(fn)=>realisationChecks['recep_'+fn.ref]},{l:'Interrupteurs poses',k:'inter',col:'#0891b2',n:interrupteurs.length,fn2:null}]
@@ -7200,13 +7203,13 @@ class Component extends DCLogic {
         // Stats bar
         r('div',{style:{display:'flex',gap:8,flexWrap:'wrap',marginBottom:14}},
           [{v:totalCables,l:'Cables',col:'#0277BD'},{v:allFils.length,l:'Conducteurs',col:'#7c3aed'},{v:conf,l:'Conformes',col:'#16a34a'},{v:nc,l:'Non conf.',col:'#dc2626'},{v:res,l:'Reserves',col:'#d97706'},{v:pending,l:'En attente',col:'#94a3b8'}]
-            .map(s=>r('div',{key:s.l,style:{background:'#f8fafc',border:'1px solid #e2e8f0',borderRadius:8,padding:'6px 12px',display:'flex',gap:7,alignItems:'baseline'}},
+            .map(s=>r('div',{key:s.l,style:{background:'#f8fafc',border:'1px solid '+c.bdr,borderRadius:8,padding:'6px 12px',display:'flex',gap:7,alignItems:'baseline'}},
               r('span',{style:{fontFamily:'monospace',fontSize:16,fontWeight:900,color:s.col}},s.v),
               r('span',{style:{fontSize:9,fontWeight:700,color:'#94a3b8',textTransform:'uppercase',letterSpacing:'.06em'}},s.l)
             ))
         ),
         // Table
-        r('div',{style:{background:c.surf,border:'1px solid #e2e8f0',borderRadius:10,overflow:'hidden',boxShadow:'0 1px 4px rgba(0,0,0,.06)'}},
+        r('div',{style:{background:c.surf,border:'1px solid '+c.bdr,borderRadius:10,overflow:'hidden',boxShadow:c.elev1}},
           r('div',{style:{overflowX:'auto',WebkitOverflowScrolling:'touch'}},
             r('table',{style:{width:'100%',borderCollapse:'collapse',minWidth:1660,tableLayout:'fixed'}},
               r('thead',null,r('tr',null,
@@ -7402,9 +7405,9 @@ class Component extends DCLogic {
       const qcOk3=allQCids3.filter(id=>realisationChecks['qc_'+id]).length;
       const nomKeys=Object.keys(nomenclatureOverrides).filter(k=>k.includes('_fil'));
       const confNom3=nomKeys.filter(k=>(nomenclatureOverrides[k]||{}).statut==='conf').length;
-      const RB=(lbl,col,sub,icon)=>r('div',{style:{background:c.surf,border:'1px solid #e2e8f0',borderRadius:10,padding:'12px 16px',display:'flex',alignItems:'center',gap:12,marginBottom:8,cursor:'pointer',boxShadow:'0 1px 3px rgba(0,0,0,.04)'},onClick:()=>window.print()},r('div',{style:{width:38,height:38,borderRadius:8,background:col+'15',display:'flex',alignItems:'center',justifyContent:'center',color:col,fontWeight:900,fontSize:15,flexShrink:0}},icon||'R'),r('div',{style:{flex:1}},r('div',{style:{fontSize:12,fontWeight:700,color:c.text,marginBottom:2}},lbl),r('div',{style:{fontSize:9,color:c.muted}},sub)),r('div',{style:{background:col,color:'#fff',border:'none',borderRadius:6,padding:'5px 13px',fontSize:10,fontWeight:700,cursor:'pointer'}},'Imprimer'));
+      const RB=(lbl,col,sub,icon)=>r('div',{style:{background:c.surf,border:'1px solid '+c.bdr,borderRadius:10,padding:'12px 16px',display:'flex',alignItems:'center',gap:12,marginBottom:8,cursor:'pointer',boxShadow:c.elev1},onClick:()=>window.print()},r('div',{style:{width:38,height:38,borderRadius:8,background:col+'15',display:'flex',alignItems:'center',justifyContent:'center',color:col,fontWeight:900,fontSize:15,flexShrink:0}},icon||'R'),r('div',{style:{flex:1}},r('div',{style:{fontSize:12,fontWeight:700,color:c.text,marginBottom:2}},lbl),r('div',{style:{fontSize:9,color:c.muted}},sub)),r('div',{style:{background:col,color:'#fff',border:'none',borderRadius:6,padding:'5px 13px',fontSize:10,fontWeight:700,cursor:'pointer'}},'Imprimer'));
       return r('div',null,
-        r('div',{style:{background:c.surf,border:'1px solid #e2e8f0',borderRadius:10,padding:'12px 16px',marginBottom:12,boxShadow:'0 1px 3px rgba(0,0,0,.04)'}},
+        r('div',{style:{background:c.surf,border:'1px solid '+c.bdr,borderRadius:10,padding:'12px 16px',marginBottom:12,boxShadow:c.elev1}},
           r('div',{style:{fontSize:11,fontWeight:700,color:c.text,marginBottom:8}},'Informations projet'),
           r('div',{style:{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'4px 20px',fontSize:10}},
             r('span',{style:{color:c.muted}},'Projet'),r('span',{style:{color:c.text,fontWeight:600}},proj?.nom||'CEBAT'),
@@ -7455,7 +7458,7 @@ class Component extends DCLogic {
           const ct=cT[sec]||{type:sec+'mm²',color:c.muted,use:''};const tot=cis.reduce((s,ci)=>s+ci.len,0);
           return r('div',{key:sec,style:{marginBottom:16}},
             r('div',{style:{display:'flex',alignItems:'center',gap:8,marginBottom:7}},r('div',{style:{width:10,height:10,borderRadius:2,background:ct.color}}),r('span',{style:{fontSize:13,fontWeight:700,color:c.text}},ct.type),r('span',{style:{fontSize:11,color:c.muted}},'— '+ct.use),this.Bdg(cis.length+' ckts',ct.color),this.Bdg(Math.ceil(tot*1.15)+'m',c.muted)),
-            r('div',{style:{background:c.surf2,border:`1px solid ${c.bdr}`,borderRadius:9,overflow:'hidden'}},
+            r('div',{className:'cbt-card',style:{background:c.surf2,border:`1px solid ${c.bdr}`,borderRadius:10,overflow:'hidden',boxShadow:c.elev1}},
               r('table',{style:{width:'100%',borderCollapse:'collapse',fontSize:11,fontFamily:c.mono}},
                 r('thead',null,r('tr',{style:{background:c.surf3}},...['Circuit','Pièce','Sect.','Long.','Qté (×1.15)'].map(h=>r('th',{key:h,style:{padding:'6px 11px',textAlign:'left',fontSize:9,fontWeight:700,color:c.muted,textTransform:'uppercase',letterSpacing:'.05em'}},h)))),
                 r('tbody',null,...cis.map((ci,i)=>r('tr',{key:ci.id,style:{borderBottom:`1px solid ${c.bdr}`,background:i%2?'transparent':'rgba(255,255,255,.01)'}},
@@ -7751,7 +7754,7 @@ class Component extends DCLogic {
     ];
     return r('div',{style:{padding:'24px 28px',animation:'fadeIn .3s ease'}},
       this.SH('Devis estimatif','Estimation indicative — '+today,r('div',{style:{display:'flex',gap:8}},this.Btn('⤓ Export CSV',()=>this.exportCSV(),'sec','md'),this.Btn(r('span',{style:{display:'inline-flex',alignItems:'center',gap:5}},this.ico('print_ico',13),'Dossier complet'),()=>this.printDossier(),'primary','md'),this.Btn(r('span',{style:{display:'inline-flex',alignItems:'center',gap:5}},this.ico('print_ico',13),'Imprimer / PDF'),()=>window.print(),'ghost','md'))),
-      r('div',{style:{background:c.surf2,border:`1px solid ${c.bdr}`,borderRadius:12,padding:'12px 16px',marginBottom:14,display:'grid',gridTemplateColumns:'repeat(2,1fr)',gap:4,fontSize:11}},
+      r('div',{className:'cbt-card',style:{background:c.surf2,border:`1px solid ${c.bdr}`,borderRadius:12,padding:'12px 16px',marginBottom:14,display:'grid',gridTemplateColumns:'repeat(2,1fr)',gap:4,fontSize:11,boxShadow:c.elev1}},
         r('span',{style:{color:c.muted}},'Projet :'),r('span',{style:{color:c.text,fontWeight:500}},project.nom),
         r('span',{style:{color:c.muted}},'Niveaux / Apparts. / Pièces :'),r('span',{style:{color:c.text}},niveaux.length+' / '+appartements.length+' / '+pieces.length),
         r('span',{style:{color:c.muted}},'Client :'),r('span',{style:{color:c.text}},project.client),
@@ -7760,12 +7763,12 @@ class Component extends DCLogic {
         this.Stat(costs.materiaux.toLocaleString('fr-FR')+'€','Matériaux HT',c.acBlue),this.Stat(costs.mainOeuvre.toLocaleString('fr-FR')+'€','MO HT ('+costs.moH+'h)',c.warn),this.Stat(costs.ht.toLocaleString('fr-FR')+'€','Total HT',c.text2),this.Stat(costs.ttc.toLocaleString('fr-FR')+'€','TOTAL TTC',c.success,'TVA 10%')),
       ...sections.map(sec=>r('div',{key:sec.cat,style:{marginBottom:12}},
         r('div',{style:{display:'flex',alignItems:'center',gap:7,marginBottom:5}},r('div',{style:{width:3,height:14,background:sec.color,borderRadius:1}}),r('span',{style:{fontSize:12,fontWeight:700,color:c.text2}},sec.cat)),
-        r('div',{style:{background:c.surf2,border:`1px solid ${c.bdr}`,borderRadius:10,overflow:'hidden'}},
+        r('div',{className:'cbt-card',style:{background:c.surf2,border:`1px solid ${c.bdr}`,borderRadius:10,overflow:'hidden',boxShadow:c.elev1}},
           r('table',{style:{width:'100%',borderCollapse:'collapse',fontSize:11}},
             r('thead',null,r('tr',{style:{background:c.surf3}},...['Désignation','Qté','U','P.U. HT','Total HT'].map(h=>r('th',{key:h,style:{padding:'6px 11px',textAlign:'left',fontSize:9,fontWeight:700,color:c.muted,textTransform:'uppercase',letterSpacing:'.05em'}},h)))),
             r('tbody',null,...sec.items.filter(it=>it.q>0).map((item,i)=>{const tot=item.q*item.pu;return r('tr',{key:i,style:{borderBottom:`1px solid ${c.bdr}`}},r('td',{style:{padding:'6px 11px',color:c.text}},item.d),r('td',{style:{padding:'6px 11px',color:c.text2,fontFamily:c.mono}},item.q),r('td',{style:{padding:'6px 11px',color:c.muted}},item.u),r('td',{style:{padding:'6px 11px',color:c.text2,fontFamily:c.mono}},item.pu.toFixed(2)+'€'),r('td',{style:{padding:'6px 11px',color:c.warn,fontFamily:c.mono,fontWeight:600}},tot.toFixed(2)+'€'));}),
             r('tr',{style:{background:c.surf3}},r('td',{colSpan:4,style:{padding:'6px 11px',fontSize:10,fontWeight:600,color:c.muted}},'Sous-total'),r('td',{style:{padding:'6px 11px',fontFamily:c.mono,fontWeight:700,color:sec.color}},sec.items.reduce((s,it)=>s+it.q*it.pu,0).toFixed(2)+'€'))))))),
-      r('div',{style:{background:'rgba(37,99,235,.06)',border:`1px solid rgba(37,99,235,.2)`,borderRadius:12,padding:'16px 20px'}},
+      r('div',{className:'cbt-card',style:{background:'rgba(37,99,235,.06)',border:`1px solid rgba(37,99,235,.2)`,borderRadius:12,padding:'16px 20px',boxShadow:c.elev2}},
         r('div',{style:{display:'flex',justifyContent:'space-between',alignItems:'center'}},
           r('div',null,r('div',{style:{fontSize:11,color:c.muted,marginBottom:3}},'Estimation indicative'),r('div',{style:{display:'flex',gap:16,fontSize:11}},r('span',{style:{color:c.muted}},'HT : '+costs.ht.toLocaleString('fr-FR')+'€'),r('span',{style:{color:c.muted}},'TVA 10% : '+costs.tva.toLocaleString('fr-FR')+'€'))),
           r('div',{style:{textAlign:'right'}},r('div',{style:{fontSize:9,color:c.muted,marginBottom:2,textTransform:'uppercase',letterSpacing:'.07em'}},'TOTAL TTC'),r('div',{style:{fontSize:28,fontWeight:800,color:c.success,fontFamily:c.mono}},costs.ttc.toLocaleString('fr-FR')+' €'))))
