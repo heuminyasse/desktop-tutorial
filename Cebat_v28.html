@@ -3090,6 +3090,47 @@ class Component extends DCLogic {
       window.addEventListener('afterprint',cleanup);window.print();
     }catch(e){this.showToast('Echec bon de commande');}
   }
+  printDossier(){
+    try{
+      const s=this.state;const pr=s.project||{};const esc=t=>String(t==null?'':t).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+      let dateStr='';try{dateStr=new Date().toLocaleDateString('fr-FR');}catch(e){}
+      const teCode=id=>{const t=(s.tableauxElec||[]).find(x=>x.id===id);return t?(t.code||t.nom||''):'';};
+      const sec=(title)=>'<h2 style="margin:6mm 0 2mm;font-size:14pt;color:#0277BD;border-bottom:2px solid #0277BD;padding-bottom:1mm">'+esc(title)+'</h2>';
+      let html='<div style="font-family:Arial,sans-serif;padding:8mm;color:#111;">';
+      html+='<div style="text-align:center;margin-bottom:8mm"><div style="font-size:22pt;font-weight:800;color:#0277BD">Dossier technique</div><div style="font-size:13pt;margin-top:2mm">'+esc(pr.nom||'Installation electrique')+'</div><div style="font-size:9pt;color:#666;margin-top:1mm">NF C 15-100 — genere le '+esc(dateStr)+'</div></div>';
+      const pf=[['Adresse',pr.adresse],['Client',pr.client],['Telephone',pr.tel],['Email',pr.email],['Alimentation',pr.typeAlim],['Puissance souscrite',(pr.puissanceSouscrite||'-')+' kVA'],['Type construction',pr.typeConstruction],['Annee',pr.annee]];
+      html+='<table style="width:100%;border-collapse:collapse;font-size:10pt;margin-bottom:4mm">'+pf.map(p=>'<tr><td style="padding:1mm 2mm;color:#666;width:40mm">'+esc(p[0])+'</td><td style="padding:1mm 2mm;font-weight:600">'+esc(p[1]==null||p[1]===''?'-':p[1])+'</td></tr>').join('')+'</table>';
+      html+=sec('Schema unifilaire');
+      const boards=s.tableauxElec||[];
+      if(boards.length)boards.forEach(te=>{let sv='';try{sv=this.schemaSVG(te.id);}catch(e){}html+='<div style="text-align:center;page-break-inside:avoid;margin-bottom:4mm">'+sv+'</div>';});
+      else html+='<div style="color:#888;font-size:9pt">Aucun tableau defini.</div>';
+      html+=sec('Nomenclature des circuits');
+      const pcs=s.pieces||[];
+      let nrows='';(s.disjoncteurs||[]).forEach(d=>{let pw='';try{pw=this.calcDjPower(d,pcs);}catch(e){}let du='';try{du=this.voltageDropOf(d).pctCumul;}catch(e){}nrows+='<tr>'+[d.code,teCode(d.tableauId),(d.recepteurs||[]).join(' '),(d.calibre||'')+'A',d.courbe||'',this._poles(d)+'P',(d.ddr?d.ddr+'mA':'-'),(d.section||'')+'mm2',(pw===''?'':pw+'W'),(du===''?'-':du+'%')].map(v=>'<td style="padding:.8mm 2mm;border-bottom:1px solid #ddd">'+esc(v)+'</td>').join('')+'</tr>';});
+      html+='<table style="width:100%;border-collapse:collapse;font-size:8.5pt"><thead><tr style="background:#eef">'+['Code','Tableau','Recepteurs','Calibre','Courbe','Poles','DDR','Section','Puissance','U cum.'].map(h=>'<th style="text-align:left;padding:1mm 2mm">'+esc(h)+'</th>').join('')+'</tr></thead><tbody>'+(nrows||'<tr><td colspan="10" style="padding:2mm;color:#888">Aucun disjoncteur.</td></tr>')+'</tbody></table>';
+      html+=sec('Bilan de puissance');
+      const b=this.bilanPuissance();
+      let brows='';b.fams.forEach(f=>{brows+='<tr><td style="padding:.8mm 2mm;border-bottom:1px solid #ddd">'+esc(f.label)+'</td><td style="text-align:right;padding:.8mm 2mm;border-bottom:1px solid #ddd">'+f.installedW+' W</td><td style="text-align:right;padding:.8mm 2mm;border-bottom:1px solid #ddd">'+f.coef+'</td><td style="text-align:right;padding:.8mm 2mm;border-bottom:1px solid #ddd">'+f.foisonneW+' W</td></tr>';});
+      html+='<table style="width:100%;border-collapse:collapse;font-size:9pt"><thead><tr style="background:#eef"><th style="text-align:left;padding:1mm 2mm">Famille</th><th style="text-align:right;padding:1mm 2mm">Installe</th><th style="text-align:right;padding:1mm 2mm">Coef</th><th style="text-align:right;padding:1mm 2mm">Foisonne</th></tr></thead><tbody>'+(brows||'<tr><td colspan="4" style="padding:2mm;color:#888">Aucune charge.</td></tr>')+'</tbody></table>';
+      html+='<div style="text-align:right;margin-top:2mm;font-size:10pt">Total foisonne : <b>'+b.kvaFoisonne+' kVA</b>'+(b.ks!==1?' &nbsp;|&nbsp; Ajuste (ks '+b.ks+') : <b>'+b.kvaAjuste+' kVA</b>':'')+(b.souscriteKva?' &nbsp;|&nbsp; Souscrit : '+b.souscriteKva+' kVA':'')+'</div>';
+      html+=sec('Conformite NF C 15-100');
+      let issues=[];try{issues=this.checkConformite();}catch(e){}
+      const lvlc={error:'#dc2626',warn:'#d97706',info:'#0277BD'};const lvll={error:'Erreur',warn:'Avertissement',info:'Info'};
+      if(issues.length)html+='<div style="font-size:9pt">'+issues.map(i=>'<div style="padding:.6mm 0"><span style="color:'+(lvlc[i.level]||'#666')+';font-weight:700">['+(lvll[i.level]||i.level)+']</span> '+esc(i.msg)+'</div>').join('')+'</div>';
+      else html+='<div style="color:#16a34a;font-size:10pt">Aucune anomalie detectee.</div>';
+      html+=sec('Chiffrage estimatif');
+      const ch=this.chiffrage();
+      let crows='';ch.items.forEach(i=>{crows+='<tr><td style="font-family:monospace;padding:.8mm 2mm;border-bottom:1px solid #ddd">'+esc(i.ref)+'</td><td style="padding:.8mm 2mm;border-bottom:1px solid #ddd">'+esc(i.label)+'</td><td style="text-align:right;padding:.8mm 2mm;border-bottom:1px solid #ddd">'+i.qty+'</td><td style="text-align:right;padding:.8mm 2mm;border-bottom:1px solid #ddd">'+i.unit.toFixed(2)+'</td><td style="text-align:right;padding:.8mm 2mm;border-bottom:1px solid #ddd">'+i.total.toFixed(2)+'</td></tr>';});
+      html+='<table style="width:100%;border-collapse:collapse;font-size:9pt"><thead><tr style="background:#eef"><th style="text-align:left;padding:1mm 2mm">Ref</th><th style="text-align:left;padding:1mm 2mm">Designation</th><th style="text-align:right;padding:1mm 2mm">Qte</th><th style="text-align:right;padding:1mm 2mm">PU HT</th><th style="text-align:right;padding:1mm 2mm">Total HT</th></tr></thead><tbody>'+(crows||'<tr><td colspan="5" style="padding:2mm;color:#888">Aucun article.</td></tr>')+'</tbody></table>';
+      html+='<div style="text-align:right;margin-top:2mm;font-size:10pt"><div>Total HT : <b>'+ch.totalHT.toFixed(2)+' EUR</b></div><div>TVA 20% : '+ch.tva.toFixed(2)+' EUR</div><div style="font-size:12pt">Total TTC : <b>'+ch.totalTTC.toFixed(2)+' EUR</b></div></div>';
+      html+='<div style="font-size:8pt;color:#888;margin-top:6mm">Dossier genere par Cebat — estimations indicatives a valider par un professionnel qualifie.</div></div>';
+      const cont=document.createElement('div');cont.id='cebat-dossier';cont.setAttribute('data-print','main');cont.style.position='absolute';cont.style.left='-99999px';cont.style.top='0';cont.innerHTML=html;document.body.appendChild(cont);
+      const main=document.querySelector('main');const prev=main?main.getAttribute('data-print'):null;if(main)main.setAttribute('data-print','hide');
+      if(!document.getElementById('cebat-doscss')){const st=document.createElement('style');st.id='cebat-doscss';st.textContent='@media print{@page{size:A4 portrait;margin:8mm;}#cebat-dossier svg{max-width:100% !important;height:auto !important;}}';document.head.appendChild(st);}
+      const cleanup=()=>{const e=document.getElementById('cebat-doscss');if(e)e.remove();cont.remove();if(main){if(prev)main.setAttribute('data-print',prev);else main.removeAttribute('data-print');}window.removeEventListener('afterprint',cleanup);};
+      window.addEventListener('afterprint',cleanup);window.print();
+    }catch(e){this.showToast('Echec dossier complet');}
+  }
   chiffrage(){
     const TYPEA=new Set(['prises_sdb','lave_linge','four','borne_ve','climatisation','chauffe_eau']);
     const refType={};(this.state.pieces||[]).forEach(p=>(p.fonctions||[]).forEach(fn=>{refType[fn.ref]=fn.type;}));
@@ -7465,7 +7506,7 @@ class Component extends DCLogic {
       {cat:'Appareillage',color:c.success,items:[{d:'Prises 2P+T 16A',q:nP,pu:6.5,u:'u'},{d:'Interrupteurs simples / va-et-vient',q:nL,pu:8.0,u:'u'},{d:'Boîtes encastrement Ø67mm',q:nP+nL,pu:1.5,u:'u'},{d:'DCL douilles E27/E14',q:nL,pu:2.80,u:'u'}]},
     ];
     return r('div',{style:{padding:'24px 28px',animation:'fadeIn .3s ease'}},
-      this.SH('Devis estimatif','Estimation indicative — '+today,r('div',{style:{display:'flex',gap:8}},this.Btn('⤓ Export CSV',()=>this.exportCSV(),'sec','md'),this.Btn(r('span',{style:{display:'inline-flex',alignItems:'center',gap:5}},this.ico('print_ico',13),'Imprimer / PDF'),()=>window.print(),'ghost','md'))),
+      this.SH('Devis estimatif','Estimation indicative — '+today,r('div',{style:{display:'flex',gap:8}},this.Btn('⤓ Export CSV',()=>this.exportCSV(),'sec','md'),this.Btn(r('span',{style:{display:'inline-flex',alignItems:'center',gap:5}},this.ico('print_ico',13),'Dossier complet'),()=>this.printDossier(),'primary','md'),this.Btn(r('span',{style:{display:'inline-flex',alignItems:'center',gap:5}},this.ico('print_ico',13),'Imprimer / PDF'),()=>window.print(),'ghost','md'))),
       r('div',{style:{background:c.surf2,border:`1px solid ${c.bdr}`,borderRadius:12,padding:'12px 16px',marginBottom:14,display:'grid',gridTemplateColumns:'repeat(2,1fr)',gap:4,fontSize:11}},
         r('span',{style:{color:c.muted}},'Projet :'),r('span',{style:{color:c.text,fontWeight:500}},project.nom),
         r('span',{style:{color:c.muted}},'Niveaux / Apparts. / Pièces :'),r('span',{style:{color:c.text}},niveaux.length+' / '+appartements.length+' / '+pieces.length),
