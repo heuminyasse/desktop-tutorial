@@ -2952,6 +2952,8 @@ class Component extends DCLogic {
     const _icc=+((s.project||{}).iccTableau)||0;const _pdc=+((s.project||{}).pdcDisjoncteurs)||0;
     if(_icc>0&&_pdc>0&&_pdc<_icc)add('error','Pouvoir de coupure insuffisant : disjoncteurs '+_pdc+' kA < Icc presume au tableau '+_icc+' kA. Choisir des disjoncteurs '+_icc+' kA (ou superieur) ou prevoir une filiation.');
     else if(_icc>0&&_pdc>0)add('info','Pouvoir de coupure OK : disjoncteurs '+_pdc+' kA >= Icc presume '+_icc+' kA.');
+    // Courant admissible Iz selon le mode de pose (IEC 60364-5-52)
+    (djs||[]).forEach(d=>{if((d.recepteurs||[]).length===0)return;const cc=this.currentCapacity(d);if(cc.izBase<=0)return;if(!cc.ok)add('error','Courant admissible insuffisant '+(d.code||'CB')+' : In '+cc.inA+'A > Iz '+cc.iz+'A (pose '+cc.method+', '+cc.iso+', '+d.section+'mm2, K1='+cc.k1+' K2='+cc.k2+') — augmenter la section.');});
     // Parafoudre (NF C 15-100 §534)
     const _pf=this.parafoudreRequis();
     if(_pf.required&&!_pf.installed)add('error','Parafoudre Type 2 obligatoire : '+_pf.reason+'. Ajouter un parafoudre en tete d\'installation.');
@@ -3020,6 +3022,20 @@ class Component extends DCLogic {
       if(pct<=lim)return{S,pct:Math.round(pct*10)/10,lim,smin,I,L};
     }
     return{S:SECTIONS[SECTIONS.length-1],pct:null,lim,smin,I,L};
+  }
+  IZ_TABLE={
+    PVC:{B:{1.5:15.5,2.5:21,4:28,6:36,10:50,16:68,25:89,35:110,50:134},C:{1.5:17.5,2.5:24,4:32,6:41,10:57,16:76,25:96,35:119,50:144},E:{1.5:18.5,2.5:25,4:34,6:43,10:60,16:80,25:101,35:126,50:153}},
+    PR:{B:{1.5:19.5,2.5:27,4:36,6:46,10:63,16:85,25:112,35:138,50:168},C:{1.5:22,2.5:30,4:40,6:51,10:70,16:94,25:119,35:147,50:179},E:{1.5:23,2.5:31,4:42,6:54,10:75,16:100,25:127,35:158,50:192}}
+  };
+  _izK1(temp,iso){const t=+temp||30;const tbl=iso==='PR'?{30:1,35:0.96,40:0.91,45:0.87,50:0.82,55:0.76,60:0.71}:{30:1,35:0.94,40:0.87,45:0.79,50:0.71,55:0.61,60:0.5};const keys=Object.keys(tbl).map(Number);let best=keys[0];keys.forEach(k=>{if(t>=k)best=k;});return tbl[best];}
+  _izK2(n){const k={1:1,2:0.8,3:0.7,4:0.65,5:0.6,6:0.57,7:0.54,8:0.52};const v=Math.max(1,Math.round(+n||1));return v>=9?0.5:(k[v]||1);}
+  currentCapacity(d){
+    const pr=this.state.project||{};const iso=(pr.isolant==='PR')?'PR':'PVC';
+    const method=['B','C','E'].indexOf(pr.poseMethod)>=0?pr.poseMethod:'B';
+    const S=parseFloat(d.section)||1.5;const tbl=(this.IZ_TABLE[iso]||{})[method]||{};
+    const izBase=tbl[S]||0;const k1=this._izK1(pr.tempAmbiante,iso);const k2=this._izK2(pr.groupement);
+    const iz=Math.round(izBase*k1*k2*10)/10;const inA=+d.calibre||0;
+    return{iz,izBase,k1,k2,iso,method,inA,ok:izBase>0?inA<=iz*1.05:true};
   }
   _circuitIm(d){
     // Courant de fonctionnement magnetique (borne haute de la bande de declenchement)
@@ -5901,7 +5917,14 @@ class Component extends DCLogic {
             r('div',{style:{background:'rgba(2,132,199,.07)',border:`1px solid rgba(2,132,199,.2)`,borderRadius:7,padding:'11px 13px',marginTop:4}},
               r('div',{style:{fontSize:10,color:c.acBlue,fontWeight:700,marginBottom:2,textTransform:'uppercase',letterSpacing:'.06em'}},'Disjoncteur général auto-calculé'),
               r('div',{style:{fontSize:26,fontWeight:800,color:c.text,fontFamily:c.mono}},cdg+'A'),
-              r('div',{style:{fontSize:10,color:c.muted,marginTop:2}},'NF C 15-100 — type S · le PdC des disjoncteurs doit couvrir l\'Icc présumé'))),null,18)
+              r('div',{style:{fontSize:10,color:c.muted,marginTop:2}},'NF C 15-100 — type S · le PdC des disjoncteurs doit couvrir l\'Icc présumé'))),null,18),
+          this.Card('Conditions de pose (courant admissible Iz)',r('div',null,
+            se('isolant','Isolant du câble',[['PVC','PVC — H07V-U/R'],['PR','PR / XLPE — U-1000 R2V']]),
+            se('poseMethod','Mode de pose (méthode réf.)',[['B','B — conduit encastré (paroi isolante)'],['C','C — câbles fixés au mur / apparent'],['E','E — chemin de câbles perforé']]),
+            r('div',{style:{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'0 14px'}},
+              se('tempAmbiante','Température ambiante',[['30','30 °C'],['35','35 °C'],['40','40 °C'],['45','45 °C'],['50','50 °C']]),
+              se('groupement','Circuits groupés',[['1','1'],['2','2'],['3','3'],['4','4'],['5','5'],['6','6'],['8','8']])),
+            r('div',{style:{fontSize:9,color:c.muted,marginTop:6,fontStyle:'italic'}},'Iz = Iz(table) × K1 (température) × K2 (groupement). La protection doit vérifier In ≤ Iz.')),null,18)
         ),
 
         // ── COL 3 : Niveaux du bâtiment ──
@@ -7828,6 +7851,7 @@ class Component extends DCLogic {
           r('span',{style:{fontFamily:c.mono}},pw+'W'),
           vd?r('span',{style:{fontFamily:c.mono,color:vd.pctCumul>5?c.danger:c.muted}},'ΔU '+vd.pctCumul.toFixed(1)+'%'):null,
           (+d.longueur>0)?(()=>{const lp=this.lmaxProtege(d);const ko=isFinite(lp.lmax)&&(+d.longueur>lp.lmax);return r('span',{style:{fontFamily:c.mono,color:ko?c.danger:c.muted},title:'Longueur max protégée (déclenchement magnétique) = '+lp.lmax+'m'},'Lmax '+lp.lmax+'m');})():null,
+          (()=>{const cc=this.currentCapacity(d);if(cc.izBase<=0)return null;return r('span',{style:{fontFamily:c.mono,color:cc.ok?c.muted:c.danger},title:'Courant admissible Iz '+cc.iz+'A (pose '+cc.method+' '+cc.iso+', K1='+cc.k1+' K2='+cc.k2+') · In '+cc.inA+'A'},'Iz '+cc.iz+'A');})(),
           secOk?null:r('span',{style:{color:c.danger,fontWeight:700}},'section!'),
           over?r('span',{style:{color:c.danger,fontWeight:700}},'surcharge'):null));
     };
