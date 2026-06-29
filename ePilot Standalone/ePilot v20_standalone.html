@@ -6782,9 +6782,13 @@ html body[class] #vac-gantt td.emp .nm{font-weight:500 !important;}</style>
   var DONE_KEY='fcr_articles_cleared_v1';
   var PENDING='epilot_pending_wipe';
 
-  /* Si déjà validé (flag posé ET reload déjà fait), ne rien faire */
+  /* Si déjà validé, ou si une restauration de sauvegarde a eu lieu (epilot_user_owned),
+     ne rien faire — évite de re-vider les données restaurées par l'outil de sauvegarde. */
   var cleared=false;
-  try{ cleared=(localStorage.getItem(DONE_KEY)==='1'&&!localStorage.getItem(PENDING)); }catch(_){}
+  try{
+    cleared=(localStorage.getItem(DONE_KEY)==='1'&&!localStorage.getItem(PENDING))
+         || localStorage.getItem('epilot_user_owned')==='1';
+  }catch(_){}
   if(cleared) return;
 
   /* Marquer le wipe pour le prochain chargement + effacer les flags FCR résiduels */
