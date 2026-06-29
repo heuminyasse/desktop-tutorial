@@ -5461,7 +5461,7 @@ document.addEventListener('DOMContentLoaded', async function() {
     var fcr=window.FCR_DB||[]; var add=[];
     fcr.forEach(function(a){
       if (!a || !a.codeA || !/^[AS]\d+$/i.test(String(a.codeA))) return;
-      var typeOk=(isSvc(a) ? /^S/i : /^A/i).test(String(a.codeA));
+      var typeOk=/^A/i.test(String(a.codeA));
       if (!CATALOG[a.codeA]){
         var sig=sigOf(a);
         var rec={ codeA:a.codeA, sig:sig, reference:a.reference||a.code||'', designation:a.desc||a.designation||'', fabricant:a.fabricant||'', unite:a.unite||'u', pu:Number(a.pu)||0, vendeur:a.vendeur||'', section:a.section||'', type:(isSvc(a)?'Service':'Article'), fige:false, dateMaj:nowISO() };
@@ -5473,9 +5473,10 @@ document.addEventListener('DOMContentLoaded', async function() {
   }
 
   /* ---------- résolution stable du codeA ---------- */
+  /* Règle : tous les articles ET services reçoivent le préfixe A##### (pas de S#####). */
   function mintCodeA(a){
-    var prefix=isSvc(a)?'S':'A', max=0;
-    function scan(c){ if(!c) return; var m=/^([AS])(\d+)$/i.exec(String(c)); if(m && m[1].toUpperCase()===prefix){ var n=parseInt(m[2],10); if(n>max) max=n; } }
+    var prefix='A', max=0;
+    function scan(c){ if(!c) return; var m=/^A(\d+)$/i.exec(String(c)); if(m){ var n=parseInt(m[1],10); if(n>max) max=n; } }
     Object.keys(CATALOG||{}).forEach(scan);
     (window.FCR_DB||[]).forEach(function(x){ if(x) scan(x.codeA); });
     return prefix+String(max+1).padStart(5,'0');
@@ -5497,15 +5498,13 @@ document.addEventListener('DOMContentLoaded', async function() {
     putMany('catalog',[rec]);
     return rec;
   }
-  /* renvoie le codeA stable d'un article : réutilise si connu, sinon impose le bon préfixe
-     selon le type (Article→A, Service→S) et enregistre. */
+  /* renvoie le codeA stable d'un article : réutilise si connu, sinon assigne A##### (unifié). */
   function resolve(a){
     if (!a) return '';
     if (!CATALOG) return a.codeA||'';
     var sig=sigOf(a);
     if (sig && SIGMAP[sig]) return SIGMAP[sig];
-    var want=isSvc(a)?'S':'A';
-    var re=new RegExp('^'+want+'\\d+$','i');
+    var re=/^A\d+$/i;
     var code=(a.codeA && re.test(String(a.codeA))) ? a.codeA : mintCodeA(a);
     register(a, code, sig);
     return code;
@@ -6810,6 +6809,63 @@ html body[class] #vac-gantt td.emp .nm{font-weight:500 !important;}</style>
   }catch(_){}
 
   setTimeout(function(){ location.reload(); }, 600);
+})();
+</script>
+
+<script id="__NP_MODAL_TRIM_v1__">
+/* Supprime les cadres Photo, Fonctions & Doc dans la fenêtre Modification/Création codeA.
+   Fonctionne par MutationObserver : chaque fois que #np-modal apparaît dans le DOM,
+   on masque tout bloc dont le titre/label contient l'un des mots-clés indésirables. */
+(function(){
+  if (window.__npModalTrim) return; window.__npModalTrim = true;
+
+  var HIDE = ['photo', 'fonctions', 'doc'];
+
+  function shouldHide(el) {
+    /* cherche un titre dans les descendants directs : label, legend, h3, h4, .np-label, etc. */
+    var heads = el.querySelectorAll('label, legend, h3, h4, h5, [class*="label"], [class*="title"], [class*="head"]');
+    for (var i = 0; i < heads.length; i++) {
+      var txt = (heads[i].textContent || '').toLowerCase().trim();
+      for (var j = 0; j < HIDE.length; j++) {
+        if (txt.indexOf(HIDE[j]) === 0 || txt === HIDE[j]) return true;
+      }
+    }
+    return false;
+  }
+
+  function trim(modal) {
+    /* sections candidates : fieldset, .np-section, .np-block, .card, divs avec classe contenant "section" */
+    var candidates = modal.querySelectorAll('fieldset, [class*="section"], [class*="block"], [class*="card"], [class*="group"]');
+    for (var i = 0; i < candidates.length; i++) {
+      if (shouldHide(candidates[i])) candidates[i].style.display = 'none';
+    }
+  }
+
+  function watch(modal) {
+    trim(modal);
+    /* re-trim si le contenu du modal change (ex: changement d'onglet Article→Service) */
+    var obs = new MutationObserver(function() { trim(modal); });
+    obs.observe(modal, { childList: true, subtree: true });
+    /* nettoyage quand le modal disparaît */
+    var bodyObs = new MutationObserver(function() {
+      if (!document.contains(modal)) { obs.disconnect(); bodyObs.disconnect(); }
+    });
+    bodyObs.observe(document.body, { childList: true });
+  }
+
+  /* Observer global sur le body pour détecter l'ouverture du modal */
+  var bodyObs = new MutationObserver(function(muts) {
+    muts.forEach(function(m) {
+      m.addedNodes.forEach(function(n) {
+        if (!n || !n.id) return;
+        if (n.id === 'np-modal') { watch(n); return; }
+        /* parfois le modal est dans un wrapper */
+        var inner = n.querySelector && n.querySelector('#np-modal');
+        if (inner) watch(inner);
+      });
+    });
+  });
+  bodyObs.observe(document.body, { childList: true, subtree: false });
 })();
 </script>
 
