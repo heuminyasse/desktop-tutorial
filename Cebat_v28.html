@@ -2405,6 +2405,32 @@ class Component extends DCLogic {
       window.print();
     }catch(e){this.showToast('Echec impression feuilles');}
   }
+  printLabels(){
+    try{
+      const djs=this.state.disjoncteurs||[];if(djs.length===0){this.showToast('Aucun disjoncteur');return;}
+      const pcs=this.state.pieces||[];const refPiece={};pcs.forEach(p=>(p.fonctions||[]).forEach(fn=>{refPiece[fn.ref]=p.nom;}));
+      const teName=id=>{const t=(this.state.tableauxElec||[]).find(x=>x.id===id);return t?(t.code||t.nom||''):'';};
+      const esc=t=>String(t==null?'':t).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+      const ordered=[];(this.state.tableauxElec||[]).forEach(t=>{this.rangeesOf(t.id).forEach(rw=>rw.brs.forEach(d=>ordered.push(d)));});
+      const _seen=new Set(ordered.map(d=>d.id));djs.forEach(d=>{if(!_seen.has(d.id))ordered.push(d);});
+      const labels=ordered.map(d=>{
+        const refs=(d.recepteurs||[]);const room=refs.map(rf=>refPiece[rf]).filter(Boolean)[0]||'';
+        let wc='';try{wc=this.genCableCBCode(d,this.state);}catch(e){}
+        return '<div style="display:inline-block;width:48mm;height:13mm;border:1px solid #333;border-radius:1mm;padding:1mm 2mm;margin:1mm;box-sizing:border-box;vertical-align:top;font-family:monospace;overflow:hidden;">'
+          +'<div style="font-size:9pt;font-weight:800;color:#0277BD;">'+esc(d.code||'CB')+' <span style="font-size:6pt;color:#666;">'+esc(teName(d.tableauId))+'</span></div>'
+          +'<div style="font-size:6.5pt;color:#333;">'+esc((d.calibre||'?')+'A '+(d.courbe||'')+' '+(d.section||'?')+'mm2 '+(d.ddr?d.ddr+'mA':'-'))+'</div>'
+          +'<div style="font-size:6.5pt;color:#333;">'+esc((room||'')+(refs.length?' '+refs.slice(0,3).join(' '):''))+(wc?' <span style="color:#7c3aed;">'+esc(wc)+'</span>':'')+'</div>'
+          +'</div>';
+      }).join('');
+      const cont=document.createElement('div');cont.id='cebat-labels';cont.setAttribute('data-print','main');cont.style.position='absolute';cont.style.left='-99999px';cont.style.top='0';
+      cont.innerHTML='<div style="padding:4mm;">'+labels+'</div>';
+      document.body.appendChild(cont);
+      const main=document.querySelector('main');const prev=main?main.getAttribute('data-print'):null;if(main)main.setAttribute('data-print','hide');
+      if(!document.getElementById('cebat-lblcss')){const st=document.createElement('style');st.id='cebat-lblcss';st.textContent='@media print{@page{size:A4 portrait;margin:8mm;}}';document.head.appendChild(st);}
+      const cleanup=()=>{const e=document.getElementById('cebat-lblcss');if(e)e.remove();cont.remove();if(main){if(prev)main.setAttribute('data-print',prev);else main.removeAttribute('data-print');}window.removeEventListener('afterprint',cleanup);};
+      window.addEventListener('afterprint',cleanup);window.print();
+    }catch(e){this.showToast('Echec impression etiquettes');}
+  }
   exportSchemaDXF(teId){
     try{
       const dxf=this.schemaDXF(teId);const blob=new Blob([dxf],{type:'application/dxf'});const url=URL.createObjectURL(blob);
@@ -6086,7 +6112,7 @@ class Component extends DCLogic {
           r('div',{style:{fontSize:9,color:c.muted}},(i.type||'')+(i.circuitRef?' → '+i.circuitRef:'')+(pc?' · '+pc:'')+(zn?' · '+zn:'')));
       })))):null;
     return r('div',{style:{padding:'24px 28px',animation:'fadeIn .3s ease',overflowY:'auto',height:'100%'}},
-      this.SH('Schéma unifilaire','Source → AGCP → Tête → Différentiel → Disjoncteur divisionnaire → Récepteur',r('div',{style:{display:'flex',gap:8}},this.Btn('DXF',()=>this.exportSchemaDXF(),'sec','md'),this.Btn('SVG',()=>this.exportSchemaSVG(),'sec','md'),this.Btn('PNG',()=>this.exportSchemaPNG(),'sec','md'),this.Btn('PDF feuilles',()=>this.printSchemaSheets(),'sec','md'),this.Btn(r('span',{style:{display:'inline-flex',alignItems:'center',gap:5}},this.ico('print_ico',13),'PDF paysage'),()=>this.printLandscape(),'ghost','md'))),
+      this.SH('Schéma unifilaire','Source → AGCP → Tête → Différentiel → Disjoncteur divisionnaire → Récepteur',r('div',{style:{display:'flex',gap:8}},this.Btn('DXF',()=>this.exportSchemaDXF(),'sec','md'),this.Btn('SVG',()=>this.exportSchemaSVG(),'sec','md'),this.Btn('PNG',()=>this.exportSchemaPNG(),'sec','md'),this.Btn('PDF feuilles',()=>this.printSchemaSheets(),'sec','md'),this.Btn('Étiquettes',()=>this.printLabels(),'sec','md'),this.Btn(r('span',{style:{display:'inline-flex',alignItems:'center',gap:5}},this.ico('print_ico',13),'PDF paysage'),()=>this.printLandscape(),'ghost','md'))),
       legend,wireLegend,
       r('div',{style:{background:c.surf2,border:'1px solid '+c.bdr,borderRadius:12,padding:'16px 18px',marginBottom:16}},
         r('div',{style:{fontSize:10,fontWeight:700,color:c.muted,textTransform:'uppercase',letterSpacing:'.08em',marginBottom:10}},'Alimentation générale'),
