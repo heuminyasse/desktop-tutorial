@@ -5945,6 +5945,36 @@ class Component extends DCLogic {
     return r('div',{className:'cbt-logements',style:{display:'flex',height:'100%',overflow:'hidden'}},col1,col2,col3,col4);
   }
 
+  TEMPLATES=[
+    {name:'Tableau minimal',breakers:[{label:'Eclairage',calibre:16,courbe:'B',section:1.5},{label:'Prises',calibre:16,courbe:'C',section:2.5},{label:'Chauffe-eau',calibre:20,courbe:'C',section:2.5}]},
+    {name:'Logement T2',breakers:[{label:'Eclairage',calibre:16,courbe:'B',section:1.5},{label:'Prises sejour',calibre:16,courbe:'C',section:2.5},{label:'Prises cuisine',calibre:20,courbe:'C',section:2.5},{label:'Cuisson',calibre:32,poles:2,courbe:'C',section:6},{label:'Lave-linge',calibre:20,courbe:'C',section:2.5},{label:'Chauffe-eau',calibre:20,courbe:'C',section:2.5},{label:'Salle de bain',calibre:16,courbe:'C',section:2.5}]},
+    {name:'Logement T4',breakers:[{label:'Eclairage 1',calibre:16,courbe:'B',section:1.5},{label:'Eclairage 2',calibre:16,courbe:'B',section:1.5},{label:'Prises sejour',calibre:16,courbe:'C',section:2.5},{label:'Prises chambres',calibre:16,courbe:'C',section:2.5},{label:'Prises cuisine',calibre:20,courbe:'C',section:2.5},{label:'Cuisson',calibre:32,poles:2,courbe:'C',section:6},{label:'Lave-linge',calibre:20,courbe:'C',section:2.5},{label:'Lave-vaisselle',calibre:20,courbe:'C',section:2.5},{label:'Chauffe-eau',calibre:20,courbe:'C',section:2.5},{label:'Salle de bain',calibre:16,courbe:'C',section:2.5},{label:'VMC',calibre:2,courbe:'C',section:1.5}]}
+  ];
+  applyTemplate(tpl){
+    this.setState(s=>{
+      const newTeId=Math.max(0,...s.tableauxElec.map(t=>t.id))+1;const teIdx=s.tableauxElec.length+1;
+      const newTE={id:newTeId,nom:tpl.name||'Tableau',type:'principal',appId:(s.appartements[0]&&s.appartements[0].id)||null,pieceId:null,code:teIdx+'TE'+teIdx,cb0Code:teIdx+'CB0'};
+      let maxDj=Math.max(0,...s.disjoncteurs.map(d=>d.id));
+      const newDjs=(tpl.breakers||[]).map((br,i)=>{maxDj++;return{id:maxDj,code:teIdx+'CB'+(i+1),nom:br.label||'',recepteurs:[],calibre:br.calibre||16,courbe:br.courbe||'C',poles:String(br.poles||1),ddr:br.ddr||30,section:br.section||2.5,tableauId:newTeId,rangee:br.rangee||1,ordre:i};});
+      return{tableauxElec:[...s.tableauxElec,newTE],disjoncteurs:[...s.disjoncteurs,...newDjs],rangeeTeId:newTeId};
+    });
+    this.showToast('Gabarit « '+(tpl.name||'')+' » applique');
+  }
+  exportBoardTemplate(teId){
+    try{
+      const t=(this.state.tableauxElec||[]).find(x=>x.id===teId);if(!t){this.showToast('Aucun tableau');return;}
+      const breakers=(this.state.disjoncteurs||[]).filter(d=>d.tableauId===teId).map(d=>({label:d.nom||'',calibre:d.calibre,courbe:d.courbe,ddr:d.ddr,section:d.section,poles:+d.poles||1}));
+      const data={app:'Cebat',type:'board-template',name:t.nom||t.code||'Tableau',breakers};
+      const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});const url=URL.createObjectURL(blob);
+      const a=document.createElement('a');const slug=(t.nom||t.code||'tableau').replace(/[^a-z0-9]+/gi,'_').toLowerCase();a.href=url;a.download='cebat_gabarit_'+slug+'.json';document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);
+      this.showToast('Gabarit exporte');
+    }catch(e){this.showToast('Echec export gabarit');}
+  }
+  importBoardTemplate(){
+    const input=document.createElement('input');input.type='file';input.accept='application/json,.json';
+    input.onchange=e=>{const file=e.target.files&&e.target.files[0];if(!file)return;const reader=new FileReader();reader.onerror=()=>this.showToast('Erreur de lecture');reader.onload=ev=>{try{const d=JSON.parse(ev.target.result);const breakers=Array.isArray(d.breakers)?d.breakers:(Array.isArray(d)?d:null);if(!breakers){this.showToast('Gabarit invalide');return;}this.applyTemplate({name:d.name||'Tableau importe',breakers});}catch(err){this.showToast('JSON illisible');}};reader.readAsText(file);};
+    input.click();
+  }
   rangeesOf(teId){
     const djs=(this.state.disjoncteurs||[]).filter(d=>d.tableauId===teId).map(d=>({...d}));
     if(!djs.some(d=>d.rangee!=null)){
@@ -6008,9 +6038,17 @@ class Component extends DCLogic {
           row.brs.length===0?r('span',{style:{fontSize:10,color:c.muted,fontStyle:'italic'}},'(deposer ici)'):null));
     };
     const maxR=rows.reduce((m,r2)=>Math.max(m,r2.rangee),0);
+    const tbtn={padding:'4px 9px',borderRadius:6,fontSize:10,fontWeight:700,border:'1px solid '+c.accent,background:'rgba(2,119,189,.08)',color:c.accent,cursor:'pointer',fontFamily:c.font};
+    const lib=r('div',{style:{display:'flex',flexWrap:'wrap',gap:8,alignItems:'center',marginBottom:14,padding:'10px 12px',background:c.surf3,borderRadius:9,border:'1px solid '+c.bdr2}},
+      r('span',{style:{fontSize:10,fontWeight:700,color:c.muted,textTransform:'uppercase',letterSpacing:'.06em'}},'Bibliotheque de gabarits'),
+      ...this.TEMPLATES.map((tpl,k)=>r('button',{key:k,onClick:()=>this.applyTemplate(tpl),title:tpl.breakers.length+' disjoncteurs',style:tbtn},'+ '+tpl.name)),
+      r('span',{style:{flex:1}}),
+      teId?this.Btn('Exporter ce tableau',()=>this.exportBoardTemplate(teId),'sec','sm'):null,
+      this.Btn('Importer JSON',()=>this.importBoardTemplate(),'sec','sm'));
     return r('div',{style:{padding:'24px 28px',animation:'fadeIn .3s ease',overflowY:'auto',height:'100%'}},
       this.SH('Composition du tableau','Glisser-deposer les disjoncteurs entre rangees (1 rangee = '+ROW+' modules, ID compris)',r('div',{style:{display:'flex',alignItems:'center',gap:8}},r('div',{style:{display:'flex',alignItems:'center',gap:5}},r('span',{style:{fontSize:10,color:c.muted}},'Modules/rangee'),r('select',{value:String(ROW),onChange:e=>this.setState(st=>({project:{...st.project,modulesParRangee:+e.target.value}})),style:{background:c.surf3,border:'1px solid '+c.bdr2,borderRadius:6,padding:'4px 7px',fontSize:11,color:c.text,outline:'none'}},...[12,13,18,24].map(n=>r('option',{key:n,value:String(n)},n)))),teId?this.Btn('Compacter',()=>this.compactRangees(teId),'sec','sm'):null)),
       tableauxElec.length>1?r('div',{style:{display:'flex',gap:6,marginBottom:14,flexWrap:'wrap'}},...tableauxElec.map(t=>r('button',{key:t.id,onClick:()=>this.setState({rangeeTeId:t.id}),style:{padding:'5px 12px',borderRadius:7,fontSize:11,fontWeight:t.id===teId?700:400,border:'1px solid '+(t.id===teId?c.accent:c.bdr2),background:t.id===teId?'rgba(2,119,189,.1)':'transparent',color:t.id===teId?c.accent:c.text2,cursor:'pointer'}},t.code||t.nom))):null,
+      lib,
       rows.length===0?r('div',{style:{fontSize:12,color:c.muted,padding:'16px 0'}},'Aucun disjoncteur dans ce tableau.'):r('div',null,...rows.map(rowEl)),
       r('div',{onDragOver:e=>e.preventDefault(),onDrop:e=>{e.preventDefault();const dc=this.state.dragCb;if(dc)this.dropCb(dc,maxR+1,null);this.setState({dragCb:null,dragOverCb:null});},
         style:{border:'2px dashed '+c.bdr3,borderRadius:9,padding:'14px',textAlign:'center',fontSize:11,color:c.muted,cursor:'copy',marginTop:4}},'+ Deposer ici pour creer une nouvelle rangee'));
