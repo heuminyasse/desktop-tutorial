@@ -2992,16 +2992,47 @@ class Component extends DCLogic {
           r('div',{style:{fontSize:9,fontWeight:700,color:c.muted,textTransform:'uppercase',letterSpacing:'.06em',marginBottom:5}},'Repartition par appartement'),
           ...apps.map(ap=>{const ba=this.bilanPuissance(ap.id);return r('div',{key:ap.id,style:{display:'flex',fontSize:11,padding:'3px 0',borderBottom:'1px solid '+c.bdr}},r('span',{style:{flex:1,color:c.text2}},ap.nom),r('span',{style:{fontFamily:c.mono,color:c.accent,fontWeight:700}},ba.kvaFoisonne.toFixed(1)+' kVA'))})):null)));
   }
+  _price(ref,base){const ov=(this.state.project&&this.state.project.priceOverrides)||{};return ov[ref]!=null?ov[ref]:base;}
   _catalog(d){
     const cal=+d.calibre||10;const poles=this._poles(d);const courbe=d.courbe||'C';
     let price=poles===1?9:poles===2?16:poles===3?28:38;if(cal>20)price*=1.3;if(cal>32)price*=1.6;
-    return{ref:'DJ-'+poles+'P-'+courbe+cal,label:'Disjoncteur '+poles+'P '+cal+'A '+courbe,price:Math.round(price*100)/100};
+    const ref='DJ-'+poles+'P-'+courbe+cal;
+    return{ref,label:'Disjoncteur '+poles+'P '+cal+'A '+courbe,price:this._price(ref,Math.round(price*100)/100)};
   }
   _catalogID(ddr,poles,typeA){
     let price=poles>=4?75:45;if(ddr<=30)price+=12;if(typeA)price+=18;
-    return{ref:'ID-'+poles+'P-'+ddr+'mA-'+(typeA?'A':'AC'),label:'Inter. differentiel '+poles+'P '+ddr+'mA Type '+(typeA?'A':'AC'),price:Math.round(price*100)/100};
+    const ref='ID-'+poles+'P-'+ddr+'mA-'+(typeA?'A':'AC');
+    return{ref,label:'Inter. differentiel '+poles+'P '+ddr+'mA Type '+(typeA?'A':'AC'),price:this._price(ref,Math.round(price*100)/100)};
   }
-  _catalogCoffret(rows){const price=rows<=1?22:rows<=2?38:rows<=3?52:70;return{ref:'COF-'+rows+'R',label:'Coffret '+rows+' rangee'+(rows>1?'s':'')+' (13 mod.)',price};}
+  _catalogCoffret(rows){const ref='COF-'+rows+'R';const base=rows<=1?22:rows<=2?38:rows<=3?52:70;return{ref,label:'Coffret '+rows+' rangee'+(rows>1?'s':'')+' (13 mod.)',price:this._price(ref,base)};}
+  importTarif(){
+    const input=document.createElement('input');input.type='file';input.accept='.csv,text/csv';
+    input.onchange=e=>{const f=e.target.files&&e.target.files[0];if(!f)return;const rd=new FileReader();rd.onerror=()=>this.showToast('Erreur de lecture');rd.onload=ev=>{try{const txt=String(ev.target.result).replace(/^﻿/,'');const ov={};txt.split(/\r?\n/).forEach(line=>{const parts=line.split(/[;,\t]/);if(parts.length>=2){const ref=(parts[0]||'').trim();const pr=parseFloat(String(parts[1]).replace(',','.'));if(ref&&Number.isFinite(pr))ov[ref]=pr;}});if(Object.keys(ov).length===0){this.showToast('Aucun tarif reconnu (format: reference;prix)');return;}this.setState(s=>({project:{...s.project,priceOverrides:{...(s.project.priceOverrides||{}),...ov}}}));this.showToast(Object.keys(ov).length+' tarifs importes');}catch(err){this.showToast('CSV illisible');}};rd.readAsText(f);};
+    input.click();
+  }
+  exportChiffrageCSV(){
+    try{
+      const ch=this.chiffrage();const esc=v=>{const t=v==null?'':String(v);return /[";\n]/.test(t)?'"'+t.replace(/"/g,'""')+'"':t;};
+      const lines=[['Reference','Designation','Quantite','PU HT','Total HT'].join(';')];
+      ch.items.forEach(i=>lines.push([i.ref,i.label,i.qty,i.unit.toFixed(2),i.total.toFixed(2)].map(esc).join(';')));
+      lines.push('');lines.push(';;;Total HT;'+ch.totalHT.toFixed(2));lines.push(';;;TVA 20%;'+ch.tva.toFixed(2));lines.push(';;;Total TTC;'+ch.totalTTC.toFixed(2));
+      const csv='﻿'+lines.join('\r\n');const blob=new Blob([csv],{type:'text/csv;charset=utf-8'});const url=URL.createObjectURL(blob);
+      const a=document.createElement('a');const slug=(((this.state.project||{}).nom)||'projet').replace(/[^a-z0-9]+/gi,'_').replace(/^_+|_+$/g,'').toLowerCase()||'projet';a.href=url;a.download='cebat_chiffrage_'+slug+'.csv';document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);
+      this.showToast('Chiffrage CSV exporte');
+    }catch(e){this.showToast('Echec export chiffrage');}
+  }
+  printBonCommande(){
+    try{
+      const ch=this.chiffrage();const pr=this.state.project||{};const esc=t=>String(t==null?'':t).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+      let dateStr='';try{dateStr=new Date().toLocaleDateString('fr-FR');}catch(e){}
+      let rows='';ch.items.forEach(i=>{rows+='<tr><td style="font-family:monospace;padding:1mm 2mm">'+esc(i.ref)+'</td><td style="padding:1mm 2mm">'+esc(i.label)+'</td><td style="text-align:right;padding:1mm 2mm">'+i.qty+'</td><td style="text-align:right;padding:1mm 2mm">'+i.unit.toFixed(2)+'</td><td style="text-align:right;padding:1mm 2mm">'+i.total.toFixed(2)+'</td></tr>';});
+      const html='<div style="font-family:Arial,sans-serif;padding:6mm;color:#111;"><h2 style="margin:0 0 2mm">Bon de commande — '+esc(pr.nom||'')+'</h2><div style="font-size:10pt;color:#444;margin-bottom:4mm">Client : '+esc(pr.client||'-')+' &nbsp;|&nbsp; Date : '+esc(dateStr)+' &nbsp;|&nbsp; Bureau : '+esc(pr.bureau||'-')+'</div><table style="width:100%;border-collapse:collapse;font-size:9pt"><thead><tr style="background:#eef;border-bottom:1px solid #99a"><th style="text-align:left;padding:1mm 2mm">Reference</th><th style="text-align:left">Designation</th><th style="text-align:right">Qte</th><th style="text-align:right">PU HT</th><th style="text-align:right">Total HT</th></tr></thead><tbody>'+rows+'</tbody></table><div style="text-align:right;margin-top:4mm;font-size:10pt"><div>Total HT : <b>'+ch.totalHT.toFixed(2)+' EUR</b></div><div>TVA 20% : '+ch.tva.toFixed(2)+' EUR</div><div style="font-size:12pt">Total TTC : <b>'+ch.totalTTC.toFixed(2)+' EUR</b></div></div><div style="font-size:8pt;color:#888;margin-top:6mm">Prix indicatifs — a confronter au catalogue fournisseur.</div></div>';
+      const cont=document.createElement('div');cont.id='cebat-bon';cont.setAttribute('data-print','main');cont.style.position='absolute';cont.style.left='-99999px';cont.style.top='0';cont.innerHTML=html;document.body.appendChild(cont);
+      const main=document.querySelector('main');const prev=main?main.getAttribute('data-print'):null;if(main)main.setAttribute('data-print','hide');
+      const cleanup=()=>{cont.remove();if(main){if(prev)main.setAttribute('data-print',prev);else main.removeAttribute('data-print');}window.removeEventListener('afterprint',cleanup);};
+      window.addEventListener('afterprint',cleanup);window.print();
+    }catch(e){this.showToast('Echec bon de commande');}
+  }
   chiffrage(){
     const TYPEA=new Set(['prises_sdb','lave_linge','four','borne_ve','climatisation','chauffe_eau']);
     const refType={};(this.state.pieces||[]).forEach(p=>(p.fonctions||[]).forEach(fn=>{refType[fn.ref]=fn.type;}));
@@ -3017,9 +3048,9 @@ class Component extends DCLogic {
     if(ch.items.length===0)return null;
     return r('div',{style:{marginTop:14}},this.Card('Chiffrage fournisseur — indicatif',
       r('div',{style:{paddingTop:2}},
-        r('div',{style:{fontSize:10,color:c.muted,marginBottom:8,fontStyle:'italic'}},'References et prix indicatifs — a confronter au catalogue fournisseur.'),
+        r('div',{style:{fontSize:10,color:c.muted,marginBottom:8,fontStyle:'italic'}},'References et prix indicatifs — a confronter au catalogue fournisseur.'),r('div',{style:{display:'flex',gap:6,flexWrap:'wrap',marginBottom:10}},this.Btn('Importer tarif (CSV)',()=>this.importTarif(),'sec','sm'),this.Btn('Export CSV',()=>this.exportChiffrageCSV(),'sec','sm'),this.Btn('Bon de commande',()=>this.printBonCommande(),'sec','sm')),
         r('div',{style:{display:'flex',fontSize:9,fontWeight:700,color:c.muted,textTransform:'uppercase',letterSpacing:'.05em',paddingBottom:4,borderBottom:'2px solid '+c.bdr2}},r('span',{style:{flex:1}},'Reference'),r('span',{style:{width:36,textAlign:'right'}},'Qte'),r('span',{style:{width:58,textAlign:'right'}},'PU'),r('span',{style:{width:68,textAlign:'right'}},'Total')),
-        ...ch.items.map((i,k)=>r('div',{key:k,style:{display:'flex',alignItems:'center',fontSize:11,padding:'4px 0',borderBottom:'1px solid '+c.bdr}},r('div',{style:{flex:1,minWidth:0}},r('div',{style:{fontFamily:c.mono,fontSize:10,color:c.accent,fontWeight:700}},i.ref),r('div',{style:{fontSize:9,color:c.muted}},i.label)),r('span',{style:{width:36,textAlign:'right',fontFamily:c.mono}},i.qty),r('span',{style:{width:58,textAlign:'right',fontFamily:c.mono,color:c.muted}},i.unit.toFixed(2)+'EUR'),r('span',{style:{width:68,textAlign:'right',fontFamily:c.mono,fontWeight:700}},i.total.toFixed(2)+'EUR'))),
+        ...ch.items.map((i,k)=>r('div',{key:k,style:{display:'flex',alignItems:'center',fontSize:11,padding:'4px 0',borderBottom:'1px solid '+c.bdr}},r('div',{style:{flex:1,minWidth:0}},r('div',{style:{fontFamily:c.mono,fontSize:10,color:c.accent,fontWeight:700}},i.ref),r('div',{style:{fontSize:9,color:c.muted}},i.label)),r('span',{style:{width:36,textAlign:'right',fontFamily:c.mono}},i.qty),r('input',{type:'number',min:0,step:0.5,value:i.unit,onChange:e=>{const v=+e.target.value;this.setState(s=>({project:{...s.project,priceOverrides:{...(s.project.priceOverrides||{}),[i.ref]:(Number.isFinite(v)&&v>=0)?v:0}}}));},title:'Prix unitaire HT (editable)',style:{width:58,textAlign:'right',fontFamily:c.mono,fontSize:10,color:c.text,background:c.surf3,border:'1px solid '+c.bdr2,borderRadius:4,padding:'2px 4px',outline:'none'}}),r('span',{style:{width:68,textAlign:'right',fontFamily:c.mono,fontWeight:700}},i.total.toFixed(2)+'EUR'))),
         r('div',{style:{display:'flex',justifyContent:'space-between',marginTop:8,fontSize:12}},r('span',{style:{color:c.muted}},'Total HT'),r('span',{style:{fontFamily:c.mono,fontWeight:700,color:c.text}},ch.totalHT.toFixed(2)+' EUR')),
         r('div',{style:{display:'flex',justifyContent:'space-between',fontSize:11,color:c.muted}},r('span',null,'TVA 20%'),r('span',{style:{fontFamily:c.mono}},ch.tva.toFixed(2)+' EUR')),
         r('div',{style:{display:'flex',justifyContent:'space-between',fontSize:14,fontWeight:800,marginTop:2}},r('span',{style:{color:c.text}},'Total TTC'),r('span',{style:{color:c.success,fontFamily:c.mono}},ch.totalTTC.toFixed(2)+' EUR')))));
