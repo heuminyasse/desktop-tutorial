@@ -5087,7 +5087,7 @@ class Component extends DCLogic {
         const dbCode='DB'+(this.state.departs.length+1);
         const newDep={...obj,id:newDepId,dbCode};
         const newDeps=[...this.state.departs,newDep];
-        this.setState(st=>({departs:newDeps,nextElemId:st.nextElemId+1,showModal:false,editDepartId:null}));
+        this.setState(st=>({departs:newDeps,nextElemId:st.nextElemId+1,showModal:false,editDepartId:null,circuitsSel:{srcId:null,teId:null,cbId:null,bdId:null}}));
         this.showToast('Source creee: '+code);
         setTimeout(()=>this.checkAutoInverseur(newDeps),80);
       }
@@ -5610,7 +5610,7 @@ class Component extends DCLogic {
         } else if(form.retourEditFonction){
           this.setState(s=>({boitesDeriv:[...s.boitesDeriv,{...obj,id:newBId}],nextElemId:newBId+1,showModal:true,modalType:'editFonction'}));
         } else {
-          this.setState(s=>({boitesDeriv:[...s.boitesDeriv,{...obj,id:newBId}],nextElemId:newBId+1,showModal:false}));
+          this.setState(s=>({boitesDeriv:[...s.boitesDeriv,{...obj,id:newBId}],nextElemId:newBId+1,showModal:false,circuitsSel:{srcId:null,teId:null,cbId:null,bdId:null}}));
         }
       }
       this.showToast(editId?'Boite modifiee':'BD creee : '+bdCodeFinal);
@@ -5782,7 +5782,7 @@ class Component extends DCLogic {
           });
           this.showToast('Paire VV créée automatiquement ✓');
         } else {
-          this.setState(s=>({interrupteurs:[...s.interrupteurs,{...obj,id:s.nextElemId}],nextElemId:s.nextElemId+1,...back}));
+          this.setState(s=>({interrupteurs:[...s.interrupteurs,{...obj,id:s.nextElemId}],nextElemId:s.nextElemId+1,circuitsSel:{srcId:null,teId:null,cbId:null,bdId:null},...back}));
           this.showToast('Interrupteur ajouté ✓');
         }
       }
@@ -7309,7 +7309,7 @@ class Component extends DCLogic {
           const tw2=djPwr(d);const l2=this.djNFCLimit(d);const pct2=Math.min(Math.round(tw2/l2.maxW*100),100);const over2=tw2>l2.maxW;
           const teCB2=tableauxElec.find(t=>t.id===d.tableauId);
           const teCode2=teCB2?this.genTECode(teCB2,this.state):'ND';
-          const cbCode2=this.genDjCode(allDj.slice(0,allDj.indexOf(d)+1),d.tableauId);
+          const cbCode2=this.genDjCode(allDj.slice(0,allDj.indexOf(d)),d.tableauId);
           if(visibleCbIds&&!visibleCbIds.includes(d.id))return null;
           const cbOn2=filtCbId===d.id;
           return r('div',{key:d.id,onClick:(e)=>{if(e.target.tagName==='BUTTON'||e.target.closest('button'))return;toggleSel('cbId',d.id);},style:{margin:'4px 8px',background:cbOn2?'rgba(239,68,68,.08)':'#fff',border:'1px solid '+(cbOn2?'#ef4444':over2?c.danger:c.bdr),borderRadius:6,padding:'7px 9px',cursor:'pointer',outline:selRing(cbOn2,'#ef4444'),transition:'all .15s'}},
@@ -7331,7 +7331,7 @@ class Component extends DCLogic {
             r('span',{style:{color:'#0277BD',fontWeight:600}},'Filtre :'),
             filtSrcId&&r('span',{style:{padding:'2px 7px',background:'#16a34a20',borderRadius:4,color:'#16a34a',fontWeight:700}},this.genSourceCode(departs.find(d=>d.id===filtSrcId)||{type:'comptage',id:filtSrcId},this.state)),
             filtTeId&&r('span',{style:{padding:'2px 7px',background:'#0277BD20',borderRadius:4,color:'#0277BD',fontWeight:700}},this.genTECode(tableauxElec.find(t=>t.id===filtTeId)||{id:filtTeId},this.state)),
-            filtCbId&&r('span',{style:{padding:'2px 7px',background:'#ef444420',borderRadius:4,color:'#ef4444',fontWeight:700}},(()=>{const dj=this.state.disjoncteurs.find(d=>d.id===filtCbId);return dj?this.genDjCode(this.state.disjoncteurs.slice(0,this.state.disjoncteurs.indexOf(dj)+1),dj.tableauId):'CB?';})()),
+            filtCbId&&r('span',{style:{padding:'2px 7px',background:'#ef444420',borderRadius:4,color:'#ef4444',fontWeight:700}},(()=>{const dj=this.state.disjoncteurs.find(d=>d.id===filtCbId);return dj?this.genDjCode(this.state.disjoncteurs.slice(0,this.state.disjoncteurs.indexOf(dj)),dj.tableauId):'CB?';})()),
             filtBdId&&r('span',{style:{padding:'2px 7px',background:'#f59e0b20',borderRadius:4,color:'#f59e0b',fontWeight:700}},this.genBDCode(boitesDeriv.find(b=>b.id===filtBdId)||{id:filtBdId},this.state)),
             r('button',{onClick:()=>setSel({srcId:null,teId:null,cbId:null,bdId:null}),style:{marginLeft:'auto',padding:'2px 8px',background:'transparent',border:'1px solid #94a3b8',borderRadius:4,fontSize:9,cursor:'pointer',color:'#64748b'}},'× Réinitialiser')
           ),
