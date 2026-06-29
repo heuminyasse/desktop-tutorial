@@ -2889,9 +2889,19 @@ class Component extends DCLogic {
       add('info','Tableau « '+(t.nom||t.code)+' » : '+br.usedModules+' modules utilises, prevoir '+br.capacity+' ('+br.nbRangees+' rangee'+(br.nbRangees>1?'s':'')+') pour 20% de reserve.');
       if(br.rows.length>=2){const mods=br.rows.map(rw=>rw.modules);const mx=Math.max.apply(null,mods),mn=Math.min.apply(null,mods);if(mx-mn>=6)add('info','Tableau « '+(t.nom||t.code)+' » : rangees desequilibrees ('+mods.join('/')+' modules) — envisager un reequilibrage.');}
     });
+    const _pb=this.phaseBalance();if(_pb&&_pb.imbalance>30)add('warn','Triphase : desequilibre des phases '+_pb.imbalance+'% (L1 '+Math.round(_pb.L1)+'W / L2 '+Math.round(_pb.L2)+'W / L3 '+Math.round(_pb.L3)+'W) — a reequilibrer.');
     return issues;
   }
   _fnPowerW(fn){const q=fn.quantite||1;if(fn.type==='eclairage')return (fn.puissance||10)*q;if(fn.type==='prises'||fn.type==='prises_sdb')return 460*q;return ({four:6000,lave_vaisselle:2200,lave_linge:2500,seche_linge:2400,chauffe_eau:3000,climatisation:2500,borne_ve:7400,hotte:300,vmc:200,portail:500,piscine:1500}[fn.type]||500)*q;}
+  phaseBalance(){
+    if(((this.state.project&&this.state.project.typeAlim)||'monophase')!=='triphase')return null;
+    const djs=this.state.disjoncteurs||[];const pcs=this.state.pieces||[];const ph=[0,0,0];
+    const items=djs.map(d=>{let p=0;try{p=this.calcDjPower(d,pcs);}catch(e){}return{d,p};}).sort((a,b)=>b.p-a.p);
+    items.forEach(it=>{let mi=0;if(ph[1]<ph[mi])mi=1;if(ph[2]<ph[mi])mi=2;ph[mi]+=it.p;});
+    const max=Math.max(ph[0],ph[1],ph[2]),min=Math.min(ph[0],ph[1],ph[2]);
+    const imbalance=max>0?Math.round((max-min)/max*100):0;
+    return{L1:ph[0],L2:ph[1],L3:ph[2],max,min,tot:ph[0]+ph[1]+ph[2],imbalance};
+  }
   bilanPuissance(appId){
     const FAM=[{label:'Eclairage',types:['eclairage'],coef:1},{label:'Prises',types:['prises','prises_sdb'],coef:0.2},{label:'Cuisson',types:['four','hotte'],coef:0.7},{label:'Lavage',types:['lave_vaisselle','lave_linge','seche_linge'],coef:0.75},{label:'Eau chaude (ECS)',types:['chauffe_eau'],coef:1},{label:'Chauffage / Clim',types:['climatisation','vmc'],coef:1},{label:'Autres',types:['borne_ve','portail','piscine','camera','tv','rj45','sono','alarme_intrusion','detecteur_fumee','detecteur_co','visiophone','domotique','solaire','inverseur_source','controleur_tension','afficheur'],coef:0.6}];
     const pcs=(this.state.pieces||[]).filter(p=>appId==null||p.appId===appId);
@@ -2936,6 +2946,7 @@ class Component extends DCLogic {
             r('span',null,'Puissance souscrite : '+b.souscriteKva+' kVA'),
             r('span',{style:{fontWeight:700,color:over?c.danger:c.success}},over?'Depassement !':pct+'% utilises')),
           r('div',{style:{height:7,background:c.bdr2,borderRadius:4,overflow:'hidden'}},r('div',{style:{height:'100%',width:Math.min(100,pct)+'%',background:over?c.danger:'linear-gradient(90deg,#0277BD,#0EA5E9)',borderRadius:4}}))):null,
+        (()=>{const pb=this.phaseBalance();if(!pb)return null;const mx=Math.max(pb.L1,pb.L2,pb.L3,1);return r('div',{style:{marginTop:12}},r('div',{style:{fontSize:9,fontWeight:700,color:pb.imbalance>30?c.warn:c.muted,textTransform:'uppercase',letterSpacing:'.06em',marginBottom:6}},'Equilibrage triphase ('+pb.imbalance+'%'+(pb.imbalance>30?' — a reequilibrer':'')+')'),...[['L1',pb.L1,'#6d4c41'],['L2',pb.L2,'#212121'],['L3',pb.L3,'#9e9e9e']].map((x,k)=>r('div',{key:k,style:{display:'flex',alignItems:'center',gap:8,marginBottom:4}},r('span',{style:{width:22,fontSize:10,fontWeight:700,color:x[2],fontFamily:c.mono}},x[0]),r('div',{style:{flex:1,height:7,background:c.bdr2,borderRadius:4,overflow:'hidden'}},r('div',{style:{height:'100%',width:(x[1]/mx*100)+'%',background:x[2],borderRadius:4}})),r('span',{style:{width:58,textAlign:'right',fontSize:10,fontFamily:c.mono,color:c.text2}},(x[1]/1000).toFixed(1)+'kW'))));})(),
         apps.length>1?r('div',{style:{marginTop:12}},
           r('div',{style:{fontSize:9,fontWeight:700,color:c.muted,textTransform:'uppercase',letterSpacing:'.06em',marginBottom:5}},'Repartition par appartement'),
           ...apps.map(ap=>{const ba=this.bilanPuissance(ap.id);return r('div',{key:ap.id,style:{display:'flex',fontSize:11,padding:'3px 0',borderBottom:'1px solid '+c.bdr}},r('span',{style:{flex:1,color:c.text2}},ap.nom),r('span',{style:{fontFamily:c.mono,color:c.accent,fontWeight:700}},ba.kvaFoisonne.toFixed(1)+' kVA'))})):null)));
