@@ -3524,6 +3524,19 @@ class Component extends DCLogic {
   ModalShell(title,onClose,children,footer){const c=this.C;return this.r('div',null,this.r('div',{style:{padding:'22px 26px 0'}},this.r('div',{style:{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:20}},this.r('h2',{style:{fontSize:16,fontWeight:700,color:c.text}},title),this.r('button',{onClick:onClose,style:{background:'transparent',border:'none',color:c.muted,fontSize:22,cursor:'pointer',lineHeight:1}},'×')),children),this.r('div',{style:{padding:'14px 26px 22px',borderTop:`1px solid ${c.bdr}`,display:'flex',gap:8,justifyContent:'flex-end'}},footer));}
   deleteItem(arr,id){this.setState(s=>({[arr]:s[arr].filter(x=>x.id!==id)}))}
   openEdit(type,obj,formKey,formData){this.setState({showModal:true,modalType:type,editId:obj.id,[formKey]:{...formData}});}
+  moveFonction(fnId,toPieceId){
+    // Deplace une fonction d'une piece vers une autre (conserve son ref/id => liens circuits/interrupteurs preserves)
+    const src=(this.state.pieces||[]).find(p=>(p.fonctions||[]).some(f=>f.id===fnId));
+    if(!src||src.id===toPieceId)return;
+    const fn=(src.fonctions||[]).find(f=>f.id===fnId);if(!fn)return;
+    const dst=(this.state.pieces||[]).find(p=>p.id===toPieceId);
+    this.setState(s=>({pieces:s.pieces.map(p=>{
+      if(p.id===src.id)return{...p,fonctions:(p.fonctions||[]).filter(f=>f.id!==fnId)};
+      if(p.id===toPieceId)return{...p,fonctions:[...(p.fonctions||[]),fn]};
+      return p;
+    }),logDragFn:null}));
+    this.showToast((this.FNS[fn.type]?this.FNS[fn.type].label:'Fonction')+' déplacée vers '+(dst?dst.nom:'la pièce'));
+  }
   duplicateAppart(appId){
     this.setState(s=>{
       const app=s.appartements.find(a=>a.id===appId);if(!app)return{};
@@ -6132,8 +6145,11 @@ class Component extends DCLogic {
         ...appPieces.map(p=>{
           const active=p.id===selPiece?.id;
           const pow=getPow(p);
+          const dragActive=this.state.logDragFn!=null;
           return r('button',{key:p.id,onClick:()=>this.setState({selectedLogPieceId:p.id===selPiece?.id?null:p.id}),
-            style:{width:'100%',display:'flex',alignItems:'center',gap:9,padding:'8px 12px',border:'none',cursor:'pointer',textAlign:'left',background:active?'#fff':'transparent',borderLeft:`3px solid ${active?sky:'transparent'}`,boxShadow:active?`0 1px 4px ${c.shadow}`:'none',transition:'all .12s',marginBottom:1}},
+            onDragOver:(e)=>{if(dragActive){e.preventDefault();try{e.dataTransfer.dropEffect='move';}catch(_){}}},
+            onDrop:(e)=>{e.preventDefault();let id=0;try{id=+e.dataTransfer.getData('text/plain');}catch(_){}if(id)this.moveFonction(id,p.id);},
+            style:{width:'100%',display:'flex',alignItems:'center',gap:9,padding:'8px 12px',border:'none',cursor:'pointer',textAlign:'left',background:active?'#fff':'transparent',borderLeft:`3px solid ${active?sky:'transparent'}`,outline:dragActive?'2px dashed '+sky:'none',outlineOffset:'-3px',boxShadow:active?`0 1px 4px ${c.shadow}`:'none',transition:'all .12s',marginBottom:1}},
             r('div',{style:{width:28,height:28,borderRadius:7,background:{sejour:'#f59e0b',cuisine:'#ef4444',chambre:'#8b5cf6',sdb:'#0284C7',wc:'#64748b',bureau:'#6366f1',couloir:'#94a3b8',garage:'#374151',cave:'#78716c',exterieur:'#16a34a'}[p.type]+'15'||c.surf3,display:'inline-flex',alignItems:'center',justifyContent:'center',flexShrink:0,color:{sejour:'#f59e0b',cuisine:'#ef4444',chambre:'#8b5cf6',sdb:'#0284C7',wc:'#64748b',bureau:'#6366f1',couloir:'#94a3b8',garage:'#374151',cave:'#78716c',exterieur:'#16a34a'}[p.type]||c.muted}},this.ico(p.type,15)),
             r('div',{style:{flex:1,minWidth:0,display:'flex',alignItems:'center',gap:6}},
               r('div',{style:{flex:1,minWidth:0}},
@@ -6203,7 +6219,11 @@ class Component extends DCLogic {
                 const pcircs=circuits.filter(ci=>ci.pid===selPiece.id&&ci.type===fn.type);
                 const fnPow=isEcl?(fn.puissance||10)*(fn.quantite||1):0;
                 const fnActive=this.state.selectedFnId===fn.id;
-                return r('div',{key:fn.id,onClick:()=>this.setState({selectedFnId:fn.id===this.state.selectedFnId?null:fn.id}),style:{background:fnActive?'rgba(2,119,189,.05)':'#fff',border:'1px solid '+(fnActive?sky:c.bdr),borderRadius:9,padding:'10px 12px',display:'flex',alignItems:'flex-start',gap:10,boxShadow:`0 1px 3px ${c.shadow}`,cursor:'pointer',transition:'all .12s'}},
+                return r('div',{key:fn.id,draggable:true,
+                  onDragStart:(e)=>{try{e.dataTransfer.setData('text/plain',String(fn.id));e.dataTransfer.effectAllowed='move';}catch(_){}this.setState({logDragFn:fn.id});},
+                  onDragEnd:()=>this.setState({logDragFn:null}),
+                  onClick:()=>this.setState({selectedFnId:fn.id===this.state.selectedFnId?null:fn.id}),style:{background:fnActive?'rgba(2,119,189,.05)':'#fff',border:'1px solid '+(fnActive?sky:c.bdr),borderRadius:9,padding:'10px 12px',display:'flex',alignItems:'flex-start',gap:10,boxShadow:`0 1px 3px ${c.shadow}`,cursor:'grab',transition:'all .12s'}},
+                  r('span',{style:{color:c.bdr3,fontSize:13,flexShrink:0,cursor:'grab',userSelect:'none',alignSelf:'center'},title:'Glisser vers une autre pièce'},'⠿'),
                   r('div',{style:{width:32,height:32,borderRadius:7,background:fnInfo.color+'18',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0,color:fnInfo.color}},this.ico(fnInfo.ico,16)),
                   r('div',{style:{flex:1,minWidth:0}},
                     r('div',{style:{display:'flex',alignItems:'center',gap:6,flexWrap:'wrap',marginBottom:3}},
@@ -7107,18 +7127,38 @@ class Component extends DCLogic {
                   const zone=zonesCommande.find(z=>z.id===i.zoneId);
                   const pc=pieces.find(p=>p.id===i.pieceId);
                   const TYPE_LBL={simple:'Simple',va_vient:'Va-et-vient',poussoir:'Poussoir',double:'Double',variateur:'Variateur',detecteur:'Detecteur',domotique:'Domotique'};
-                  return r('div',{key:i.id,style:{margin:'4px 8px',background:c.surf,border:'1px solid '+c.bdr,borderRadius:6,padding:'7px 9px'}},
+                  const sel=this.state.selectedInterId===i.id;
+                  return r('div',{key:i.id,onClick:()=>this.setState({selectedInterId:sel?null:i.id}),title:'Cliquer pour voir les lampes commandées',style:{margin:'4px 8px',background:sel?'rgba(8,145,178,.06)':c.surf,border:'1px solid '+(sel?'#0891b2':c.bdr),borderRadius:6,padding:'7px 9px',cursor:'pointer'}},
                     r('div',{style:{display:'flex',alignItems:'center',gap:4,marginBottom:2}},
                       r('span',{style:{fontFamily:c.mono,fontSize:11,fontWeight:900,color:'#0891b2',flex:1}},this.genInterCode(i,this.state)),
                       this.Bdg(TYPE_LBL[i.type]||i.type,'#0891b2'),
-                      r('button',{onClick:()=>this.openEdit('addInter',i,'interForm',{nom:i.nom||'',pieceId:i.pieceId?String(i.pieceId):'',type:i.type||'simple',circuitRef:i.circuitRef||'',zoneId:i.zoneId?String(i.zoneId):''}),style:{background:'transparent',border:'none',color:c.muted,cursor:'pointer',padding:1}},this.ico('pencil',8)),
-                      r('button',{onClick:()=>{this.deleteItem('interrupteurs',i.id);this.showToast('Supprime');},style:{background:'transparent',border:'none',color:c.danger,cursor:'pointer',fontSize:10,padding:0}},'x')
+                      r('button',{onClick:e=>{e.stopPropagation();this.openEdit('addInter',i,'interForm',{nom:i.nom||'',pieceId:i.pieceId?String(i.pieceId):'',type:i.type||'simple',circuitRef:i.circuitRef||'',zoneId:i.zoneId?String(i.zoneId):''});},style:{background:'transparent',border:'none',color:c.muted,cursor:'pointer',padding:1}},this.ico('pencil',8)),
+                      r('button',{onClick:e=>{e.stopPropagation();this.deleteItem('interrupteurs',i.id);this.showToast('Supprime');},style:{background:'transparent',border:'none',color:c.danger,cursor:'pointer',fontSize:10,padding:0}},'x')
                     ),
                     r('div',{style:{display:'flex',gap:3,flexWrap:'wrap'}},
                       i.circuitRef&&this.Bdg(i.circuitRef,'#64748b'),
                       zone&&this.Bdg(zone.zoneCode||zone.nom,'#7c3aed'),
                       pc&&this.Bdg(pc.nom,c.muted)
-                    )
+                    ),
+                    sel&&(()=>{
+                      const refs=[i.circuitRef].filter(Boolean);
+                      // si l'interrupteur est rattache a une zone, inclure les circuits commandes par cette zone
+                      if(i.zoneId)interrupteurs.forEach(o=>{if(o.zoneId===i.zoneId&&o.circuitRef&&refs.indexOf(o.circuitRef)<0)refs.push(o.circuitRef);});
+                      const linked=refs.map(rf=>{const x=pieces.flatMap(p=>(p.fonctions||[]).map(fn=>({fn,p}))).find(y=>y.fn.ref===rf);return{rf,x};});
+                      return r('div',{style:{marginTop:6,paddingTop:6,borderTop:'1px dashed '+c.bdr}},
+                        r('div',{style:{fontSize:8,fontWeight:700,color:c.muted,textTransform:'uppercase',letterSpacing:'.05em',marginBottom:4}},'Lampes / points commandés'),
+                        ...linked.map(({rf,x},k)=>{
+                          if(!x)return r('div',{key:k,style:{fontSize:9,color:c.muted,fontStyle:'italic'}},'Circuit '+rf+' introuvable');
+                          const fn=x.fn;const isEcl=fn.type==='eclairage';const q=fn.quantite||1;const fi=this.FNS[fn.type]||{};
+                          const lamp=isEcl?(this.LAMP_TYPES[fn.typeLampe]?.label||fn.typeLampe||''):'';
+                          const pw=isEcl?(fn.puissance||10)*q:0;
+                          return r('div',{key:k,style:{display:'flex',alignItems:'center',gap:5,fontSize:10,color:c.text,marginBottom:3}},
+                            r('span',{style:{color:fi.color||'#f59e0b',display:'inline-flex',flexShrink:0}},this.ico(fi.ico||'eclairage',12)),
+                            r('span',{style:{flex:1}},(isEcl?q+' point'+(q>1?'s':'')+' lumineux':(fi.label||fn.type))+(lamp?' · '+lamp:'')+(pw>0?' · '+pw+'W':'')),
+                            r('span',{style:{fontFamily:c.mono,fontSize:8,color:c.muted,flexShrink:0}},rf+' · '+x.p.nom));
+                        }),
+                        linked.length===0?r('div',{style:{fontSize:9,color:c.muted,fontStyle:'italic'}},'Aucun circuit associé à cet interrupteur'):null);
+                    })()
                   );
                 }))
             )
