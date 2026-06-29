@@ -7405,110 +7405,181 @@ if(window.__epKeepApplying){
 
 })();
 </script>
-<script id="__FCR_DEDUP_v1__">
-/* Fix: FCR_DB contient des doublons (article importé SANS code + article catalogue AVEC code,
-   même (ref-pi, desc)). Ce patch déduplique FCR_DB en mémoire et corrige le chargement des devis. */
+<script id="__FCR_FIX_v2__">
+/* Fix v2 – 4 correctifs consolidés (remplace __FCR_DEDUP_v1__)
+   1) Guard IDB vide : si localStorage="seedé" mais IDB<50 articles catalogue → clear flags + reload
+   2) Backfill codeA : items avec code A##### sans codeA → codeA=code
+   3) Refresh vue après population de FCR_DB (timing fix)
+   4) Dédup LIGNES_INIT dans acPILoad : évite doublons catalogue+import pour même ref-pi */
 (function(){
 'use strict';
-if(window.__fcrDedupV1) return; window.__fcrDedupV1=true;
+if(window.__fcrFixV2) return; window.__fcrFixV2=true;
 
-var SEP='\x00';
+var CAT_FLAG='epilot_cat_v3';
+var SVC_FLAG='epilot_svc_v1';
+var RELOAD_KEY='fcr_fix_reload_v2';
+
+function isCat(c){ return /^[AS]\d{5}$/.test(c||''); }
 function nn(s){ return (s||'').toLowerCase().replace(/\s+/g,' ').trim(); }
 
-function artKey(a){
-  var pi=(a['ref-pi']||'').trim().toUpperCase();
-  var d=nn(a.desc||a.designation||'');
-  if(!pi||!d) return null;
-  return pi+SEP+d;
-}
-
-function dedupArr(arr){
-  if(!arr||arr.length<2) return arr||[];
-  var byKey={};
-  arr.forEach(function(a){
-    if(!a) return;
-    var k=artKey(a);
-    if(k===null) return;
-    var prev=byKey[k];
-    if(!prev){ byKey[k]=a; return; }
-    var ac=!!(a.code||'').trim(), pc=!!(prev.code||'').trim();
-    if(ac&&!pc){
-      if(!parseFloat(a.pu)&&parseFloat(prev.pu)) a.pu=prev.pu;
-      if(!parseFloat(a.qty)&&parseFloat(prev.qty)) a.qty=prev.qty;
-      if(!parseFloat(a.rabais)&&parseFloat(prev.rabais)) a.rabais=prev.rabais;
-      byKey[k]=a;
-    } else if(!ac&&pc){
-      if(!parseFloat(prev.pu)&&parseFloat(a.pu)) prev.pu=a.pu;
-      if(!parseFloat(prev.qty)&&parseFloat(a.qty)) prev.qty=a.qty;
-    }
+/* ── 1. Backfill codeA ── */
+function backfillCodeA(db){
+  if(!db||!db.length) return 0;
+  var n=0;
+  db.forEach(function(a){
+    if(a&&!a.codeA&&isCat(a.code)){ a.codeA=a.code; n++; }
   });
-  var result=[], seen={};
-  arr.forEach(function(a){
-    if(!a){ result.push(a); return; }
-    var k=artKey(a);
-    if(k===null){ result.push(a); return; }
-    if(byKey[k]===a&&!seen[k]){ seen[k]=true; result.push(a); }
-  });
-  return result;
+  return n;
 }
 
-function dedupInPlace(){
-  var db=window.FCR_DB;
-  if(!db||db.length<2) return;
-  var orig=db.length;
-  var clean=dedupArr(db.slice());
-  if(clean.length===orig) return;
-  db.length=0;
-  clean.forEach(function(a){ db.push(a); });
-  console.info('[FCR Dedup] FCR_DB: '+orig+' → '+db.length+' (-'+(orig-clean.length)+' doublons supprimés)');
+/* ── 2. Refresh de la vue Articles ── */
+function scheduleRefresh(){
+  clearTimeout(window.__fcrRefreshTimer);
+  window.__fcrRefreshTimer=setTimeout(function(){
+    try{ if(window.HubViews&&window.HubViews.refresh) window.HubViews.refresh(); }catch(_){}
+    try{ if(typeof window.renderArticles==='function') window.renderArticles(); }catch(_){}
+  },600);
 }
 
-/* Intercepter les assignations de window.FCR_DB */
+/* ── 3. Intercepteur window.FCR_DB ── */
 var _db=window.FCR_DB||[];
+function onDbSet(v){
+  _db=v;
+  if(!v||v.length<10) return;
+  var n=backfillCodeA(v);
+  scheduleRefresh();
+}
 try{
-  Object.defineProperty(window,'FCR_DB',{
-    configurable:true, enumerable:true,
-    get:function(){ return _db; },
-    set:function(v){ _db=v; if(v&&v.length>20) setTimeout(dedupInPlace,400); }
-  });
+  var desc=Object.getOwnPropertyDescriptor(window,'FCR_DB');
+  if(!desc||desc.configurable!==false){
+    Object.defineProperty(window,'FCR_DB',{
+      configurable:true, enumerable:true,
+      get:function(){ return _db; },
+      set:onDbSet
+    });
+    if(_db&&_db.length>=10){ backfillCodeA(_db); }
+  }
 }catch(e){}
 
-/* Patcher acPILoad : dédupliquer FCR_DB avant le filtrage */
+/* ── 4. Guard IDB vide ── */
+function checkIDB(cb){
+  try{
+    var r=indexedDB.open('fcr_db',1);
+    r.onupgradeneeded=function(e){ e.target.result.createObjectStore('articles',{keyPath:'_k'}); };
+    r.onsuccess=function(e){
+      var db=e.target.result;
+      if(!db.objectStoreNames.contains('articles')){ db.close(); cb(0); return; }
+      var q=db.transaction('articles','readonly').objectStore('articles').getAll();
+      q.onsuccess=function(){
+        var n=(q.result||[]).filter(function(a){ return a&&isCat(a.code); }).length;
+        db.close(); cb(n);
+      };
+      q.onerror=function(){ db.close(); cb(0); };
+    };
+    r.onerror=function(){ cb(0); };
+  }catch(e){ cb(0); }
+}
+
+function doReload(){
+  try{ localStorage.removeItem(CAT_FLAG); }catch(_){}
+  try{ localStorage.removeItem(SVC_FLAG); }catch(_){}
+  try{ sessionStorage.setItem(RELOAD_KEY,'1'); }catch(_){}
+  try{
+    var b=document.createElement('div');
+    b.style.cssText='position:fixed;top:0;left:0;right:0;z-index:99999;background:#B5000A;color:#fff;text-align:center;padding:14px;font:700 14px/1.4 sans-serif';
+    b.textContent='Rechargement du catalogue...';
+    document.body.appendChild(b);
+  }catch(_){}
+  setTimeout(function(){ location.reload(); },900);
+}
+
+function guardCheck(){
+  var catFlagSet=false;
+  try{ catFlagSet=(localStorage.getItem(CAT_FLAG)==='1'); }catch(_){}
+  if(!catFlagSet) return; // seed n'a pas encore tourné, il va s'en occuper
+
+  var alreadyReloaded=false;
+  try{ alreadyReloaded=(sessionStorage.getItem(RELOAD_KEY)==='1'); }catch(_){}
+
+  var db=window.FCR_DB||[];
+  var catCount=db.filter(function(a){ return a&&isCat(a.code); }).length;
+
+  if(catCount>=50){
+    // FCR_DB OK : backfill + refresh si nécessaire
+    backfillCodeA(db);
+    scheduleRefresh();
+    return;
+  }
+
+  // FCR_DB a < 50 articles catalogue malgré le flag → vérifier IDB
+  checkIDB(function(idbCount){
+    if(idbCount>=50){
+      // IDB a des données mais FCR_DB vide → restoreArticlesDB peut-être pas fini
+      setTimeout(function(){
+        var db2=window.FCR_DB||[];
+        backfillCodeA(db2);
+        scheduleRefresh();
+      },2000);
+      return;
+    }
+    // IDB vraiment vide
+    if(alreadyReloaded){
+      // Déjà rechargé une fois cette session, éviter boucle infinie
+      try{ localStorage.removeItem(CAT_FLAG); }catch(_){}
+      try{ localStorage.removeItem(SVC_FLAG); }catch(_){}
+      console.warn('[FCR Fix] Seed semble avoir échoué même après reload. Flags supprimés.');
+      return;
+    }
+    console.info('[FCR Fix] IDB vide mais flag localStorage présent → reload pour forcer le seed');
+    doReload();
+  });
+}
+
+/* ── 5. Patch acPILoad : dédup LIGNES_INIT après construction ── */
 function patchAcPILoad(){
   if(typeof window.acPILoad!=='function') return false;
-  if(window.acPILoad.__dedupV1) return true;
+  if(window.acPILoad.__fixV2) return true;
   var orig=window.acPILoad;
   window.acPILoad=function(ref){
-    dedupInPlace();
     orig.apply(this,arguments);
+    // Dédup les lignes par desc normalisée (garde la 1re occurrence = article catalogue)
+    try{
+      var lignes=window.LIGNES_INIT;
+      if(!lignes||lignes.length<2) return;
+      var seen={};
+      var clean=lignes.filter(function(l){
+        if(!l||l.type==='section') return true;
+        var k=nn(l.desc||l.designation||'');
+        if(!k) return true;
+        if(seen[k]) return false;
+        seen[k]=true;
+        return true;
+      });
+      if(clean.length<lignes.length){
+        lignes.length=0;
+        clean.forEach(function(l){ lignes.push(l); });
+        setTimeout(function(){ try{ if(window.renderAll) window.renderAll(); }catch(_){} },100);
+      }
+    }catch(_){}
   };
-  window.acPILoad.__dedupV1=true;
+  window.acPILoad.__fixV2=true;
   return true;
 }
 
-/* Patcher chargerDevisParNumero : dédupliquer avant le chargement */
-function patchCharger(){
-  if(typeof window.chargerDevisParNumero!=='function') return false;
-  if(window.chargerDevisParNumero.__dedupV1) return true;
-  var orig=window.chargerDevisParNumero;
-  window.chargerDevisParNumero=function(){
-    dedupInPlace();
-    orig.apply(this,arguments);
-  };
-  window.chargerDevisParNumero.__dedupV1=true;
-  return true;
-}
-
+/* ── Boot ── */
 var _bt=0;
 function boot(){
-  var done=patchAcPILoad()&&patchCharger();
-  if(done) return;
-  if(++_bt<40) setTimeout(boot,500);
+  if(patchAcPILoad()) return;
+  if(++_bt<40) setTimeout(boot,300);
 }
-
-/* Déduplication initiale après stabilisation des seeds (~5s) */
-setTimeout(function(){ dedupInPlace(); boot(); },5000);
 boot();
+
+// Lancer le guard après que restoreArticlesDB ait eu le temps de finir (~3s)
+if(document.readyState==='loading'){
+  document.addEventListener('DOMContentLoaded',function(){ setTimeout(guardCheck,3000); });
+}else{
+  setTimeout(guardCheck,3000);
+}
 
 })();
 </script>
