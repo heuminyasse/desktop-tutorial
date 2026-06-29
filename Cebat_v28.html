@@ -2193,6 +2193,10 @@ function(a,b,c){if(!Vd(b))throw Error(m(200));return Wd(null,a,b,!1,c)};Q.unmoun
     input:focus-visible,select:focus-visible,textarea:focus-visible{outline:none;border-color:#0284C7 !important;box-shadow:0 0 0 3px rgba(2,132,199,.20)}
     button:focus-visible{outline:none;box-shadow:0 0 0 3px rgba(2,132,199,.28)}
     [draggable="true"]:active{cursor:grabbing}
+    .cbt-card{transition:box-shadow .17s ease,border-color .17s ease}
+    .cbt-card:hover{box-shadow:var(--elev2,0 8px 20px rgba(0,0,0,.1))}
+    .cbt-stat{transition:box-shadow .17s ease,transform .17s ease}
+    .cbt-stat:hover{box-shadow:var(--elev2,0 8px 20px rgba(0,0,0,.1));transform:translateY(-2px)}
     @keyframes fadeIn{from{opacity:0;transform:translateY(7px)}to{opacity:1;transform:none}}
     @keyframes appear{from{opacity:0;transform:scale(.97)}to{opacity:1;transform:scale(1)}}
     @keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
@@ -2827,7 +2831,7 @@ class Component extends DCLogic {
   // ═══ THEME ═══
   getC(theme){
     const shared={font:"'Calibri Light','Calibri',system-ui,sans-serif",mono:"'JetBrains Mono',monospace",accent:'#0284C7',acBlue:'#0EA5E9',success:'#16a34a',warn:'#d97706',danger:'#dc2626',cyan:'#06b6d4',purple:'#7c3aed',brand:'#C62828'};
-    return theme==='dark'?{...shared,bg:'#0B0E17',surf:'#141925',surf2:'#1A2030',surf3:'#202739',bdr:'#283044',bdr2:'#374055',bdr3:'#4C5872',text:'#E8ECF6',text2:'#A7B0C5',muted:'#6B7590',accentSoft:'rgba(2,132,199,.18)',scrollThumb:'#283044',shadow:'rgba(0,0,0,.45)'}:{...shared,bg:'#F1F3F7',surf:'#FFFFFF',surf2:'#FFFFFF',surf3:'#F6F8FB',bdr:'#E8EBF0',bdr2:'#D5DAE2',bdr3:'#9AA3B2',text:'#0F172A',text2:'#334155',muted:'#64748B',accentSoft:'rgba(2,132,199,.10)',scrollThumb:'#D5DAE2',shadow:'rgba(15,23,42,.07)'};
+    return theme==='dark'?{...shared,bg:'#0B0E17',surf:'#141925',surf2:'#1A2030',surf3:'#202739',bdr:'#283044',bdr2:'#374055',bdr3:'#4C5872',text:'#E8ECF6',text2:'#A7B0C5',muted:'#6B7590',accentSoft:'rgba(2,132,199,.18)',scrollThumb:'#283044',shadow:'rgba(0,0,0,.45)',elev1:'0 1px 2px rgba(0,0,0,.3),0 1px 3px rgba(0,0,0,.4)',elev2:'0 2px 6px rgba(0,0,0,.4),0 8px 20px rgba(0,0,0,.45)',elev3:'0 10px 30px rgba(0,0,0,.55),0 2px 8px rgba(0,0,0,.4)'}:{...shared,bg:'#F1F3F7',surf:'#FFFFFF',surf2:'#FFFFFF',surf3:'#F6F8FB',bdr:'#E8EBF0',bdr2:'#D5DAE2',bdr3:'#9AA3B2',text:'#0F172A',text2:'#334155',muted:'#64748B',accentSoft:'rgba(2,132,199,.10)',scrollThumb:'#D5DAE2',shadow:'rgba(15,23,42,.07)',elev1:'0 1px 2px rgba(15,23,42,.04),0 1px 3px rgba(15,23,42,.07)',elev2:'0 2px 4px rgba(15,23,42,.05),0 8px 20px rgba(15,23,42,.10)',elev3:'0 12px 30px rgba(15,23,42,.12),0 2px 8px rgba(15,23,42,.07)'};
   }
 
   // ═══ HELPERS ═══
@@ -3227,12 +3231,12 @@ class Component extends DCLogic {
   }
   Card(title,children,extra=null,p=20){
     const c=this.C;
-    return this.r('div',{style:{background:c.surf,border:`1px solid ${c.bdr}`,borderRadius:10,padding:p,boxShadow:`0 1px 4px ${c.shadow}`}},
+    return this.r('div',{className:'cbt-card',style:{background:c.surf,border:`1px solid ${c.bdr}`,borderRadius:12,padding:p,boxShadow:c.elev1}},
       title&&this.r('div',{style:{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:14}},
         this.r('h3',{style:{fontSize:11,fontWeight:700,color:c.text2,textTransform:'uppercase',letterSpacing:'.07em'}},title),extra),children);
   }
   Bdg(text,color='#0284C7'){return this.r('span',{style:{display:'inline-block',fontSize:10,fontWeight:700,padding:'2px 7px',borderRadius:8,background:color+'22',color,border:`1px solid ${color}44`,fontFamily:this.C.mono,whiteSpace:'nowrap'}},text);}
-  Stat(val,label,color='#0284C7',sub=''){const c=this.C;return this.r('div',{style:{background:c.surf,border:`1px solid ${c.bdr}`,borderRadius:10,padding:'16px 18px',boxShadow:`0 1px 4px ${c.shadow}`}},this.r('div',{style:{fontSize:10,color:c.muted,marginBottom:5,textTransform:'uppercase',letterSpacing:'.05em',fontWeight:600}},label),this.r('div',{style:{fontSize:24,fontWeight:800,color,fontFamily:c.mono}},val),sub&&this.r('div',{style:{fontSize:10,color:c.muted,marginTop:3}},sub));}
+  Stat(val,label,color='#0284C7',sub=''){const c=this.C;return this.r('div',{className:'cbt-stat',style:{background:c.surf,border:`1px solid ${c.bdr}`,borderRadius:12,padding:'16px 18px',boxShadow:c.elev1}},this.r('div',{style:{fontSize:10,color:c.muted,marginBottom:5,textTransform:'uppercase',letterSpacing:'.05em',fontWeight:600}},label),this.r('div',{style:{fontSize:24,fontWeight:800,color,fontFamily:c.mono}},val),sub&&this.r('div',{style:{fontSize:10,color:c.muted,marginTop:3}},sub));}
   SH(title,sub='',extra=null){const c=this.C;return this.r('div',{style:{marginBottom:24}},this.r('div',{style:{display:'flex',justifyContent:'space-between',alignItems:'flex-start'}},this.r('div',null,this.r('h1',{style:{fontSize:21,fontWeight:800,color:c.text,marginBottom:3,letterSpacing:'-.4px'}},title),sub&&this.r('p',{style:{fontSize:13,color:c.muted}},sub)),extra));}
   showToast(msg){this.setState({toast:msg});clearTimeout(this._tt);this._tt=setTimeout(()=>this.setState({toast:null}),3000);}
   Inp(field,label,type='text',form,setForm,opts={}){const c=this.C;return this.r('div',{style:{marginBottom:14}},this.r('label',{style:{display:'block',fontSize:11,color:c.text2,marginBottom:5,fontWeight:600}},label),this.r('input',{type,value:form[field]??'',onChange:e=>setForm(f=>({...f,[field]:type==='number'?(e.target.value===''?'':(Number.isFinite(+e.target.value)?+e.target.value:f[field])):e.target.value})),...opts,style:{width:'100%',background:c.surf3,border:`1px solid ${c.bdr2}`,borderRadius:7,padding:'8px 11px',color:c.text,fontSize:13,outline:'none',fontFamily:c.font,...(opts.style||{})}}));}
@@ -3441,7 +3445,7 @@ class Component extends DCLogic {
     const{view,project,theme}=this.state;const c=this.C;const r=this.r;
     const nav=this.NAV.find(n=>n.id===view);
     const red='#0277BD';
-    return r('header',{'data-print':'hide',style:{height:52,background:red,display:'flex',alignItems:'center',justifyContent:'space-between',padding:'0 20px',flexShrink:0,boxShadow:'0 2px 8px rgba(0,0,0,.2)'}},
+    return r('header',{'data-print':'hide',style:{height:54,background:'linear-gradient(180deg,#0288CE 0%,#0277BD 100%)',display:'flex',alignItems:'center',justifyContent:'space-between',padding:'0 20px',flexShrink:0,boxShadow:'0 4px 16px rgba(2,46,77,.28),0 1px 0 rgba(255,255,255,.12) inset',position:'relative',zIndex:20}},
       r('div',{style:{display:'flex',alignItems:'center',gap:14}},
         r('button',{className:'cbt-burger',onClick:()=>this.setState(st=>({sidebarOpen:!st.sidebarOpen})),title:'Menu',style:{display:'none',background:'rgba(255,255,255,.15)',border:'1px solid rgba(255,255,255,.25)',borderRadius:7,width:32,height:28,cursor:'pointer',color:'#fff',fontSize:15,alignItems:'center',justifyContent:'center'}},'☰'),
         r('div',{style:{display:'flex',flexDirection:'column',lineHeight:1.1}},
@@ -5620,14 +5624,15 @@ class Component extends DCLogic {
     const costs=this.estCost(circuits);const totalW=circuits.reduce((s,ci)=>s+ci.puissance,0);const comp=this.getCompletion();
     const milestones=['Projet','Niveaux','Appartements','Pièces','Circuits','Rapport'].map((l,i)=>({l,done:i<(comp>=95?6:comp>=75?5:comp>=55?4:comp>=35?3:comp>=20?2:1)}));
     return r('div',{style:{padding:'24px 28px',animation:'fadeIn .3s ease'}},
-      r('div',{style:{marginBottom:4,display:'flex',alignItems:'center',gap:8}},r('div',{style:{width:6,height:6,borderRadius:'50%',background:c.success,animation:'pulse 2s infinite'}}),r('span',{style:{fontSize:11,color:c.muted}},'Projet actif — '+new Date().toLocaleDateString('fr-FR'))),
-      r('h1',{style:{fontSize:24,fontWeight:800,color:c.text,marginBottom:2,letterSpacing:'-.5px'}},project.nom),
-      r('div',{style:{display:'flex',gap:8,marginBottom:18,alignItems:'center'}},
-        r('span',{style:{fontSize:12,color:c.muted}},project.adresse),
-        this.Bdg((this.TC[project.typeConstruction]||{label:project.typeConstruction||'Projet'}).label,c.purple)
-      ),
+      r('div',{className:'cbt-card',style:{background:c.surf,border:`1px solid ${c.bdr}`,borderRadius:14,padding:'16px 20px',marginBottom:16,boxShadow:c.elev2,borderLeft:`3px solid ${c.accent}`}},
+        r('div',{style:{marginBottom:4,display:'flex',alignItems:'center',gap:8}},r('div',{style:{width:6,height:6,borderRadius:'50%',background:c.success,animation:'pulse 2s infinite'}}),r('span',{style:{fontSize:11,color:c.muted}},'Projet actif — '+new Date().toLocaleDateString('fr-FR'))),
+        r('h1',{style:{fontSize:24,fontWeight:800,color:c.text,marginBottom:2,letterSpacing:'-.5px'}},project.nom),
+        r('div',{style:{display:'flex',gap:8,alignItems:'center'}},
+          r('span',{style:{fontSize:12,color:c.muted}},project.adresse),
+          this.Bdg((this.TC[project.typeConstruction]||{label:project.typeConstruction||'Projet'}).label,c.purple)
+        )),
       niveaux.length===0&&r('div',{style:{background:'rgba(2,119,189,.06)',border:'1px dashed '+c.acBlue,borderRadius:10,padding:'14px 18px',marginBottom:16,display:'flex',alignItems:'center',justifyContent:'space-between',gap:12}},r('div',null,r('div',{style:{fontSize:13,fontWeight:700,color:c.text,marginBottom:2}},'Bienvenue 👋 Commencez votre installation'),r('div',{style:{fontSize:11,color:c.muted}},'Ajoutez un niveau et un appartement pour démarrer.')),this.Btn('Configurer le projet →',()=>this.setState({view:'projet'}),'primary','sm')),
-      r('div',{style:{background:c.surf2,border:`1px solid ${c.bdr}`,borderRadius:12,padding:'14px 20px',marginBottom:16}},
+      r('div',{className:'cbt-card',style:{background:c.surf2,border:`1px solid ${c.bdr}`,borderRadius:14,padding:'14px 20px',marginBottom:16,boxShadow:c.elev1}},
         r('div',{style:{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:10}},r('span',{style:{fontSize:12,fontWeight:600,color:c.text}},'Progression du projet'),r('span',{style:{fontSize:13,fontWeight:800,color:c.accent,fontFamily:c.mono}},comp+'%')),
         r('div',{style:{height:6,background:c.bdr2,borderRadius:3,overflow:'hidden',marginBottom:12}},r('div',{style:{height:'100%',width:comp+'%',background:'linear-gradient(90deg,#0277BD,#0EA5E9)',borderRadius:3,transition:'width .6s'}})),
         r('div',{style:{display:'flex',gap:0}},...milestones.map((m,i)=>r('div',{key:m.l,style:{flex:1,display:'flex',flexDirection:'column',alignItems:'center',gap:3}},r('div',{style:{width:18,height:18,borderRadius:'50%',background:m.done?c.success:c.bdr2,border:`2px solid ${m.done?c.success:c.bdr3}`,display:'flex',alignItems:'center',justifyContent:'center',fontSize:9,color:'#fff',fontWeight:700}},m.done?'✓':String(i+1)),r('div',{style:{fontSize:9,color:m.done?c.success:c.muted,fontWeight:m.done?600:400,textAlign:'center'}},m.l))))
@@ -7779,7 +7784,7 @@ class Component extends DCLogic {
       realisation:()=>this.vRealisation(circuits),cablage:()=>this.vCablage(circuits),
       domotique:()=>this.vDomotique(),devis:()=>this.vDevis(circuits),
     };
-    const app=r('div',{style:{display:'flex',flexDirection:'column',height:'100vh',overflow:'hidden'}},
+    const app=r('div',{style:{display:'flex',flexDirection:'column',height:'100vh',overflow:'hidden','--elev1':c.elev1,'--elev2':c.elev2,'--elev3':c.elev3}},
       this.renderTopBar(),
       r('div',{style:{display:'flex',flex:1,overflow:'hidden'}},
         this.renderSidebar(circuits),
