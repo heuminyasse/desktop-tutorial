@@ -2927,6 +2927,12 @@ class Component extends DCLogic {
       if(isPr&&d.calibre>20)add('warn','Disjoncteur '+code+' : prises en '+d.calibre+'A (max conseille 20A).');
       if(d.ddr&&d.ddr>30)add('warn','Disjoncteur '+code+' : circuit terminal devrait etre en 30 mA (actuel '+d.ddr+' mA).');
     });
+    const TYPEA_FN={lave_linge:'lave-linge',four:'plaque de cuisson',borne_ve:'borne de recharge VE'};
+    const typeARefs=[];djs.forEach(d=>{(d.recepteurs||[]).forEach(rf=>{if(TYPEA_FN[refType[rf]])typeARefs.push({code:d.code||('CB'+d.id),lib:TYPEA_FN[refType[rf]]});});});
+    if(typeARefs.length){
+      const libs=[...new Set(typeARefs.map(x=>x.lib))].join(', ');
+      add('warn','Differentiel Type A obligatoire : '+typeARefs.length+' circuit(s) ('+libs+') a proteger par un ID 30 mA de Type A (NF C 15-100 §531.2.4) — composantes continues de defaut.');
+    }
     tes.forEach(t=>{
       const td=djs.filter(d=>d.tableauId===t.id);if(td.length===0)return;
       const byDdr={};td.forEach(d=>{const k=(+d.ddr||0);(byDdr[k]=byDdr[k]||[]).push(d);});
