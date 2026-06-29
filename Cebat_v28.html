@@ -7139,29 +7139,36 @@ class Component extends DCLogic {
                       i.circuitRef&&this.Bdg(i.circuitRef,'#64748b'),
                       zone&&this.Bdg(zone.zoneCode||zone.nom,'#7c3aed'),
                       pc&&this.Bdg(pc.nom,c.muted)
-                    ),
-                    sel&&(()=>{
-                      const refs=[i.circuitRef].filter(Boolean);
-                      // si l'interrupteur est rattache a une zone, inclure les circuits commandes par cette zone
-                      if(i.zoneId)interrupteurs.forEach(o=>{if(o.zoneId===i.zoneId&&o.circuitRef&&refs.indexOf(o.circuitRef)<0)refs.push(o.circuitRef);});
-                      const linked=refs.map(rf=>{const x=pieces.flatMap(p=>(p.fonctions||[]).map(fn=>({fn,p}))).find(y=>y.fn.ref===rf);return{rf,x};});
-                      return r('div',{style:{marginTop:6,paddingTop:6,borderTop:'1px dashed '+c.bdr}},
-                        r('div',{style:{fontSize:8,fontWeight:700,color:c.muted,textTransform:'uppercase',letterSpacing:'.05em',marginBottom:4}},'Lampes / points commandés'),
-                        ...linked.map(({rf,x},k)=>{
-                          if(!x)return r('div',{key:k,style:{fontSize:9,color:c.muted,fontStyle:'italic'}},'Circuit '+rf+' introuvable');
-                          const fn=x.fn;const isEcl=fn.type==='eclairage';const q=fn.quantite||1;const fi=this.FNS[fn.type]||{};
-                          const lamp=isEcl?(this.LAMP_TYPES[fn.typeLampe]?.label||fn.typeLampe||''):'';
-                          const pw=isEcl?(fn.puissance||10)*q:0;
-                          return r('div',{key:k,style:{display:'flex',alignItems:'center',gap:5,fontSize:10,color:c.text,marginBottom:3}},
-                            r('span',{style:{color:fi.color||'#f59e0b',display:'inline-flex',flexShrink:0}},this.ico(fi.ico||'eclairage',12)),
-                            r('span',{style:{flex:1}},(isEcl?q+' point'+(q>1?'s':'')+' lumineux':(fi.label||fn.type))+(lamp?' · '+lamp:'')+(pw>0?' · '+pw+'W':'')),
-                            r('span',{style:{fontFamily:c.mono,fontSize:8,color:c.muted,flexShrink:0}},rf+' · '+x.p.nom));
-                        }),
-                        linked.length===0?r('div',{style:{fontSize:9,color:c.muted,fontStyle:'italic'}},'Aucun circuit associé à cet interrupteur'):null);
-                    })()
+                    )
                   );
                 }))
             )
+          ),
+
+          r('div',{style:{...colW,minWidth:200,borderRight:'none'}},
+            r('div',{style:colHdrSt('#f59e0b')},r('span',{style:{fontSize:10,fontWeight:800,color:'#f59e0b',textTransform:'uppercase',letterSpacing:'.06em',flex:1}},'Lampes commandées')),
+            r('div',{style:colBody},(()=>{
+              const i=interrupteurs.find(x=>x.id===this.state.selectedInterId);
+              if(!i)return r('div',{style:{padding:'14px',textAlign:'center',fontSize:10,color:c.muted,fontStyle:'italic'}},'Cliquez un interrupteur pour afficher les lampes commandées');
+              const refs=[i.circuitRef].filter(Boolean);
+              if(i.zoneId)interrupteurs.forEach(o=>{if(o.zoneId===i.zoneId&&o.circuitRef&&refs.indexOf(o.circuitRef)<0)refs.push(o.circuitRef);});
+              const linked=refs.map(rf=>({rf,x:pieces.flatMap(p=>(p.fonctions||[]).map(fn=>({fn,p}))).find(y=>y.fn.ref===rf)}));
+              return r('div',{style:{padding:'6px 8px'}},
+                r('div',{style:{fontSize:10,fontFamily:c.mono,fontWeight:800,color:'#0891b2',marginBottom:6,display:'flex',alignItems:'center',gap:5}},this.genInterCode(i,this.state),r('span',{style:{color:c.muted,fontSize:12}},'→')),
+                ...linked.map(({rf,x},k)=>{
+                  if(!x)return r('div',{key:k,style:{fontSize:9,color:c.muted,fontStyle:'italic',padding:'6px 0'}},'Circuit '+rf+' introuvable');
+                  const fn=x.fn;const isEcl=fn.type==='eclairage';const q=fn.quantite||1;const fi=this.FNS[fn.type]||{};
+                  const lamp=isEcl?(this.LAMP_TYPES[fn.typeLampe]?.label||fn.typeLampe||''):'';
+                  const pw=isEcl?(fn.puissance||10)*q:0;
+                  return r('div',{key:k,style:{background:c.surf,border:'1px solid '+c.bdr,borderRadius:6,padding:'8px 9px',marginBottom:5,display:'flex',alignItems:'flex-start',gap:8}},
+                    r('div',{style:{width:28,height:28,borderRadius:6,background:(fi.color||'#f59e0b')+'18',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0,color:fi.color||'#f59e0b'}},this.ico(fi.ico||'eclairage',15)),
+                    r('div',{style:{flex:1,minWidth:0}},
+                      r('div',{style:{fontSize:11,fontWeight:700,color:c.text}},isEcl?q+' point'+(q>1?'s':'')+' lumineux':(fi.label||fn.type)),
+                      lamp&&r('div',{style:{fontSize:9,color:c.muted}},lamp),
+                      r('div',{style:{fontSize:9,fontFamily:c.mono,color:fi.color||'#f59e0b'}},rf+(pw>0?' · '+pw+'W':'')+' · '+x.p.nom)));
+                }),
+                linked.length===0?r('div',{style:{fontSize:10,color:c.muted,fontStyle:'italic',padding:'8px 0'}},'Aucun circuit associé à cet interrupteur'):null);
+            })())
           )
 
         )
