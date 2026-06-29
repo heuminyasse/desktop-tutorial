@@ -6916,7 +6916,7 @@ function patchCalc(){
       var rabAmt=htBrut-htNet;
       /* Montant Hors Taxes → montant BRUT (avant rabais) */
       var tHT=document.getElementById('t-ht');
-      if(tHT) tHT.textContent=fmt(htBrut)+' FCFA';
+      if(tHT){ tHT.textContent=fmt(htBrut)+' FCFA'; tHT.style.fontWeight='700'; }
       /* Rabais → montant total du rabais */
       var tRab=document.getElementById('t-rab');
       if(tRab) tRab.textContent=(rabAmt>0?'- ':'')+fmt(rabAmt)+' FCFA';
