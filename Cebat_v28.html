@@ -7790,6 +7790,35 @@ class Component extends DCLogic {
         });
       });
 
+      // ── Cables d'alimentation des boites de derivation (TE -> BD) ──
+      (this.state.boitesDeriv||[]).forEach(bd=>{
+        const te=(this.state.tableauxElec||[]).find(t=>String(t.id)===String(bd.tableauId));
+        if(!te)return;
+        const bdC=this.genBDCode(bd,this.state);
+        const teC=this.genTECode(te,this.state);
+        const wCodeB=bdC;
+        const tenantB=teC+(te.nom?' — '+te.nom:'');
+        const aboutissantB=bdC+(bd.nom?' — '+bd.nom:'');
+        const schemaB=[{k:'L',bt:'L',ba:'L'},{k:'N',bt:'N',ba:'N'},{k:'PE',bt:'PE',ba:'PE'}];
+        const cableTypeB='U1000 R2V 3G2.5 mm²';
+        const filsB=schemaB.map((sx,i)=>{
+          const ovrKey=wCodeB+'_filBD'+(i+1);
+          const ovr=nomenclatureOverrides[ovrKey]||{};
+          return {
+            wCode:wCodeB,filNum:i+1,conducteurKey:sx.k,
+            bt:ovr.bt||sx.bt,ba:ovr.ba||sx.ba,
+            tenant:ovr.tenant||tenantB,aboutissant:ovr.aboutissant||aboutissantB,
+            cableType:cableTypeB,
+            couleur:COUL[sx.k]?.label||sx.k,couleurHex:COUL[sx.k]?.hex||'#888',
+            rep:ovr.rep||'',racc:ovr.racc||'',test:ovr.test||'',statut:ovr.statut||'',
+            fnRef:null,fnType:'bdfeeder',pieceNom:(this.state.pieces.find(p=>p.id===bd.pieceId)||{}).nom||'',
+            conducteur:sx.k,departType:'',departId:null,
+            longueur:ovr.longueur||0,fnPieceId:null,fnId:null,
+          };
+        });
+        cables.push({wCode:wCodeB,fils:filsB,fn:null});
+      });
+
       const allCables=[...sourceCables,...cables];
       const allFils=allCables.flatMap(c=>c.fils);
       const totalCables=allCables.length;
