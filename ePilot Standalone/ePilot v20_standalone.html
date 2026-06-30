@@ -6882,157 +6882,208 @@ html body[class] #vac-gantt td.emp .nm{font-weight:500 !important;}</style>
      PLANNING — Colonnes Date début / Date fin dans le Gantt
      ═══════════════════════════════════════════════════════════════ -->
 <script id="__PLANNING_DATE_COLS_v1__">
+/* ePilot date-cols v7 – sibling column injection (no position:fixed, no overflow fight) */
 (function(){
-  if(window.__dcInjected) return; window.__dcInjected=1;
-  var STORE_KEY='epilot_chantier_data_v1';
-  var CW=100; // width per date column
-  var OV_ID='_dcDateOverlay', OH_ID='_dcDateHdr';
+  if(window.__dcInjected) return; window.__dcInjected = 1;
+
+  /* ── DEBUG BADGE: red dot bottom-right confirms script is executing ── */
+  var _badge = document.createElement('div');
+  _badge.id = '_dcBadge';
+  _badge.style.cssText = 'position:fixed;bottom:8px;right:8px;z-index:2147483647;background:#c0392b;color:#fff;' +
+    'font:bold 11px/1 monospace;padding:4px 10px;border-radius:4px;pointer-events:none;' +
+    'box-shadow:0 2px 8px rgba(0,0,0,.4);';
+  _badge.textContent = 'DC v7';
+  (document.body || document.documentElement).appendChild(_badge);
+  setTimeout(function(){ var e = document.getElementById('_dcBadge'); if(e) e.remove(); }, 8000);
+
+  var STORE_KEY = 'epilot_chantier_data_v1';
+  var CW = 100; /* px per column */
+  var COL_ID = '_dcColBody', HDR_ID = '_dcColHdr';
+  var _injecting = false;
 
   /* ─── Data helpers ─── */
   function getAllTasks(){
     try{
-      var a=JSON.parse(localStorage.getItem(STORE_KEY)||'{}');
-      var ks=Object.keys(a); if(!ks.length) return [];
-      return a[ks[ks.length-1]].taches||[];
-    }catch(e){return [];}
+      var a = JSON.parse(localStorage.getItem(STORE_KEY) || '{}');
+      var ks = Object.keys(a);
+      if(!ks.length) return [];
+      return a[ks[ks.length - 1]].taches || [];
+    }catch(e){ return []; }
   }
-  function addWD(s,n){
-    var d=new Date(s); if(isNaN(d.getTime())) return '';
-    for(var c=0,m=Math.max(0,(n||1)-1);c<m;){d.setDate(d.getDate()+1);var w=d.getDay();if(w!==0&&w!==6)c++;}
-    return d.toISOString().slice(0,10);
+  function addWD(s, n){
+    var d = new Date(s);
+    if(isNaN(d.getTime())) return '';
+    for(var c = 0, m = Math.max(0, (n||1) - 1); c < m;){
+      d.setDate(d.getDate() + 1);
+      var w = d.getDay();
+      if(w !== 0 && w !== 6) c++;
+    }
+    return d.toISOString().slice(0, 10);
   }
-  var _M=['Jan','Fév','Mar','Avr','Mai','Jun','Jul','Aoû','Sep','Oct','Nov','Déc'];
+  var _M = ['Jan','Fév','Mar','Avr','Mai','Jun','Jul','Aoû','Sep','Oct','Nov','Déc'];
   function fmt(s){
-    if(!s) return '';
-    var d=new Date(s);
-    if(!isNaN(d.getTime())) return d.getDate()+' '+_M[d.getMonth()]+' '+d.getFullYear();
+    if(!s) return '-';
+    var d = new Date(s);
+    if(!isNaN(d.getTime())) return d.getDate() + ' ' + _M[d.getMonth()] + ' ' + d.getFullYear();
     return s;
   }
   function buildLk(){
-    var lk={};
-    getAllTasks().forEach(function(t){if(t.nom)lk[t.nom]={d:t.debut||'',f:addWD(t.debut,t.duree||1)};});
+    var lk = {};
+    getAllTasks().forEach(function(t){
+      if(t.nom) lk[t.nom] = { d: t.debut||'', f: addWD(t.debut, t.duree||1) };
+    });
     return lk;
   }
 
-  var cellSt='width:'+CW+'px;padding:0 6px;font-size:11px;color:#333;display:flex;align-items:center;' +
-             'height:100%;border-right:1px solid #dee2e6;white-space:nowrap;overflow:hidden;box-sizing:border-box;';
-  var hdrSt ='width:'+CW+'px;padding:0 6px;font-size:11px;font-weight:600;color:#111;display:flex;align-items:center;' +
-             'height:100%;border-right:1px solid #dee2e6;white-space:nowrap;box-sizing:border-box;';
+  /* ─── Styles ─── */
+  var cellSt = 'display:flex;align-items:center;padding:0 5px;font-size:11px;color:#444;' +
+               'width:' + CW + 'px;flex-shrink:0;border-right:1px solid #dee2e6;' +
+               'white-space:nowrap;overflow:hidden;box-sizing:border-box;';
+  var hdrSt  = 'display:flex;align-items:center;padding:0 5px;font-size:11px;font-weight:600;color:#111;' +
+               'width:' + CW + 'px;flex-shrink:0;border-right:1px solid #dee2e6;' +
+               'white-space:nowrap;box-sizing:border-box;';
 
-  /* ════════════════════════════════════════════════════════════
-     FIXED-POSITION OVERLAY — immune to overflow:hidden anywhere
-     ════════════════════════════════════════════════════════════ */
-  function buildOverlay(taskRows, lk){
-    /* Remove stale overlays */
-    var old=document.getElementById(OV_ID); if(old) old.remove();
-    var oldH=document.getElementById(OH_ID); if(oldH) oldH.remove();
-
-    /* Guard: only when visible in viewport */
-    if(!taskRows || taskRows.offsetParent===null) return;
-    var tr=taskRows.getBoundingClientRect();
-    if(tr.width<10||tr.height<10) return;
-
-    var names=Object.keys(lk).sort(function(a,b){return b.length-a.length;});
-    var rows=Array.prototype.slice.call(taskRows.children);
+  /* ─── Body column: inserted as sibling of #jip-taskRows ─── */
+  function injectBody(taskRows, lk){
+    var rows = taskRows.children;
     if(!rows.length) return;
+    var old = document.getElementById(COL_ID);
+    if(old) old.remove();
 
-    /* ── BODY OVERLAY ── */
-    var ov=document.createElement('div');
-    ov.id=OV_ID;
-    ov.style.cssText=
-      'position:fixed;z-index:900;overflow:hidden;box-sizing:border-box;'+
-      'background:#fff;border-left:1px solid #dee2e6;border-right:2px solid #dee2e6;'+
-      'left:'+Math.round(tr.right)+'px;'+
-      'top:'+Math.round(tr.top)+'px;'+
-      'width:'+(CW*2)+'px;'+
-      'height:'+Math.round(tr.height)+'px;';
+    var names = Object.keys(lk).sort(function(a, b){ return b.length - a.length; });
 
-    var inner=document.createElement('div');
-    inner.style.cssText='overflow:hidden;height:100%;';
-    ov.appendChild(inner);
+    var col = document.createElement('div');
+    col.id = COL_ID;
+    col.style.cssText =
+      'display:flex;flex-direction:column;flex-shrink:0;' +
+      'width:' + (CW * 2) + 'px;overflow-y:hidden;overflow-x:hidden;' +
+      'border-left:1px solid #dee2e6;border-right:2px solid #adb5bd;' +
+      'background:#fff;box-sizing:border-box;';
 
-    rows.forEach(function(srcRow){
-      var h=srcRow.offsetHeight||36;
-      var dr=document.createElement('div');
-      dr.style.cssText='display:flex;height:'+h+'px;border-bottom:1px solid #f0f0f0;align-items:center;flex-shrink:0;';
-      var rText=srcRow.textContent, info=null;
-      for(var n=0;n<names.length;n++){if(rText.indexOf(names[n])>-1){info=lk[names[n]];break;}}
-      var deb=document.createElement('span'); deb.style.cssText=cellSt;
-      var fin=document.createElement('span'); fin.style.cssText=cellSt;
-      if(info){deb.textContent=fmt(info.d);fin.textContent=fmt(info.f);}
-      dr.appendChild(deb); dr.appendChild(fin);
-      inner.appendChild(dr);
-    });
-    document.body.appendChild(ov);
-
-    /* ── HEADER OVERLAY — find TÂCHE header rect ── */
-    var hdrEl=findTacheHeaderEl(taskRows);
-    if(hdrEl){
-      var hr=hdrEl.getBoundingClientRect();
-      var oh=document.createElement('div');
-      oh.id=OH_ID;
-      oh.style.cssText=
-        'position:fixed;z-index:901;display:flex;align-items:center;box-sizing:border-box;'+
-        'background:#f8f9fa;border-left:1px solid #dee2e6;border-right:2px solid #dee2e6;border-bottom:1px solid #dee2e6;'+
-        'left:'+Math.round(tr.right)+'px;'+
-        'top:'+Math.round(hr.top)+'px;'+
-        'width:'+(CW*2)+'px;'+
-        'height:'+Math.round(hr.height)+'px;';
-      var hd=document.createElement('span'); hd.style.cssText=hdrSt; hd.textContent='Date Debut';
-      var hf=document.createElement('span'); hf.style.cssText=hdrSt; hf.textContent='Date Fin';
-      oh.appendChild(hd); oh.appendChild(hf);
-      document.body.appendChild(oh);
+    for(var i = 0; i < rows.length; i++){
+      var row = rows[i];
+      var h = row.offsetHeight || 36;
+      var cell = document.createElement('div');
+      cell.style.cssText = 'display:flex;height:' + h + 'px;border-bottom:1px solid #f0f2f4;flex-shrink:0;';
+      var info = null;
+      var rText = row.textContent;
+      for(var n = 0; n < names.length; n++){
+        if(rText.indexOf(names[n]) > -1){ info = lk[names[n]]; break; }
+      }
+      var sd = document.createElement('span'); sd.style.cssText = cellSt; sd.style.height = h + 'px';
+      var sf = document.createElement('span'); sf.style.cssText = cellSt; sf.style.height = h + 'px';
+      if(info){ sd.textContent = fmt(info.d); sf.textContent = fmt(info.f); }
+      cell.appendChild(sd); cell.appendChild(sf);
+      col.appendChild(cell);
     }
 
-    /* Sync vertical scroll of body overlay */
-    taskRows.addEventListener('scroll',function(){inner.scrollTop=taskRows.scrollTop;},{passive:true});
+    var par = taskRows.parentElement;
+    if(!par) return;
+    par.insertBefore(col, taskRows.nextSibling);
 
-    /* Also push gantt bars right to avoid overlap */
-    var tl=document.getElementById('jip-tlRows');
-    if(tl) tl.style.setProperty('margin-left',(CW*2+2)+'px','important');
-    var tlH=document.getElementById('jip-tlHead');
-    if(tlH) tlH.style.setProperty('margin-left',(CW*2+2)+'px','important');
+    /* Sync vertical scroll */
+    taskRows.addEventListener('scroll', function(){
+      var c = document.getElementById(COL_ID);
+      if(c) c.scrollTop = taskRows.scrollTop;
+    }, { passive: true });
   }
 
-  /* Find the element in the TÂCHE header row that aligns with #jip-taskRows */
-  function findTacheHeaderEl(taskRows){
-    /* Walk up from taskRows to find a sibling that is the header row */
-    var cur=taskRows.parentElement;
-    for(var k=0;k<8;k++){
-      if(!cur||cur===document.body) break;
-      var par=cur.parentElement; if(!par) break;
-      for(var c=0;c<par.children.length;c++){
-        var ch=par.children[c];
-        if(ch===cur||ch.contains(cur)) continue;
-        /* Is this sibling likely the gantt header? Look for TÂCHE text inside */
-        if(ch.textContent.indexOf('TÂCHE')>-1||ch.textContent.indexOf('Tâche')>-1||ch.textContent.indexOf('TACHE')>-1){
-          return ch;
-        }
-      }
-      cur=cur.parentElement;
+  /* ─── Header: insert after TÂCHE cell in its flex row ─── */
+  function closestFlex(el){
+    var cur = el.parentElement;
+    for(var k = 0; k < 10; k++){
+      if(!cur || cur === document.body) return null;
+      var d = window.getComputedStyle ? window.getComputedStyle(cur).display : '';
+      if(d === 'flex' && cur.children.length >= 1) return cur;
+      cur = cur.parentElement;
     }
     return null;
+  }
+  function childOf(par, el){
+    var cur = el;
+    while(cur && cur.parentElement !== par) cur = cur.parentElement;
+    return cur || null;
+  }
+  function injectHdr(){
+    if(document.getElementById(HDR_ID)) return;
+    var all = document.querySelectorAll('div,span,th');
+    for(var i = 0; i < all.length; i++){
+      var el = all[i];
+      if(el.children.length > 0) continue;
+      var t = el.textContent.trim();
+      if(t !== 'TÂCHE' && t !== 'Tâche' && t !== 'TACHE') continue;
+      var flex = closestFlex(el);
+      if(!flex || flex.getAttribute('data-dh')) continue;
+      var tc = childOf(flex, el);
+      if(!tc) continue;
+      var wrap = document.createElement('div');
+      wrap.id = HDR_ID;
+      wrap.style.cssText =
+        'display:flex;flex-shrink:0;align-items:stretch;' +
+        'width:' + (CW * 2) + 'px;' +
+        'border-left:1px solid #dee2e6;border-right:2px solid #adb5bd;' +
+        'background:#f0f4f8;box-sizing:border-box;';
+      var hd = document.createElement('div'); hd.style.cssText = hdrSt; hd.textContent = 'Date Debut';
+      var hf = document.createElement('div'); hf.style.cssText = hdrSt; hf.textContent = 'Date Fin';
+      wrap.appendChild(hd); wrap.appendChild(hf);
+      var nx = tc.nextElementSibling;
+      if(nx) flex.insertBefore(wrap, nx); else flex.appendChild(wrap);
+      flex.setAttribute('data-dh', '1');
+      return;
+    }
   }
 
   /* ─── Main inject ─── */
   function inject(){
-    var taskRows=document.getElementById('jip-taskRows');
-    if(!taskRows||!taskRows.children.length) return;
-    buildOverlay(taskRows,buildLk());
+    var taskRows = document.getElementById('jip-taskRows');
+    if(!taskRows || !taskRows.children.length) return;
+    _injecting = true;
+    try {
+      injectBody(taskRows, buildLk());
+      injectHdr();
+    } finally {
+      setTimeout(function(){ _injecting = false; }, 150);
+    }
   }
 
-  /* ─── Reposition on resize ─── */
-  window.addEventListener('resize',function(){clearTimeout(window._dcRT);window._dcRT=setTimeout(inject,100);},{passive:true});
+  /* ─── MO on #jip-taskRows: rebuild when rows change ─── */
+  var _rowMO = null, _moTarget = null;
+  function attachRowMO(){
+    var taskRows = document.getElementById('jip-taskRows');
+    if(!taskRows || taskRows === _moTarget) return;
+    if(_rowMO) _rowMO.disconnect();
+    _moTarget = taskRows;
+    _rowMO = new MutationObserver(function(){
+      clearTimeout(_rowMO._t);
+      _rowMO._t = setTimeout(inject, 80);
+    });
+    _rowMO.observe(taskRows, { childList: true });
+  }
 
-  /* ─── MO + poll ─── */
-  var _bmo=new MutationObserver(function(){
-    if(document.getElementById('jip-taskRows')){clearTimeout(_bmo._t);_bmo._t=setTimeout(inject,120);}
+  /* ─── Body MO: detect Planning tab appearing (suppressed during own mutations) ─── */
+  var _bmo = new MutationObserver(function(){
+    if(_injecting) return;
+    if(document.getElementById('jip-taskRows')){
+      clearTimeout(_bmo._t);
+      _bmo._t = setTimeout(function(){ inject(); attachRowMO(); }, 80);
+    }
   });
-  _bmo.observe(document.body,{childList:true,subtree:true});
+  _bmo.observe(document.body, { childList: true, subtree: true });
 
-  var _t=0;
-  (function p(){ inject(); if(++_t<200) setTimeout(p,400); })();
-  window.__injectDateCols=inject;
+  window.addEventListener('resize', function(){
+    clearTimeout(window._dcRT); window._dcRT = setTimeout(inject, 150);
+  }, { passive: true });
+
+  /* ─── Poll: 20× at 500ms then every 3s ─── */
+  var _pt = 0;
+  (function poll(){
+    inject(); attachRowMO();
+    _pt++;
+    if(_pt < 20) setTimeout(poll, 500);
+    else setInterval(inject, 3000);
+  })();
+
+  window.__injectDateCols = inject;
 })();
 </script>
 
