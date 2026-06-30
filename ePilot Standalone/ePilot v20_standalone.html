@@ -6885,7 +6885,7 @@ html body[class] #vac-gantt td.emp .nm{font-weight:500 !important;}</style>
 (function(){
   if(window.__dcInjected) return; window.__dcInjected=1;
   var STORE_KEY='epilot_chantier_data_v1';
-  var CW=86; // width per date column
+  var CW=100; // width per date column
 
   /* ─── Data helpers ─── */
   function getAllTasks(){
@@ -6900,7 +6900,13 @@ html body[class] #vac-gantt td.emp .nm{font-weight:500 !important;}</style>
     for(var c=0,m=Math.max(0,(n||1)-1);c<m;){d.setDate(d.getDate()+1);var w=d.getDay();if(w!==0&&w!==6)c++;}
     return d.toISOString().slice(0,10);
   }
-  function fmt(s){if(!s)return'—';var p=s.split('-');return p.length===3?p[2]+'/'+p[1]:s;}
+  var _M=['Jan','Fév','Mar','Avr','Mai','Jun','Jul','Aoû','Sep','Oct','Nov','Déc'];
+  function fmt(s){
+    if(!s) return '—';
+    var d=new Date(s);
+    if(!isNaN(d.getTime())) return d.getDate()+' '+_M[d.getMonth()]+' '+d.getFullYear();
+    return s;
+  }
   function buildLk(){
     var lk={};
     getAllTasks().forEach(function(t){if(t.nom)lk[t.nom]={d:t.debut||'',f:addWD(t.debut,t.duree||1)};});
@@ -6979,8 +6985,8 @@ html body[class] #vac-gantt td.emp .nm{font-weight:500 !important;}</style>
       var flexRow=closestFlexRow(el);
       if(!flexRow||flexRow.getAttribute('data-dh')) continue;
       var tacheCell=directChildOf(flexRow,el); if(!tacheCell) continue;
-      var hd=document.createElement('div'); hd.style.cssText=hs; hd.textContent='Début';
-      var hf=document.createElement('div'); hf.style.cssText=hs; hf.textContent='Fin';
+      var hd=document.createElement('div'); hd.style.cssText=hs; hd.textContent='Date Debut';
+      var hf=document.createElement('div'); hf.style.cssText=hs; hf.textContent='Date Fin';
       var nx=tacheCell.nextElementSibling;
       if(nx){flexRow.insertBefore(hd,nx);flexRow.insertBefore(hf,nx);}
       else{flexRow.appendChild(hd);flexRow.appendChild(hf);}
