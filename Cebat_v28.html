@@ -7696,38 +7696,46 @@ class Component extends DCLogic {
         return (fnInfo?.label||fn.type)+' — '+cebatCode+(fn.quantite>1?' x'+fn.quantite:'');
       };
 
-      // ── Cables sources (créés auto à la création TE) ──
+      // ── Cables d'alimentation des tableaux (source/parent -> TE), comme la Vue Câble ──
+      const isTriProj=((this.state.project||{}).typeAlim)==='triphase';
       const sourceCables=[];
-      this.state.departs.forEach(dep=>{
-        const srcCode=this.genSourceCode(dep,this.state);
-        this.state.tableauxElec.forEach(te=>{
-          const teCode=this.genTECode(te,this.state);
-          const ck=srcCode+'to'+teCode;
-          // Chercher si ce cable existe dans nomenclatureOverrides
-          if(nomenclatureOverrides[ck+'_fil1']){
-            // Detecter nb de fils en comptant les cles _filN
-            const srcFilsKeys=[];
-            for(let i=1;i<=10;i++){if(nomenclatureOverrides[ck+'_fil'+i])srcFilsKeys.push(i);else break;}
-            const fils=srcFilsKeys.map((i)=>{
-              const ovrKey=ck+'_fil'+i;
-              const ovr=nomenclatureOverrides[ovrKey]||{};
-              return {
-                wCode:srcCode,filNum:i,conducteurKey:ovr.bt||'L',
-                bt:ovr.bt||'L',ba:ovr.ba||ovr.bt||'L',
-                tenant:ovr.tenant||dep.nom||srcCode,
-                aboutissant:ovr.aboutissant||te.nom||teCode,
-                cableType:'U1000 R2V 3G16 mm²',
-                couleur:{L:'Marron/Rouge',N:'Bleu',PE:'Vert/Jaune',L1:'Marron',L2:'Noir',L3:'Gris'}[ovr.bt]||ovr.bt||'?',
-                couleurHex:{L:'#dc2626',N:'#1d4ed8',PE:'#15803d',L1:'#dc2626',L2:'#f97316',L3:'#c026d3'}[ovr.bt]||'#888',
-                rep:ovr.rep||'',racc:ovr.racc||'',test:ovr.test||'',statut:ovr.statut||'',
-                fnRef:null,fnType:'source',isSrcCable:true,ovrKey,
-                tenantRef:null,aboutRef:{kind:'te',id:te.id},
-                longueur:ovr.longueur||0,fnPieceId:null,fnId:null
-              };
-            });
-            sourceCables.push({wCode:srcCode,fils,isSrcCable:true});
-          }
+      this.state.tableauxElec.forEach(te=>{
+        const teCode=this.genTECode(te,this.state);
+        const parentTe=this.state.tableauxElec.find(t=>t.id===te.departId);
+        let srcCode='',tenantBase='',dbCode='',sec='16',isTri=false,tenantRefS=null;
+        if(parentTe){
+          srcCode=this.genTECode(parentTe,this.state);
+          tenantBase=srcCode+(parentTe.nom?' — '+parentTe.nom:'');
+          dbCode=parentTe.cb0Code||srcCode;sec=te.feederSection||'?';isTri=isTriProj;
+          tenantRefS={kind:'te',id:parentTe.id};
+        } else {
+          const dep=this.state.departs.find(d=>d.id===te.departId)||this.state.departs.find(d=>d.type==='comptage');
+          if(!dep)return;
+          srcCode=this.genSourceCode(dep,this.state);
+          tenantBase=srcCode+(dep.nom?' — '+dep.nom:'');
+          dbCode=dep.dbCode||'DB';sec=dep.section||'16';
+          isTri=dep.tension==='tri'||dep.tension==='tri_it'||(+dep.poles>=3);
+        }
+        const ck=srcCode+'to'+teCode;
+        const schemaS=isTri?[{k:'L1'},{k:'L2'},{k:'L3'},{k:'N'},{k:'PE'}]:[{k:'L'},{k:'N'},{k:'PE'}];
+        const wCodeS=dbCode;
+        const aboutBorne=te.cb0Code||'CB0';
+        const fils=schemaS.map((sx,i)=>{
+          const ovrKey=ck+'_fil'+(i+1);
+          const ovr=nomenclatureOverrides[ovrKey]||{};
+          return {
+            wCode:wCodeS,filNum:i+1,conducteurKey:sx.k,
+            bt:ovr.bt||sx.k,ba:ovr.ba||sx.k,conducteur:sx.k,
+            tenant:ovr.tenant||tenantBase,aboutissant:ovr.aboutissant||((te.nom||'Tableau')+' — '+teCode),
+            cableType:'U1000 R2V '+schemaS.length+'G'+sec+' mm²',
+            couleur:COUL[sx.k]?.label||sx.k,couleurHex:COUL[sx.k]?.hex||'#888',
+            rep:ovr.rep||'',racc:ovr.racc||'',test:ovr.test||'',statut:ovr.statut||'',
+            fnRef:null,fnType:'source',isSrcCable:true,ovrKey,
+            tenantRef:tenantRefS,aboutRef:null,fixedBt:dbCode,fixedBa:aboutBorne,
+            longueur:ovr.longueur||0,fnPieceId:null,fnId:null
+          };
         });
+        sourceCables.push({wCode:wCodeS,fils,isSrcCable:true});
       });
 
       // ── Génération des cables depuis l'etat CEBAT ──
@@ -7982,8 +7990,8 @@ class Component extends DCLogic {
                         return pfx+pot+'.'+(sameCondBefore+1);
                       }
                     };
-                    const borneT=ovr.bt!==undefined?ovr.bt:calcBorne(tenantEl,cond);
-                    const borneA=ovr.ba!==undefined?ovr.ba:(aboutEl?calcBorne(aboutEl,cond):fil.ba);
+                    const borneT=ovr.bt!==undefined?ovr.bt:(fil.fixedBt!==undefined?fil.fixedBt:calcBorne(tenantEl,cond));
+                    const borneA=ovr.ba!==undefined?ovr.ba:(fil.fixedBa!==undefined?fil.fixedBa:(aboutEl?calcBorne(aboutEl,cond):fil.ba));
                     // Equip T = code de l'element tenant
                     const equipT=tenantBD?this.genBDCode(tenantBD,this.state):tenantTE?this.genTECode(tenantTE,this.state):(fil.tenant||'');
                     // Equip A = code du recepteur (déjà dans aboutissant après —)
