@@ -6842,8 +6842,9 @@ class Component extends DCLogic {
         const pushSw=(it,condsI)=>{let ic='';try{ic=this.genInterCode(it,s);}catch(e){ic=it.nom||'SA';}const itp=it.pieceId?(((s.pieces||[]).find(x=>x.id===it.pieceId)||{}).nom||''):(p.nom||'');sortants.push({wcode:ic,from:center.code,to:ic+(it.nom?' — '+it.nom:''),conds:condsI,sec:'1.5mm²',bornes:ic,bTel:bd,bAel:null,borneT:'',borneA:'',pieceT:bdPiece,pieceA:itp,edit:{type:'inter',id:it.id},statutKey:'int'+it.id});};
         // Va-et-vient : 1er inter = phase + 2 navettes ; suivants = retour + 2 navettes (navettes partagées W4/W5, pas de PE)
         vvCmds.forEach((it,idx)=>pushSw(it,idx===0?[_L,_NAV1,_NAV2]:[_NAV,_NAV1,_NAV2]));
-        // Variateur : phase + neutre + retour + PE ; simple / poussoir / double : phase + retour + PE
-        otherCmds.forEach(it=>pushSw(it,it.type==='variateur'?[_L,_N,_NAV,_PE]:[_L,_NAV,_PE]));
+        // Variateur : phase + neutre + retour + PE ; domotique (KNX) : bus ; simple / poussoir / double : phase + retour + PE
+        const _BUS=['CMD','#0891b2'];
+        otherCmds.forEach(it=>pushSw(it,it.type==='variateur'?[_L,_N,_NAV,_PE]:it.type==='domotique'?[_BUS]:[_L,_NAV,_PE]));
       }}));
       return{entrants,sortants,center};
     }
