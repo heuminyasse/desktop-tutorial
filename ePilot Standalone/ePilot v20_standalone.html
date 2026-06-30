@@ -5848,6 +5848,14 @@ document.addEventListener('DOMContentLoaded', async function() {
     var tabbar=root.querySelector('.tabbar'); var header=tabbar?tabbar.parentElement:null; if (!header) return null;
     var monos=header.querySelectorAll('.mono');
     var pi=monos[0]?(monos[0].textContent||'').trim():'';
+    /* Fallback : cherche PI##### dans tout le header (contexte Devis/RFQ) */
+    if (!pi || !/^PI\d/i.test(pi)){
+      var all=header.querySelectorAll('*');
+      for (var i=0;i<all.length;i++){
+        var txt=(all[i].childNodes[0]&&all[i].childNodes[0].nodeType===3 ? all[i].childNodes[0].nodeValue : all[i].textContent||'').trim();
+        if (/^PI\d{4,}/i.test(txt)){ pi=txt; break; }
+      }
+    }
     var oa=(monos[2] && (monos[2].textContent||'').trim()!=='—') ? (monos[2].textContent||'').trim() : '';
     return { pi:pi, oa:oa };
   }
@@ -6326,20 +6334,19 @@ document.addEventListener('DOMContentLoaded', async function() {
     w.document.write(html); w.document.close();
   }
 
-  /* ---------- injection du bouton (remplace « + Ajouter une exigence ») ---------- */
+  /* ---------- masquage du bouton natif et de l'ancien système exigences ---------- */
   function inject(){
     var native=null, btns=$all('button');
     for (var i=0;i<btns.length;i++){ if((btns[i].textContent||'').trim()==='+ Ajouter une exigence'){ native=btns[i]; break; } }
     if (!native) return;
     var flex=native.parentElement; if(!flex) return;
-    if (flex.querySelector('.cdcd-btn')) return;
-    var ctx=detailCtx(native); if(!ctx||!ctx.pi) return;
+    /* masque le bouton inconditionnellement (sans vérifier le contexte PI) */
     native.style.display='none';
-    /* masque l'ancien système exigences/conformité (remplacé par le document structuré) */
+    /* masque l'ancien système exigences/conformité */
     try{
-      var conf=flex.firstElementChild;                 /* bloc « Conformité globale » (ou div vide) */
-      if (conf && conf!==b && conf!==native) conf.style.display='none';
-      var list=flex.nextElementSibling;                /* liste des cartes d'exigences */
+      var conf=flex.firstElementChild;
+      if (conf && conf!==native) conf.style.display='none';
+      var list=flex.nextElementSibling;
       if (list && !list.querySelector('.tabbar') && !list.querySelector('.overlay')) list.style.display='none';
     }catch(e){}
   }
