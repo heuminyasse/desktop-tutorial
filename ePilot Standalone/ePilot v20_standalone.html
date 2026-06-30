@@ -6884,9 +6884,10 @@ html body[class] #vac-gantt td.emp .nm{font-weight:500 !important;}</style>
 
 
 <script id="__CDC_TAB_v1__">
-/* __CDC_TAB_v1__ — Ajoute un onglet "📋 CDC" dans la barre d'onglets du détail chantier/devis.
-   Au clic : affiche "Demande de cotation & éléments retenus" (FCR_DB filtré par PI).
-   Le contenu natif est masqué via CSS (data-cdct-active sur le root). */
+/* __CDC_TAB_v1__ — Ajoute un bouton "📋 CDC" dans la barre d'onglets du détail chantier.
+   Détection : walk-up depuis le bouton "Ajouter une exigence" (ancre fiable) vers .tabbar,
+   puis QuerySelector direct. Panneau en overlay fixe : pas besoin de connaître la structure
+   DOM pour cacher le contenu natif. Polling 700ms comme les autres patches. */
 (function(){
   if (window.__cdcTab) return; window.__cdcTab = true;
 
@@ -6973,9 +6974,7 @@ html body[class] #vac-gantt td.emp .nm{font-weight:500 !important;}</style>
       '.cdct-btn{display:inline-flex;align-items:center;padding:9px 14px;border:0;border-bottom:3px solid transparent;background:transparent;cursor:pointer;font:600 13px/1 inherit;color:var(--muted,#6b7280);white-space:nowrap;flex-shrink:0;vertical-align:middle}',
       '.cdct-btn:hover{background:var(--card-2,#f5f5f7)}',
       '.cdct-btn.on{color:#B5000A;border-bottom-color:#B5000A;font-weight:800}',
-      /* hide native tab content when CDC active; preserve header + our panel */
-      '[data-cdct-active]>*:not([data-cdct-panel]):not([data-cdct-hdr]){display:none!important}',
-      /* panel wrapper */
+      /* panel wrapper (inside overlay) */
       '[data-cdct-panel]{padding:16px;background:var(--bg,#f7f8fa);min-height:240px;box-sizing:border-box}',
       /* card */
       '.cdct-card{border:1px solid #e5e7eb;border-radius:12px;background:#fff;overflow:hidden}',
@@ -7157,94 +7156,94 @@ html body[class] #vac-gantt td.emp .nm{font-weight:500 !important;}</style>
     });
   }
 
-  /* ---------- cycle de vie de l'onglet ---------- */
-  function deactivate(root,btn){
-    root.removeAttribute('data-cdct-active');
-    if(btn) btn.classList.remove('on');
-    var panel=$('[data-cdct-panel]',root);
-    if(panel) panel.style.display='none';
+  /* ---------- ouverture / fermeture de l'overlay ---------- */
+  function openOverlay(pi,oa){
+    injectCss();
+    var old=document.getElementById('cdct-overlay'); if(old) old.remove();
+    var ov=document.createElement('div'); ov.id='cdct-overlay';
+    ov.style.cssText='position:fixed;inset:0;z-index:9800;background:rgba(15,23,42,.55);display:flex;align-items:flex-start;justify-content:flex-end';
+    var panel=buildPanel(pi,oa);
+    panel.style.cssText='width:min(780px,100%);height:100%;overflow:auto;box-shadow:-8px 0 40px rgba(0,0,0,.25)';
+    /* Bouton fermer */
+    var closeBar=document.createElement('div');
+    closeBar.style.cssText='display:flex;align-items:center;justify-content:space-between;padding:10px 15px;background:#0f172a;color:#fff';
+    closeBar.innerHTML='<span style="font-weight:700;font-size:13px">📋 CDC · '+esc(pi)+'</span>';
+    var xBtn=document.createElement('button');
+    xBtn.textContent='✕'; xBtn.style.cssText='background:rgba(255,255,255,.15);border:0;color:#fff;width:30px;height:30px;border-radius:7px;cursor:pointer;font-size:16px';
+    xBtn.addEventListener('click',function(){ov.remove();var b=document.querySelector('.cdct-btn.on');if(b)b.classList.remove('on');});
+    closeBar.appendChild(xBtn);
+    panel.insertBefore(closeBar, panel.firstChild);
+    ov.appendChild(panel);
+    ov.addEventListener('click',function(e){if(e.target===ov){ov.remove();var b=document.querySelector('.cdct-btn.on');if(b)b.classList.remove('on');}});
+    document.body.appendChild(ov);
+    fillPanel(panel,pi);
   }
 
-  function activate(tabbar,root,btn,pi){
-    /* Marque le header pour que le CSS ne le masque pas */
-    var header=tabbar.parentElement;
-    if(header) header.setAttribute('data-cdct-hdr','1');
-    /* Active le masquage CSS du contenu natif */
-    root.setAttribute('data-cdct-active','1');
-    btn.classList.add('on');
-    var oa=getOa(tabbar);
-    /* Crée ou affiche le panneau */
-    var panel=$('[data-cdct-panel]',root);
-    if(!panel){
-      panel=buildPanel(pi,oa);
-      root.appendChild(panel);
-      fillPanel(panel,pi);
-    } else {
-      panel.style.display='';
-      /* Rafraîchit le badge OA si changé */
-      var badge=$('.cdct-oa',panel);
-      if(badge){badge.className='cdct-oa '+(oa?'ok':'no');badge.textContent=oa?'OA '+oa:'OA non saisi';}
-      var sendBtn=$('[data-send]',panel);
-      if(sendBtn){sendBtn.disabled=!oa;sendBtn.title=oa?'':'Saisir le N° OA pour activer';}
+  /* ---------- trouver la tabbar depuis n'importe quel contexte ---------- */
+  function findTabbar(){
+    /* Stratégie A : walk-up depuis le bouton "Ajouter une exigence" */
+    var btns=document.querySelectorAll('button');
+    for(var i=0;i<btns.length;i++){
+      if((btns[i].textContent||'').trim()==='+ Ajouter une exigence'){
+        var node=btns[i];
+        while(node&&node!==document.body){
+          if(node.classList&&node.classList.contains('tabbar')) return node;
+          if(node.querySelector){var t=node.querySelector('.tabbar');if(t) return t;}
+          node=node.parentElement;
+        }
+      }
     }
+    /* Stratégie B : querySelector direct */
+    var d=document.querySelector('.tabbar'); if(d) return d;
+    /* Stratégie C : trouver un conteneur de .mono avec PI puis chercher les boutons d'onglets */
+    var monos=document.querySelectorAll('.mono');
+    for(var j=0;j<monos.length;j++){
+      var txt=(monos[j].textContent||'').trim();
+      if(!/^PI\d{4,}/i.test(txt)) continue;
+      /* parent→chercher un div/nav avec ≥3 boutons */
+      var p=monos[j];
+      while(p&&p!==document.body){
+        var sibs=p.querySelectorAll('button');
+        if(sibs.length>=3) return p; /* container avec les boutons d'onglets */
+        p=p.parentElement;
+      }
+    }
+    return null;
   }
 
-  /* ---------- setup par tabbar ---------- */
   function setupTabbar(tabbar){
     var pi=getPi(tabbar); if(!pi) return;
-    var header=tabbar.parentElement; if(!header) return;
-    var root=header.parentElement;
-    if(!root||root===document.body||root===document.documentElement) return;
 
     /* Déjà injecté pour ce PI ? */
-    var existing=tabbar.querySelector('.cdct-btn');
+    var existing=tabbar.querySelector('.cdct-btn[data-cdc-pi]');
     if(existing){
       if(existing.getAttribute('data-cdc-pi')===pi) return;
       existing.parentNode.removeChild(existing);
     }
 
     injectCss();
-    header.setAttribute('data-cdct-hdr','1');
-
     var btn=document.createElement('button');
     btn.className='cdct-btn';
     btn.setAttribute('data-cdc-pi',pi);
     btn.textContent='📋 CDC';
-    if(root.hasAttribute('data-cdct-active')) btn.classList.add('on');
 
     btn.addEventListener('click',function(e){
       e.preventDefault(); e.stopPropagation();
-      if(root.hasAttribute('data-cdct-active')) deactivate(root,btn);
-      else activate(tabbar,root,btn,pi);
-    });
-
-    /* Désactivation au clic sur un onglet natif (phase bulle : après React) */
-    tabbar.addEventListener('click',function(e){
-      if(!root.hasAttribute('data-cdct-active')) return;
-      var t=e.target;
-      while(t&&t!==tabbar){
-        if(t.tagName==='BUTTON'&&!t.classList.contains('cdct-btn')){deactivate(root,btn);return;}
-        t=t.parentElement;
-      }
+      if(document.getElementById('cdct-overlay')){ document.getElementById('cdct-overlay').remove(); btn.classList.remove('on'); }
+      else { btn.classList.add('on'); openOverlay(pi, getOa(tabbar)); }
     });
 
     tabbar.appendChild(btn);
   }
 
-  /* ---------- scan & watch ---------- */
-  function scan(){
-    var tbs=document.querySelectorAll('.tabbar');
-    for(var i=0;i<tbs.length;i++){try{setupTabbar(tbs[i]);}catch(e){}}
+  /* ---------- scan & polling ---------- */
+  function tick(){
+    var tb=findTabbar(); if(tb) try{setupTabbar(tb);}catch(e){}
   }
 
-  var scanTimer=null;
-  try{
-    new MutationObserver(function(){
-      if(scanTimer) clearTimeout(scanTimer);
-      scanTimer=setTimeout(function(){scanTimer=null;scan();},50);
-    }).observe(document.body,{childList:true,subtree:true});
-  }catch(_){}
-  scan();
+  var t=0;
+  (function poll(){ try{tick();}catch(e){} if(++t<200) setTimeout(poll,700); })();
+  try{ new MutationObserver(function(){ try{tick();}catch(e){}; }).observe(document.body,{childList:true,subtree:true}); }catch(_){}
 })();
 </script>
 
