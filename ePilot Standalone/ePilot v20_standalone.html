@@ -6878,5 +6878,898 @@ html body[class] #vac-gantt td.emp .nm{font-weight:500 !important;}</style>
 [data-cdc-card] ~ * { display: none !important; }
 </style>
 
+<!-- ═══════════════════════════════════════════════════════════════
+     PLANNING — Colonnes Date début / Date fin dans le Gantt
+     ═══════════════════════════════════════════════════════════════ -->
+<script id="__PLANNING_DATE_COLS_v1__">
+(function(){
+  var STORE_KEY = 'epilot_chantier_data_v1';
+  var COL_W = 90; // px per date column
+
+  /* ── Helpers ── */
+  function currentPI(){
+    try{
+      var raw = localStorage.getItem(STORE_KEY);
+      if(!raw) return null;
+      var all = JSON.parse(raw);
+      var keys = Object.keys(all);
+      return keys.length ? keys[keys.length-1] : null;
+    }catch(e){ return null; }
+  }
+
+  function getTasks(pi){
+    try{
+      var raw = localStorage.getItem(STORE_KEY);
+      if(!raw) return [];
+      var all = JSON.parse(raw);
+      return (all[pi] && all[pi].taches) ? all[pi].taches : [];
+    }catch(e){ return []; }
+  }
+
+  function addWorkDays(dateStr, days){
+    var d = new Date(dateStr);
+    if(isNaN(d.getTime())) return '';
+    var added = 0;
+    while(added < days-1){
+      d.setDate(d.getDate()+1);
+      var dow = d.getDay();
+      if(dow!==0 && dow!==6) added++;
+    }
+    return d.toISOString().slice(0,10);
+  }
+
+  function fmt(dateStr){
+    if(!dateStr) return '—';
+    var p = dateStr.split('-');
+    if(p.length!==3) return dateStr;
+    return p[2]+'/'+p[1]+'/'+p[3-3]; // dd/mm — no room for year
+    // Simpler: dd/mm
+  }
+  function fmtDate(dateStr){
+    if(!dateStr) return '—';
+    var p = dateStr.split('-');
+    if(p.length!==3) return dateStr;
+    return p[2]+'/'+p[1];
+  }
+
+  /* ── Build task name → dates lookup ── */
+  function buildLookup(pi){
+    var tasks = getTasks(pi);
+    var lk = {};
+    tasks.forEach(function(t){
+      var fin = addWorkDays(t.debut, t.duree||1);
+      lk[t.nom] = { debut: t.debut, fin: fin, id: t.id };
+    });
+    return lk;
+  }
+
+  /* ── Inject date columns into the left panel rows ── */
+  function injectDateCols(taskRows, lookup){
+    if(!taskRows) return;
+    var rows = taskRows.children;
+    for(var i=0;i<rows.length;i++){
+      var row = rows[i];
+      if(row.getAttribute('data-dates-injected')) continue;
+      // First child div = task name cell (280px wide)
+      var nameCell = row.firstElementChild;
+      if(!nameCell) continue;
+      // Find the task name text
+      var nameSpan = nameCell.querySelector('span,b,strong') || nameCell;
+      var taskName = nameSpan.textContent.trim();
+      // Strip phase prefix if present (name might be "Tâche · Phase")
+      var parts = taskName.split('·');
+      var nom = parts[0].trim();
+      var info = lookup[nom] || {};
+      // Build two date cells
+      var cellStyle = 'flex-shrink:0;width:'+COL_W+'px;padding:0 6px;font-size:11px;color:#555;' +
+                      'display:flex;align-items:center;border-right:1px solid #e0e0e0;white-space:nowrap;overflow:hidden;';
+      var deb = document.createElement('div');
+      deb.style.cssText = cellStyle;
+      deb.textContent = fmtDate(info.debut);
+      deb.title = info.debut || '';
+      var fin = document.createElement('div');
+      fin.style.cssText = cellStyle;
+      fin.textContent = fmtDate(info.fin);
+      fin.title = info.fin || '';
+      // Insert after nameCell
+      if(nameCell.nextSibling){
+        row.insertBefore(deb, nameCell.nextSibling);
+        row.insertBefore(fin, deb.nextSibling);
+      } else {
+        row.appendChild(deb);
+        row.appendChild(fin);
+      }
+      row.setAttribute('data-dates-injected','1');
+    }
+  }
+
+  /* ── Inject header cells ── */
+  function injectHeader(){
+    /* The gantt header has a left panel — find it and add date headers */
+    /* Strategy: look for a header row that contains the "Tâche" label */
+    var headers = document.querySelectorAll('#jip-taskRows, [id*="taskHead"], [id*="gantt"] [style*="280px"]');
+    /* Also try to find any header row above #jip-taskRows */
+    var taskRows = document.getElementById('jip-taskRows');
+    if(!taskRows) return;
+    var parent = taskRows.parentElement;
+    if(!parent) return;
+    /* Look for a sibling header div */
+    var prev = taskRows.previousElementSibling;
+    while(prev){
+      if(prev.getAttribute('data-date-header-injected')) break;
+      // Check if this looks like a header (contains "Tâche" text)
+      if(prev.textContent.indexOf('Tâche')>-1 || prev.textContent.indexOf('tache')>-1 || prev.textContent.indexOf('Tache')>-1){
+        var firstCell = prev.firstElementChild;
+        if(firstCell && !prev.getAttribute('data-date-header-injected')){
+          var hStyle = 'flex-shrink:0;width:'+COL_W+'px;padding:0 6px;font-size:11px;font-weight:600;' +
+                       'color:#333;display:flex;align-items:center;border-right:1px solid #e0e0e0;' +
+                       'background:var(--surface,#f8f9fa);white-space:nowrap;';
+          var hDeb = document.createElement('div');
+          hDeb.style.cssText = hStyle;
+          hDeb.textContent = 'Début';
+          var hFin = document.createElement('div');
+          hFin.style.cssText = hStyle;
+          hFin.textContent = 'Fin';
+          if(firstCell.nextSibling){
+            prev.insertBefore(hDeb, firstCell.nextSibling);
+            prev.insertBefore(hFin, hDeb.nextSibling);
+          } else {
+            prev.appendChild(hDeb);
+            prev.appendChild(hFin);
+          }
+          prev.setAttribute('data-date-header-injected','1');
+        }
+        break;
+      }
+      prev = prev.previousElementSibling;
+    }
+  }
+
+  /* ── Main inject function ── */
+  function inject(){
+    var taskRows = document.getElementById('jip-taskRows');
+    if(!taskRows) return;
+    var pi = currentPI();
+    if(!pi) return;
+    var lookup = buildLookup(pi);
+    injectDateCols(taskRows, lookup);
+    injectHeader();
+  }
+
+  /* ── MutationObserver on #jip-taskRows (gantt rewrites it on each draw) ── */
+  function watchGantt(){
+    var taskRows = document.getElementById('jip-taskRows');
+    if(!taskRows){ return; }
+    inject(); // initial
+    var mo = new MutationObserver(function(){
+      // Short debounce — gantt sets innerHTML in one go
+      clearTimeout(mo._t);
+      mo._t = setTimeout(inject, 50);
+    });
+    mo.observe(taskRows, { childList: true, subtree: false });
+  }
+
+  /* ── Also observe body for when #jip-taskRows first appears ── */
+  var bodyMo = new MutationObserver(function(){
+    if(document.getElementById('jip-taskRows')){
+      bodyMo.disconnect();
+      watchGantt();
+    }
+  });
+  bodyMo.observe(document.body, { childList: true, subtree: true });
+  /* Fire immediately in case already mounted */
+  if(document.getElementById('jip-taskRows')) watchGantt();
+})();
+</script>
+
+<!-- ═══════════════════════════════════════════════════════════════
+     PRINT BUTTONS — Visite de Site, Cahier des Charges, Planning
+     ═══════════════════════════════════════════════════════════════ -->
+<script id="__PRINT_TABS_v1__">
+(function(){
+  /* ── Generic print helper ── */
+  function printHTML(html){
+    var w = window.open('','_blank','width=900,height=700');
+    w.document.write(html);
+    w.document.close();
+    w.focus();
+    setTimeout(function(){ w.print(); }, 600);
+  }
+
+  function pi(){
+    try{
+      var d = window.JIP_DATA || {};
+      return d.Imputation || d.PI || '—';
+    }catch(e){ return '—'; }
+  }
+
+  function clientInfo(){
+    var d = window.JIP_DATA || {};
+    return {
+      pi: d.Imputation || d.PI || '—',
+      client: d.Client || '—',
+      desc: d.Description || '—'
+    };
+  }
+
+  function printCSS(){
+    return '<style>*{margin:0;padding:0;box-sizing:border-box}body{font-family:Arial,sans-serif;font-size:12px;color:#222;padding:20px}' +
+      'h1{font-size:16px;margin-bottom:4px}h2{font-size:13px;margin:12px 0 6px;border-bottom:1px solid #ccc;padding-bottom:3px}' +
+      'p{margin:3px 0}table{width:100%;border-collapse:collapse;margin:8px 0}' +
+      'th,td{border:1px solid #ccc;padding:5px 8px;text-align:left;font-size:11px}th{background:#f0f0f0;font-weight:bold}' +
+      '.header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px;padding-bottom:8px;border-bottom:2px solid #0069d9}' +
+      '.badge{background:#0069d9;color:#fff;padding:3px 10px;border-radius:4px;font-weight:bold;font-size:13px}' +
+      '@media print{@page{margin:15mm}}</style>';
+  }
+
+  function headerBlock(title){
+    var c = clientInfo();
+    return '<div class="header"><div><h1>'+title+'</h1><p>Client : <b>'+c.client+'</b> — '+c.desc+'</p>' +
+           '<p style="color:#666;font-size:10px">Imprimé le '+new Date().toLocaleDateString('fr-FR')+'</p></div>' +
+           '<div class="badge">'+c.pi+'</div></div>';
+  }
+
+  /* ════════════════════════════════
+     VISITE DE SITE — Print
+     ════════════════════════════════ */
+  function printVisiteSite(){
+    /* Grab visible content of the Visite de site panel */
+    var panel = null;
+    /* Try to find the active panel */
+    document.querySelectorAll('[class*="tab"],[class*="Tab"],[class*="panel"],[class*="Panel"],[class*="content"],[class*="Content"]').forEach(function(el){
+      if(el.textContent.indexOf('Compte rendu de visite')>-1 || el.textContent.indexOf('Visite de site')>-1){
+        if(!panel || el.children.length > (panel.children.length||0)) panel = el;
+      }
+    });
+    /* Fallback: capture the main content area */
+    var bodyHtml = '';
+    if(panel){
+      bodyHtml = panel.outerHTML;
+    } else {
+      /* Grab entire visible forms/tables */
+      bodyHtml = '<p>Contenu non disponible — veuillez ouvrir l\'onglet "Visite de Site".</p>';
+    }
+    printHTML('<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Visite de Site</title>'+printCSS()+
+      '</head><body>'+headerBlock('Compte Rendu de Visite de Site')+bodyHtml+'</body></html>');
+  }
+
+  /* ════════════════════════════════
+     CAHIER DES CHARGES — Print
+     ════════════════════════════════ */
+  function printCahierDesCharges(){
+    /* Grab CDC card content */
+    var cdcCard = document.querySelector('[data-cdc-card]');
+    var cdcDoc  = document.getElementById('cdc-doc-panel');
+    var bodyHtml = '';
+    if(cdcCard) bodyHtml += cdcCard.outerHTML;
+    if(cdcDoc)  bodyHtml += cdcDoc.outerHTML;
+    if(!bodyHtml) bodyHtml = '<p>Contenu non disponible.</p>';
+    printHTML('<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Cahier des Charges</title>'+printCSS()+
+      '</head><body>'+headerBlock('Cahier des Charges')+bodyHtml+'</body></html>');
+  }
+
+  /* ════════════════════════════════
+     PLANNING — Print (Gantt + stats)
+     ════════════════════════════════ */
+  function printPlanning(){
+    var STORE_KEY = 'epilot_chantier_data_v1';
+    var tasks = [];
+    try{
+      var all = JSON.parse(localStorage.getItem(STORE_KEY)||'{}');
+      var keys = Object.keys(all);
+      if(keys.length){ tasks = all[keys[keys.length-1]].taches || []; }
+    }catch(e){}
+
+    function addWD(ds,n){
+      var d=new Date(ds); var a=0;
+      while(a<n-1){d.setDate(d.getDate()+1);var w=d.getDay();if(w!==0&&w!==6)a++;}
+      return d.toLocaleDateString('fr-FR');
+    }
+    function fmtD(s){ try{return new Date(s).toLocaleDateString('fr-FR');}catch(e){return s||'—';} }
+
+    var rows = tasks.map(function(t){
+      return '<tr><td>'+t.nom+'</td><td>'+t.phase+'</td>' +
+        '<td>'+fmtD(t.debut)+'</td>' +
+        '<td>'+addWD(t.debut,t.duree||1)+'</td>' +
+        '<td style="text-align:center">'+t.pct+'%</td>' +
+        '<td>'+t.statut+'</td>' +
+        '<td>'+(t.equipe||[]).join(', ')+'</td></tr>';
+    }).join('');
+
+    var html = '<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Planning</title>'+printCSS()+
+      '</head><body>'+headerBlock('Planning Chantier')+
+      '<table><thead><tr><th>Tâche</th><th>Phase</th><th>Date début</th><th>Date fin</th>' +
+      '<th>Avancement</th><th>Statut</th><th>Équipe</th></tr></thead><tbody>'+rows+'</tbody></table>'+
+      '</body></html>';
+    printHTML(html);
+  }
+
+  /* ════════════════════════════════
+     Inject print buttons into tabs
+     ════════════════════════════════ */
+  function btnHTML(label, onclick){
+    return '<button onclick="'+onclick+'" style="display:inline-flex;align-items:center;gap:5px;padding:6px 14px;' +
+      'background:#0069d9;color:#fff;border:none;border-radius:6px;font-size:12px;cursor:pointer;' +
+      'box-shadow:0 1px 3px rgba(0,0,0,.2);transition:opacity .15s" ' +
+      'onmouseover="this.style.opacity=.85" onmouseout="this.style.opacity=1">' +
+      '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">' +
+      '<polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/>' +
+      '<rect x="6" y="14" width="12" height="8"/></svg>'+label+'</button>';
+  }
+
+  window.__printVisiteSite       = printVisiteSite;
+  window.__printCahierDesCharges = printCahierDesCharges;
+  window.__printPlanning         = printPlanning;
+
+  /* Expose helpers so Rapport d'activité can reuse */
+  window.__printHTML    = printHTML;
+  window.__printCSS     = printCSS;
+  window.__clientInfo   = clientInfo;
+  window.__headerBlock  = headerBlock;
+
+  /* ── Toolbar injection (one bar per tab) ── */
+  function makeBar(printFn, extraBtns){
+    var bar = document.createElement('div');
+    bar.setAttribute('data-print-bar','1');
+    bar.style.cssText = 'display:flex;gap:8px;align-items:center;padding:8px 14px;' +
+      'background:linear-gradient(135deg,#f8f9fa 0%,#e9ecef 100%);' +
+      'border-bottom:1px solid #dee2e6;flex-wrap:wrap;';
+    var pBtn = document.createElement('button');
+    pBtn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">' +
+      '<polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/>' +
+      '<rect x="6" y="14" width="12" height="8"/></svg> Imprimer';
+    pBtn.style.cssText = 'display:inline-flex;align-items:center;gap:5px;padding:6px 14px;' +
+      'background:#0069d9;color:#fff;border:none;border-radius:6px;font-size:12px;cursor:pointer;font-weight:500;';
+    pBtn.onclick = printFn;
+    pBtn.onmouseover = function(){ this.style.opacity='.85'; };
+    pBtn.onmouseout  = function(){ this.style.opacity='1'; };
+    bar.appendChild(pBtn);
+    if(extraBtns){ extraBtns.forEach(function(b){ bar.appendChild(b); }); }
+    return bar;
+  }
+
+  /* Find tab sub-nav items by label text */
+  function findSubNav(label){
+    var subs = document.querySelectorAll('[data-sub],[class*="sub"],[class*="Sub"]');
+    for(var i=0;i<subs.length;i++){
+      if(subs[i].textContent.trim().indexOf(label)>-1) return subs[i];
+    }
+    return null;
+  }
+
+  /* Find the content panel currently active — look for the closest scrollable container */
+  function findActivePanel(sub){
+    if(!sub) return null;
+    /* Walk up from sub nav to find the parent tab section */
+    var el = sub;
+    for(var i=0;i<8;i++){
+      if(!el) break;
+      el = el.parentElement;
+      /* Look for a sibling content div */
+      if(el){
+        var kids = el.children;
+        for(var k=0;k<kids.length;k++){
+          var kid = kids[k];
+          if(kid !== sub && kid.scrollHeight > 100 && kid.children.length > 0){
+            return kid;
+          }
+        }
+      }
+    }
+    return null;
+  }
+
+  var injected = {};
+
+  function tryInjectBars(){
+    /* ── Visite de site ── */
+    if(!injected.visite){
+      var vsArea = null;
+      /* Find by heading text */
+      document.querySelectorAll('h2,h3,[class*="title"],[class*="heading"]').forEach(function(h){
+        if(h.textContent.trim().indexOf('Visite de site')>-1 || h.textContent.trim().indexOf('Compte rendu')>-1){
+          vsArea = h.closest('[style*="overflow"],[class*="panel"],[class*="content"],[class*="tab"]') || h.parentElement;
+        }
+      });
+      if(!vsArea){
+        /* Try finding the "Visite de Site" sub tab content */
+        document.querySelectorAll('[data-sub]').forEach(function(el){
+          if(el.textContent.trim().indexOf('Visite de Site')>-1){
+            /* The content is a sibling or nearby element */
+            var parent = el.parentElement;
+            if(parent){
+              /* Look for content area that's visible */
+              Array.from(parent.querySelectorAll('[class*="content"],[style*="flex"]')).forEach(function(c){
+                if(c.offsetHeight > 100) vsArea = c;
+              });
+            }
+          }
+        });
+      }
+      if(vsArea && !vsArea.querySelector('[data-print-bar]')){
+        var bar = makeBar(printVisiteSite);
+        vsArea.insertBefore(bar, vsArea.firstChild);
+        injected.visite = true;
+      }
+    }
+
+    /* ── Cahier des Charges ── */
+    if(!injected.cdc){
+      var cdcCard = document.querySelector('[data-cdc-card]');
+      if(cdcCard){
+        var cdcParent = cdcCard.parentElement;
+        if(cdcParent && !cdcParent.querySelector('[data-print-bar]')){
+          var bar = makeBar(printCahierDesCharges);
+          cdcParent.insertBefore(bar, cdcCard);
+          injected.cdc = true;
+        }
+      }
+    }
+
+    /* ── Planning ── */
+    if(!injected.planning){
+      var planArea = document.getElementById('jip-taskRows');
+      if(planArea){
+        /* Find Planning tab container */
+        var planParent = planArea.parentElement;
+        for(var i=0;i<6;i++){
+          if(!planParent) break;
+          /* Look for a toolbar-like sibling at the top */
+          var toolbars = planParent.querySelectorAll('[style*="flex"][style*="gap"],[class*="toolbar"],[class*="Toolbar"],[class*="actions"],[class*="Actions"]');
+          if(toolbars.length){
+            var tb = toolbars[0];
+            if(!tb.querySelector('[data-print-bar]') && !tb.querySelector('[data-rapact-btn]')){
+              /* Rapport d'activité button */
+              var rapBtn = document.createElement('button');
+              rapBtn.setAttribute('data-rapact-btn','1');
+              rapBtn.innerHTML = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:middle;margin-right:4px">' +
+                '<rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg>Rapport d\'activité';
+              rapBtn.style.cssText = 'display:inline-flex;align-items:center;gap:4px;padding:6px 12px;' +
+                'background:#28a745;color:#fff;border:none;border-radius:6px;font-size:12px;cursor:pointer;font-weight:500;';
+              rapBtn.onmouseover = function(){ this.style.opacity='.85'; };
+              rapBtn.onmouseout  = function(){ this.style.opacity='1'; };
+              rapBtn.onclick = function(){ window.__openRapportActivite && window.__openRapportActivite(); };
+              tb.appendChild(rapBtn);
+              /* Print button */
+              var pBtn = document.createElement('button');
+              pBtn.setAttribute('data-print-bar','1');
+              pBtn.innerHTML = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:middle;margin-right:4px">' +
+                '<polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/>' +
+                '<rect x="6" y="14" width="12" height="8"/></svg>Imprimer';
+              pBtn.style.cssText = 'display:inline-flex;align-items:center;gap:4px;padding:6px 12px;' +
+                'background:#0069d9;color:#fff;border:none;border-radius:6px;font-size:12px;cursor:pointer;font-weight:500;';
+              pBtn.onmouseover = function(){ this.style.opacity='.85'; };
+              pBtn.onmouseout  = function(){ this.style.opacity='1'; };
+              pBtn.onclick = printPlanning;
+              tb.appendChild(pBtn);
+              injected.planning = true;
+            }
+            break;
+          }
+          planParent = planParent.parentElement;
+        }
+      }
+    }
+  }
+
+  /* Poll until all bars injected */
+  var _tries = 0;
+  var _iv = setInterval(function(){
+    tryInjectBars();
+    _tries++;
+    var allDone = injected.visite && injected.cdc && injected.planning;
+    if(allDone || _tries > 400){ clearInterval(_iv); }
+  }, 600);
+
+  /* Also re-check when DOM changes (tab switches) */
+  var domMo = new MutationObserver(function(){
+    clearTimeout(domMo._t);
+    domMo._t = setTimeout(tryInjectBars, 300);
+  });
+  domMo.observe(document.body, { childList: true, subtree: true });
+})();
+</script>
+
+<!-- ═══════════════════════════════════════════════════════════════
+     RAPPORT D'ACTIVITÉ — Modal + localStorage + mail
+     ═══════════════════════════════════════════════════════════════ -->
+<script id="__RAPPORT_ACTIVITE_v1__">
+(function(){
+  var STORE_KEY   = 'epilot_chantier_data_v1';
+  var RAPPORTS_KEY = 'epilot_activity_reports';
+
+  /* ── Utils ── */
+  function currentPI(){
+    try{
+      var all = JSON.parse(localStorage.getItem(STORE_KEY)||'{}');
+      var ks = Object.keys(all);
+      return ks.length ? ks[ks.length-1] : '—';
+    }catch(e){ return '—'; }
+  }
+  function getTasks(pi){
+    try{
+      var all = JSON.parse(localStorage.getItem(STORE_KEY)||'{}');
+      return (all[pi]&&all[pi].taches) ? all[pi].taches : [];
+    }catch(e){ return []; }
+  }
+  function getPersonnel(){
+    try{ return window.PERSONNEL_DATA || []; }catch(e){ return []; }
+  }
+  function saveReports(list){
+    localStorage.setItem(RAPPORTS_KEY, JSON.stringify(list));
+  }
+  function getReports(){
+    try{ return JSON.parse(localStorage.getItem(RAPPORTS_KEY)||'[]'); }catch(e){ return []; }
+  }
+  function todayStr(){
+    return new Date().toLocaleDateString('fr-FR');
+  }
+  function todayISO(){
+    return new Date().toISOString().slice(0,10);
+  }
+  function timeStr(offset){
+    var d = new Date();
+    d.setHours(offset, 30, 0);
+    return d.toTimeString().slice(0,5);
+  }
+  function uid(){
+    return Date.now().toString(36) + Math.random().toString(36).slice(2,6);
+  }
+  /* Group tasks by phase */
+  function groupByPhase(tasks){
+    var phases = {};
+    tasks.forEach(function(t){
+      var ph = t.phase || 'Sans phase';
+      if(!phases[ph]) phases[ph] = [];
+      phases[ph].push(t);
+    });
+    return phases;
+  }
+
+  /* ── Build modal HTML ── */
+  function buildModal(pi, tasks, personnel){
+    var phases = groupByPhase(tasks);
+    var phaseRows = '';
+    Object.keys(phases).forEach(function(ph){
+      var avg = 0;
+      phases[ph].forEach(function(t){ avg += (t.pct||0); });
+      avg = Math.round(avg / phases[ph].length);
+      phaseRows += '<tr data-phase="'+ph+'">' +
+        '<td style="padding:6px 8px;font-size:12px;font-weight:500">'+ph+'</td>' +
+        '<td style="padding:6px 8px;font-size:11px;color:#555">'+phases[ph].map(function(t){return t.nom;}).join(', ')+'</td>' +
+        '<td style="padding:6px 8px;width:160px">' +
+          '<div style="display:flex;align-items:center;gap:6px">' +
+            '<input type="range" min="0" max="100" value="'+avg+'" class="ra-pct-range" data-ph="'+ph+'" ' +
+              'style="flex:1;accent-color:#0069d9" oninput="this.nextElementSibling.textContent=this.value+\'%\'">' +
+            '<span style="width:34px;font-size:12px;font-weight:600;color:#0069d9">'+avg+'%</span>' +
+          '</div>' +
+        '</td></tr>';
+    });
+
+    var personnelChk = '';
+    var pers = getPersonnel();
+    if(pers.length){
+      pers.forEach(function(p){
+        var label = (p.prenoms||'') + ' ' + (p.nom||p.matricule||'');
+        personnelChk += '<label style="display:flex;align-items:center;gap:6px;padding:4px 0;font-size:12px;cursor:pointer">' +
+          '<input type="checkbox" value="'+(p.matricule||label.trim())+'" data-name="'+label.trim()+'" class="ra-pers-chk" ' +
+          'style="width:14px;height:14px;accent-color:#0069d9"> '+label.trim()+'</label>';
+      });
+    } else {
+      personnelChk = '<p style="font-size:12px;color:#777">Aucun personnel enregistré.</p>';
+    }
+
+    var now = new Date();
+    var dateVal = now.toISOString().slice(0,10);
+    var hDeb = String(now.getHours()).padStart(2,'0');
+    var hFin = String((now.getHours()+8)%24).padStart(2,'0');
+
+    return '<div id="rapact-overlay" style="position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:99999;' +
+      'display:flex;align-items:center;justify-content:center;padding:16px;animation:fadeIn .15s">' +
+      '<div id="rapact-modal" style="background:#fff;border-radius:12px;width:100%;max-width:680px;max-height:90vh;' +
+      'overflow-y:auto;box-shadow:0 8px 40px rgba(0,0,0,.3);display:flex;flex-direction:column">' +
+
+      /* Header */
+      '<div style="background:linear-gradient(135deg,#0069d9,#0050a0);color:#fff;padding:14px 18px;border-radius:12px 12px 0 0;' +
+      'display:flex;justify-content:space-between;align-items:center;flex-shrink:0">' +
+      '<div><div style="font-size:15px;font-weight:700">📊 Rapport d\'activité</div>' +
+      '<div style="font-size:12px;opacity:.85;margin-top:2px">'+pi+'</div></div>' +
+      '<button onclick="document.getElementById(\'rapact-overlay\').remove()" ' +
+      'style="background:rgba(255,255,255,.2);border:none;color:#fff;width:30px;height:30px;border-radius:6px;font-size:16px;cursor:pointer;line-height:1">&times;</button></div>' +
+
+      /* Date / Time row */
+      '<div style="padding:12px 18px;border-bottom:1px solid #eee;display:flex;gap:16px;flex-wrap:wrap;background:#f8f9fa;flex-shrink:0">' +
+      '<label style="display:flex;align-items:center;gap:6px;font-size:12px;font-weight:600">' +
+      '📅 Date :<input id="ra-date" type="date" value="'+dateVal+'" style="padding:4px 8px;border:1px solid #ced4da;border-radius:4px;font-size:12px"></label>' +
+      '<label style="display:flex;align-items:center;gap:6px;font-size:12px;font-weight:600">' +
+      '⏱ Début :<input id="ra-hdeb" type="time" value="'+hDeb+':30" style="padding:4px 8px;border:1px solid #ced4da;border-radius:4px;font-size:12px"></label>' +
+      '<label style="display:flex;align-items:center;gap:6px;font-size:12px;font-weight:600">' +
+      '→ Fin :<input id="ra-hfin" type="time" value="'+hFin+':30" style="padding:4px 8px;border:1px solid #ced4da;border-radius:4px;font-size:12px"></label>' +
+      '</div>' +
+
+      /* Body */
+      '<div style="padding:16px 18px;flex:1;overflow-y:auto">' +
+
+      /* A — Phases */
+      '<div style="margin-bottom:16px">' +
+      '<div style="font-size:12px;font-weight:700;color:#0069d9;margin-bottom:8px;letter-spacing:.5px">A) PHASES & AVANCEMENT</div>' +
+      '<table id="ra-phases-table" style="width:100%;border-collapse:collapse;font-size:12px">' +
+      '<thead><tr style="background:#f0f4ff"><th style="padding:6px 8px;text-align:left;font-size:11px;border-bottom:2px solid #dee2e6">Phase</th>' +
+      '<th style="padding:6px 8px;text-align:left;font-size:11px;border-bottom:2px solid #dee2e6">Tâches</th>' +
+      '<th style="padding:6px 8px;text-align:left;font-size:11px;border-bottom:2px solid #dee2e6;width:160px">Avancement</th></tr></thead>' +
+      '<tbody>'+phaseRows+'</tbody></table></div>' +
+
+      /* B — Observations */
+      '<div style="margin-bottom:16px">' +
+      '<div style="font-size:12px;font-weight:700;color:#0069d9;margin-bottom:8px;letter-spacing:.5px">B) OBSERVATIONS / INCIDENTS</div>' +
+      '<textarea id="ra-obs" rows="4" placeholder="Saisir les observations, incidents, points bloquants..." ' +
+      'style="width:100%;border:1px solid #ced4da;border-radius:6px;padding:8px;font-size:12px;resize:vertical;font-family:inherit"></textarea></div>' +
+
+      /* C — Personnel */
+      '<div>' +
+      '<div style="font-size:12px;font-weight:700;color:#0069d9;margin-bottom:8px;letter-spacing:.5px">C) ÉQUIPE PRÉSENTE</div>' +
+      '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:2px;' +
+      'background:#f8f9fa;border:1px solid #dee2e6;border-radius:6px;padding:10px">'+personnelChk+'</div></div>' +
+
+      '</div>' + /* end body */
+
+      /* Footer */
+      '<div style="padding:12px 18px;border-top:1px solid #eee;display:flex;gap:8px;flex-wrap:wrap;background:#f8f9fa;border-radius:0 0 12px 12px;flex-shrink:0">' +
+      '<button id="ra-print-btn" style="flex:1;min-width:120px;padding:8px;background:#6c757d;color:#fff;border:none;border-radius:6px;font-size:12px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:5px;font-weight:500">' +
+      '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>Imprimer</button>' +
+      '<button id="ra-mail-btn" style="flex:1;min-width:120px;padding:8px;background:#17a2b8;color:#fff;border:none;border-radius:6px;font-size:12px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:5px;font-weight:500">' +
+      '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>Envoyer par mail</button>' +
+      '<button id="ra-save-btn" style="flex:1;min-width:120px;padding:8px;background:#28a745;color:#fff;border:none;border-radius:6px;font-size:12px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:5px;font-weight:500">' +
+      '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>Enregistrer</button>' +
+      '</div>' +
+
+      '</div></div>'; /* end modal + overlay */
+  }
+
+  /* ── Collect form data ── */
+  function collectFormData(){
+    var date  = document.getElementById('ra-date').value;
+    var hdeb  = document.getElementById('ra-hdeb').value;
+    var hfin  = document.getElementById('ra-hfin').value;
+    var obs   = document.getElementById('ra-obs').value.trim();
+    var phases = {};
+    document.querySelectorAll('.ra-pct-range').forEach(function(r){
+      phases[r.getAttribute('data-ph')] = parseInt(r.value)||0;
+    });
+    var equipe = [];
+    document.querySelectorAll('.ra-pers-chk:checked').forEach(function(c){
+      equipe.push({ matricule: c.value, nom: c.getAttribute('data-name') });
+    });
+    return { date: date, hdeb: hdeb, hfin: hfin, obs: obs, phases: phases, equipe: equipe };
+  }
+
+  /* ── Build printable HTML for the report ── */
+  function buildPrintHTML(data, pi){
+    var css = window.__printCSS ? window.__printCSS() : '<style>body{font-family:Arial,sans-serif;font-size:12px;padding:20px}</style>';
+    var c = window.__clientInfo ? window.__clientInfo() : {};
+    var dateLabel = data.date ? new Date(data.date).toLocaleDateString('fr-FR') : data.date;
+    var phRows = Object.keys(data.phases).map(function(ph){
+      var pct = data.phases[ph];
+      return '<tr><td>'+ph+'</td><td style="width:200px">' +
+        '<div style="background:#e9ecef;border-radius:4px;height:10px;overflow:hidden">' +
+        '<div style="width:'+pct+'%;background:#0069d9;height:100%"></div></div></td>' +
+        '<td style="text-align:center;font-weight:bold">'+pct+'%</td></tr>';
+    }).join('');
+    var teamList = data.equipe.map(function(e){ return e.nom; }).join(', ') || '—';
+    return '<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Rapport d\'activité</title>'+css+
+      '</head><body>' +
+      '<div class="header"><div><h1>Rapport d\'activité</h1>' +
+      '<p>Client : <b>'+(c.client||'—')+'</b> — '+(c.desc||'')+'</p>' +
+      '<p>Date : <b>'+dateLabel+'</b> · Horaire : '+data.hdeb+' → '+data.hfin+'</p></div>' +
+      '<div class="badge">'+(pi||c.pi||'—')+'</div></div>' +
+      '<h2>A) Phases & Avancement</h2>' +
+      '<table><thead><tr><th>Phase</th><th>Avancement</th><th>%</th></tr></thead><tbody>'+phRows+'</tbody></table>' +
+      '<h2>B) Observations / Incidents</h2>' +
+      '<p style="white-space:pre-wrap;padding:8px;background:#f8f9fa;border:1px solid #dee2e6;border-radius:4px">'+(data.obs||'Aucune observation.')+'</p>' +
+      '<h2>C) Équipe présente</h2><p>'+teamList+'</p>' +
+      '<p style="margin-top:20px;font-size:10px;color:#999">Généré le '+new Date().toLocaleString('fr-FR')+'</p>' +
+      '</body></html>';
+  }
+
+  /* ── Send by mail (mailto) ── */
+  function sendByMail(data, pi){
+    var dateLabel = data.date ? new Date(data.date).toLocaleDateString('fr-FR') : data.date;
+    var subject = encodeURIComponent('Rapport d\'activité ' + pi + ' — ' + dateLabel);
+    var lines = ['Rapport d\'activité — ' + pi, 'Date : ' + dateLabel,
+      'Horaire : ' + data.hdeb + ' → ' + data.hfin, '',
+      'PHASES & AVANCEMENT :'];
+    Object.keys(data.phases).forEach(function(ph){
+      lines.push('  • ' + ph + ' : ' + data.phases[ph] + '%');
+    });
+    lines.push('', 'OBSERVATIONS :', data.obs || 'Aucune.', '',
+      'ÉQUIPE PRÉSENTE :', data.equipe.map(function(e){ return '  • '+e.nom; }).join('\n') || '  Aucun');
+    var body = encodeURIComponent(lines.join('\n'));
+    window.location.href = 'mailto:?subject=' + subject + '&body=' + body;
+  }
+
+  /* ── Save report ── */
+  function saveReport(data, pi){
+    var reports = getReports();
+    reports.unshift({
+      id: uid(),
+      pi: pi,
+      date: data.date,
+      hdeb: data.hdeb,
+      hfin: data.hfin,
+      obs: data.obs,
+      phases: data.phases,
+      equipe: data.equipe,
+      createdAt: new Date().toISOString()
+    });
+    saveReports(reports);
+    /* Flash save button */
+    var btn = document.getElementById('ra-save-btn');
+    if(btn){
+      btn.textContent = '✓ Enregistré !';
+      btn.style.background = '#155724';
+      setTimeout(function(){ document.getElementById('rapact-overlay') && document.getElementById('rapact-overlay').remove(); }, 900);
+    }
+  }
+
+  /* ── Open modal ── */
+  function openModal(){
+    var pi = currentPI();
+    var tasks = getTasks(pi);
+    var personnel = getPersonnel();
+    /* Remove existing */
+    var old = document.getElementById('rapact-overlay');
+    if(old) old.remove();
+    document.body.insertAdjacentHTML('beforeend', buildModal(pi, tasks, personnel));
+    /* Wire buttons */
+    document.getElementById('ra-print-btn').onclick = function(){
+      var data = collectFormData();
+      var html = buildPrintHTML(data, pi);
+      var w = window.open('','_blank','width=900,height=700');
+      w.document.write(html); w.document.close(); w.focus();
+      setTimeout(function(){ w.print(); }, 600);
+    };
+    document.getElementById('ra-mail-btn').onclick = function(){
+      sendByMail(collectFormData(), pi);
+    };
+    document.getElementById('ra-save-btn').onclick = function(){
+      saveReport(collectFormData(), pi);
+    };
+    /* Close on overlay click */
+    document.getElementById('rapact-overlay').addEventListener('click', function(e){
+      if(e.target === this) this.remove();
+    });
+  }
+
+  window.__openRapportActivite = openModal;
+})();
+</script>
+
+<!-- ═══════════════════════════════════════════════════════════════
+     HISTORIQUE RAPPORTS D'ACTIVITÉ — dans "Rapports Chantier"
+     ═══════════════════════════════════════════════════════════════ -->
+<script id="__RAPPORTS_ACTIVITE_HISTORY_v1__">
+(function(){
+  var RAPPORTS_KEY = 'epilot_activity_reports';
+  var CARD_ID      = 'rapact-history-card';
+
+  function getReports(){
+    try{ return JSON.parse(localStorage.getItem(RAPPORTS_KEY)||'[]'); }catch(e){ return []; }
+  }
+  function deleteReport(id){
+    var list = getReports().filter(function(r){ return r.id!==id; });
+    localStorage.setItem(RAPPORTS_KEY, JSON.stringify(list));
+    renderCard();
+  }
+  function fmtDate(s){
+    try{ return new Date(s).toLocaleDateString('fr-FR'); }catch(e){ return s||'—'; }
+  }
+  function pctBar(pct){
+    return '<div style="display:inline-flex;align-items:center;gap:4px;min-width:80px">' +
+      '<div style="width:50px;height:6px;background:#e9ecef;border-radius:3px;overflow:hidden">' +
+      '<div style="width:'+pct+'%;height:100%;background:#0069d9"></div></div>' +
+      '<span style="font-size:10px;font-weight:600;color:#0069d9">'+pct+'%</span></div>';
+  }
+
+  function buildCard(){
+    var reports = getReports();
+    var header = '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">' +
+      '<div style="font-size:14px;font-weight:700;color:#0069d9">📊 Historique Rapports d\'activité</div>' +
+      '<span style="background:#0069d9;color:#fff;border-radius:12px;padding:2px 10px;font-size:11px;font-weight:600">'+reports.length+'</span></div>';
+
+    if(!reports.length){
+      return '<div style="text-align:center;padding:24px;color:#999;font-size:13px">' +
+        '📋 Aucun rapport d\'activité enregistré.<br><span style="font-size:11px">Utilisez le bouton "Rapport d\'activité" dans l\'onglet Planning.</span></div>';
+    }
+
+    var rows = reports.map(function(r){
+      var phases = Object.keys(r.phases||{}).map(function(ph){
+        return '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin:2px 0">' +
+          '<span style="font-size:11px;color:#555;min-width:90px">'+ph+'</span>'+pctBar(r.phases[ph])+'</div>';
+      }).join('');
+      var equipe = (r.equipe||[]).map(function(e){ return e.nom; }).join(', ') || '—';
+      return '<div style="border:1px solid #dee2e6;border-radius:8px;padding:12px;margin-bottom:10px;background:#fff">' +
+        '<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px">' +
+        '<div>' +
+        '<div style="font-size:13px;font-weight:700">'+fmtDate(r.date)+'</div>' +
+        '<div style="font-size:11px;color:#666;margin-top:2px">⏱ '+r.hdeb+' → '+r.hfin+
+        ' &nbsp;|&nbsp; PI : <b>'+(r.pi||'—')+'</b></div>' +
+        '</div>' +
+        '<button onclick="window.__deleteRapportActivite(\''+r.id+'\')" ' +
+        'style="background:none;border:1px solid #dc3545;color:#dc3545;padding:3px 8px;border-radius:4px;font-size:10px;cursor:pointer">' +
+        '🗑 Supprimer</button></div>' +
+        '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">' +
+        '<div><div style="font-size:10px;font-weight:700;color:#555;margin-bottom:4px;text-transform:uppercase;letter-spacing:.4px">Phases</div>'+phases+'</div>' +
+        '<div><div style="font-size:10px;font-weight:700;color:#555;margin-bottom:4px;text-transform:uppercase;letter-spacing:.4px">Équipe</div>' +
+        '<div style="font-size:11px;color:#333">'+equipe+'</div>' +
+        (r.obs ? '<div style="font-size:10px;font-weight:700;color:#555;margin-top:6px;margin-bottom:2px;text-transform:uppercase;letter-spacing:.4px">Observations</div>' +
+        '<div style="font-size:11px;color:#555;white-space:pre-wrap">'+r.obs+'</div>' : '')+
+        '</div></div></div>';
+    }).join('');
+
+    return header + rows;
+  }
+
+  function renderCard(){
+    var card = document.getElementById(CARD_ID);
+    if(card) card.innerHTML = buildCard();
+  }
+
+  window.__deleteRapportActivite = function(id){ deleteReport(id); };
+
+  /* ── Find "Rapports Chantier" tab content and inject history card ── */
+  function injectHistoryCard(){
+    if(document.getElementById(CARD_ID)) return; // already there
+
+    /* Find the Rapports Chantier sub panel */
+    var target = null;
+    document.querySelectorAll('[data-sub]').forEach(function(el){
+      if(el.textContent.trim().indexOf('Rapports Chantier')>-1 ||
+         el.textContent.trim().indexOf('Rapports chantier')>-1){
+        /* Content area might be a sibling or nearby */
+        var p = el.closest('[style*="flex"],[class*="tab"],[class*="Tab"],[class*="panel"]');
+        if(p) target = p;
+      }
+    });
+    if(!target){
+      /* Fallback: look for a div containing JSA report elements */
+      var jsaCard = document.querySelector('[id*="jsa"],[id*="JSA"],[data-jsa]');
+      if(jsaCard) target = jsaCard.parentElement;
+    }
+    if(!target) return;
+
+    /* Create card */
+    var card = document.createElement('div');
+    card.id = CARD_ID;
+    card.style.cssText = 'background:#f8f9fa;border:1px solid #dee2e6;border-radius:10px;padding:14px;' +
+      'margin:12px 0;';
+    card.innerHTML = buildCard();
+    /* Insert at bottom of target */
+    target.appendChild(card);
+  }
+
+  /* ── Poll + MutationObserver ── */
+  var _tries = 0;
+  var _iv = setInterval(function(){
+    injectHistoryCard();
+    _tries++;
+    if(document.getElementById(CARD_ID) || _tries > 400) clearInterval(_iv);
+  }, 600);
+
+  var domMo = new MutationObserver(function(){
+    clearTimeout(domMo._t);
+    domMo._t = setTimeout(function(){
+      injectHistoryCard();
+      renderCard();
+    }, 300);
+  });
+  domMo.observe(document.body, { childList: true, subtree: true });
+})();
+</script>
+
+<style id="__RAPACT_ANIM_v1__">
+@keyframes fadeIn { from { opacity: 0; transform: scale(.96); } to { opacity: 1; transform: scale(1); } }
+#rapact-modal { animation: fadeIn .18s ease; }
+</style>
+
 </body>
 </html>
