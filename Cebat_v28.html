@@ -2648,7 +2648,8 @@ class Component extends DCLogic {
 
   genBDCode(bd,state){
     const allBD=state.boitesDeriv;const allTE=state.tableauxElec;
-    const te=allTE.find(t=>t.id===bd.tableauId);
+    let te=allTE.find(t=>t.id===bd.tableauId);
+    if(!te){const allFns=state.pieces.flatMap(p=>(p.fonctions||[]));const fnBD=allFns.find(f=>f.departType==='boite'&&String(f.departId)===String(bd.id));if(fnBD){const dj=(state.disjoncteurs||[]).find(d=>(d.recepteurs||[]).includes(fnBD.ref));if(dj)te=allTE.find(t=>t.id===dj.tableauId);}}
     const teIdx=te?allTE.indexOf(te)+1:1;
     const bdIdx=allBD.indexOf(bd)+1;
     return teIdx+'BD'+bdIdx;
@@ -5596,7 +5597,6 @@ class Component extends DCLogic {
     const save=()=>{
       if(!editId){
         if(!form.pieceId){alert('La boite doit etre dans une piece. Choisissez une piece.');return;}
-        if(!form.tableauId){alert('La boite doit etre liee a un tableau electrique. Choisissez un tableau.');return;}
       }
       const bdCodeFinal=editId?this.genBDCode(existingBD.find(b=>b.id===editId)||previewBD,this.state):autoCode;
       const obj={
@@ -5613,7 +5613,7 @@ class Component extends DCLogic {
       } else {
         const newBId=this.state.nextElemId;
         if(form.retourDepart){
-          this.setState(s=>({boitesDeriv:[...s.boitesDeriv,{...obj,id:newBId}],nextElemId:newBId+1,editFonctionForm:{...s.editFonctionForm,departId:String(newBId),departType:'boite'},showModal:true,modalType:'editFonction'}));
+          this.setState(s=>({boitesDeriv:[...s.boitesDeriv,{...obj,id:newBId}],nextElemId:newBId+1,showModal:true,modalType:'editFonction'}));
         } else if(form.retourEditFonction){
           this.setState(s=>({boitesDeriv:[...s.boitesDeriv,{...obj,id:newBId}],nextElemId:newBId+1,showModal:true,modalType:'editFonction'}));
         } else {
@@ -5692,14 +5692,12 @@ class Component extends DCLogic {
               )
             ),
             r('div',null,
-              Lbl('Tableau electrique *',true),
-              selPiece&&filteredTabx.length===0?
-                r('div',{style:{padding:'8px 10px',background:'rgba(220,38,38,.06)',border:'1px solid rgba(220,38,38,.2)',borderRadius:6,fontSize:10,color:c.danger}},'Aucun tableau dans cet appartement — creez un tableau principal dabord'):
-                r('select',{value:form.tableauId||'',onChange:e=>sf({tableauId:e.target.value}),style:{width:'100%',background:c.surf3,border:'1px solid '+(form.tableauId?c.bdr2:c.danger),borderRadius:7,padding:'8px 10px',color:c.text,fontSize:12,outline:'none',appearance:'auto'}},
-                  r('option',{value:''},'-- Choisir un tableau --'),
-                  ...(selPiece?filteredTabx:allTabx).map(t=>r('option',{key:t.id,value:String(t.id)},(t.type==='secondaire'?'[DIV] ':'[TGBT] ')+t.nom))
-                ),
-              selApp&&r('div',{style:{fontSize:9,color:c.muted,marginTop:3,fontStyle:'italic'}},'Tableaux de: '+selApp.nom)
+              Lbl('Tableau de rattachement (optionnel)'),
+              r('select',{value:form.tableauId||'',onChange:e=>sf({tableauId:e.target.value}),style:{width:'100%',background:c.surf3,border:'1px solid '+c.bdr2,borderRadius:7,padding:'8px 10px',color:c.text,fontSize:12,outline:'none',appearance:'auto'}},
+                r('option',{value:''},'-- Aucun (déduit des circuits) --'),
+                ...(selPiece?filteredTabx:allTabx).map(t=>r('option',{key:t.id,value:String(t.id)},(t.type==='secondaire'?'[DIV] ':'[TGBT] ')+t.nom))
+              ),
+              r('div',{style:{fontSize:9,color:c.muted,marginTop:3,fontStyle:'italic'}},'Facultatif : une boîte peut être alimentée par plusieurs tableaux. Les câbles entrants sont déduits des disjoncteurs dont un récepteur part de cette boîte.')
             ),
             r('div',null,
               Lbl('Position dans la piece'),
@@ -6779,25 +6777,27 @@ class Component extends DCLogic {
       const parentTe=(s.tableauxElec||[]).find(t=>t.id===te.departId);
       if(parentTe){entrants.push({wcode:'',from:teCode(parentTe)+(parentTe.nom?' '+parentTe.nom:''),to:center.code,conds:this._condsFor(triAlim?3:1),sec:(te.feederSection||'?')+'mm²',bornes:(te.cb0Code||'CB0'),borneT:(parentTe.cb0Code||''),borneA:(te.cb0Code||'CB0'),pieceA:(te.nom||''),edit:{type:'te',id:te.id},statutKey:'te'+te.id+'feed'});}
       else{const dep=(s.departs||[]).find(d=>d.id===te.departId)||(s.departs||[]).find(d=>d.type==='comptage');if(dep){let sc='';try{sc=this.genSourceCode(dep,s);}catch(e){sc=dep.code||'SRC';}const tri=dep.tension==='tri'||dep.tension==='tri_it'||(+dep.poles>=3);entrants.push({wcode:dep.dbCode||'DB',from:sc+(dep.nom?' '+dep.nom:''),to:center.code,conds:this._condsFor(tri?3:1),sec:(dep.section||'16')+'mm²',bornes:(te.cb0Code||'CB0'),borneT:(dep.dbCode||'DB'),borneA:(te.cb0Code||'CB0'),pieceA:(te.nom||''),edit:{type:'dep',id:dep.id},statutKey:'dep'+dep.id+'te'+te.id});}}
-      const fedBd=new Set();
       (s.disjoncteurs||[]).filter(d=>d.tableauId===te.id).forEach(d=>{
         const refs=d.recepteurs||[];const room=refs.map(rf=>refPiece[rf]).filter(Boolean)[0]||'';
         let wc='';try{wc=this.genCableCBCode(d,s);}catch(e){}
         const bdIds=[];const directRefs=[];
         refs.forEach(rf=>{const e=fnByRef[rf];if(e&&e.fn.departType==='boite'&&e.fn.departId!=null){const k=String(e.fn.departId);if(bdIds.indexOf(k)<0)bdIds.push(k);}else{directRefs.push(rf);}});
-        bdIds.forEach(k=>{const bd=(s.boitesDeriv||[]).find(b=>String(b.id)===k);if(!bd)return;fedBd.add(k);sortants.push({wcode:wc||d.code||'',from:center.code+(d.code?' '+d.code:''),to:bdCode(bd)+(bd.nom?' '+bd.nom:''),conds:this._condsFor(this._poles(d)),sec:(d.section||'1.5')+'mm²',bornes:d.code||'',borneT:(d.code||''),borneA:bdCode(bd),pieceA:((s.pieces||[]).find(p=>p.id===bd.pieceId)||{}).nom||'',edit:{type:'dj',id:d.id},statutKey:'bd'+bd.id+'feed'});});
+        bdIds.forEach(k=>{const bd=(s.boitesDeriv||[]).find(b=>String(b.id)===k);if(!bd)return;sortants.push({wcode:wc||d.code||'',from:center.code+(d.code?' '+d.code:''),to:bdCode(bd)+(bd.nom?' '+bd.nom:''),conds:this._condsFor(this._poles(d)),sec:(d.section||'1.5')+'mm²',bornes:d.code||'',borneT:(d.code||''),borneA:bdCode(bd),pieceA:((s.pieces||[]).find(p=>p.id===bd.pieceId)||{}).nom||'',edit:{type:'dj',id:d.id},statutKey:'dj'+d.id+'bd'+bd.id});});
         if(directRefs.length){sortants.push({wcode:wc||d.code||'',from:center.code+(d.code?' '+d.code:''),to:directRefs.join(' ')+(room?' · '+room:''),conds:this._condsFor(this._poles(d)),sec:(d.section||'1.5')+'mm²',bornes:d.code||'',borneT:(d.code||''),borneA:directRefs.join(' '),pieceA:room,edit:{type:'dj',id:d.id},statutKey:'dj'+d.id});}
       });
-      (s.boitesDeriv||[]).filter(b=>String(b.tableauId)===String(te.id)).forEach(b=>{if(fedBd.has(String(b.id)))return;sortants.push({wcode:bdCode(b),from:center.code,to:bdCode(b)+(b.nom?' '+b.nom:''),conds:this._condsFor(1),sec:'?',bornes:'BD',borneT:(te.cb0Code||''),borneA:bdCode(b),pieceA:((s.pieces||[]).find(p=>p.id===b.pieceId)||{}).nom||'',edit:{type:'bd',id:b.id},statutKey:'bd'+b.id+'feed'});});
       return{entrants,sortants,center};
     }
     if(kind==='bd'){
       const bd=(s.boitesDeriv||[]).find(b=>b.id===id);if(!bd)return{entrants,sortants,center:null};
       const center={code:bdCode(bd),nom:bd.nom||'',type:'BD'};
-      // Câble entrant = le câble qui alimente la boîte, déduit du disjoncteur (même câble que le sortant du tableau)
-      const feedDj=(s.disjoncteurs||[]).find(d=>(d.recepteurs||[]).some(rf=>{const e=fnByRef[rf];return e&&e.fn.departType==='boite'&&String(e.fn.departId)===String(bd.id);}));
-      const te=(feedDj?(s.tableauxElec||[]).find(t=>t.id===feedDj.tableauId):null)||(s.tableauxElec||[]).find(t=>String(t.id)===String(bd.tableauId));
-      if(te){let wc='';if(feedDj){try{wc=this.genCableCBCode(feedDj,s);}catch(e){wc=feedDj.code||'';}}entrants.push({wcode:wc,from:teCode(te)+(feedDj&&feedDj.code?' '+feedDj.code:(te.nom?' '+te.nom:'')),to:center.code,conds:this._condsFor(feedDj?this._poles(feedDj):1),sec:(feedDj&&feedDj.section?feedDj.section:'?')+'mm²',bornes:'',borneT:(feedDj&&feedDj.code)||(te.cb0Code||''),borneA:center.code,pieceA:bd.pieceId?(((s.pieces||[]).find(p=>p.id===bd.pieceId)||{}).nom||''):'',edit:feedDj?{type:'dj',id:feedDj.id}:{type:'bd',id:bd.id},statutKey:'bd'+bd.id+'feed'});}
+      // Câbles entrants = tous les câbles de disjoncteurs dont un récepteur part de cette boîte
+      // (une boîte peut être alimentée par plusieurs tableaux). Pas de lien tableauId obligatoire.
+      const bdPiece=bd.pieceId?(((s.pieces||[]).find(p=>p.id===bd.pieceId)||{}).nom||''):'';
+      (s.disjoncteurs||[]).filter(d=>(d.recepteurs||[]).some(rf=>{const e=fnByRef[rf];return e&&e.fn.departType==='boite'&&String(e.fn.departId)===String(bd.id);})).forEach(d=>{
+        const te=(s.tableauxElec||[]).find(t=>t.id===d.tableauId);if(!te)return;
+        let wc='';try{wc=this.genCableCBCode(d,s);}catch(e){wc=d.code||'';}
+        entrants.push({wcode:wc,from:teCode(te)+(d.code?' '+d.code:''),to:center.code,conds:this._condsFor(this._poles(d)),sec:(d.section||'1.5')+'mm²',bornes:'',borneT:(d.code||''),borneA:center.code,pieceA:bdPiece,edit:{type:'dj',id:d.id},statutKey:'dj'+d.id+'bd'+bd.id});
+      });
       (s.pieces||[]).forEach(p=>(p.fonctions||[]).forEach(fn=>{if(fn.departType==='boite'&&String(fn.departId)===String(bd.id)){const fi=this.FNS[fn.type]||{};sortants.push({wcode:fn.ref||'',from:center.code,to:(fi.label||fn.type)+(fn.ref?' '+fn.ref:'')+' · '+(p.nom||''),conds:this._condsFor(1),sec:(fn.cableSection||'1.5')+'mm²',bornes:fn.ref||'',borneT:center.code,borneA:(fn.ref||''),pieceT:bd.pieceId?(((s.pieces||[]).find(x=>x.id===bd.pieceId)||{}).nom||''):'',pieceA:(p.nom||''),edit:{type:'fn',pieceId:p.id,fnId:fn.id},statutKey:'fn'+fn.id});
         (s.interrupteurs||[]).filter(it=>it.circuitRef===fn.ref).forEach(it=>{const itDt=it.departType||fn.departType;const itDi=it.departId!=null?it.departId:fn.departId;if(itDt==='boite'&&String(itDi)===String(bd.id)){let ic='';try{ic=this.genInterCode(it,s);}catch(e){ic=it.nom||'SA';}const itp=it.pieceId?(((s.pieces||[]).find(x=>x.id===it.pieceId)||{}).nom||''):(p.nom||'');sortants.push({wcode:ic,from:center.code,to:ic+(it.nom?' — '+it.nom:''),conds:this._condsFor(1),sec:'1.5mm²',bornes:ic,borneT:center.code,borneA:ic,pieceT:bd.pieceId?(((s.pieces||[]).find(x=>x.id===bd.pieceId)||{}).nom||''):'',pieceA:itp,edit:{type:'inter',id:it.id},statutKey:'int'+it.id});}});
       }}));
@@ -7829,35 +7829,39 @@ class Component extends DCLogic {
         });
       });
 
-      // ── Cables d'alimentation des boites de derivation (TE -> BD) ──
+      // ── Cables d'alimentation des boites de derivation (disjoncteur -> BD) ──
+      // Une boite peut etre alimentee par plusieurs tableaux : un cable par disjoncteur dont un recepteur part de la boite.
       (this.state.boitesDeriv||[]).forEach(bd=>{
-        const feedDj=(this.state.disjoncteurs||[]).find(d=>(d.recepteurs||[]).some(rf=>{const e=allFns.find(f=>f.ref===rf);return e&&e.departType==='boite'&&String(e.departId)===String(bd.id);}));
-        const te=(feedDj?(this.state.tableauxElec||[]).find(t=>t.id===feedDj.tableauId):null)||(this.state.tableauxElec||[]).find(t=>String(t.id)===String(bd.tableauId));
-        if(!te)return;
-        const bdC=this.genBDCode(bd,this.state);
-        const teC=this.genTECode(te,this.state);
-        const wCodeB=bdC;
-        const tenantB=feedDj?teC+' '+(feedDj.code||''):teC+(te.nom?' — '+te.nom:'');
-        const aboutissantB=bdC+(bd.nom?' — '+bd.nom:'');
-        const schemaB=[{k:'L',bt:'L',ba:'L'},{k:'N',bt:'N',ba:'N'},{k:'PE',bt:'PE',ba:'PE'}];
-        const cableTypeB='U1000 R2V 3G2.5 mm²';
-        const filsB=schemaB.map((sx,i)=>{
-          const ovrKey=wCodeB+'_filBD'+(i+1);
-          const ovr=nomenclatureOverrides[ovrKey]||{};
-          return {
-            wCode:wCodeB,filNum:i+1,conducteurKey:sx.k,
-            bt:ovr.bt||sx.bt,ba:ovr.ba||sx.ba,
-            tenant:ovr.tenant||tenantB,aboutissant:ovr.aboutissant||aboutissantB,
-            cableType:cableTypeB,
-            couleur:COUL[sx.k]?.label||sx.k,couleurHex:COUL[sx.k]?.hex||'#888',
-            rep:ovr.rep||'',racc:ovr.racc||'',test:ovr.test||'',statut:ovr.statut||'',
-            fnRef:null,fnType:'bdfeeder',pieceNom:(this.state.pieces.find(p=>p.id===bd.pieceId)||{}).nom||'',
-            conducteur:sx.k,departType:'',departId:null,
-            tenantRef:{kind:'te',id:te.id},aboutRef:{kind:'bd',id:bd.id},
-            longueur:ovr.longueur||0,fnPieceId:null,fnId:null,
-          };
+        const feedDjs=(this.state.disjoncteurs||[]).filter(d=>(d.recepteurs||[]).some(rf=>{const e=allFns.find(f=>f.ref===rf);return e&&e.departType==='boite'&&String(e.departId)===String(bd.id);}));
+        feedDjs.forEach(feedDj=>{
+          const te=(this.state.tableauxElec||[]).find(t=>t.id===feedDj.tableauId);
+          if(!te)return;
+          const bdC=this.genBDCode(bd,this.state);
+          const teC=this.genTECode(te,this.state);
+          let djWc='';try{djWc=this.genCableCBCode(feedDj,this.state);}catch(e){djWc=feedDj.code||'';}
+          const wCodeB=djWc||bdC;
+          const tenantB=teC+' '+(feedDj.code||'');
+          const aboutissantB=bdC+(bd.nom?' — '+bd.nom:'');
+          const schemaB=[{k:'L',bt:'L',ba:'L'},{k:'N',bt:'N',ba:'N'},{k:'PE',bt:'PE',ba:'PE'}];
+          const cableTypeB='U1000 R2V 3G'+(feedDj.section||'2.5')+' mm²';
+          const filsB=schemaB.map((sx,i)=>{
+            const ovrKey=wCodeB+'_filBD'+bd.id+'_'+(i+1);
+            const ovr=nomenclatureOverrides[ovrKey]||{};
+            return {
+              wCode:wCodeB,filNum:i+1,conducteurKey:sx.k,
+              bt:ovr.bt||sx.bt,ba:ovr.ba||sx.ba,
+              tenant:ovr.tenant||tenantB,aboutissant:ovr.aboutissant||aboutissantB,
+              cableType:cableTypeB,
+              couleur:COUL[sx.k]?.label||sx.k,couleurHex:COUL[sx.k]?.hex||'#888',
+              rep:ovr.rep||'',racc:ovr.racc||'',test:ovr.test||'',statut:ovr.statut||'',
+              fnRef:null,fnType:'bdfeeder',pieceNom:(this.state.pieces.find(p=>p.id===bd.pieceId)||{}).nom||'',
+              conducteur:sx.k,departType:'',departId:null,
+              tenantRef:{kind:'te',id:te.id},aboutRef:{kind:'bd',id:bd.id},
+              longueur:ovr.longueur||0,fnPieceId:null,fnId:null,
+            };
+          });
+          cables.push({wCode:wCodeB,fils:filsB,fn:null});
         });
-        cables.push({wCode:wCodeB,fils:filsB,fn:null});
       });
 
       const allCables=[...sourceCables,...cables];
