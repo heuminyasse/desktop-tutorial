@@ -7721,6 +7721,7 @@ class Component extends DCLogic {
                 couleurHex:{L:'#dc2626',N:'#1d4ed8',PE:'#15803d',L1:'#dc2626',L2:'#f97316',L3:'#c026d3'}[ovr.bt]||'#888',
                 rep:ovr.rep||'',racc:ovr.racc||'',test:ovr.test||'',statut:ovr.statut||'',
                 fnRef:null,fnType:'source',isSrcCable:true,ovrKey,
+                tenantRef:null,aboutRef:{kind:'te',id:te.id},
                 longueur:ovr.longueur||0,fnPieceId:null,fnId:null
               };
             });
@@ -7740,6 +7741,8 @@ class Component extends DCLogic {
         const cableType=getCableType(fn);
         const tenant=getTenant(fn);
         const aboutissant=getAboutissant(fn);
+        // Élément tenant (pour le code des bornes selon raccordement)
+        const fnTenantRef=fn.departType==='boite'&&fn.departId!=null?{kind:'bd',id:fn.departId}:(()=>{const dj=this.state.disjoncteurs.find(d=>(d.recepteurs||[]).includes(fn.ref));const te=dj?this.state.tableauxElec.find(t=>t.id===dj.tableauId):(fn.departType==='tableau'&&fn.departId?this.state.tableauxElec.find(t=>String(t.id)===String(fn.departId)):null);return te?{kind:'te',id:te.id}:null;})();
         const fils=schema.map((s,i)=>{
           const ovrKey=wCode+'_fil'+(i+1);
           const ovr=nomenclatureOverrides[ovrKey]||{};
@@ -7764,6 +7767,7 @@ class Component extends DCLogic {
             conducteur:s.k,
             departType:fn.departType||'',
             departId:fn.departId||null,
+            tenantRef:fnTenantRef,aboutRef:null,
             longueur:fn.cableLongueur||0,
             fnPieceId:fn.piece?.id||null,
             fnId:fn.id||null,
@@ -7815,6 +7819,7 @@ class Component extends DCLogic {
               statut:ovr.statut||'',
               fnRef:fn.ref,
               fnType:typeInter,
+              tenantRef:interDeptType==='boite'&&interDeptId!=null?{kind:'bd',id:interDeptId}:(interDeptType==='tableau'&&interDeptId!=null?{kind:'te',id:interDeptId}:null),aboutRef:null,
               longueur:ovr.longueur!==undefined?ovr.longueur:(inter.cableLongueur||0),
               fnPieceId:null,fnId:null,interId:inter.id,
             };
@@ -7826,12 +7831,12 @@ class Component extends DCLogic {
 
       // ── Cables d'alimentation des boites de derivation (TE -> BD) ──
       (this.state.boitesDeriv||[]).forEach(bd=>{
-        const te=(this.state.tableauxElec||[]).find(t=>String(t.id)===String(bd.tableauId));
+        const feedDj=(this.state.disjoncteurs||[]).find(d=>(d.recepteurs||[]).some(rf=>{const e=allFns.find(f=>f.ref===rf);return e&&e.departType==='boite'&&String(e.departId)===String(bd.id);}));
+        const te=(feedDj?(this.state.tableauxElec||[]).find(t=>t.id===feedDj.tableauId):null)||(this.state.tableauxElec||[]).find(t=>String(t.id)===String(bd.tableauId));
         if(!te)return;
         const bdC=this.genBDCode(bd,this.state);
         const teC=this.genTECode(te,this.state);
         const wCodeB=bdC;
-        const feedDj=(this.state.disjoncteurs||[]).find(d=>d.tableauId===te.id&&(d.recepteurs||[]).some(rf=>{const e=allFns.find(f=>f.ref===rf);return e&&e.departType==='boite'&&String(e.departId)===String(bd.id);}));
         const tenantB=feedDj?teC+' '+(feedDj.code||''):teC+(te.nom?' — '+te.nom:'');
         const aboutissantB=bdC+(bd.nom?' — '+bd.nom:'');
         const schemaB=[{k:'L',bt:'L',ba:'L'},{k:'N',bt:'N',ba:'N'},{k:'PE',bt:'PE',ba:'PE'}];
@@ -7848,6 +7853,7 @@ class Component extends DCLogic {
             rep:ovr.rep||'',racc:ovr.racc||'',test:ovr.test||'',statut:ovr.statut||'',
             fnRef:null,fnType:'bdfeeder',pieceNom:(this.state.pieces.find(p=>p.id===bd.pieceId)||{}).nom||'',
             conducteur:sx.k,departType:'',departId:null,
+            tenantRef:{kind:'te',id:te.id},aboutRef:{kind:'bd',id:bd.id},
             longueur:ovr.longueur||0,fnPieceId:null,fnId:null,
           };
         });
@@ -7941,9 +7947,11 @@ class Component extends DCLogic {
                     // Compute borne codes from raccordType
                     const cond=fil.conducteur||fil.bt||'L';
                     // Tenant element (BD or TE) for borne
+                    const elOf=ref=>!ref?null:(ref.kind==='bd'?this.state.boitesDeriv.find(b=>String(b.id)===String(ref.id)):this.state.tableauxElec.find(t=>String(t.id)===String(ref.id)));
                     const tenantBD=fil.fnType&&fil.departType==='boite'?this.state.boitesDeriv.find(b=>String(b.id)===String(fil.departId)):null;
                     const tenantTE=fil.departType==='tableau'?this.state.tableauxElec.find(t=>String(t.id)===String(fil.departId)):null;
-                    const tenantEl=tenantBD||tenantTE;
+                    const tenantEl=elOf(fil.tenantRef)||tenantBD||tenantTE;
+                    const aboutEl=elOf(fil.aboutRef);
                     // Mapping conducteur → numero de connecteur/bornier
                     // Connecteur Wago / Repartiteur : un connecteur PAR potentiel
                     // W1=phase(L,L1), W2=neutre(N), W3=terre(PE), W4=navette(NAV), W5=L2, W6=L3
@@ -7971,7 +7979,7 @@ class Component extends DCLogic {
                       }
                     };
                     const borneT=ovr.bt!==undefined?ovr.bt:calcBorne(tenantEl,cond);
-                    const borneA=ovr.ba!==undefined?ovr.ba:fil.ba;
+                    const borneA=ovr.ba!==undefined?ovr.ba:(aboutEl?calcBorne(aboutEl,cond):fil.ba);
                     // Equip T = code de l'element tenant
                     const equipT=tenantBD?this.genBDCode(tenantBD,this.state):tenantTE?this.genTECode(tenantTE,this.state):(fil.tenant||'');
                     // Equip A = code du recepteur (déjà dans aboutissant après —)
