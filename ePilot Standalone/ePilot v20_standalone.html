@@ -6885,7 +6885,7 @@ html body[class] #vac-gantt td.emp .nm{font-weight:500 !important;}</style>
 (function(){
   if(window.__dcInjected) return; window.__dcInjected=1;
   var STORE_KEY='epilot_chantier_data_v1';
-  var CW=86; // column width px
+  var CW=86;
 
   function getAllTasks(){
     try{
@@ -6907,24 +6907,55 @@ html body[class] #vac-gantt td.emp .nm{font-weight:500 !important;}</style>
     return lk;
   }
 
-  /* Find the gantt left-panel rows container.
-     Primary: #jip-taskRows.
-     Fallback: scan for a div whose direct children are many flex-row divs
-               each with a wide (≥200px) first child — that's the task list. */
+  /* ── Walk up to the nearest ancestor with display:flex that has >1 child ── */
+  function closestFlexRow(el){
+    var cur=el.parentElement;
+    for(var k=0;k<10;k++){
+      if(!cur||cur===document.body) return null;
+      var d=cur.style.display||(window.getComputedStyle?window.getComputedStyle(cur).display:'');
+      if(d==='flex'&&cur.children.length>=1) return cur;
+      cur=cur.parentElement;
+    }
+    return null;
+  }
+
+  /* ── Find the direct child of flexRow that contains el ── */
+  function directChildOf(flexRow,el){
+    var cur=el;
+    while(cur&&cur.parentElement!==flexRow) cur=cur.parentElement;
+    return cur||null;
+  }
+
+  /* ── Unlock overflow on gantt left panel ancestors ── */
+  function unlockOverflow(container){
+    if(!container) return;
+    var el=container.parentElement;
+    for(var i=0;i<8;i++){
+      if(!el||el===document.body) break;
+      var st=el.style;
+      if(st.overflow==='hidden'||st.overflowX==='hidden'){
+        var ow=el.offsetWidth;
+        st.overflow='visible'; st.overflowX='visible';
+        /* also widen so flex children fit */
+        if(ow>0) { st.width=(ow+CW*2)+'px'; st.minWidth=(ow+CW*2)+'px'; }
+      }
+      el=el.parentElement;
+    }
+  }
+
   function findRowsEl(){
     var el=document.getElementById('jip-taskRows');
     if(el&&el.children.length>0) return el;
-    // Fallback: look for container of task rows via structure
+    /* structural fallback: find a div with ≥3 children each having ≥2 sub-children */
     var divs=document.querySelectorAll('div');
     for(var i=0;i<divs.length;i++){
-      var d=divs[i];
-      if(d.children.length<3) continue;
+      var d=divs[i]; if(d.children.length<3) continue;
       var ok=0;
       for(var k=0;k<Math.min(d.children.length,4);k++){
         var r=d.children[k];
-        if(r.firstElementChild&&r.children.length>=2){
-          var fw=r.firstElementChild.offsetWidth||parseFloat(r.firstElementChild.style.width||0);
-          if(fw>150) ok++;
+        if(r.children.length>=2&&r.firstElementChild){
+          var fw=r.firstElementChild.offsetWidth||parseFloat(r.firstElementChild.style.width||'0');
+          if(fw>100) ok++;
         }
       }
       if(ok>=3) return d;
@@ -6932,10 +6963,10 @@ html body[class] #vac-gantt td.emp .nm{font-weight:500 !important;}</style>
     return null;
   }
 
-  var cs='flex-shrink:0;width:'+CW+'px;padding:0 4px;font-size:11px;color:#555;display:flex;' +
-         'align-items:center;border-right:1px solid #e0e0e0;white-space:nowrap;overflow:hidden;';
-  var hs='flex-shrink:0;width:'+CW+'px;padding:0 4px;font-size:11px;font-weight:700;color:#333;display:flex;' +
-         'align-items:center;border-right:1px solid #e0e0e0;white-space:nowrap;background:inherit;';
+  var cs='flex-shrink:0;width:'+CW+'px;padding:0 4px;font-size:11px;color:#444;display:flex;' +
+         'align-items:center;border-right:1px solid #e0e0e0;white-space:nowrap;box-sizing:border-box;';
+  var hs='flex-shrink:0;width:'+CW+'px;padding:0 4px;font-size:11px;font-weight:700;color:#222;display:flex;' +
+         'align-items:center;border-right:1px solid #e0e0e0;white-space:nowrap;box-sizing:border-box;background:inherit;';
 
   function injectRows(container,lk){
     var names=Object.keys(lk); if(!names.length) return;
@@ -6943,8 +6974,7 @@ html body[class] #vac-gantt td.emp .nm{font-weight:500 !important;}</style>
     for(var i=0;i<rows.length;i++){
       var row=rows[i];
       if(row.getAttribute('data-di')) continue;
-      var fc=row.firstElementChild; if(!fc) continue;
-      if(row.children.length<2) continue; // single-cell rows = phase headers
+      var fc=row.firstElementChild; if(!fc||row.children.length<2) continue;
       var ct=fc.textContent;
       var info=null;
       for(var n=0;n<names.length;n++){if(ct.indexOf(names[n])>-1){info=lk[names[n]];break;}}
@@ -6957,34 +6987,43 @@ html body[class] #vac-gantt td.emp .nm{font-weight:500 !important;}</style>
     }
   }
 
-  function injectHdr(container){
-    /* Find "TÂCHE" text node, then add headers in its parent row */
-    var allEls=document.querySelectorAll('div,th,span');
-    for(var i=0;i<allEls.length;i++){
-      var el=allEls[i];
-      if(el.getAttribute('data-dh')||el.children.length>0) continue;
+  function injectHdr(){
+    /* Find "TÂCHE" leaf text node → walk UP to the flex row → insert after TÂCHE's cell */
+    if(document.querySelector('[data-dh="1"]')) return;
+    var all=document.querySelectorAll('div,span,th');
+    for(var i=0;i<all.length;i++){
+      var el=all[i];
+      if(el.children.length>0||el.getAttribute('data-dh-el')) continue;
       var t=el.textContent.trim();
-      if(t==='TÂCHE'||t==='Tâche'||t==='tâche'){
-        var hrow=el.parentElement; if(!hrow||hrow.getAttribute('data-dh')) continue;
-        var hd=document.createElement('div'); hd.style.cssText=hs; hd.textContent='Début';
-        var hf=document.createElement('div'); hf.style.cssText=hs; hf.textContent='Fin';
-        var nx=el.nextElementSibling;
-        if(nx){hrow.insertBefore(hd,nx);hrow.insertBefore(hf,nx);}
-        else{hrow.appendChild(hd);hrow.appendChild(hf);}
-        hrow.setAttribute('data-dh','1');
-        break;
-      }
+      if(t!=='TÂCHE'&&t!=='Tâche') continue;
+
+      /* Walk up until we reach a flex row that has multiple children */
+      var flexRow=closestFlexRow(el);
+      if(!flexRow||flexRow.getAttribute('data-dh')) continue;
+
+      /* Find the direct child of flexRow that wraps TÂCHE */
+      var tacheCell=directChildOf(flexRow,el);
+      if(!tacheCell) continue;
+
+      var hd=document.createElement('div'); hd.style.cssText=hs; hd.textContent='Début';
+      var hf=document.createElement('div'); hf.style.cssText=hs; hf.textContent='Fin';
+      var nx=tacheCell.nextElementSibling;
+      if(nx){flexRow.insertBefore(hd,nx);flexRow.insertBefore(hf,nx);}
+      else{flexRow.appendChild(hd);flexRow.appendChild(hf);}
+      flexRow.setAttribute('data-dh','1');
+      el.setAttribute('data-dh-el','1');
+      break;
     }
   }
 
   function inject(){
     var container=findRowsEl(); if(!container) return;
+    unlockOverflow(container);
     var lk=buildLk();
     injectRows(container,lk);
-    injectHdr(container);
+    injectHdr();
   }
 
-  /* Patch window.jipDrawGantt — most reliable hook */
   function patchGantt(){
     if(!window.jipDrawGantt||window.__dcGanttPatched) return;
     var orig=window.jipDrawGantt;
@@ -6993,23 +7032,16 @@ html body[class] #vac-gantt td.emp .nm{font-weight:500 !important;}</style>
       setTimeout(inject,60);
     };
     window.__dcGanttPatched=true;
-    setTimeout(inject,60);
   }
 
-  /* Body MO to catch when gantt rows container appears */
   var _bmo=new MutationObserver(function(){
     patchGantt();
-    if(findRowsEl()) inject();
+    if(findRowsEl()){clearTimeout(_bmo._t);_bmo._t=setTimeout(inject,80);}
   });
   _bmo.observe(document.body,{childList:true,subtree:true});
 
-  /* Polling — 200ms × 150 tries */
   var _t=0;
-  (function p(){
-    patchGantt(); inject();
-    if(++_t<150) setTimeout(p,200);
-  })();
-
+  (function p(){ patchGantt(); inject(); if(++_t<200) setTimeout(p,300); })();
   window.__injectDateCols=inject;
 })();
 </script>
@@ -7260,47 +7292,68 @@ html body[class] #vac-gantt td.emp .nm{font-weight:500 !important;}</style>
 
     /* ── Planning toolbar ── */
     if(!injected.planning && !document.querySelector('[data-rapact-btn]')){
-      /* Multi-strategy anchor search */
-      var anchor = null;
 
-      /* S1: button with "Nouvelle" */
-      var btns = document.querySelectorAll('button');
-      for(var bi=0;bi<btns.length;bi++){
-        if(btns[bi].textContent.indexOf('Nouvelle')>-1){ anchor=btns[bi]; break; }
+      /* Find toolbar by "tâches terminées" stats text → walk to flex-row ancestor */
+      var toolbarRow = null;
+      var allEls2 = document.querySelectorAll('*');
+      for(var ti=0;ti<allEls2.length;ti++){
+        var te=allEls2[ti];
+        if(te.children.length===0 && te.textContent.indexOf('tâches terminées')>-1){
+          var cur=te.parentElement;
+          for(var tk=0;tk<8;tk++){
+            if(!cur||cur===document.body) break;
+            var td=cur.style.display||(window.getComputedStyle?window.getComputedStyle(cur).display:'');
+            if(td==='flex'&&cur.children.length>=2){ toolbarRow=cur; break; }
+            cur=cur.parentElement;
+          }
+          break;
+        }
       }
-      /* S2: any element (div/span) with "Nouvelle tâche" leaf text */
-      if(!anchor){
-        var allEl=document.querySelectorAll('*');
-        for(var ai=0;ai<allEl.length;ai++){
-          var ae=allEl[ai];
-          if(ae.children.length===0 && ae.textContent.indexOf('Nouvelle')>-1 && ae.textContent.indexOf('che')>-1){
-            anchor=ae.parentElement; break;
+
+      /* Fallback: find by "Nouvelle" button and its toolbar row ancestor */
+      if(!toolbarRow){
+        var btns2=document.querySelectorAll('button,*[role="button"]');
+        for(var bi=0;bi<btns2.length;bi++){
+          if(btns2[bi].textContent.indexOf('Nouvelle')>-1){
+            var cur2=btns2[bi].parentElement;
+            for(var bk=0;bk<8;bk++){
+              if(!cur2||cur2===document.body) break;
+              var bd=cur2.style.display||(window.getComputedStyle?window.getComputedStyle(cur2).display:'');
+              if(bd==='flex'&&cur2.children.length>=2){ toolbarRow=cur2; break; }
+              cur2=cur2.parentElement;
+            }
+            break;
           }
         }
       }
-      /* S3: "Semaine" button (always in Planning toolbar) */
-      if(!anchor){
-        for(var si=0;si<btns.length;si++){
-          if(btns[si].textContent.trim()==='Semaine'){ anchor=btns[si]; break; }
-        }
-      }
 
-      if(anchor && anchor.parentElement){
-        var tb = anchor.parentElement;
+      if(toolbarRow && !toolbarRow.querySelector('[data-rapact-btn]')){
+        /* Insert button group after the first child (stats text side) */
+        var btnGroup = document.createElement('div');
+        btnGroup.style.cssText = 'display:flex;gap:6px;align-items:center;';
+
         var rapBtn = document.createElement('button');
         rapBtn.setAttribute('data-rapact-btn','1');
         rapBtn.textContent = '📊 Rapport d\'activité';
         rapBtn.style.cssText = 'padding:6px 12px;background:#28a745;color:#fff;border:none;border-radius:6px;' +
-          'font-size:12px;cursor:pointer;font-weight:500;margin-right:4px;';
+          'font-size:12px;cursor:pointer;font-weight:500;';
         rapBtn.onclick = function(){ window.__openRapportActivite && window.__openRapportActivite(); };
+
         var pBtn = document.createElement('button');
         pBtn.setAttribute('data-print-plan','1');
         pBtn.textContent = '🖨 Imprimer';
         pBtn.style.cssText = 'padding:6px 12px;background:#0069d9;color:#fff;border:none;border-radius:6px;' +
-          'font-size:12px;cursor:pointer;font-weight:500;margin-right:6px;';
+          'font-size:12px;cursor:pointer;font-weight:500;';
         pBtn.onclick = printPlanning;
-        tb.insertBefore(pBtn, anchor);
-        tb.insertBefore(rapBtn, pBtn);
+
+        btnGroup.appendChild(rapBtn);
+        btnGroup.appendChild(pBtn);
+
+        /* Insert as second child (between stats and existing buttons) */
+        var secondChild = toolbarRow.children[1];
+        if(secondChild) toolbarRow.insertBefore(btnGroup, secondChild);
+        else toolbarRow.appendChild(btnGroup);
+
         injected.planning = true;
       }
     }
