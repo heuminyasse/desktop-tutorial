@@ -6335,10 +6335,6 @@ document.addEventListener('DOMContentLoaded', async function() {
     if (flex.querySelector('.cdcd-btn')) return;
     var ctx=detailCtx(native); if(!ctx||!ctx.pi) return;
     native.style.display='none';
-    var b=document.createElement('button');
-    b.className='btn btn-p btn-sm cdcd-btn'; b.textContent='+ Cahier des charges';
-    b.onclick=function(){ openEditor(ctx.pi); };
-    flex.insertBefore(b, native);
     /* masque l'ancien système exigences/conformité (remplacé par le document structuré) */
     try{
       var conf=flex.firstElementChild;                 /* bloc « Conformité globale » (ou div vide) */
