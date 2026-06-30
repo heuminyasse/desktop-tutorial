@@ -6882,19 +6882,18 @@ html body[class] #vac-gantt td.emp .nm{font-weight:500 !important;}</style>
      PLANNING — Colonnes Date début / Date fin dans le Gantt
      ═══════════════════════════════════════════════════════════════ -->
 <script id="__PLANNING_DATE_COLS_v1__">
-/* ePilot date-cols v7 – sibling column injection (no position:fixed, no overflow fight) */
+/* ePilot date-cols v8 – sibling injection + CSS badge (immune to body manipulation) */
 (function(){
   if(window.__dcInjected) return; window.__dcInjected = 1;
 
-  /* ── DEBUG BADGE: red dot bottom-right confirms script is executing ── */
-  var _badge = document.createElement('div');
-  _badge.id = '_dcBadge';
-  _badge.style.cssText = 'position:fixed;bottom:8px;right:8px;z-index:2147483647;background:#c0392b;color:#fff;' +
-    'font:bold 11px/1 monospace;padding:4px 10px;border-radius:4px;pointer-events:none;' +
-    'box-shadow:0 2px 8px rgba(0,0,0,.4);';
-  _badge.textContent = 'DC v7';
-  (document.body || document.documentElement).appendChild(_badge);
-  setTimeout(function(){ var e = document.getElementById('_dcBadge'); if(e) e.remove(); }, 8000);
+  /* ── DEBUG BADGE via CSS ::after on body (immune to DOM body wipes) ── */
+  var _bst = document.createElement('style');
+  _bst.id = '_dcBadgeSt';
+  _bst.textContent = 'body::after{content:"DC v8 ✓";position:fixed;bottom:8px;right:8px;z-index:2147483647;' +
+    'background:#c0392b;color:#fff;font:bold 11px/1 monospace;padding:4px 10px;border-radius:4px;' +
+    'pointer-events:none;box-shadow:0 2px 8px rgba(0,0,0,.4);}';
+  (document.head || document.documentElement).appendChild(_bst);
+  setTimeout(function(){ var e = document.getElementById('_dcBadgeSt'); if(e) e.remove(); }, 10000);
 
   var STORE_KEY = 'epilot_chantier_data_v1';
   var CW = 100; /* px per column */
@@ -7046,18 +7045,35 @@ html body[class] #vac-gantt td.emp .nm{font-weight:500 !important;}</style>
     }
   }
 
-  /* ─── MO on #jip-taskRows: rebuild when rows change ─── */
-  var _rowMO = null, _moTarget = null;
+  /* ─── MO on #jip-taskRows children: rebuild when rows change ─── */
+  var _rowMO = null, _parMO = null, _moTarget = null;
   function attachRowMO(){
     var taskRows = document.getElementById('jip-taskRows');
     if(!taskRows || taskRows === _moTarget) return;
     if(_rowMO) _rowMO.disconnect();
+    if(_parMO) _parMO.disconnect();
     _moTarget = taskRows;
+
+    /* Watch taskRows children — React rebuilds rows here */
     _rowMO = new MutationObserver(function(){
       clearTimeout(_rowMO._t);
       _rowMO._t = setTimeout(inject, 80);
     });
     _rowMO.observe(taskRows, { childList: true });
+
+    /* Watch taskRows PARENT children — catches React removing our _dcColBody sibling */
+    var par = taskRows.parentElement;
+    if(par){
+      _parMO = new MutationObserver(function(){
+        if(_injecting) return;
+        /* If our column was removed, re-inject */
+        if(!document.getElementById(COL_ID)){
+          clearTimeout(_parMO._t);
+          _parMO._t = setTimeout(inject, 80);
+        }
+      });
+      _parMO.observe(par, { childList: true });
+    }
   }
 
   /* ─── Body MO: detect Planning tab appearing (suppressed during own mutations) ─── */
@@ -7074,13 +7090,25 @@ html body[class] #vac-gantt td.emp .nm{font-weight:500 !important;}</style>
     clearTimeout(window._dcRT); window._dcRT = setTimeout(inject, 150);
   }, { passive: true });
 
-  /* ─── Poll: 20× at 500ms then every 3s ─── */
+  /* ─── Keep badge alive (re-inject if doc was reset) ─── */
+  function ensureBadge(){
+    if(document.getElementById('_dcBadgeSt')) return;
+    var st = document.createElement('style');
+    st.id = '_dcBadgeSt';
+    st.textContent = 'body::after{content:"DC v8 ✓";position:fixed;bottom:8px;right:8px;z-index:2147483647;' +
+      'background:#c0392b;color:#fff;font:bold 11px/1 monospace;padding:4px 10px;border-radius:4px;' +
+      'pointer-events:none;box-shadow:0 2px 8px rgba(0,0,0,.4);}';
+    (document.head || document.body || document.documentElement).appendChild(st);
+  }
+
+  /* ─── Poll: 20× at 300ms then every 2s ─── */
   var _pt = 0;
   (function poll(){
+    ensureBadge();
     inject(); attachRowMO();
     _pt++;
-    if(_pt < 20) setTimeout(poll, 500);
-    else setInterval(inject, 3000);
+    if(_pt < 20) setTimeout(poll, 300);
+    else setInterval(function(){ ensureBadge(); inject(); }, 2000);
   })();
 
   window.__injectDateCols = inject;
