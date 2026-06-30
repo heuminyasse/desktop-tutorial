@@ -6884,10 +6884,9 @@ html body[class] #vac-gantt td.emp .nm{font-weight:500 !important;}</style>
 
 
 <script id="__CDC_TAB_v1__">
-/* __CDC_TAB_v1__ — Ajoute un bouton "📋 CDC" dans la barre d'onglets du détail chantier.
-   Détection : walk-up depuis le bouton "Ajouter une exigence" (ancre fiable) vers .tabbar,
-   puis QuerySelector direct. Panneau en overlay fixe : pas besoin de connaître la structure
-   DOM pour cacher le contenu natif. Polling 700ms comme les autres patches. */
+/* __CDC_TAB_v1__ — Bouton "📋 CDC" dans la barre d'onglets du détail chantier.
+   Panneau inline (même scroll que la page) : cache la zone de contenu native,
+   insère le panneau CDC à sa place. Polling 700ms × 200. */
 (function(){
   if (window.__cdcTab) return; window.__cdcTab = true;
 
@@ -6974,8 +6973,10 @@ html body[class] #vac-gantt td.emp .nm{font-weight:500 !important;}</style>
       '.cdct-btn{display:inline-flex;align-items:center;padding:9px 14px;border:0;border-bottom:3px solid transparent;background:transparent;cursor:pointer;font:600 13px/1 inherit;color:var(--muted,#6b7280);white-space:nowrap;flex-shrink:0;vertical-align:middle}',
       '.cdct-btn:hover{background:var(--card-2,#f5f5f7)}',
       '.cdct-btn.on{color:#B5000A;border-bottom-color:#B5000A;font-weight:800}',
-      /* panel wrapper (inside overlay) */
-      '[data-cdct-panel]{padding:16px;background:var(--bg,#f7f8fa);min-height:240px;box-sizing:border-box}',
+      /* inline panel */
+      '#cdct-inline{padding:12px 8px 40px;max-width:1000px;margin:0 auto;width:100%;box-sizing:border-box}',
+      /* hide native content while CDC is open */
+      '[data-cdct-hidden]{display:none!important}',
       /* card */
       '.cdct-card{border:1px solid #e5e7eb;border-radius:12px;background:#fff;overflow:hidden}',
       '.cdct-head{display:flex;align-items:center;gap:10px;padding:11px 15px;background:#f8fafc;border-bottom:1px solid #e5e7eb;flex-wrap:wrap}',
@@ -7127,7 +7128,7 @@ html body[class] #vac-gantt td.emp .nm{font-weight:500 !important;}</style>
     var div=document.createElement('div');
     div.setAttribute('data-cdct-panel',pi);
     div.innerHTML='<div class="cdct-card">'
-      +'<div class="cdct-head"><span class="t">Demande de cotation &amp; éléments retenus</span>'
+      +'<div class="cdct-head"><span class="t">📋 Demande de cotation &amp; éléments retenus</span>'
       +'<span class="cdct-oa '+(oa?'ok':'no')+'">'+(oa?'OA '+esc(oa):'OA non saisi')+'</span>'
       +'<span style="margin-left:auto;font-size:10.5px;color:#94a3b8">PU/qté envoyés client → retenus contrat</span></div>'
       +'<div class="cdct-body" data-cdct-body><div class="cdct-empty">Chargement…</div></div>'
@@ -7156,26 +7157,39 @@ html body[class] #vac-gantt td.emp .nm{font-weight:500 !important;}</style>
     });
   }
 
-  /* ---------- ouverture / fermeture de l'overlay ---------- */
-  function openOverlay(pi,oa){
+  /* ---------- inline open / close ---------- */
+  function findContentArea(tabbar){
+    /* Essaie plusieurs niveaux de "prochain frère" pour trouver la zone de contenu */
+    var ns=tabbar.nextElementSibling;
+    if(ns&&!ns.querySelector('.cdct-btn')) return ns;
+    var p=tabbar.parentElement;
+    if(p){
+      ns=p.nextElementSibling; if(ns) return ns;
+      var gp=p.parentElement;
+      if(gp){ ns=gp.nextElementSibling; if(ns) return ns; }
+    }
+    return null;
+  }
+
+  function deactivateInline(){
+    var panel=document.getElementById('cdct-inline'); if(panel) panel.remove();
+    var hidden=document.querySelector('[data-cdct-hidden]'); if(hidden) hidden.removeAttribute('data-cdct-hidden');
+  }
+
+  function activateInline(tabbar,pi,oa){
     injectCss();
-    var old=document.getElementById('cdct-overlay'); if(old) old.remove();
-    var ov=document.createElement('div'); ov.id='cdct-overlay';
-    ov.style.cssText='position:fixed;inset:0;z-index:9800;background:rgba(15,23,42,.55);display:flex;align-items:flex-start;justify-content:flex-end';
+    deactivateInline();
+    var ca=findContentArea(tabbar);
+    if(ca) ca.setAttribute('data-cdct-hidden','1');
     var panel=buildPanel(pi,oa);
-    panel.style.cssText='width:min(780px,100%);height:100%;overflow:auto;box-shadow:-8px 0 40px rgba(0,0,0,.25)';
-    /* Bouton fermer */
-    var closeBar=document.createElement('div');
-    closeBar.style.cssText='display:flex;align-items:center;justify-content:space-between;padding:10px 15px;background:#0f172a;color:#fff';
-    closeBar.innerHTML='<span style="font-weight:700;font-size:13px">📋 CDC · '+esc(pi)+'</span>';
-    var xBtn=document.createElement('button');
-    xBtn.textContent='✕'; xBtn.style.cssText='background:rgba(255,255,255,.15);border:0;color:#fff;width:30px;height:30px;border-radius:7px;cursor:pointer;font-size:16px';
-    xBtn.addEventListener('click',function(){ov.remove();var b=document.querySelector('.cdct-btn.on');if(b)b.classList.remove('on');});
-    closeBar.appendChild(xBtn);
-    panel.insertBefore(closeBar, panel.firstChild);
-    ov.appendChild(panel);
-    ov.addEventListener('click',function(e){if(e.target===ov){ov.remove();var b=document.querySelector('.cdct-btn.on');if(b)b.classList.remove('on');}});
-    document.body.appendChild(ov);
+    panel.id='cdct-inline';
+    if(ca&&ca.parentElement){
+      ca.parentElement.insertBefore(panel,ca);
+    } else if(tabbar.parentElement){
+      tabbar.parentElement.insertBefore(panel,tabbar.nextSibling||null);
+    } else {
+      document.body.appendChild(panel);
+    }
     fillPanel(panel,pi);
   }
 
@@ -7200,11 +7214,10 @@ html body[class] #vac-gantt td.emp .nm{font-weight:500 !important;}</style>
     for(var j=0;j<monos.length;j++){
       var txt=(monos[j].textContent||'').trim();
       if(!/^PI\d{4,}/i.test(txt)) continue;
-      /* parent→chercher un div/nav avec ≥3 boutons */
       var p=monos[j];
       while(p&&p!==document.body){
         var sibs=p.querySelectorAll('button');
-        if(sibs.length>=3) return p; /* container avec les boutons d'onglets */
+        if(sibs.length>=3) return p;
         p=p.parentElement;
       }
     }
@@ -7229,8 +7242,22 @@ html body[class] #vac-gantt td.emp .nm{font-weight:500 !important;}</style>
 
     btn.addEventListener('click',function(e){
       e.preventDefault(); e.stopPropagation();
-      if(document.getElementById('cdct-overlay')){ document.getElementById('cdct-overlay').remove(); btn.classList.remove('on'); }
-      else { btn.classList.add('on'); openOverlay(pi, getOa(tabbar)); }
+      if(btn.classList.contains('on')){
+        btn.classList.remove('on'); deactivateInline();
+      } else {
+        /* fermer tout CDC ouvert */
+        var old=document.querySelector('.cdct-btn.on'); if(old&&old!==btn) old.classList.remove('on');
+        deactivateInline();
+        btn.classList.add('on'); activateInline(tabbar,pi,getOa(tabbar));
+      }
+    });
+
+    /* Fermer le panneau CDC si un onglet natif est cliqué */
+    $all('button',tabbar).forEach(function(b){
+      if(b===btn||b.__cdct_ntab) return; b.__cdct_ntab=1;
+      b.addEventListener('click',function(){
+        if(document.getElementById('cdct-inline')){ btn.classList.remove('on'); deactivateInline(); }
+      });
     });
 
     tabbar.appendChild(btn);
