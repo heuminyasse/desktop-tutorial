@@ -6819,25 +6819,27 @@ class Component extends DCLogic {
     const data={entrants:datas.flatMap(d=>d.data.entrants),sortants:datas.flatMap(d=>d.data.sortants)};
     const filt=s.vueCableFilter||'all';
     const fmatch=cb=>filt==='all'||((s.poseStatuts||{})[cb.statutKey]||'')===filt;
-    const bars=(conds,sec)=>r('div',{style:{display:'flex',flexDirection:'column',gap:2,flex:1,minWidth:80}},...conds.map((x,k)=>r('div',{key:k,style:{display:'flex',alignItems:'center',gap:4}},
-      r('span',{style:{width:22,fontSize:8,fontWeight:700,color:x[1]==='grad'?'#43a047':x[1],fontFamily:c.mono}},x[0]),
+    const condBorne=(name,term)=>name==='PE'?'PE':(term?term+'.'+name:'');
+    const bars=(conds,sec,bT,bA)=>r('div',{style:{display:'flex',flexDirection:'column',gap:2,flex:1,minWidth:150}},...conds.map((x,k)=>r('div',{key:k,style:{display:'flex',alignItems:'center',gap:4}},
+      (bT||bT==='')?r('span',{style:{fontSize:7,color:c.muted,fontFamily:c.mono,minWidth:38,textAlign:'right'}},condBorne(x[0],bT)):null,
+      r('span',{style:{width:16,fontSize:8,fontWeight:700,color:x[1]==='grad'?'#43a047':x[1],fontFamily:c.mono}},x[0]),
       r('div',{style:{flex:1,height:4,borderRadius:2,background:x[1]==='grad'?'repeating-linear-gradient(45deg,#43a047 0 4px,#fdd835 4px 8px)':x[1]}}),
-      r('span',{style:{fontSize:8,color:c.muted,fontFamily:c.mono,minWidth:34,textAlign:'right'}},sec))));
-    const endBlk=(code,borne,piece,align)=>r('div',{style:{minWidth:78,maxWidth:150,fontSize:9,textAlign:align,flexShrink:0}},
+      r('span',{style:{fontSize:8,color:c.muted,fontFamily:c.mono,minWidth:28,textAlign:'right'}},sec),
+      (bA||bA==='')?r('span',{style:{fontSize:7,color:c.muted,fontFamily:c.mono,minWidth:38}},condBorne(x[0],bA)):null)));
+    const endBlk=(code,piece,align)=>r('div',{style:{minWidth:74,maxWidth:140,fontSize:9,textAlign:align,flexShrink:0}},
       r('div',{style:{color:c.text2,fontWeight:600,whiteSpace:'normal',lineHeight:1.25}},code||'—'),
-      borne?r('div',{style:{color:c.muted,fontFamily:c.mono,fontSize:8}},'borne '+borne):null,
       piece?r('div',{style:{color:c.muted,fontSize:8,fontStyle:'italic'}},piece):null);
-    const repCenter=(cab)=>r('div',{style:{flex:1,minWidth:84,display:'flex',flexDirection:'column',gap:3}},
+    const repCenter=(cab)=>r('div',{style:{flex:1,minWidth:150,display:'flex',flexDirection:'column',gap:3}},
       cab.wcode?r('div',{style:{textAlign:'center',fontFamily:c.mono,fontWeight:800,color:c.accent,fontSize:10}},cab.wcode):r('div',{style:{textAlign:'center',fontSize:8,color:c.muted}},'(sans repère)'),
-      bars(cab.conds,cab.sec));
+      bars(cab.conds,cab.sec,cab.borneT,cab.borneA));
     const rowSt={display:'flex',alignItems:'center',gap:6,padding:'7px 9px',background:c.surf,border:'1px solid '+c.bdr,borderRadius:8,marginBottom:6,boxShadow:c.elev1,cursor:'pointer'};
     const poseBadge=(key)=>{const st=this._poseState(key);const m=(s.poseMeta||{})[key];const tt='Statut de pose — cliquer pour changer'+(m&&m.at?'\n'+st.l+(m.by?' par '+m.by:'')+' le '+this._fmtStamp(m.at):'');return r('button',{onClick:(e)=>{e.stopPropagation();this._cyclePose(key);},title:tt,style:{flexShrink:0,fontSize:8,fontWeight:700,color:st.col,background:st.col+'18',border:'1px solid '+st.col+'66',borderRadius:5,padding:'2px 6px',cursor:'pointer',whiteSpace:'nowrap'}},st.l);};
     const cableRow=(cab,k,dir)=>r('div',{key:dir+k,onClick:()=>this._openCableEdit(cab.edit),title:'Modifier ce câble / cet équipement',style:rowSt},
-      endBlk(cab.from,cab.borneT,cab.pieceT,'left'),
+      endBlk(cab.from,cab.pieceT,'left'),
       r('span',{style:{color:c.muted,fontSize:12,flexShrink:0}},'→'),
       repCenter(cab),
       r('span',{style:{color:c.muted,fontSize:12,flexShrink:0}},'→'),
-      endBlk(cab.to,cab.borneA,cab.pieceA,'right'),
+      endBlk(cab.to,cab.pieceA,'right'),
       poseBadge(cab.statutKey));
     const inRow=(cab,k)=>cableRow(cab,k,'in');const outRow=(cab,k)=>cableRow(cab,k,'out');
     const equipBlock=(d,key)=>{
@@ -7720,6 +7722,7 @@ class Component extends DCLogic {
         const schemaS=isTri?[{k:'L1'},{k:'L2'},{k:'L3'},{k:'N'},{k:'PE'}]:[{k:'L'},{k:'N'},{k:'PE'}];
         const wCodeS=dbCode;
         const aboutBorne=te.cb0Code||'CB0';
+        const tePiece=(this.state.pieces.find(p=>p.id===te.pieceId)||{}).nom||'';
         const fils=schemaS.map((sx,i)=>{
           const ovrKey=ck+'_fil'+(i+1);
           const ovr=nomenclatureOverrides[ovrKey]||{};
@@ -7731,7 +7734,8 @@ class Component extends DCLogic {
             couleur:COUL[sx.k]?.label||sx.k,couleurHex:COUL[sx.k]?.hex||'#888',
             rep:ovr.rep||'',racc:ovr.racc||'',test:ovr.test||'',statut:ovr.statut||'',
             fnRef:null,fnType:'source',isSrcCable:true,ovrKey,
-            tenantRef:tenantRefS,aboutRef:null,fixedBt:dbCode,fixedBa:aboutBorne,
+            tenantRef:null,aboutRef:null,fixedBt:(sx.k==='PE'?'PE':dbCode+'.'+sx.k),fixedBa:(sx.k==='PE'?'PE':aboutBorne+'.'+sx.k),
+            pieceT:'',pieceA:tePiece,
             longueur:ovr.longueur||0,fnPieceId:null,fnId:null
           };
         });
@@ -7972,6 +7976,8 @@ class Component extends DCLogic {
                     // X1.1=L, X1.2=N, X1.3=PE, X1.4=NAV, X1.5=NAV2...
                     const COND_BORNIER={L:1,L1:1,N:2,PE:3,NAV:4,CMD:4,L2:5,L3:6};
                     const calcBorne=(el,conducteur)=>{
+                      // Le PE n'a pas de repère individuel (tous les PE sont raccordés ensemble)
+                      if(conducteur==='PE')return 'PE';
                       if(!el)return conducteur;
                       const rt=el.raccordType||'connecteur';
                       const pfx={bornier:'X',connecteur:'W',repartiteur:'R'}[rt]||'W';
@@ -8000,7 +8006,7 @@ class Component extends DCLogic {
                     const aboutLabel=aboutParts[0]||'';
                     return r('tr',{key:ovrKey,style:{borderTop:isFirst?'2px solid #e2e8f0':'none',background:isFirst&&fi%2===0?'#fafafa':'#fff',whiteSpace:'nowrap'}},
                       TD(r('span',{style:{fontSize:10,color:'#64748b',whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis',display:'block'}},
-                        ovr.pieceT!==undefined?ovr.pieceT:fil.pieceNom||''
+                        ovr.pieceT!==undefined?ovr.pieceT:(fil.pieceT!==undefined?fil.pieceT:fil.pieceNom||'')
                       ),{width:90}),
                       TD(r('span',{style:{fontFamily:'monospace',fontSize:10,fontWeight:700,color:'#0277BD',display:'block',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'},title:ovr.tenantLabel||fil.tenant||''},
                         ovr.tenantLabel||fil.tenant||''
@@ -8037,7 +8043,7 @@ class Component extends DCLogic {
                       TD(r('span',{style:{fontFamily:'monospace',fontSize:10,fontWeight:700,color:'#64748b',display:'block',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'},title:equipA},equipA),{width:80}),
                       TD(r('span',{style:{fontSize:10,color:'#1e293b',display:'block',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'},title:aboutLabel},aboutLabel),{width:90}),
                       TD(r('span',{style:{fontSize:10,color:'#64748b',whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis',display:'block'}},
-                        ovr.pieceA!==undefined?ovr.pieceA:fil.pieceNom||''
+                        ovr.pieceA!==undefined?ovr.pieceA:(fil.pieceA!==undefined?fil.pieceA:fil.pieceNom||'')
                       ),{width:90}),
                       TD(r('span',{style:{fontFamily:'monospace',fontSize:10,color:'#475569',whiteSpace:'nowrap'}},
                         isFirst?fil.cableType:r('span',{style:{color:'#e2e8f0'}},'└ '+fil.cableType)
