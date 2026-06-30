@@ -6883,189 +6883,134 @@ html body[class] #vac-gantt td.emp .nm{font-weight:500 !important;}</style>
      ═══════════════════════════════════════════════════════════════ -->
 <script id="__PLANNING_DATE_COLS_v1__">
 (function(){
-  var STORE_KEY = 'epilot_chantier_data_v1';
-  var COL_W = 90; // px per date column
+  if(window.__dcInjected) return; window.__dcInjected=1;
+  var STORE_KEY='epilot_chantier_data_v1';
+  var CW=86; // column width px
 
-  /* ── Helpers ── */
-  function currentPI(){
+  function getAllTasks(){
     try{
-      var raw = localStorage.getItem(STORE_KEY);
-      if(!raw) return null;
-      var all = JSON.parse(raw);
-      var keys = Object.keys(all);
-      return keys.length ? keys[keys.length-1] : null;
-    }catch(e){ return null; }
+      var a=JSON.parse(localStorage.getItem(STORE_KEY)||'{}');
+      var ks=Object.keys(a); if(!ks.length) return [];
+      return a[ks[ks.length-1]].taches||[];
+    }catch(e){return [];}
   }
-
-  function getTasks(pi){
-    try{
-      var raw = localStorage.getItem(STORE_KEY);
-      if(!raw) return [];
-      var all = JSON.parse(raw);
-      return (all[pi] && all[pi].taches) ? all[pi].taches : [];
-    }catch(e){ return []; }
-  }
-
-  function addWorkDays(dateStr, days){
-    var d = new Date(dateStr);
-    if(isNaN(d.getTime())) return '';
-    var added = 0;
-    while(added < days-1){
-      d.setDate(d.getDate()+1);
-      var dow = d.getDay();
-      if(dow!==0 && dow!==6) added++;
-    }
+  function addWD(s,n){
+    var d=new Date(s); if(isNaN(d)) return '';
+    for(var c=0,m=Math.max(0,(n||1)-1);c<m;){d.setDate(d.getDate()+1);var w=d.getDay();if(w!==0&&w!==6)c++;}
     return d.toISOString().slice(0,10);
   }
+  function fmt(s){if(!s)return'—';var p=s.split('-');return p.length===3?p[2]+'/'+p[1]:s;}
 
-  function fmt(dateStr){
-    if(!dateStr) return '—';
-    var p = dateStr.split('-');
-    if(p.length!==3) return dateStr;
-    return p[2]+'/'+p[1]+'/'+p[3-3]; // dd/mm — no room for year
-    // Simpler: dd/mm
-  }
-  function fmtDate(dateStr){
-    if(!dateStr) return '—';
-    var p = dateStr.split('-');
-    if(p.length!==3) return dateStr;
-    return p[2]+'/'+p[1];
-  }
-
-  /* ── Build task name → dates lookup ── */
-  function buildLookup(pi){
-    var tasks = getTasks(pi);
-    var lk = {};
-    tasks.forEach(function(t){
-      var fin = addWorkDays(t.debut, t.duree||1);
-      lk[t.nom] = { debut: t.debut, fin: fin, id: t.id };
-    });
+  function buildLk(){
+    var lk={};
+    getAllTasks().forEach(function(t){lk[t.nom]={d:t.debut||'',f:addWD(t.debut,t.duree||1)};});
     return lk;
   }
 
-  /* ── Inject date columns into the left panel rows ── */
-  function injectDateCols(taskRows, lookup){
-    if(!taskRows) return;
-    var taskNames = Object.keys(lookup);
-    if(!taskNames.length) return;
-    var rows = taskRows.children;
-    for(var i=0;i<rows.length;i++){
-      var row = rows[i];
-      if(row.getAttribute('data-dates-injected')) continue;
-      var nameCell = row.firstElementChild;
-      if(!nameCell) continue;
-      /* Require at least 2 children — phase-header rows often span full width differently */
-      if(row.children.length < 2) continue;
-      /* Match task name by substring (cell contains name + badges/icons) */
-      var cellText = nameCell.textContent;
-      var info = null;
-      for(var n=0;n<taskNames.length;n++){
-        if(cellText.indexOf(taskNames[n]) > -1){
-          info = lookup[taskNames[n]];
-          break;
+  /* Find the gantt left-panel rows container.
+     Primary: #jip-taskRows.
+     Fallback: scan for a div whose direct children are many flex-row divs
+               each with a wide (≥200px) first child — that's the task list. */
+  function findRowsEl(){
+    var el=document.getElementById('jip-taskRows');
+    if(el&&el.children.length>0) return el;
+    // Fallback: look for container of task rows via structure
+    var divs=document.querySelectorAll('div');
+    for(var i=0;i<divs.length;i++){
+      var d=divs[i];
+      if(d.children.length<3) continue;
+      var ok=0;
+      for(var k=0;k<Math.min(d.children.length,4);k++){
+        var r=d.children[k];
+        if(r.firstElementChild&&r.children.length>=2){
+          var fw=r.firstElementChild.offsetWidth||parseFloat(r.firstElementChild.style.width||0);
+          if(fw>150) ok++;
         }
       }
-      /* Skip rows that match no task — likely phase headers */
+      if(ok>=3) return d;
+    }
+    return null;
+  }
+
+  var cs='flex-shrink:0;width:'+CW+'px;padding:0 4px;font-size:11px;color:#555;display:flex;' +
+         'align-items:center;border-right:1px solid #e0e0e0;white-space:nowrap;overflow:hidden;';
+  var hs='flex-shrink:0;width:'+CW+'px;padding:0 4px;font-size:11px;font-weight:700;color:#333;display:flex;' +
+         'align-items:center;border-right:1px solid #e0e0e0;white-space:nowrap;background:inherit;';
+
+  function injectRows(container,lk){
+    var names=Object.keys(lk); if(!names.length) return;
+    var rows=container.children;
+    for(var i=0;i<rows.length;i++){
+      var row=rows[i];
+      if(row.getAttribute('data-di')) continue;
+      var fc=row.firstElementChild; if(!fc) continue;
+      if(row.children.length<2) continue; // single-cell rows = phase headers
+      var ct=fc.textContent;
+      var info=null;
+      for(var n=0;n<names.length;n++){if(ct.indexOf(names[n])>-1){info=lk[names[n]];break;}}
       if(!info) continue;
-      // Build two date cells
-      var cellStyle = 'flex-shrink:0;width:'+COL_W+'px;padding:0 6px;font-size:11px;color:#555;' +
-                      'display:flex;align-items:center;border-right:1px solid #e0e0e0;white-space:nowrap;overflow:hidden;';
-      var deb = document.createElement('div');
-      deb.style.cssText = cellStyle;
-      deb.textContent = fmtDate(info.debut);
-      deb.title = info.debut || '';
-      var fin = document.createElement('div');
-      fin.style.cssText = cellStyle;
-      fin.textContent = fmtDate(info.fin);
-      fin.title = info.fin || '';
-      // Insert after nameCell
-      if(nameCell.nextSibling){
-        row.insertBefore(deb, nameCell.nextSibling);
-        row.insertBefore(fin, deb.nextSibling);
-      } else {
-        row.appendChild(deb);
-        row.appendChild(fin);
-      }
-      row.setAttribute('data-dates-injected','1');
+      var deb=document.createElement('div'); deb.style.cssText=cs; deb.textContent=fmt(info.d); deb.title=info.d||'';
+      var fin=document.createElement('div'); fin.style.cssText=cs; fin.textContent=fmt(info.f); fin.title=info.f||'';
+      var sc=fc.nextElementSibling;
+      row.insertBefore(deb,sc); row.insertBefore(fin,sc);
+      row.setAttribute('data-di','1');
     }
   }
 
-  /* ── Inject header cells ── */
-  function injectHeader(){
-    /* The gantt header has a left panel — find it and add date headers */
-    /* Strategy: look for a header row that contains the "Tâche" label */
-    var headers = document.querySelectorAll('#jip-taskRows, [id*="taskHead"], [id*="gantt"] [style*="280px"]');
-    /* Also try to find any header row above #jip-taskRows */
-    var taskRows = document.getElementById('jip-taskRows');
-    if(!taskRows) return;
-    var parent = taskRows.parentElement;
-    if(!parent) return;
-    /* Look for a sibling header div */
-    var prev = taskRows.previousElementSibling;
-    while(prev){
-      if(prev.getAttribute('data-date-header-injected')) break;
-      // Check if this looks like a header (contains "Tâche" text)
-      if(prev.textContent.indexOf('Tâche')>-1 || prev.textContent.indexOf('tache')>-1 || prev.textContent.indexOf('Tache')>-1){
-        var firstCell = prev.firstElementChild;
-        if(firstCell && !prev.getAttribute('data-date-header-injected')){
-          var hStyle = 'flex-shrink:0;width:'+COL_W+'px;padding:0 6px;font-size:11px;font-weight:600;' +
-                       'color:#333;display:flex;align-items:center;border-right:1px solid #e0e0e0;' +
-                       'background:var(--surface,#f8f9fa);white-space:nowrap;';
-          var hDeb = document.createElement('div');
-          hDeb.style.cssText = hStyle;
-          hDeb.textContent = 'Début';
-          var hFin = document.createElement('div');
-          hFin.style.cssText = hStyle;
-          hFin.textContent = 'Fin';
-          if(firstCell.nextSibling){
-            prev.insertBefore(hDeb, firstCell.nextSibling);
-            prev.insertBefore(hFin, hDeb.nextSibling);
-          } else {
-            prev.appendChild(hDeb);
-            prev.appendChild(hFin);
-          }
-          prev.setAttribute('data-date-header-injected','1');
-        }
+  function injectHdr(container){
+    /* Find "TÂCHE" text node, then add headers in its parent row */
+    var allEls=document.querySelectorAll('div,th,span');
+    for(var i=0;i<allEls.length;i++){
+      var el=allEls[i];
+      if(el.getAttribute('data-dh')||el.children.length>0) continue;
+      var t=el.textContent.trim();
+      if(t==='TÂCHE'||t==='Tâche'||t==='tâche'){
+        var hrow=el.parentElement; if(!hrow||hrow.getAttribute('data-dh')) continue;
+        var hd=document.createElement('div'); hd.style.cssText=hs; hd.textContent='Début';
+        var hf=document.createElement('div'); hf.style.cssText=hs; hf.textContent='Fin';
+        var nx=el.nextElementSibling;
+        if(nx){hrow.insertBefore(hd,nx);hrow.insertBefore(hf,nx);}
+        else{hrow.appendChild(hd);hrow.appendChild(hf);}
+        hrow.setAttribute('data-dh','1');
         break;
       }
-      prev = prev.previousElementSibling;
     }
   }
 
-  /* ── Main inject function ── */
   function inject(){
-    var taskRows = document.getElementById('jip-taskRows');
-    if(!taskRows) return;
-    var pi = currentPI();
-    if(!pi) return;
-    var lookup = buildLookup(pi);
-    injectDateCols(taskRows, lookup);
-    injectHeader();
+    var container=findRowsEl(); if(!container) return;
+    var lk=buildLk();
+    injectRows(container,lk);
+    injectHdr(container);
   }
 
-  /* ── MutationObserver on #jip-taskRows (gantt rewrites it on each draw) ── */
-  function watchGantt(){
-    var taskRows = document.getElementById('jip-taskRows');
-    if(!taskRows){ return; }
-    inject(); // initial
-    var mo = new MutationObserver(function(){
-      // Short debounce — gantt sets innerHTML in one go
-      clearTimeout(mo._t);
-      mo._t = setTimeout(inject, 50);
-    });
-    mo.observe(taskRows, { childList: true, subtree: false });
+  /* Patch window.jipDrawGantt — most reliable hook */
+  function patchGantt(){
+    if(!window.jipDrawGantt||window.__dcGanttPatched) return;
+    var orig=window.jipDrawGantt;
+    window.jipDrawGantt=function(){
+      orig.apply(this,arguments);
+      setTimeout(inject,60);
+    };
+    window.__dcGanttPatched=true;
+    setTimeout(inject,60);
   }
 
-  /* ── Also observe body for when #jip-taskRows first appears ── */
-  var bodyMo = new MutationObserver(function(){
-    if(document.getElementById('jip-taskRows')){
-      bodyMo.disconnect();
-      watchGantt();
-    }
+  /* Body MO to catch when gantt rows container appears */
+  var _bmo=new MutationObserver(function(){
+    patchGantt();
+    if(findRowsEl()) inject();
   });
-  bodyMo.observe(document.body, { childList: true, subtree: true });
-  /* Fire immediately in case already mounted */
-  if(document.getElementById('jip-taskRows')) watchGantt();
+  _bmo.observe(document.body,{childList:true,subtree:true});
+
+  /* Polling — 200ms × 150 tries */
+  var _t=0;
+  (function p(){
+    patchGantt(); inject();
+    if(++_t<150) setTimeout(p,200);
+  })();
+
+  window.__injectDateCols=inject;
 })();
 </script>
 
@@ -7313,60 +7258,71 @@ html body[class] #vac-gantt td.emp .nm{font-weight:500 !important;}</style>
       }
     }
 
-    /* ── Planning ── */
-    if(!injected.planning){
-      /* Anchor: find the "+ Nouvelle tâche" button — it's always in the Planning toolbar */
-      var newTaskBtn = null;
-      document.querySelectorAll('button').forEach(function(b){
-        if(!newTaskBtn && b.textContent.indexOf('Nouvelle') > -1) newTaskBtn = b;
-      });
-      /* Fallback: find "Semaine" view-selector button */
-      if(!newTaskBtn){
-        document.querySelectorAll('button').forEach(function(b){
-          if(!newTaskBtn && b.textContent.trim() === 'Semaine') newTaskBtn = b;
-        });
+    /* ── Planning toolbar ── */
+    if(!injected.planning && !document.querySelector('[data-rapact-btn]')){
+      /* Multi-strategy anchor search */
+      var anchor = null;
+
+      /* S1: button with "Nouvelle" */
+      var btns = document.querySelectorAll('button');
+      for(var bi=0;bi<btns.length;bi++){
+        if(btns[bi].textContent.indexOf('Nouvelle')>-1){ anchor=btns[bi]; break; }
       }
-      if(newTaskBtn && newTaskBtn.parentElement && !newTaskBtn.parentElement.querySelector('[data-rapact-btn]')){
-        var tb = newTaskBtn.parentElement;
-        /* Rapport d'activité button */
+      /* S2: any element (div/span) with "Nouvelle tâche" leaf text */
+      if(!anchor){
+        var allEl=document.querySelectorAll('*');
+        for(var ai=0;ai<allEl.length;ai++){
+          var ae=allEl[ai];
+          if(ae.children.length===0 && ae.textContent.indexOf('Nouvelle')>-1 && ae.textContent.indexOf('che')>-1){
+            anchor=ae.parentElement; break;
+          }
+        }
+      }
+      /* S3: "Semaine" button (always in Planning toolbar) */
+      if(!anchor){
+        for(var si=0;si<btns.length;si++){
+          if(btns[si].textContent.trim()==='Semaine'){ anchor=btns[si]; break; }
+        }
+      }
+
+      if(anchor && anchor.parentElement){
+        var tb = anchor.parentElement;
         var rapBtn = document.createElement('button');
         rapBtn.setAttribute('data-rapact-btn','1');
-        rapBtn.innerHTML = '📊 Rapport d\'activité';
-        rapBtn.style.cssText = 'display:inline-flex;align-items:center;gap:4px;padding:6px 12px;' +
-          'background:#28a745;color:#fff;border:none;border-radius:6px;font-size:12px;cursor:pointer;font-weight:500;margin-right:4px;';
-        rapBtn.onmouseover = function(){ this.style.opacity='.85'; };
-        rapBtn.onmouseout  = function(){ this.style.opacity='1'; };
+        rapBtn.textContent = '📊 Rapport d\'activité';
+        rapBtn.style.cssText = 'padding:6px 12px;background:#28a745;color:#fff;border:none;border-radius:6px;' +
+          'font-size:12px;cursor:pointer;font-weight:500;margin-right:4px;';
         rapBtn.onclick = function(){ window.__openRapportActivite && window.__openRapportActivite(); };
-        /* Print button */
         var pBtn = document.createElement('button');
-        pBtn.setAttribute('data-print-bar','1');
-        pBtn.innerHTML = '🖨 Imprimer';
-        pBtn.style.cssText = 'display:inline-flex;align-items:center;gap:4px;padding:6px 12px;' +
-          'background:#0069d9;color:#fff;border:none;border-radius:6px;font-size:12px;cursor:pointer;font-weight:500;margin-right:6px;';
-        pBtn.onmouseover = function(){ this.style.opacity='.85'; };
-        pBtn.onmouseout  = function(){ this.style.opacity='1'; };
+        pBtn.setAttribute('data-print-plan','1');
+        pBtn.textContent = '🖨 Imprimer';
+        pBtn.style.cssText = 'padding:6px 12px;background:#0069d9;color:#fff;border:none;border-radius:6px;' +
+          'font-size:12px;cursor:pointer;font-weight:500;margin-right:6px;';
         pBtn.onclick = printPlanning;
-        /* Insert both before "+ Nouvelle tâche" */
-        tb.insertBefore(pBtn, newTaskBtn);
+        tb.insertBefore(pBtn, anchor);
         tb.insertBefore(rapBtn, pBtn);
         injected.planning = true;
       }
     }
   }
 
-  /* Poll until all bars injected */
+  /* Poll — always re-check if buttons got removed by React reconciliation */
   var _tries = 0;
   var _iv = setInterval(function(){
+    /* Reset planning flag if buttons were removed from DOM */
+    if(injected.planning && !document.querySelector('[data-rapact-btn]')) injected.planning = false;
     tryInjectBars();
     _tries++;
-    var allDone = injected.visite && injected.cdc && injected.planning;
-    if(allDone || _tries > 400){ clearInterval(_iv); }
-  }, 600);
+    if(_tries > 600) clearInterval(_iv);
+  }, 500);
 
-  /* Also re-check when DOM changes (tab switches) */
+  /* Also re-check on DOM changes (tab navigation) */
   var domMo = new MutationObserver(function(){
     clearTimeout(domMo._t);
-    domMo._t = setTimeout(tryInjectBars, 300);
+    domMo._t = setTimeout(function(){
+      if(!document.querySelector('[data-rapact-btn]')) injected.planning = false;
+      tryInjectBars();
+    }, 250);
   });
   domMo.observe(document.body, { childList: true, subtree: true });
 })();
