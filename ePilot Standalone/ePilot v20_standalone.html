@@ -6334,27 +6334,37 @@ document.addEventListener('DOMContentLoaded', async function() {
     w.document.write(html); w.document.close();
   }
 
-  /* ---------- masquage du bouton natif et de l'ancien système exigences ---------- */
-  function inject(){
-    var native=null, btns=$all('button');
-    for (var i=0;i<btns.length;i++){ if((btns[i].textContent||'').trim()==='+ Ajouter une exigence'){ native=btns[i]; break; } }
-    if (!native) return;
-    var flex=native.parentElement; if(!flex) return;
-    /* masque le bouton inconditionnellement (sans vérifier le contexte PI) */
-    native.style.display='none';
-    /* masque l'ancien système exigences/conformité */
-    try{
-      var conf=flex.firstElementChild;
-      if (conf && conf!==native) conf.style.display='none';
-      var list=flex.nextElementSibling;
-      if (list && !list.querySelector('.tabbar') && !list.querySelector('.overlay')) list.style.display='none';
-    }catch(e){}
+  /* ---------- masquage immédiat (avant paint) via MutationObserver direct ---------- */
+  function hideExigences(){
+    var btns=document.querySelectorAll('button');
+    for (var i=0;i<btns.length;i++){
+      if ((btns[i].textContent||'').trim()!=='+ Ajouter une exigence') continue;
+      var btn=btns[i], flex=btn.parentElement; if(!flex||flex.__exigHidden) continue;
+      flex.__exigHidden=true;
+      /* marque pour CSS — zéro délai de repaint */
+      flex.setAttribute('data-exig-hide','1');
+      btn.style.display='none';
+      try{
+        var conf=flex.firstElementChild; if(conf&&conf!==btn) conf.setAttribute('data-exig-hide','1');
+        var list=flex.nextElementSibling;
+        if(list&&!list.querySelector('.tabbar')&&!list.querySelector('.overlay')) list.setAttribute('data-exig-hide','1');
+      }catch(_){}
+    }
   }
-  if (window.__epOnBodyMut){ window.__epOnBodyMut(function(){ try{ inject(); }catch(e){} }); }
-  var t=0; (function poll(){ try{ inject(); }catch(e){} if(++t<300) setTimeout(poll, 700); })();
+  /* Observer direct sans debounce : fire avant le premier paint du navigateur */
+  try{ new MutationObserver(hideExigences).observe(document.body,{childList:true,subtree:true}); }catch(_){}
+  hideExigences();
 })();
 
 </script>
+<style id="__CDC_HIDE_EXIG_v1__">
+/* Masquage instantané de l'ancien système exigences — sans flash.
+   [data-exig-hide] : marqué par le MO direct avant paint.
+   [data-cdc-card] ~ * : tout sibling APRÈS notre carte de cotation est masqué
+   (flex bouton + liste exigences), même si le MO n'a pas encore tourné. */
+[data-exig-hide="1"] { display: none !important; }
+[data-cdc-card] ~ * { display: none !important; }
+</style>
 <style id="__CONGES_NAME_v1__">/* Congés : noms non gras (poids léger comme en Paie). Double-ID pour battre #vac-gantt + !important */
 html body[class] #view-vacation #vac-gantt td.emp .nm,
 html body[class] #vac-gantt td.emp .nm{font-weight:500 !important;}</style>
