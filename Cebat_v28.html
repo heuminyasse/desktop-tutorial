@@ -6786,9 +6786,9 @@ class Component extends DCLogic {
       return 'X'+block+'.'+(seq>=0?seq+1:1);
     }
     // Connecteur / répartiteur : un connecteur PAR potentiel (toutes bornes en court-circuit).
-    // W1 = phase, W2 = neutre, W3 = retour (navette), etc.
+    // W1 = phase, W2 = neutre, W3 = retour, W4 = navette 1, W5 = navette 2, etc.
     const pfx=rt==='repartiteur'?'R':'W';
-    const POT={L:1,L1:1,N:2,NAV:3,Nv:3,CMD:3,L2:4,L3:5};
+    const POT={L:1,L1:1,N:2,NAV:3,Nv:3,CMD:3,NAV1:4,NAV2:5,L2:6,L3:7};
     return pfx+(POT[conductor]||1)+'.1';
   }
   // Repère de borne pour une extrémité de câble (Vue Câble) : équipement à raccordement, borne d'appareil, ou récepteur.
@@ -6833,12 +6833,17 @@ class Component extends DCLogic {
         let wc='';try{wc=this.genCableCBCode(d,s);}catch(e){wc=d.code||'';}
         entrants.push({wcode:wc,from:teCode(te)+(d.code?' '+d.code:''),to:center.code,conds:this._condsFor(this._poles(d)),sec:(d.section||'1.5')+'mm²',bornes:'',bTel:te,bAel:bd,borneT:'',borneA:'',pieceT:((s.pieces||[]).find(p=>p.id===te.pieceId)||{}).nom||'',pieceA:bdPiece,edit:{type:'dj',id:d.id},statutKey:'dj'+d.id+'bd'+bd.id});
       });
-      const _NAV=['NAV','#7c3aed'],_L=['L','#6d4c41'],_N=['N','#42a5f5'],_PE=['PE','grad'];
+      const _NAV=['NAV','#7c3aed'],_L=['L','#6d4c41'],_N=['N','#42a5f5'],_PE=['PE','grad'],_NAV1=['NAV1','#f59e0b'],_NAV2=['NAV2','#ec4899'];
       (s.pieces||[]).forEach(p=>(p.fonctions||[]).forEach(fn=>{if(fn.departType==='boite'&&String(fn.departId)===String(bd.id)){const fi=this.FNS[fn.type]||{};
-        const fnCmds=(s.interrupteurs||[]).filter(it=>it.circuitRef===fn.ref);
+        const fnCmds=(s.interrupteurs||[]).filter(it=>it.circuitRef===fn.ref&&((it.departType||fn.departType)==='boite')&&String(it.departId!=null?it.departId:fn.departId)===String(bd.id));
         const lampConds=fn.type==='eclairage'&&fnCmds.length?[_NAV,_N,_PE]:this._condsFor(1);
         sortants.push({wcode:fn.ref||'',from:center.code,to:(fi.label||fn.type)+(fn.ref?' '+fn.ref:'')+' · '+(p.nom||''),conds:lampConds,sec:(fn.cableSection||'1.5')+'mm²',bornes:fn.ref||'',bTel:bd,bAel:null,borneT:'',borneA:'',pieceT:bdPiece,pieceA:(p.nom||''),edit:{type:'fn',pieceId:p.id,fnId:fn.id},statutKey:'fn'+fn.id});
-        fnCmds.forEach(it=>{const itDt=it.departType||fn.departType;const itDi=it.departId!=null?it.departId:fn.departId;if(itDt==='boite'&&String(itDi)===String(bd.id)){let ic='';try{ic=this.genInterCode(it,s);}catch(e){ic=it.nom||'SA';}const itp=it.pieceId?(((s.pieces||[]).find(x=>x.id===it.pieceId)||{}).nom||''):(p.nom||'');sortants.push({wcode:ic,from:center.code,to:ic+(it.nom?' — '+it.nom:''),conds:[_L,_NAV,_PE],sec:'1.5mm²',bornes:ic,bTel:bd,bAel:null,borneT:'',borneA:'',pieceT:bdPiece,pieceA:itp,edit:{type:'inter',id:it.id},statutKey:'int'+it.id});}});
+        const vvCmds=fnCmds.filter(it=>it.type==='va_vient');const otherCmds=fnCmds.filter(it=>it.type!=='va_vient');
+        const pushSw=(it,condsI)=>{let ic='';try{ic=this.genInterCode(it,s);}catch(e){ic=it.nom||'SA';}const itp=it.pieceId?(((s.pieces||[]).find(x=>x.id===it.pieceId)||{}).nom||''):(p.nom||'');sortants.push({wcode:ic,from:center.code,to:ic+(it.nom?' — '+it.nom:''),conds:condsI,sec:'1.5mm²',bornes:ic,bTel:bd,bAel:null,borneT:'',borneA:'',pieceT:bdPiece,pieceA:itp,edit:{type:'inter',id:it.id},statutKey:'int'+it.id});};
+        // Va-et-vient : 1er inter = phase + 2 navettes ; suivants = retour + 2 navettes (navettes partagées W4/W5, pas de PE)
+        vvCmds.forEach((it,idx)=>pushSw(it,idx===0?[_L,_NAV1,_NAV2]:[_NAV,_NAV1,_NAV2]));
+        // Simple / poussoir : phase + retour + PE
+        otherCmds.forEach(it=>pushSw(it,[_L,_NAV,_PE]));
       }}));
       return{entrants,sortants,center};
     }
@@ -7675,6 +7680,8 @@ class Component extends DCLogic {
         L2:  {hex:'#f97316',label:'Noir',         iec:'L2'},
         L3:  {hex:'#c026d3',label:'Gris',         iec:'L3'},
         NAV: {hex:'#7c3aed',label:'Violet',       iec:'NAV'},
+        NAV1:{hex:'#f59e0b',label:'Navette 1',    iec:'NAV1'},
+        NAV2:{hex:'#ec4899',label:'Navette 2',    iec:'NAV2'},
         CMD: {hex:'#0891b2',label:'Bleu clair',   iec:'CMD'},
       };
 
@@ -7837,7 +7844,12 @@ class Component extends DCLogic {
           const interCode=this.genInterCode(inter,this.state);
           const wCodeI=interCode;
           const typeInter=inter.type||'simple';
-          const schemaI=getSchema(typeInter);
+          // Va-et-vient : 1er inter = phase + 2 navettes ; suivants = retour + 2 navettes (pas de PE)
+          let schemaI;
+          if(typeInter==='va_vient'){
+            const vvIdx=linkedInter.filter(i=>(i.type||'simple')==='va_vient').findIndex(i=>i.id===inter.id);
+            schemaI=vvIdx===0?[{k:'L',bt:'L',ba:'L'},{k:'NAV1',bt:'Nv1',ba:'1'},{k:'NAV2',bt:'Nv2',ba:'2'}]:[{k:'NAV',bt:'Nv',ba:'R'},{k:'NAV1',bt:'Nv1',ba:'1'},{k:'NAV2',bt:'Nv2',ba:'2'}];
+          } else {schemaI=getSchema(typeInter);}
           const zone=zonesCommande.find(z=>z.id===inter.zoneId);
           // Tenant = meme BD/TE que la fonction commandee (heritage)
           const interDeptType=inter.departType||fn.departType;
