@@ -6885,7 +6885,8 @@ html body[class] #vac-gantt td.emp .nm{font-weight:500 !important;}</style>
 (function(){
   if(window.__dcInjected) return; window.__dcInjected=1;
   var STORE_KEY='epilot_chantier_data_v1';
-  var CW=86;
+  var CW=86; // width of each date column
+  var PANEL_ID='jip-date-cols-panel';
 
   function getAllTasks(){
     try{
@@ -6899,7 +6900,7 @@ html body[class] #vac-gantt td.emp .nm{font-weight:500 !important;}</style>
     for(var c=0,m=Math.max(0,(n||1)-1);c<m;){d.setDate(d.getDate()+1);var w=d.getDay();if(w!==0&&w!==6)c++;}
     return d.toISOString().slice(0,10);
   }
-  function fmt(s){if(!s)return'—';var p=s.split('-');return p.length===3?p[2]+'/'+p[1]:s;}
+  function fmt(s){if(!s)return'';var p=s.split('-');return p.length===3?p[2]+'/'+p[1]:s;}
 
   function buildLk(){
     var lk={};
@@ -6907,141 +6908,146 @@ html body[class] #vac-gantt td.emp .nm{font-weight:500 !important;}</style>
     return lk;
   }
 
-  /* ── Walk up to the nearest ancestor with display:flex that has >1 child ── */
-  function closestFlexRow(el){
-    var cur=el.parentElement;
-    for(var k=0;k<10;k++){
+  function findRowsEl(){
+    var el=document.getElementById('jip-taskRows');
+    if(el&&el.children.length>0) return el;
+    return null;
+  }
+
+  /* ── Walk to nearest flex ancestor ── */
+  function closestFlex(el){
+    var cur=el&&el.parentElement;
+    for(var k=0;k<12;k++){
       if(!cur||cur===document.body) return null;
       var d=cur.style.display||(window.getComputedStyle?window.getComputedStyle(cur).display:'');
-      if(d==='flex'&&cur.children.length>=1) return cur;
+      if((d==='flex'||d==='-webkit-flex')&&cur.children.length>=2) return cur;
       cur=cur.parentElement;
     }
     return null;
   }
-
-  /* ── Find the direct child of flexRow that contains el ── */
-  function directChildOf(flexRow,el){
+  function directChild(parent,el){
     var cur=el;
-    while(cur&&cur.parentElement!==flexRow) cur=cur.parentElement;
+    while(cur&&cur.parentElement!==parent) cur=cur.parentElement;
     return cur||null;
   }
 
-  /* ── Unlock overflow on gantt left panel ancestors ── */
-  function unlockOverflow(container){
-    if(!container) return;
-    var el=container.parentElement;
-    for(var i=0;i<8;i++){
-      if(!el||el===document.body) break;
-      var st=el.style;
-      if(st.overflow==='hidden'||st.overflowX==='hidden'){
-        var ow=el.offsetWidth;
-        st.overflow='visible'; st.overflowX='visible';
-        /* also widen so flex children fit */
-        if(ow>0) { st.width=(ow+CW*2)+'px'; st.minWidth=(ow+CW*2)+'px'; }
-      }
-      el=el.parentElement;
-    }
-  }
+  var cellSt='width:'+CW+'px;padding:0 5px;font-size:11px;color:#333;white-space:nowrap;overflow:hidden;' +
+             'display:flex;align-items:center;height:100%;box-sizing:border-box;border-right:1px solid #dee2e6;';
+  var hdrSt='width:'+CW+'px;padding:0 5px;font-size:11px;font-weight:700;color:#111;white-space:nowrap;' +
+            'display:flex;align-items:center;height:100%;box-sizing:border-box;border-right:1px solid #dee2e6;background:inherit;';
 
-  function findRowsEl(){
-    var el=document.getElementById('jip-taskRows');
-    if(el&&el.children.length>0) return el;
-    /* structural fallback: find a div with ≥3 children each having ≥2 sub-children */
-    var divs=document.querySelectorAll('div');
-    for(var i=0;i<divs.length;i++){
-      var d=divs[i]; if(d.children.length<3) continue;
-      var ok=0;
-      for(var k=0;k<Math.min(d.children.length,4);k++){
-        var r=d.children[k];
-        if(r.children.length>=2&&r.firstElementChild){
-          var fw=r.firstElementChild.offsetWidth||parseFloat(r.firstElementChild.style.width||'0');
-          if(fw>100) ok++;
-        }
-      }
-      if(ok>=3) return d;
-    }
-    return null;
-  }
+  /* ════════════════════════════════════════════════════════════
+     CREATE A PARALLEL DATE PANEL next to #jip-taskRows
+     This avoids overflow:hidden of the left panel entirely.
+     ════════════════════════════════════════════════════════════ */
+  function buildDatePanel(taskRows, lk){
+    /* Remove old panel */
+    var old=document.getElementById(PANEL_ID); if(old) old.remove();
+    var names=Object.keys(lk);
+    var rows=taskRows.children; if(!rows.length) return;
 
-  var cs='flex-shrink:0;width:'+CW+'px;padding:0 4px;font-size:11px;color:#444;display:flex;' +
-         'align-items:center;border-right:1px solid #e0e0e0;white-space:nowrap;box-sizing:border-box;';
-  var hs='flex-shrink:0;width:'+CW+'px;padding:0 4px;font-size:11px;font-weight:700;color:#222;display:flex;' +
-         'align-items:center;border-right:1px solid #e0e0e0;white-space:nowrap;box-sizing:border-box;background:inherit;';
+    /* Sort names longest-first to avoid a short name matching a row that belongs to a longer task */
+    names.sort(function(a,b){return b.length-a.length;});
+    /* Snapshot rows array so DOM mutations don't affect iteration */
+    var rowsArr=Array.prototype.slice.call(rows);
 
-  function injectRows(container,lk){
-    var names=Object.keys(lk); if(!names.length) return;
-    var rows=container.children;
-    for(var i=0;i<rows.length;i++){
-      var row=rows[i];
-      if(row.getAttribute('data-di')) continue;
-      var fc=row.firstElementChild; if(!fc||row.children.length<2) continue;
-      var ct=fc.textContent;
+    var panel=document.createElement('div');
+    panel.id=PANEL_ID;
+    panel.style.cssText='flex-shrink:0;width:'+(CW*2)+'px;overflow:hidden;border-right:1px solid #dee2e6;background:#fff;';
+
+    for(var i=0;i<rowsArr.length;i++){
+      var srcRow=rowsArr[i];
+      /* Match row height exactly */
+      var h=srcRow.offsetHeight||36;
+      var dr=document.createElement('div');
+      dr.style.cssText='display:flex;height:'+h+'px;border-bottom:1px solid #f0f0f0;align-items:center;';
+
+      /* Match task: search full row text so the name is found regardless of column position */
+      var rowText=srcRow.textContent;
       var info=null;
-      for(var n=0;n<names.length;n++){if(ct.indexOf(names[n])>-1){info=lk[names[n]];break;}}
-      if(!info) continue;
-      var deb=document.createElement('div'); deb.style.cssText=cs; deb.textContent=fmt(info.d); deb.title=info.d||'';
-      var fin=document.createElement('div'); fin.style.cssText=cs; fin.textContent=fmt(info.f); fin.title=info.f||'';
-      var sc=fc.nextElementSibling;
-      row.insertBefore(deb,sc); row.insertBefore(fin,sc);
-      row.setAttribute('data-di','1');
+      for(var n=0;n<names.length;n++){
+        if(rowText.indexOf(names[n])>-1){info=lk[names[n]];break;}
+      }
+
+      var deb=document.createElement('div'); deb.style.cssText=cellSt;
+      var fin=document.createElement('div'); fin.style.cssText=cellSt;
+      if(info){ deb.textContent=fmt(info.d); deb.title=info.d||''; fin.textContent=fmt(info.f); fin.title=info.f||''; }
+      dr.appendChild(deb); dr.appendChild(fin);
+      panel.appendChild(dr);
     }
+
+    /* Insert panel between #jip-taskRows and its next sibling */
+    var parent=taskRows.parentElement;
+    if(!parent) return;
+    var nxt=taskRows.nextElementSibling;
+    if(nxt) parent.insertBefore(panel,nxt);
+    else parent.appendChild(panel);
+
+    /* Sync vertical scroll with task rows */
+    taskRows.addEventListener('scroll',function(){ panel.scrollTop=taskRows.scrollTop; });
   }
 
-  function injectHdr(){
-    /* Find "TÂCHE" leaf text node → walk UP to the flex row → insert after TÂCHE's cell */
-    if(document.querySelector('[data-dh="1"]')) return;
-    var all=document.querySelectorAll('div,span,th');
-    for(var i=0;i<all.length;i++){
-      var el=all[i];
-      if(el.children.length>0||el.getAttribute('data-dh-el')) continue;
+  /* ════════════════════════════════════════════════════════════
+     HEADER: insert "Début" and "Fin" cells after the "TÂCHE" cell
+     in the gantt header flex row (same flex container as panels)
+     ════════════════════════════════════════════════════════════ */
+  function injectHdr(taskRows){
+    if(document.getElementById(PANEL_ID+'H')) return; // already done
+    /* Find "TÂCHE" leaf element */
+    var allEl=document.querySelectorAll('div,span');
+    for(var i=0;i<allEl.length;i++){
+      var el=allEl[i];
+      if(el.children.length>0) continue;
       var t=el.textContent.trim();
       if(t!=='TÂCHE'&&t!=='Tâche') continue;
 
-      /* Walk up until we reach a flex row that has multiple children */
-      var flexRow=closestFlexRow(el);
-      if(!flexRow||flexRow.getAttribute('data-dh')) continue;
+      var flexRow=closestFlex(el); if(!flexRow||flexRow.getAttribute('data-dhdr')) continue;
+      var tacheCell=directChild(flexRow,el); if(!tacheCell) continue;
 
-      /* Find the direct child of flexRow that wraps TÂCHE */
-      var tacheCell=directChildOf(flexRow,el);
-      if(!tacheCell) continue;
+      var hd=document.createElement('div'); hd.style.cssText=hdrSt; hd.textContent='Début';
+      var hf=document.createElement('div'); hf.style.cssText=hdrSt; hf.textContent='Fin';
+      hd.id=PANEL_ID+'H'; // sentinel
 
-      var hd=document.createElement('div'); hd.style.cssText=hs; hd.textContent='Début';
-      var hf=document.createElement('div'); hf.style.cssText=hs; hf.textContent='Fin';
       var nx=tacheCell.nextElementSibling;
       if(nx){flexRow.insertBefore(hd,nx);flexRow.insertBefore(hf,nx);}
       else{flexRow.appendChild(hd);flexRow.appendChild(hf);}
-      flexRow.setAttribute('data-dh','1');
-      el.setAttribute('data-dh-el','1');
+      flexRow.setAttribute('data-dhdr','1');
       break;
     }
   }
 
+  /* ════════════════════════════════════════════════════════════
+     MAIN INJECT
+     ════════════════════════════════════════════════════════════ */
   function inject(){
-    var container=findRowsEl(); if(!container) return;
-    unlockOverflow(container);
+    var taskRows=findRowsEl(); if(!taskRows) return;
     var lk=buildLk();
-    injectRows(container,lk);
-    injectHdr();
+    buildDatePanel(taskRows,lk);
+    injectHdr(taskRows);
   }
 
+  /* Patch jipDrawGantt — called after each gantt redraw */
   function patchGantt(){
-    if(!window.jipDrawGantt||window.__dcGanttPatched) return;
+    if(!window.jipDrawGantt||window.__dcPatch) return;
     var orig=window.jipDrawGantt;
     window.jipDrawGantt=function(){
       orig.apply(this,arguments);
-      setTimeout(inject,60);
+      setTimeout(inject,80);
     };
-    window.__dcGanttPatched=true;
+    window.__dcPatch=true;
   }
 
+  /* Body MO — detect when #jip-taskRows appears */
   var _bmo=new MutationObserver(function(){
     patchGantt();
-    if(findRowsEl()){clearTimeout(_bmo._t);_bmo._t=setTimeout(inject,80);}
+    var r=findRowsEl();
+    if(r&&!document.getElementById(PANEL_ID)){clearTimeout(_bmo._t);_bmo._t=setTimeout(inject,100);}
   });
   _bmo.observe(document.body,{childList:true,subtree:true});
 
-  var _t=0;
-  (function p(){ patchGantt(); inject(); if(++_t<200) setTimeout(p,300); })();
+  /* Aggressive poll: 300ms × 200 tries */
+  var _pt=0;
+  (function p(){ patchGantt(); inject(); if(++_pt<200) setTimeout(p,300); })();
   window.__injectDateCols=inject;
 })();
 </script>
