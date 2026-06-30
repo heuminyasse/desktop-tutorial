@@ -6946,20 +6946,27 @@ html body[class] #vac-gantt td.emp .nm{font-weight:500 !important;}</style>
   /* ── Inject date columns into the left panel rows ── */
   function injectDateCols(taskRows, lookup){
     if(!taskRows) return;
+    var taskNames = Object.keys(lookup);
+    if(!taskNames.length) return;
     var rows = taskRows.children;
     for(var i=0;i<rows.length;i++){
       var row = rows[i];
       if(row.getAttribute('data-dates-injected')) continue;
-      // First child div = task name cell (280px wide)
       var nameCell = row.firstElementChild;
       if(!nameCell) continue;
-      // Find the task name text
-      var nameSpan = nameCell.querySelector('span,b,strong') || nameCell;
-      var taskName = nameSpan.textContent.trim();
-      // Strip phase prefix if present (name might be "Tâche · Phase")
-      var parts = taskName.split('·');
-      var nom = parts[0].trim();
-      var info = lookup[nom] || {};
+      /* Require at least 2 children — phase-header rows often span full width differently */
+      if(row.children.length < 2) continue;
+      /* Match task name by substring (cell contains name + badges/icons) */
+      var cellText = nameCell.textContent;
+      var info = null;
+      for(var n=0;n<taskNames.length;n++){
+        if(cellText.indexOf(taskNames[n]) > -1){
+          info = lookup[taskNames[n]];
+          break;
+        }
+      }
+      /* Skip rows that match no task — likely phase headers */
+      if(!info) continue;
       // Build two date cells
       var cellStyle = 'flex-shrink:0;width:'+COL_W+'px;padding:0 6px;font-size:11px;color:#555;' +
                       'display:flex;align-items:center;border-right:1px solid #e0e0e0;white-space:nowrap;overflow:hidden;';
@@ -7308,46 +7315,41 @@ html body[class] #vac-gantt td.emp .nm{font-weight:500 !important;}</style>
 
     /* ── Planning ── */
     if(!injected.planning){
-      var planArea = document.getElementById('jip-taskRows');
-      if(planArea){
-        /* Find Planning tab container */
-        var planParent = planArea.parentElement;
-        for(var i=0;i<6;i++){
-          if(!planParent) break;
-          /* Look for a toolbar-like sibling at the top */
-          var toolbars = planParent.querySelectorAll('[style*="flex"][style*="gap"],[class*="toolbar"],[class*="Toolbar"],[class*="actions"],[class*="Actions"]');
-          if(toolbars.length){
-            var tb = toolbars[0];
-            if(!tb.querySelector('[data-print-bar]') && !tb.querySelector('[data-rapact-btn]')){
-              /* Rapport d'activité button */
-              var rapBtn = document.createElement('button');
-              rapBtn.setAttribute('data-rapact-btn','1');
-              rapBtn.innerHTML = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:middle;margin-right:4px">' +
-                '<rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg>Rapport d\'activité';
-              rapBtn.style.cssText = 'display:inline-flex;align-items:center;gap:4px;padding:6px 12px;' +
-                'background:#28a745;color:#fff;border:none;border-radius:6px;font-size:12px;cursor:pointer;font-weight:500;';
-              rapBtn.onmouseover = function(){ this.style.opacity='.85'; };
-              rapBtn.onmouseout  = function(){ this.style.opacity='1'; };
-              rapBtn.onclick = function(){ window.__openRapportActivite && window.__openRapportActivite(); };
-              tb.appendChild(rapBtn);
-              /* Print button */
-              var pBtn = document.createElement('button');
-              pBtn.setAttribute('data-print-bar','1');
-              pBtn.innerHTML = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:middle;margin-right:4px">' +
-                '<polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/>' +
-                '<rect x="6" y="14" width="12" height="8"/></svg>Imprimer';
-              pBtn.style.cssText = 'display:inline-flex;align-items:center;gap:4px;padding:6px 12px;' +
-                'background:#0069d9;color:#fff;border:none;border-radius:6px;font-size:12px;cursor:pointer;font-weight:500;';
-              pBtn.onmouseover = function(){ this.style.opacity='.85'; };
-              pBtn.onmouseout  = function(){ this.style.opacity='1'; };
-              pBtn.onclick = printPlanning;
-              tb.appendChild(pBtn);
-              injected.planning = true;
-            }
-            break;
-          }
-          planParent = planParent.parentElement;
-        }
+      /* Anchor: find the "+ Nouvelle tâche" button — it's always in the Planning toolbar */
+      var newTaskBtn = null;
+      document.querySelectorAll('button').forEach(function(b){
+        if(!newTaskBtn && b.textContent.indexOf('Nouvelle') > -1) newTaskBtn = b;
+      });
+      /* Fallback: find "Semaine" view-selector button */
+      if(!newTaskBtn){
+        document.querySelectorAll('button').forEach(function(b){
+          if(!newTaskBtn && b.textContent.trim() === 'Semaine') newTaskBtn = b;
+        });
+      }
+      if(newTaskBtn && newTaskBtn.parentElement && !newTaskBtn.parentElement.querySelector('[data-rapact-btn]')){
+        var tb = newTaskBtn.parentElement;
+        /* Rapport d'activité button */
+        var rapBtn = document.createElement('button');
+        rapBtn.setAttribute('data-rapact-btn','1');
+        rapBtn.innerHTML = '📊 Rapport d\'activité';
+        rapBtn.style.cssText = 'display:inline-flex;align-items:center;gap:4px;padding:6px 12px;' +
+          'background:#28a745;color:#fff;border:none;border-radius:6px;font-size:12px;cursor:pointer;font-weight:500;margin-right:4px;';
+        rapBtn.onmouseover = function(){ this.style.opacity='.85'; };
+        rapBtn.onmouseout  = function(){ this.style.opacity='1'; };
+        rapBtn.onclick = function(){ window.__openRapportActivite && window.__openRapportActivite(); };
+        /* Print button */
+        var pBtn = document.createElement('button');
+        pBtn.setAttribute('data-print-bar','1');
+        pBtn.innerHTML = '🖨 Imprimer';
+        pBtn.style.cssText = 'display:inline-flex;align-items:center;gap:4px;padding:6px 12px;' +
+          'background:#0069d9;color:#fff;border:none;border-radius:6px;font-size:12px;cursor:pointer;font-weight:500;margin-right:6px;';
+        pBtn.onmouseover = function(){ this.style.opacity='.85'; };
+        pBtn.onmouseout  = function(){ this.style.opacity='1'; };
+        pBtn.onclick = printPlanning;
+        /* Insert both before "+ Nouvelle tâche" */
+        tb.insertBefore(pBtn, newTaskBtn);
+        tb.insertBefore(rapBtn, pBtn);
+        injected.planning = true;
       }
     }
   }
@@ -7716,53 +7718,77 @@ html body[class] #vac-gantt td.emp .nm{font-weight:500 !important;}</style>
 
   window.__deleteRapportActivite = function(id){ deleteReport(id); };
 
-  /* ── Find "Rapports Chantier" tab content and inject history card ── */
-  function injectHistoryCard(){
-    if(document.getElementById(CARD_ID)) return; // already there
+  /* ── Find "Rapports chantier" tab content using click interception ── */
 
-    /* Find the Rapports Chantier sub panel */
-    var target = null;
-    document.querySelectorAll('[data-sub]').forEach(function(el){
-      if(el.textContent.trim().indexOf('Rapports Chantier')>-1 ||
-         el.textContent.trim().indexOf('Rapports chantier')>-1){
-        /* Content area might be a sibling or nearby */
-        var p = el.closest('[style*="flex"],[class*="tab"],[class*="Tab"],[class*="panel"]');
-        if(p) target = p;
+  /* After clicking "Rapports chantier" tab, find the visible panel that appeared.
+     Strategy: walk up from #jip-taskRows to find the tab-panels container,
+     then find the sibling that became visible (Planning gantt is now hidden). */
+  function findRapportPanel(){
+    var gantt = document.getElementById('jip-taskRows');
+    if(!gantt) return null;
+    /* Walk up: look for a container whose siblings include the now-visible Rapports panel */
+    var el = gantt;
+    for(var i=0; i<12; i++){
+      el = el.parentElement;
+      if(!el || el === document.body) return null;
+      var kids = el.children;
+      if(kids.length >= 2){
+        /* Among siblings, find one that is visible AND does not contain the gantt */
+        for(var k=0; k<kids.length; k++){
+          var kid = kids[k];
+          if(kid.contains(gantt)) continue; // that's the Planning panel
+          if(kid.offsetHeight > 60 && kid.children.length > 0){
+            return kid; // visible sibling — this is the active tab panel
+          }
+        }
       }
-    });
-    if(!target){
-      /* Fallback: look for a div containing JSA report elements */
-      var jsaCard = document.querySelector('[id*="jsa"],[id*="JSA"],[data-jsa]');
-      if(jsaCard) target = jsaCard.parentElement;
     }
+    return null;
+  }
+
+  function doInject(){
+    /* If gantt is visible, Planning is the active tab — don't inject here */
+    var gantt = document.getElementById('jip-taskRows');
+    if(gantt && gantt.offsetParent !== null) return;
+
+    var existing = document.getElementById(CARD_ID);
+    var target = findRapportPanel();
     if(!target) return;
 
-    /* Create card */
+    /* If card exists in the wrong container, relocate it */
+    if(existing && !target.contains(existing)){
+      existing.remove();
+      existing = null;
+    }
+    if(existing){ existing.innerHTML = buildCard(); return; }
+
     var card = document.createElement('div');
     card.id = CARD_ID;
-    card.style.cssText = 'background:#f8f9fa;border:1px solid #dee2e6;border-radius:10px;padding:14px;' +
-      'margin:12px 0;';
+    card.style.cssText = 'background:#f8f9fa;border:1px solid #dee2e6;border-radius:10px;padding:14px;margin:12px;';
     card.innerHTML = buildCard();
-    /* Insert at bottom of target */
     target.appendChild(card);
   }
 
-  /* ── Poll + MutationObserver ── */
-  var _tries = 0;
-  var _iv = setInterval(function(){
-    injectHistoryCard();
-    _tries++;
-    if(document.getElementById(CARD_ID) || _tries > 400) clearInterval(_iv);
-  }, 600);
+  /* Click interceptor — listen for "Rapports chantier" tab click */
+  document.addEventListener('click', function(e){
+    var el = e.target;
+    for(var d=0; d<6; d++){
+      if(!el || el === document.body) break;
+      var txt = (el.textContent || '').replace(/\s*\d+\s*$/, '').trim(); // strip badge number
+      if(txt === 'Rapports chantier' || txt === 'Rapports Chantier'){
+        setTimeout(doInject, 350);
+        setTimeout(doInject, 800);
+        setTimeout(doInject, 1500);
+        break;
+      }
+      el = el.parentElement;
+    }
+  }, true);
 
-  var domMo = new MutationObserver(function(){
-    clearTimeout(domMo._t);
-    domMo._t = setTimeout(function(){
-      injectHistoryCard();
-      renderCard();
-    }, 300);
+  /* Also refresh card content when localStorage changes (new report saved) */
+  window.addEventListener('storage', function(e){
+    if(e.key === RAPPORTS_KEY) renderCard();
   });
-  domMo.observe(document.body, { childList: true, subtree: true });
 })();
 </script>
 
