@@ -6882,21 +6882,20 @@ html body[class] #vac-gantt td.emp .nm{font-weight:500 !important;}</style>
      PLANNING — Colonnes Date début / Date fin dans le Gantt
      ═══════════════════════════════════════════════════════════════ -->
 <script id="__PLANNING_DATE_COLS_v1__">
-/* ePilot date-cols v8 – sibling injection + CSS badge (immune to body manipulation) */
+/* ePilot date-cols v9 – walks to row-flex insertion parent */
 (function(){
   if(window.__dcInjected) return; window.__dcInjected = 1;
 
-  /* ── DEBUG BADGE via CSS ::after on body (immune to DOM body wipes) ── */
+  /* ── DEBUG BADGE via CSS ::after on body ── */
   var _bst = document.createElement('style');
   _bst.id = '_dcBadgeSt';
-  _bst.textContent = 'body::after{content:"DC v8 ✓";position:fixed;bottom:8px;right:8px;z-index:2147483647;' +
-    'background:#c0392b;color:#fff;font:bold 11px/1 monospace;padding:4px 10px;border-radius:4px;' +
+  _bst.textContent = 'body::after{content:"DC v9 ✓";position:fixed;bottom:8px;right:8px;z-index:2147483647;' +
+    'background:#27ae60;color:#fff;font:bold 11px/1 monospace;padding:4px 10px;border-radius:4px;' +
     'pointer-events:none;box-shadow:0 2px 8px rgba(0,0,0,.4);}';
   (document.head || document.documentElement).appendChild(_bst);
-  setTimeout(function(){ var e = document.getElementById('_dcBadgeSt'); if(e) e.remove(); }, 10000);
 
   var STORE_KEY = 'epilot_chantier_data_v1';
-  var CW = 100; /* px per column */
+  var CW = 100;
   var COL_ID = '_dcColBody', HDR_ID = '_dcColHdr';
   var _injecting = false;
 
@@ -6921,7 +6920,7 @@ html body[class] #vac-gantt td.emp .nm{font-weight:500 !important;}</style>
   }
   var _M = ['Jan','Fév','Mar','Avr','Mai','Jun','Jul','Aoû','Sep','Oct','Nov','Déc'];
   function fmt(s){
-    if(!s) return '-';
+    if(!s) return '–';
     var d = new Date(s);
     if(!isNaN(d.getTime())) return d.getDate() + ' ' + _M[d.getMonth()] + ' ' + d.getFullYear();
     return s;
@@ -6942,19 +6941,42 @@ html body[class] #vac-gantt td.emp .nm{font-weight:500 !important;}</style>
                'width:' + CW + 'px;flex-shrink:0;border-right:1px solid #dee2e6;' +
                'white-space:nowrap;box-sizing:border-box;';
 
-  /* ─── Body column: inserted as sibling of #jip-taskRows ─── */
+  /* ─── Walk up from taskRows to the ROW-flex ancestor that has a jip* sibling ─── */
+  function findRowFlexCtx(taskRows){
+    var cur = taskRows;
+    while(cur && cur !== document.body){
+      var par = cur.parentElement;
+      if(!par || par === document.body) break;
+      var kids = par.children;
+      for(var i = 0; i < kids.length; i++){
+        if(kids[i] !== cur && kids[i].id && kids[i].id.indexOf('jip') > -1){
+          return { container: par, taskPanel: cur };
+        }
+      }
+      cur = par;
+    }
+    return null;
+  }
+
+  /* ─── Body column ─── */
   function injectBody(taskRows, lk){
     var rows = taskRows.children;
     if(!rows.length) return;
     var old = document.getElementById(COL_ID);
     if(old) old.remove();
 
+    var ctx = findRowFlexCtx(taskRows);
+    var par, taskPanel;
+    if(ctx){ par = ctx.container; taskPanel = ctx.taskPanel; }
+    else    { par = taskRows.parentElement; taskPanel = taskRows; }
+    if(!par) return;
+
     var names = Object.keys(lk).sort(function(a, b){ return b.length - a.length; });
 
     var col = document.createElement('div');
     col.id = COL_ID;
     col.style.cssText =
-      'display:flex;flex-direction:column;flex-shrink:0;' +
+      'display:flex;flex-direction:column;flex-shrink:0;align-self:stretch;' +
       'width:' + (CW * 2) + 'px;overflow-y:hidden;overflow-x:hidden;' +
       'border-left:1px solid #dee2e6;border-right:2px solid #adb5bd;' +
       'background:#fff;box-sizing:border-box;';
@@ -6963,9 +6985,8 @@ html body[class] #vac-gantt td.emp .nm{font-weight:500 !important;}</style>
       var row = rows[i];
       var h = row.offsetHeight || 36;
       var cell = document.createElement('div');
-      cell.style.cssText = 'display:flex;height:' + h + 'px;border-bottom:1px solid #f0f2f4;flex-shrink:0;';
-      var info = null;
-      var rText = row.textContent;
+      cell.style.cssText = 'display:flex;height:' + h + 'px;border-bottom:1px solid #f0f2f4;flex-shrink:0;align-items:center;';
+      var info = null, rText = row.textContent;
       for(var n = 0; n < names.length; n++){
         if(rText.indexOf(names[n]) > -1){ info = lk[names[n]]; break; }
       }
@@ -6976,76 +6997,120 @@ html body[class] #vac-gantt td.emp .nm{font-weight:500 !important;}</style>
       col.appendChild(cell);
     }
 
-    var par = taskRows.parentElement;
-    if(!par) return;
-    par.insertBefore(col, taskRows.nextSibling);
+    par.insertBefore(col, taskPanel.nextSibling);
 
-    /* Sync vertical scroll */
     taskRows.addEventListener('scroll', function(){
       var c = document.getElementById(COL_ID);
       if(c) c.scrollTop = taskRows.scrollTop;
     }, { passive: true });
   }
 
-  /* ─── Header: insert after TÂCHE cell in its flex row ─── */
-  function closestFlex(el){
-    var cur = el.parentElement;
-    for(var k = 0; k < 10; k++){
-      if(!cur || cur === document.body) return null;
-      var d = window.getComputedStyle ? window.getComputedStyle(cur).display : '';
-      if(d === 'flex' && cur.children.length >= 1) return cur;
-      cur = cur.parentElement;
-    }
-    return null;
-  }
-  function childOf(par, el){
-    var cur = el;
-    while(cur && cur.parentElement !== par) cur = cur.parentElement;
-    return cur || null;
-  }
-  function injectHdr(){
+  /* ─── Header column ─── */
+  function hasTache(el){ var t = el.textContent; return t.indexOf('TÂCHE')>-1||t.indexOf('Tâche')>-1||t.indexOf('TACHE')>-1; }
+
+  function injectHdr(taskRows){
     if(document.getElementById(HDR_ID)) return;
-    var all = document.querySelectorAll('div,span,th');
+
+    var ctx = findRowFlexCtx(taskRows);
+    if(!ctx) return;
+    var ganttBody = ctx.container;
+    var outerWrap = ganttBody.parentElement;
+    if(!outerWrap) return;
+
+    /* Find header row: sibling of ganttBody that contains TÂCHE */
+    var hdrRow = null;
+    var outerKids = outerWrap.children;
+    for(var i = 0; i < outerKids.length; i++){
+      if(outerKids[i] !== ganttBody && hasTache(outerKids[i])){ hdrRow = outerKids[i]; break; }
+    }
+
+    /* Fallback: find TÂCHE leaf, walk up to sibling of ganttBody */
+    if(!hdrRow){
+      var all = document.querySelectorAll('div,span,th');
+      for(var j = 0; j < all.length; j++){
+        var el = all[j];
+        if(el.children.length > 0) continue;
+        var t = el.textContent.trim();
+        if(t !== 'TÂCHE' && t !== 'Tâche' && t !== 'TACHE') continue;
+        var p = el;
+        while(p && p.parentElement !== outerWrap && p.parentElement !== document.body) p = p.parentElement;
+        if(p && p.parentElement === outerWrap && p !== ganttBody){ hdrRow = p; break; }
+      }
+    }
+    if(!hdrRow) return;
+
+    /* Find left panel header (direct child of hdrRow containing TÂCHE) */
+    var hdrLeft = null;
+    var hkids = hdrRow.children;
+    for(var k = 0; k < hkids.length; k++){
+      if(hasTache(hkids[k])){ hdrLeft = hkids[k]; break; }
+    }
+    if(!hdrLeft) return;
+
+    var wrap = document.createElement('div');
+    wrap.id = HDR_ID;
+    wrap.style.cssText =
+      'display:flex;flex-shrink:0;align-items:center;height:100%;' +
+      'width:' + (CW * 2) + 'px;' +
+      'border-left:1px solid #dee2e6;border-right:2px solid #adb5bd;' +
+      'background:#f0f4f8;box-sizing:border-box;';
+    var hd = document.createElement('div'); hd.style.cssText = hdrSt; hd.textContent = 'Date Début';
+    var hf = document.createElement('div'); hf.style.cssText = hdrSt; hf.textContent = 'Date Fin';
+    wrap.appendChild(hd); wrap.appendChild(hf);
+    var nx = hdrLeft.nextElementSibling;
+    if(nx) hdrRow.insertBefore(wrap, nx); else hdrRow.appendChild(wrap);
+  }
+
+  /* ─── Fallback: find #jip-taskRows without relying on its id ─── */
+  function findTaskRowsFallback(){
+    var all = document.querySelectorAll('div,span');
     for(var i = 0; i < all.length; i++){
       var el = all[i];
-      if(el.children.length > 0) continue;
-      var t = el.textContent.trim();
-      if(t !== 'TÂCHE' && t !== 'Tâche' && t !== 'TACHE') continue;
-      var flex = closestFlex(el);
-      if(!flex || flex.getAttribute('data-dh')) continue;
-      var tc = childOf(flex, el);
-      if(!tc) continue;
-      var wrap = document.createElement('div');
-      wrap.id = HDR_ID;
-      wrap.style.cssText =
-        'display:flex;flex-shrink:0;align-items:stretch;' +
-        'width:' + (CW * 2) + 'px;' +
-        'border-left:1px solid #dee2e6;border-right:2px solid #adb5bd;' +
-        'background:#f0f4f8;box-sizing:border-box;';
-      var hd = document.createElement('div'); hd.style.cssText = hdrSt; hd.textContent = 'Date Debut';
-      var hf = document.createElement('div'); hf.style.cssText = hdrSt; hf.textContent = 'Date Fin';
-      wrap.appendChild(hd); wrap.appendChild(hf);
-      var nx = tc.nextElementSibling;
-      if(nx) flex.insertBefore(wrap, nx); else flex.appendChild(wrap);
-      flex.setAttribute('data-dh', '1');
-      return;
+      if(el.children.length === 0 && hasTache(el)){
+        var par = el.parentElement;
+        for(var k = 0; k < 8; k++){
+          if(!par || par === document.body) break;
+          var siblings = par.parentElement ? par.parentElement.children : [];
+          for(var s = 0; s < siblings.length; s++){
+            var sib = siblings[s];
+            if(sib !== par && sib.children.length >= 3 && sib.id && sib.id.indexOf('jip') > -1){
+              return sib;
+            }
+          }
+          par = par.parentElement;
+        }
+        break;
+      }
     }
+    return null;
   }
 
   /* ─── Main inject ─── */
   function inject(){
-    var taskRows = document.getElementById('jip-taskRows');
+    var taskRows = document.getElementById('jip-taskRows') || findTaskRowsFallback();
+    window.__dcStatus = {
+      taskRowsFound: !!taskRows,
+      taskRowsId: taskRows ? taskRows.id : null,
+      taskRowsKids: taskRows ? taskRows.children.length : 0,
+      taskRowsRect: taskRows ? (function(r){ return [Math.round(r.left),Math.round(r.top),Math.round(r.width),Math.round(r.height)]; })(taskRows.getBoundingClientRect()) : null,
+      ctx: (function(){ var c=taskRows&&findRowFlexCtx(taskRows); return c?{parId:c.container.id||'?',panelId:c.taskPanel.id||'?'}:null; })(),
+      colBodyExists: !!document.getElementById(COL_ID),
+      colBodyRect: (function(c){ return c?(function(r){ return [Math.round(r.left),Math.round(r.top),Math.round(r.width),Math.round(r.height)]; })(c.getBoundingClientRect()):null; })(document.getElementById(COL_ID)),
+      colHdrExists: !!document.getElementById(HDR_ID),
+      lsKeys: Object.keys(JSON.parse(localStorage.getItem(STORE_KEY)||'{}')).length,
+      t: new Date().toISOString().slice(11,19)
+    };
     if(!taskRows || !taskRows.children.length) return;
     _injecting = true;
     try {
       injectBody(taskRows, buildLk());
-      injectHdr();
+      injectHdr(taskRows);
     } finally {
       setTimeout(function(){ _injecting = false; }, 150);
     }
   }
 
-  /* ─── MO on #jip-taskRows children: rebuild when rows change ─── */
+  /* ─── MO: watch for React removing our column ─── */
   var _rowMO = null, _parMO = null, _moTarget = null;
   function attachRowMO(){
     var taskRows = document.getElementById('jip-taskRows');
@@ -7054,29 +7119,27 @@ html body[class] #vac-gantt td.emp .nm{font-weight:500 !important;}</style>
     if(_parMO) _parMO.disconnect();
     _moTarget = taskRows;
 
-    /* Watch taskRows children — React rebuilds rows here */
     _rowMO = new MutationObserver(function(){
       clearTimeout(_rowMO._t);
       _rowMO._t = setTimeout(inject, 80);
     });
     _rowMO.observe(taskRows, { childList: true });
 
-    /* Watch taskRows PARENT children — catches React removing our _dcColBody sibling */
-    var par = taskRows.parentElement;
-    if(par){
+    var ctx = findRowFlexCtx(taskRows);
+    var watchPar = ctx ? ctx.container : taskRows.parentElement;
+    if(watchPar){
       _parMO = new MutationObserver(function(){
         if(_injecting) return;
-        /* If our column was removed, re-inject */
         if(!document.getElementById(COL_ID)){
           clearTimeout(_parMO._t);
           _parMO._t = setTimeout(inject, 80);
         }
       });
-      _parMO.observe(par, { childList: true });
+      _parMO.observe(watchPar, { childList: true });
     }
   }
 
-  /* ─── Body MO: detect Planning tab appearing (suppressed during own mutations) ─── */
+  /* ─── Body MO: detect Planning tab ─── */
   var _bmo = new MutationObserver(function(){
     if(_injecting) return;
     if(document.getElementById('jip-taskRows')){
@@ -7090,13 +7153,13 @@ html body[class] #vac-gantt td.emp .nm{font-weight:500 !important;}</style>
     clearTimeout(window._dcRT); window._dcRT = setTimeout(inject, 150);
   }, { passive: true });
 
-  /* ─── Keep badge alive (re-inject if doc was reset) ─── */
+  /* ─── Keep badge alive ─── */
   function ensureBadge(){
     if(document.getElementById('_dcBadgeSt')) return;
     var st = document.createElement('style');
     st.id = '_dcBadgeSt';
-    st.textContent = 'body::after{content:"DC v8 ✓";position:fixed;bottom:8px;right:8px;z-index:2147483647;' +
-      'background:#c0392b;color:#fff;font:bold 11px/1 monospace;padding:4px 10px;border-radius:4px;' +
+    st.textContent = 'body::after{content:"DC v9 ✓";position:fixed;bottom:8px;right:8px;z-index:2147483647;' +
+      'background:#27ae60;color:#fff;font:bold 11px/1 monospace;padding:4px 10px;border-radius:4px;' +
       'pointer-events:none;box-shadow:0 2px 8px rgba(0,0,0,.4);}';
     (document.head || document.body || document.documentElement).appendChild(st);
   }
