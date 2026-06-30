@@ -6764,6 +6764,33 @@ class Component extends DCLogic {
     ),this.Btn('⤓ CSV',()=>this.exportPoseCSV(),'sec','sm')));
   }
   _condsFor(poles){return poles>=3?[['L1','#6d4c41'],['L2','#212121'],['L3','#9e9e9e'],['N','#42a5f5'],['PE','grad']]:[['L','#6d4c41'],['N','#42a5f5'],['PE','grad']];}
+  // Numéro de bloc de raccordement d'un équipement (TE puis BD) → X1, X2...
+  _raccordBlock(el){
+    if(!el)return 1;
+    const tes=this.state.tableauxElec||[];const bds=this.state.boitesDeriv||[];
+    let i=tes.findIndex(t=>t.id===el.id);if(i>=0)return i+1;
+    i=bds.findIndex(b=>b.id===el.id);if(i>=0)return tes.length+i+1;
+    return el.raccordIdx||1;
+  }
+  // Repère de borne d'un conducteur sur un équipement à raccordement (bornier X / connecteur W / répartiteur R).
+  // Le PE n'a pas de repère (tous raccordés ensemble). condKeys = liste des conducteurs du câble.
+  _borneOf(el,conductor,condKeys){
+    if(conductor==='PE')return 'PE';
+    if(!el||el.id==null)return conductor;
+    const rt=el.raccordType||'connecteur';
+    const pfx={bornier:'X',connecteur:'W',repartiteur:'R'}[rt]||'W';
+    const block=this._raccordBlock(el);
+    const nonPE=(condKeys||[]).filter(k=>k!=='PE');
+    const seq=nonPE.indexOf(conductor);
+    return pfx+block+'.'+(seq>=0?seq+1:1);
+  }
+  // Repère de borne pour une extrémité de câble (Vue Câble) : équipement à raccordement, borne d'appareil, ou récepteur.
+  _endBorne(cond,el,devCode,condKeys){
+    if(cond==='PE')return 'PE';
+    if(el)return this._borneOf(el,cond,condKeys);
+    if(devCode)return devCode+'.'+cond;
+    return cond;
+  }
   _vueCableData(kind,id){
     const s=this.state;const entrants=[],sortants=[];
     const teCode=t=>{try{return this.genTECode(t,s);}catch(e){return t.code||('TE'+t.id);}};
@@ -6774,16 +6801,17 @@ class Component extends DCLogic {
     if(kind==='te'){
       const te=(s.tableauxElec||[]).find(t=>t.id===id);if(!te)return{entrants,sortants,center:null};
       const center={code:teCode(te),nom:te.nom||'',type:'TE'};
+      const tePiece=((s.pieces||[]).find(p=>p.id===te.pieceId)||{}).nom||'';
       const parentTe=(s.tableauxElec||[]).find(t=>t.id===te.departId);
-      if(parentTe){entrants.push({wcode:'',from:teCode(parentTe)+(parentTe.nom?' '+parentTe.nom:''),to:center.code,conds:this._condsFor(triAlim?3:1),sec:(te.feederSection||'?')+'mm²',bornes:(te.cb0Code||'CB0'),borneT:(parentTe.cb0Code||''),borneA:(te.cb0Code||'CB0'),pieceA:(te.nom||''),edit:{type:'te',id:te.id},statutKey:'te'+te.id+'feed'});}
-      else{const dep=(s.departs||[]).find(d=>d.id===te.departId)||(s.departs||[]).find(d=>d.type==='comptage');if(dep){let sc='';try{sc=this.genSourceCode(dep,s);}catch(e){sc=dep.code||'SRC';}const tri=dep.tension==='tri'||dep.tension==='tri_it'||(+dep.poles>=3);entrants.push({wcode:dep.dbCode||'DB',from:sc+(dep.nom?' '+dep.nom:''),to:center.code,conds:this._condsFor(tri?3:1),sec:(dep.section||'16')+'mm²',bornes:(te.cb0Code||'CB0'),borneT:(dep.dbCode||'DB'),borneA:(te.cb0Code||'CB0'),pieceA:(te.nom||''),edit:{type:'dep',id:dep.id},statutKey:'dep'+dep.id+'te'+te.id});}}
+      if(parentTe){entrants.push({wcode:'',from:teCode(parentTe)+(parentTe.nom?' '+parentTe.nom:''),to:center.code,conds:this._condsFor(triAlim?3:1),sec:(te.feederSection||'?')+'mm²',bornes:(te.cb0Code||'CB0'),borneT:(parentTe.cb0Code||''),borneA:(te.cb0Code||'CB0'),bTel:null,bAel:null,pieceT:(((s.pieces||[]).find(p=>p.id===parentTe.pieceId)||{}).nom||tePiece),pieceA:tePiece,edit:{type:'te',id:te.id},statutKey:'te'+te.id+'feed'});}
+      else{const dep=(s.departs||[]).find(d=>d.id===te.departId)||(s.departs||[]).find(d=>d.type==='comptage');if(dep){let sc='';try{sc=this.genSourceCode(dep,s);}catch(e){sc=dep.code||'SRC';}const tri=dep.tension==='tri'||dep.tension==='tri_it'||(+dep.poles>=3);entrants.push({wcode:dep.dbCode||'DB',from:sc+(dep.nom?' '+dep.nom:''),to:center.code,conds:this._condsFor(tri?3:1),sec:(dep.section||'16')+'mm²',bornes:(te.cb0Code||'CB0'),borneT:(dep.dbCode||'DB'),borneA:(te.cb0Code||'CB0'),bTel:null,bAel:null,pieceT:(((s.pieces||[]).find(p=>p.id===dep.pieceId)||{}).nom||tePiece),pieceA:tePiece,edit:{type:'dep',id:dep.id},statutKey:'dep'+dep.id+'te'+te.id});}}
       (s.disjoncteurs||[]).filter(d=>d.tableauId===te.id).forEach(d=>{
         const refs=d.recepteurs||[];const room=refs.map(rf=>refPiece[rf]).filter(Boolean)[0]||'';
         let wc='';try{wc=this.genCableCBCode(d,s);}catch(e){}
         const bdIds=[];const directRefs=[];
         refs.forEach(rf=>{const e=fnByRef[rf];if(e&&e.fn.departType==='boite'&&e.fn.departId!=null){const k=String(e.fn.departId);if(bdIds.indexOf(k)<0)bdIds.push(k);}else{directRefs.push(rf);}});
-        bdIds.forEach(k=>{const bd=(s.boitesDeriv||[]).find(b=>String(b.id)===k);if(!bd)return;sortants.push({wcode:wc||d.code||'',from:center.code+(d.code?' '+d.code:''),to:bdCode(bd)+(bd.nom?' '+bd.nom:''),conds:this._condsFor(this._poles(d)),sec:(d.section||'1.5')+'mm²',bornes:d.code||'',borneT:(d.code||''),borneA:bdCode(bd),pieceA:((s.pieces||[]).find(p=>p.id===bd.pieceId)||{}).nom||'',edit:{type:'dj',id:d.id},statutKey:'dj'+d.id+'bd'+bd.id});});
-        if(directRefs.length){sortants.push({wcode:wc||d.code||'',from:center.code+(d.code?' '+d.code:''),to:directRefs.join(' ')+(room?' · '+room:''),conds:this._condsFor(this._poles(d)),sec:(d.section||'1.5')+'mm²',bornes:d.code||'',borneT:(d.code||''),borneA:directRefs.join(' '),pieceA:room,edit:{type:'dj',id:d.id},statutKey:'dj'+d.id});}
+        bdIds.forEach(k=>{const bd=(s.boitesDeriv||[]).find(b=>String(b.id)===k);if(!bd)return;sortants.push({wcode:wc||d.code||'',from:center.code+(d.code?' '+d.code:''),to:bdCode(bd)+(bd.nom?' '+bd.nom:''),conds:this._condsFor(this._poles(d)),sec:(d.section||'1.5')+'mm²',bornes:d.code||'',bTel:te,bAel:bd,borneT:'',borneA:'',pieceT:tePiece,pieceA:((s.pieces||[]).find(p=>p.id===bd.pieceId)||{}).nom||'',edit:{type:'dj',id:d.id},statutKey:'dj'+d.id+'bd'+bd.id});});
+        if(directRefs.length){sortants.push({wcode:wc||d.code||'',from:center.code+(d.code?' '+d.code:''),to:directRefs.join(' ')+(room?' · '+room:''),conds:this._condsFor(this._poles(d)),sec:(d.section||'1.5')+'mm²',bornes:d.code||'',bTel:te,bAel:null,borneT:'',borneA:'',pieceT:tePiece,pieceA:room,edit:{type:'dj',id:d.id},statutKey:'dj'+d.id});}
       });
       return{entrants,sortants,center};
     }
@@ -6796,10 +6824,10 @@ class Component extends DCLogic {
       (s.disjoncteurs||[]).filter(d=>(d.recepteurs||[]).some(rf=>{const e=fnByRef[rf];return e&&e.fn.departType==='boite'&&String(e.fn.departId)===String(bd.id);})).forEach(d=>{
         const te=(s.tableauxElec||[]).find(t=>t.id===d.tableauId);if(!te)return;
         let wc='';try{wc=this.genCableCBCode(d,s);}catch(e){wc=d.code||'';}
-        entrants.push({wcode:wc,from:teCode(te)+(d.code?' '+d.code:''),to:center.code,conds:this._condsFor(this._poles(d)),sec:(d.section||'1.5')+'mm²',bornes:'',borneT:(d.code||''),borneA:center.code,pieceA:bdPiece,edit:{type:'dj',id:d.id},statutKey:'dj'+d.id+'bd'+bd.id});
+        entrants.push({wcode:wc,from:teCode(te)+(d.code?' '+d.code:''),to:center.code,conds:this._condsFor(this._poles(d)),sec:(d.section||'1.5')+'mm²',bornes:'',bTel:te,bAel:bd,borneT:'',borneA:'',pieceT:((s.pieces||[]).find(p=>p.id===te.pieceId)||{}).nom||'',pieceA:bdPiece,edit:{type:'dj',id:d.id},statutKey:'dj'+d.id+'bd'+bd.id});
       });
-      (s.pieces||[]).forEach(p=>(p.fonctions||[]).forEach(fn=>{if(fn.departType==='boite'&&String(fn.departId)===String(bd.id)){const fi=this.FNS[fn.type]||{};sortants.push({wcode:fn.ref||'',from:center.code,to:(fi.label||fn.type)+(fn.ref?' '+fn.ref:'')+' · '+(p.nom||''),conds:this._condsFor(1),sec:(fn.cableSection||'1.5')+'mm²',bornes:fn.ref||'',borneT:center.code,borneA:(fn.ref||''),pieceT:bd.pieceId?(((s.pieces||[]).find(x=>x.id===bd.pieceId)||{}).nom||''):'',pieceA:(p.nom||''),edit:{type:'fn',pieceId:p.id,fnId:fn.id},statutKey:'fn'+fn.id});
-        (s.interrupteurs||[]).filter(it=>it.circuitRef===fn.ref).forEach(it=>{const itDt=it.departType||fn.departType;const itDi=it.departId!=null?it.departId:fn.departId;if(itDt==='boite'&&String(itDi)===String(bd.id)){let ic='';try{ic=this.genInterCode(it,s);}catch(e){ic=it.nom||'SA';}const itp=it.pieceId?(((s.pieces||[]).find(x=>x.id===it.pieceId)||{}).nom||''):(p.nom||'');sortants.push({wcode:ic,from:center.code,to:ic+(it.nom?' — '+it.nom:''),conds:this._condsFor(1),sec:'1.5mm²',bornes:ic,borneT:center.code,borneA:ic,pieceT:bd.pieceId?(((s.pieces||[]).find(x=>x.id===bd.pieceId)||{}).nom||''):'',pieceA:itp,edit:{type:'inter',id:it.id},statutKey:'int'+it.id});}});
+      (s.pieces||[]).forEach(p=>(p.fonctions||[]).forEach(fn=>{if(fn.departType==='boite'&&String(fn.departId)===String(bd.id)){const fi=this.FNS[fn.type]||{};sortants.push({wcode:fn.ref||'',from:center.code,to:(fi.label||fn.type)+(fn.ref?' '+fn.ref:'')+' · '+(p.nom||''),conds:this._condsFor(1),sec:(fn.cableSection||'1.5')+'mm²',bornes:fn.ref||'',bTel:bd,bAel:null,borneT:'',borneA:'',pieceT:bdPiece,pieceA:(p.nom||''),edit:{type:'fn',pieceId:p.id,fnId:fn.id},statutKey:'fn'+fn.id});
+        (s.interrupteurs||[]).filter(it=>it.circuitRef===fn.ref).forEach(it=>{const itDt=it.departType||fn.departType;const itDi=it.departId!=null?it.departId:fn.departId;if(itDt==='boite'&&String(itDi)===String(bd.id)){let ic='';try{ic=this.genInterCode(it,s);}catch(e){ic=it.nom||'SA';}const itp=it.pieceId?(((s.pieces||[]).find(x=>x.id===it.pieceId)||{}).nom||''):(p.nom||'');sortants.push({wcode:ic,from:center.code,to:ic+(it.nom?' — '+it.nom:''),conds:this._condsFor(1),sec:'1.5mm²',bornes:ic,bTel:bd,bAel:null,borneT:'',borneA:'',pieceT:bdPiece,pieceA:itp,edit:{type:'inter',id:it.id},statutKey:'int'+it.id});}});
       }}));
       return{entrants,sortants,center};
     }
@@ -6819,19 +6847,18 @@ class Component extends DCLogic {
     const data={entrants:datas.flatMap(d=>d.data.entrants),sortants:datas.flatMap(d=>d.data.sortants)};
     const filt=s.vueCableFilter||'all';
     const fmatch=cb=>filt==='all'||((s.poseStatuts||{})[cb.statutKey]||'')===filt;
-    const condBorne=(name,term)=>name==='PE'?'PE':(term?term+'.'+name:'');
-    const bars=(conds,sec,bT,bA)=>r('div',{style:{display:'flex',flexDirection:'column',gap:2,flex:1,minWidth:150}},...conds.map((x,k)=>r('div',{key:k,style:{display:'flex',alignItems:'center',gap:4}},
-      (bT||bT==='')?r('span',{style:{fontSize:7,color:c.muted,fontFamily:c.mono,minWidth:38,textAlign:'right'}},condBorne(x[0],bT)):null,
+    const bars=(cab)=>{const condKeys=(cab.conds||[]).map(x=>x[0]);return r('div',{style:{display:'flex',flexDirection:'column',gap:2,flex:1,minWidth:150}},...(cab.conds||[]).map((x,k)=>r('div',{key:k,style:{display:'flex',alignItems:'center',gap:4}},
+      r('span',{style:{fontSize:7,color:c.muted,fontFamily:c.mono,minWidth:40,textAlign:'right'}},this._endBorne(x[0],cab.bTel,cab.borneT,condKeys)),
       r('span',{style:{width:16,fontSize:8,fontWeight:700,color:x[1]==='grad'?'#43a047':x[1],fontFamily:c.mono}},x[0]),
       r('div',{style:{flex:1,height:4,borderRadius:2,background:x[1]==='grad'?'repeating-linear-gradient(45deg,#43a047 0 4px,#fdd835 4px 8px)':x[1]}}),
-      r('span',{style:{fontSize:8,color:c.muted,fontFamily:c.mono,minWidth:28,textAlign:'right'}},sec),
-      (bA||bA==='')?r('span',{style:{fontSize:7,color:c.muted,fontFamily:c.mono,minWidth:38}},condBorne(x[0],bA)):null)));
+      r('span',{style:{fontSize:8,color:c.muted,fontFamily:c.mono,minWidth:28,textAlign:'right'}},cab.sec),
+      r('span',{style:{fontSize:7,color:c.muted,fontFamily:c.mono,minWidth:40}},this._endBorne(x[0],cab.bAel,cab.borneA,condKeys)))));};
     const endBlk=(code,piece,align)=>r('div',{style:{minWidth:74,maxWidth:140,fontSize:9,textAlign:align,flexShrink:0}},
       r('div',{style:{color:c.text2,fontWeight:600,whiteSpace:'normal',lineHeight:1.25}},code||'—'),
       piece?r('div',{style:{color:c.muted,fontSize:8,fontStyle:'italic'}},piece):null);
     const repCenter=(cab)=>r('div',{style:{flex:1,minWidth:150,display:'flex',flexDirection:'column',gap:3}},
       cab.wcode?r('div',{style:{textAlign:'center',fontFamily:c.mono,fontWeight:800,color:c.accent,fontSize:10}},cab.wcode):r('div',{style:{textAlign:'center',fontSize:8,color:c.muted}},'(sans repère)'),
-      bars(cab.conds,cab.sec,cab.borneT,cab.borneA));
+      bars(cab));
     const rowSt={display:'flex',alignItems:'center',gap:6,padding:'7px 9px',background:c.surf,border:'1px solid '+c.bdr,borderRadius:8,marginBottom:6,boxShadow:c.elev1,cursor:'pointer'};
     const poseBadge=(key)=>{const st=this._poseState(key);const m=(s.poseMeta||{})[key];const tt='Statut de pose — cliquer pour changer'+(m&&m.at?'\n'+st.l+(m.by?' par '+m.by:'')+' le '+this._fmtStamp(m.at):'');return r('button',{onClick:(e)=>{e.stopPropagation();this._cyclePose(key);},title:tt,style:{flexShrink:0,fontSize:8,fontWeight:700,color:st.col,background:st.col+'18',border:'1px solid '+st.col+'66',borderRadius:5,padding:'2px 6px',cursor:'pointer',whiteSpace:'nowrap'}},st.l);};
     const cableRow=(cab,k,dir)=>r('div',{key:dir+k,onClick:()=>this._openCableEdit(cab.edit),title:'Modifier ce câble / cet équipement',style:rowSt},
@@ -7968,34 +7995,8 @@ class Component extends DCLogic {
                     const tenantTE=fil.departType==='tableau'?this.state.tableauxElec.find(t=>String(t.id)===String(fil.departId)):null;
                     const tenantEl=elOf(fil.tenantRef)||tenantBD||tenantTE;
                     const aboutEl=elOf(fil.aboutRef);
-                    // Mapping conducteur → numero de connecteur/bornier
-                    // Connecteur Wago / Repartiteur : un connecteur PAR potentiel
-                    // W1=phase(L,L1), W2=neutre(N), W3=terre(PE), W4=navette(NAV), W5=L2, W6=L3
-                    const COND_WAGO={L:1,L1:1,N:2,PE:3,NAV:4,CMD:4,L2:5,L3:6};
-                    // Bornier X : numerotation sequentielle lineaire (un numero par fil)
-                    // X1.1=L, X1.2=N, X1.3=PE, X1.4=NAV, X1.5=NAV2...
-                    const COND_BORNIER={L:1,L1:1,N:2,PE:3,NAV:4,CMD:4,L2:5,L3:6};
-                    const calcBorne=(el,conducteur)=>{
-                      // Le PE n'a pas de repère individuel (tous les PE sont raccordés ensemble)
-                      if(conducteur==='PE')return 'PE';
-                      if(!el)return conducteur;
-                      const rt=el.raccordType||'connecteur';
-                      const pfx={bornier:'X',connecteur:'W',repartiteur:'R'}[rt]||'W';
-                      if(rt==='bornier'){
-                        // Bornier: X1.{seq} - numero sequentiel selon position du conducteur
-                        const seq=COND_BORNIER[conducteur]||1;
-                        return pfx+'1.'+seq;
-                      } else {
-                        // Wago/Repartiteur: W{potentiel}.{n} - un connecteur par potentiel
-                        // n = ordre d'arrivee sur ce potentiel dans cet element
-                        // Pour simplifier: W{pot}.1 (a surcharger manuellement si besoin)
-                        const pot=COND_WAGO[conducteur]||1;
-                        // Compter combien de fils du meme potentiel arrivent avant celui-ci
-                        const myFilIdx=fi; // index dans cab.fils
-                        const sameCondBefore=cab.fils.slice(0,myFilIdx).filter(f=>(COND_WAGO[f.conducteur||f.bt||'L']||1)===pot).length;
-                        return pfx+pot+'.'+(sameCondBefore+1);
-                      }
-                    };
+                    const condKeys=cab.fils.map(f=>f.conducteur||f.bt||'L');
+                    const calcBorne=(el,conducteur)=>this._borneOf(el,conducteur,condKeys);
                     const borneT=ovr.bt!==undefined?ovr.bt:(fil.fixedBt!==undefined?fil.fixedBt:calcBorne(tenantEl,cond));
                     const borneA=ovr.ba!==undefined?ovr.ba:(fil.fixedBa!==undefined?fil.fixedBa:(aboutEl?calcBorne(aboutEl,cond):fil.ba));
                     // Equip T = code de l'element tenant
