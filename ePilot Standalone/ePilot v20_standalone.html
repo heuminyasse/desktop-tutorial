@@ -6869,5 +6869,14 @@ html body[class] #vac-gantt td.emp .nm{font-weight:500 !important;}</style>
 })();
 </script>
 
+<style id="__CDC_HIDE_EXIG_v1__">
+/* Masquage instantané de l'ancien système exigences — sans flash.
+   [data-exig-hide] : marqué par le MO direct avant paint.
+   [data-cdc-card] ~ * : tout sibling APRÈS notre carte de cotation est masqué
+   (flex bouton + liste exigences), même si le MO n'a pas encore tourné. */
+[data-exig-hide="1"] { display: none !important; }
+[data-cdc-card] ~ * { display: none !important; }
+</style>
+
 </body>
 </html>
