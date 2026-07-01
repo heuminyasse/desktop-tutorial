@@ -6882,226 +6882,248 @@ html body[class] #vac-gantt td.emp .nm{font-weight:500 !important;}</style>
      PLANNING — Colonnes Date début / Date fin dans le Gantt
      ═══════════════════════════════════════════════════════════════ -->
 <script id="__PLANNING_DATE_COLS_v1__">
-/* ePilot date-cols v11 – diagnostic + position:fixed overlay */
+/* ePilot date-cols v12 – IndexedDB data + sticky-col DOM discovery */
 (function(){
   if(window.__dcInjected) return; window.__dcInjected = 1;
 
   /* ── DEBUG BADGE ── */
   var _bst = document.createElement('style');
   _bst.id = '_dcBadgeSt';
-  _bst.textContent = 'body::after{content:"DC v11 ✓";position:fixed;bottom:8px;right:8px;z-index:2147483647;' +
+  _bst.textContent = 'body::after{content:"DC v12 ✓";position:fixed;bottom:8px;right:8px;z-index:2147483647;' +
     'background:#c0392b;color:#fff;font:bold 11px/1 monospace;padding:4px 10px;border-radius:4px;' +
     'pointer-events:none;box-shadow:0 2px 8px rgba(0,0,0,.4);}';
   (document.head || document.documentElement).appendChild(_bst);
 
-  var STORE_KEY = 'epilot_chantier_data_v1';
-  var CW = 100;
-  var COL_ID = '_dcColBody', HDR_ID = '_dcColHdr';
+  var CW = 100; /* px per date column */
+  var COL_ID = '_dcColBody', HDR_ID = '_dcColHdr', DIAG_ID = '_dcDiag';
 
-  /* ─── Data helpers ─── */
-  function getAllTasks(){
-    try{
-      var a=JSON.parse(localStorage.getItem(STORE_KEY)||'{}');
-      var ks=Object.keys(a);
-      return ks.length?(a[ks[ks.length-1]].taches||[]):[];
-    }catch(e){ return []; }
-  }
-  function addWD(s,n){
-    var d=new Date(s); if(isNaN(d.getTime())) return '';
-    for(var c=0,m=Math.max(0,(n||1)-1);c<m;){d.setDate(d.getDate()+1);var w=d.getDay();if(w&&w!==6)c++;}
-    return d.toISOString().slice(0,10);
-  }
+  /* ─── Date format ─── */
   var _M=['Jan','Fév','Mar','Avr','Mai','Jun','Jul','Aoû','Sep','Oct','Nov','Déc'];
-  function fmt(s){ if(!s)return '–'; var d=new Date(s); return isNaN(d.getTime())?s:d.getDate()+' '+_M[d.getMonth()]+' '+d.getFullYear(); }
-  function buildLk(){
-    var lk={};
-    getAllTasks().forEach(function(t){ if(t.nom) lk[t.nom]={d:t.debut||'',f:addWD(t.debut,t.duree||1)}; });
-    return lk;
-  }
+  function fmt(s){ if(!s) return '–'; var d=new Date(s); return isNaN(d.getTime())?'–':d.getDate()+' '+_M[d.getMonth()]+' '+d.getFullYear(); }
 
   /* ─── Styles ─── */
-  var cellSt='display:flex;align-items:center;padding:0 5px;font-size:11px;color:#444;'+
+  var cellSt='display:flex;align-items:center;padding:0 6px;font-size:11px;color:#333;'+
     'width:'+CW+'px;flex-shrink:0;border-right:1px solid #dee2e6;'+
-    'white-space:nowrap;overflow:hidden;box-sizing:border-box;';
-  var hdrSt='display:flex;align-items:center;padding:0 5px;font-size:11px;font-weight:600;color:#111;'+
+    'white-space:nowrap;overflow:hidden;box-sizing:border-box;height:100%;';
+  var hdrSt='display:flex;align-items:center;padding:0 6px;font-size:11px;font-weight:700;color:#1a2733;'+
     'width:'+CW+'px;flex-shrink:0;border-right:1px solid #dee2e6;'+
-    'white-space:nowrap;box-sizing:border-box;';
+    'white-space:nowrap;box-sizing:border-box;height:100%;';
 
-  /* ─── Helpers ─── */
+  /* ─── DOM helpers ─── */
   function getOrCreate(id){
     var el=document.getElementById(id);
     if(!el){ el=document.createElement('div'); el.id=id; el.setAttribute('data-dc','1'); document.body.appendChild(el); }
     return el;
   }
-  function hideEl(id){ var el=document.getElementById(id); if(el) el.style.display='none'; }
+  function hideEl(id){ var el=document.getElementById(id); if(el){ el.style.display='none'; } }
 
-  function findTacheEl(){
-    var all=document.querySelectorAll('div,span,th');
+  /* ─── Find Planning label column via "Tâche" sticky div ───
+     The React PlanningPro component renders:
+       <div style="position:sticky;left:0;width:230px;...">   ← label column
+         <div style="height:34px;...">Tâche</div>             ← header (CSS uppercases it)
+         <div>  ← phase group
+           <div style="height:26px;...">PHASE_NAME</div>
+           <div style="height:30px;...">✓ task title</div>
+     ─── */
+  function findLabelCol(){
+    var all=document.querySelectorAll('div,span');
     for(var i=0;i<all.length;i++){
       var el=all[i];
-      if(el.children.length===0){var t=el.textContent.trim(); if(t==='TÂCHE'||t==='Tâche'||t==='TACHE') return el;}
+      if(el.children.length>0) continue;
+      var t=el.textContent.trim();
+      /* textContent is "Tâche"; CSS text-transform:uppercase makes it look like "TÂCHE" */
+      if(t!=='Tâche') continue;
+      var hdrDiv=el.parentElement; if(!hdrDiv) continue;
+      var col=hdrDiv.parentElement; if(!col) continue;
+      var cs=window.getComputedStyle(col);
+      if(cs.position==='sticky') return {col:col, hdr:hdrDiv};
+      /* fallback: walk up one more */
+      var col2=col.parentElement;
+      if(col2){var cs2=window.getComputedStyle(col2); if(cs2.position==='sticky') return {col:col2, hdr:hdrDiv};}
     }
     return null;
   }
-  function findTacheCell(tw){
-    var tEl=findTacheEl(); if(!tEl) return null;
-    var cur=tEl;
-    for(var k=0;k<12;k++){
-      if(!cur||cur===document.body) return tEl;
-      if(cur.offsetWidth>=tw*0.8) return cur;
-      cur=cur.parentElement;
+
+  /* ─── Find task row elements in the label column ───
+     Task rows start with ✓ (U+2713) or ○ (U+25CB). ─── */
+  function findTaskRowEls(labelCol){
+    var divs=labelCol.querySelectorAll('div');
+    var out=[];
+    for(var i=0;i<divs.length;i++){
+      var d=divs[i];
+      var ch=d.textContent.trim().charAt(0);
+      if(ch!=='✓'&&ch!=='○') continue;
+      /* skip if parent also starts with ✓/○ (nested child) */
+      var p=d.parentElement;
+      if(p){ var pch=p.textContent.trim().charAt(0); if(pch==='✓'||pch==='○') continue; }
+      out.push(d);
     }
-    return tEl;
+    return out;
   }
 
-  /* ─── DIAGNOSTIC panel (visible without console) ─── */
-  function updateDiag(tr, taskRows, lk){
-    var p=getOrCreate('_dcDiag');
-    var colR=document.getElementById(COL_ID)?document.getElementById(COL_ID).getBoundingClientRect():null;
+  /* ─── Extract task title from row textContent ─── */
+  function rowTitle(rowEl){
+    var txt=rowEl.textContent.trim();
+    txt=txt.replace(/^[✓○]\s*/,''); /* strip ✓/○ prefix */
+    txt=txt.replace(/\s+[A-Z]{1,3}$/,'').trim(); /* strip avatar initials */
+    return txt;
+  }
+
+  /* ─── IndexedDB: read all tasks from epilot_chantier_v2 ───
+     Each chantier record has: { tasks:[{id,title,start,end,progress,phase}] }
+     start/end are ISO date strings (YYYY-MM-DD). ─── */
+  function buildLkFromIDB(cb){
+    try{
+      var req=indexedDB.open('epilot_chantier_v2');
+      req.onsuccess=function(e){
+        var db=e.target.result;
+        if(!db.objectStoreNames.contains('chantiers')){ db.close(); cb({}); return; }
+        var tx=db.transaction('chantiers','readonly');
+        var allReq=tx.objectStore('chantiers').getAll();
+        allReq.onsuccess=function(){
+          db.close();
+          var lk={};
+          (allReq.result||[]).forEach(function(ch){
+            (ch.tasks||[]).forEach(function(t){
+              if(t.title) lk[t.title]={d:t.start||'',f:t.end||''};
+            });
+          });
+          cb(lk);
+        };
+        allReq.onerror=function(){ db.close(); cb({}); };
+      };
+      req.onerror=function(){ cb({}); };
+    }catch(e){ cb({}); }
+  }
+
+  /* ─── Match title to lookup (exact then substring) ─── */
+  function findInfo(lk,title){
+    if(!title) return null;
+    if(lk[title]) return lk[title];
+    var keys=Object.keys(lk);
+    for(var i=0;i<keys.length;i++){
+      var k=keys[i];
+      if(k.indexOf(title)>=0||title.indexOf(k)>=0) return lk[k];
+    }
+    return null;
+  }
+
+  /* ─── Diagnostic panel ─── */
+  function updateDiag(info){
+    var p=getOrCreate(DIAG_ID);
     p.style.cssText='position:fixed;bottom:50px;right:8px;z-index:2147483646;'+
       'background:rgba(0,0,0,.82);color:#0f0;font:9px/1.5 monospace;'+
-      'padding:5px 7px;border-radius:5px;white-space:pre;pointer-events:none;min-width:210px;';
+      'padding:5px 7px;border-radius:5px;white-space:pre;pointer-events:none;min-width:180px;';
     p.textContent=[
-      '── DC v11 diag ──',
-      'TR found: '+(taskRows?'YES ('+taskRows.children.length+' rows)':'NO'),
-      taskRows?'TR rect: '+Math.round(tr.left)+','+Math.round(tr.top)+' '+Math.round(tr.width)+'×'+Math.round(tr.height):'',
-      taskRows?'TR offPar: '+(taskRows.offsetParent?'ok':'NULL←hidden?'):'',
-      'lk tasks: '+Object.keys(lk).length,
-      'col: '+(colR?Math.round(colR.left)+','+Math.round(colR.top)+' '+Math.round(colR.width)+'×'+Math.round(colR.height):'none'),
-    ].filter(Boolean).join('\n');
+      '── DC v12 diag ──',
+      'LC: '+(info.lc?'YES ('+Math.round(info.lcW)+'×'+Math.round(info.lcH)+')':'NO'),
+      'rows: '+info.rows,
+      'lk: '+info.lkSize,
+      'col: '+(info.colOk?'OK':'none'),
+    ].join('\n');
   }
 
-  /* ─── Body column overlay ─── */
-  function injectBody(taskRows,lk){
-    var rows=taskRows.children;
-    var tr=taskRows.getBoundingClientRect();
-    if(!rows.length||taskRows.offsetParent===null||tr.width===0||tr.height===0){
-      hideEl(COL_ID); return;
-    }
+  /* ─── Body overlay ─── */
+  function injectBody(lc,lk){
+    var lcRect=lc.col.getBoundingClientRect();
+    if(!lcRect||lcRect.width<10||lcRect.height<10){ hideEl(COL_ID); return; }
+    var rows=findTaskRowEls(lc.col);
+    if(!rows.length){ hideEl(COL_ID); return; }
 
     var col=getOrCreate(COL_ID);
     col.style.cssText=
-      'position:fixed;z-index:9990;pointer-events:none;display:flex;flex-direction:column;'+
-      'left:'+Math.round(tr.right)+'px;top:'+Math.round(tr.top)+'px;'+
-      'width:'+(CW*2)+'px;height:'+Math.round(tr.height)+'px;'+
-      'overflow:hidden;background:#fff;'+
-      'border-left:2px solid #3498db;border-right:2px solid #adb5bd;'+
-      'box-shadow:3px 0 8px rgba(0,0,0,.2);box-sizing:border-box;';
+      'position:fixed;z-index:9995;overflow:hidden;box-sizing:border-box;pointer-events:none;'+
+      'left:'+Math.round(lcRect.right)+'px;top:'+Math.round(lcRect.top)+'px;'+
+      'width:'+(CW*2)+'px;height:'+Math.round(lcRect.height)+'px;'+
+      'background:#fff;border-left:2px solid #3498db;border-right:1px solid #dee2e6;'+
+      'box-shadow:4px 0 10px rgba(0,0,0,.18);';
+    col.innerHTML='';
 
-    var inner=document.createElement('div');
-    inner.setAttribute('data-dc-inner','1');
-    inner.style.cssText='display:flex;flex-direction:column;will-change:transform;'+
-      'transform:translateY(-'+taskRows.scrollTop+'px);';
-
-    var names=Object.keys(lk).sort(function(a,b){return b.length-a.length;});
-    for(var i=0;i<rows.length;i++){
-      var row=rows[i], h=row.offsetHeight||36;
+    rows.forEach(function(row){
+      var rRect=row.getBoundingClientRect();
+      var relTop=rRect.top-lcRect.top;
       var cell=document.createElement('div');
-      cell.style.cssText='display:flex;height:'+h+'px;border-bottom:1px solid #f0f2f4;'+
-        'flex-shrink:0;align-items:center;background:#fff;';
-      var info=null, rText=row.textContent;
-      for(var n=0;n<names.length;n++){if(rText.indexOf(names[n])>-1){info=lk[names[n]];break;}}
+      cell.style.cssText=
+        'position:absolute;display:flex;align-items:center;left:0;'+
+        'top:'+Math.round(relTop)+'px;width:100%;height:'+Math.round(rRect.height)+'px;'+
+        'border-bottom:1px solid #eef0f3;box-sizing:border-box;';
+      var title=rowTitle(row);
+      var info=findInfo(lk,title);
       var sd=document.createElement('span'); sd.style.cssText=cellSt;
       var sf=document.createElement('span'); sf.style.cssText=cellSt;
-      if(info){sd.textContent=fmt(info.d);sf.textContent=fmt(info.f);}
+      if(info){ sd.textContent=fmt(info.d); sf.textContent=fmt(info.f); }
+      else { sd.textContent='–'; sf.textContent='–'; sd.style.color='#bbb'; sf.style.color='#bbb'; }
       cell.appendChild(sd); cell.appendChild(sf);
-      inner.appendChild(cell);
-    }
-    col.innerHTML='';
-    col.appendChild(inner);
-
-    if(!taskRows._dcScroll){
-      taskRows._dcScroll=1;
-      taskRows.addEventListener('scroll',function(){
-        var c=document.getElementById(COL_ID); if(!c) return;
-        var inn=c.querySelector('[data-dc-inner]');
-        if(inn) inn.style.transform='translateY(-'+taskRows.scrollTop+'px)';
-        var r=taskRows.getBoundingClientRect();
-        c.style.left=Math.round(r.right)+'px';
-        c.style.top=Math.round(r.top)+'px';
-        c.style.height=Math.round(r.height)+'px';
-      },{passive:true});
-    }
-    return tr;
+      col.appendChild(cell);
+    });
   }
 
   /* ─── Header overlay ─── */
-  function injectHdr(taskRows){
-    var tc=findTacheCell(taskRows.offsetWidth);
-    if(!tc){ hideEl(HDR_ID); return; }
-    var tR=tc.getBoundingClientRect();
-    if(tR.width===0||tR.height===0){ hideEl(HDR_ID); return; }
+  function injectHdr(lc){
+    if(!lc||!lc.hdr){ hideEl(HDR_ID); return; }
+    var hRect=lc.hdr.getBoundingClientRect();
+    if(!hRect||hRect.width<10){ hideEl(HDR_ID); return; }
     var hdr=getOrCreate(HDR_ID);
     hdr.style.cssText=
-      'position:fixed;z-index:9991;pointer-events:none;display:flex;align-items:center;'+
-      'left:'+Math.round(tR.right)+'px;top:'+Math.round(tR.top)+'px;'+
-      'width:'+(CW*2)+'px;height:'+Math.round(tR.height)+'px;'+
-      'background:#eef2f7;border-left:2px solid #3498db;border-right:2px solid #adb5bd;'+
-      'box-shadow:3px 0 8px rgba(0,0,0,.2);box-sizing:border-box;';
+      'position:fixed;z-index:9996;display:flex;align-items:center;pointer-events:none;box-sizing:border-box;'+
+      'left:'+Math.round(hRect.right)+'px;top:'+Math.round(hRect.top)+'px;'+
+      'width:'+(CW*2)+'px;height:'+Math.round(hRect.height)+'px;'+
+      'background:#f0f4fa;border-left:2px solid #3498db;border-right:1px solid #dee2e6;'+
+      'box-shadow:4px 0 10px rgba(0,0,0,.18);';
     hdr.innerHTML='';
-    var hd=document.createElement('div');hd.style.cssText=hdrSt;hd.textContent='Date Début';
-    var hf=document.createElement('div');hf.style.cssText=hdrSt;hf.textContent='Date Fin';
-    hdr.appendChild(hd);hdr.appendChild(hf);
+    var hd=document.createElement('div'); hd.style.cssText=hdrSt; hd.textContent='Date Début';
+    var hf=document.createElement('div'); hf.style.cssText=hdrSt; hf.textContent='Date Fin';
+    hdr.appendChild(hd); hdr.appendChild(hf);
   }
 
-  /* ─── Reposition ─── */
+  /* ─── Reposition existing overlays ─── */
   function reposition(){
-    var taskRows=document.getElementById('jip-taskRows');
-    if(!taskRows||taskRows.offsetParent===null){ hideEl(COL_ID);hideEl(HDR_ID);return; }
-    var tr=taskRows.getBoundingClientRect();
-    var col=document.getElementById(COL_ID);
-    if(col){ col.style.left=Math.round(tr.right)+'px'; col.style.top=Math.round(tr.top)+'px'; col.style.height=Math.round(tr.height)+'px'; }
-    var tc=findTacheCell(taskRows.offsetWidth);
-    if(tc){
-      var tR=tc.getBoundingClientRect();
-      var hdr=document.getElementById(HDR_ID);
-      if(hdr){ hdr.style.left=Math.round(tR.right)+'px'; hdr.style.top=Math.round(tR.top)+'px'; hdr.style.height=Math.round(tR.height)+'px'; }
-    }
+    var lc=findLabelCol(); if(!lc){ hideEl(COL_ID); hideEl(HDR_ID); return; }
+    var lcRect=lc.col.getBoundingClientRect();
+    var c=document.getElementById(COL_ID);
+    if(c){ c.style.left=Math.round(lcRect.right)+'px'; c.style.top=Math.round(lcRect.top)+'px'; c.style.height=Math.round(lcRect.height)+'px'; }
+    var hRect=lc.hdr.getBoundingClientRect();
+    var h=document.getElementById(HDR_ID);
+    if(h){ h.style.left=Math.round(hRect.right)+'px'; h.style.top=Math.round(hRect.top)+'px'; h.style.height=Math.round(hRect.height)+'px'; }
   }
 
   /* ─── Main inject ─── */
+  var _lk={};
   function inject(){
-    var taskRows=document.getElementById('jip-taskRows');
-    var lk=buildLk();
-    var tr=taskRows?taskRows.getBoundingClientRect():{width:0,height:0,left:0,top:0,right:0};
-    window.__dcStatus={v:11,taskRowsFound:!!taskRows,taskRowsKids:taskRows?taskRows.children.length:0,
-      taskRowsRect:taskRows?[Math.round(tr.left),Math.round(tr.top),Math.round(tr.width),Math.round(tr.height)]:null,
-      colExists:!!document.getElementById(COL_ID),lkSize:Object.keys(lk).length,
-      t:new Date().toISOString().slice(11,19)};
-    updateDiag(tr,taskRows,lk);
-    if(!taskRows||!taskRows.children.length) return;
-    injectBody(taskRows,lk);
-    injectHdr(taskRows);
+    var lc=findLabelCol();
+    var lcRect=lc?lc.col.getBoundingClientRect():{width:0,height:0};
+    var rows=lc?findTaskRowEls(lc.col):[];
+    updateDiag({lc:!!lc,lcW:lcRect.width,lcH:lcRect.height,rows:rows.length,lkSize:Object.keys(_lk).length,colOk:!!document.getElementById(COL_ID)});
+    if(!lc){ hideEl(COL_ID); hideEl(HDR_ID); return; }
+    injectBody(lc,_lk);
+    injectHdr(lc);
   }
 
-  /* ─── MO ─── */
-  var _bmo=new MutationObserver(function(){
-    if(document.getElementById('jip-taskRows')){clearTimeout(_bmo._t);_bmo._t=setTimeout(inject,80);}
-  });
-  _bmo.observe(document.body,{childList:true,subtree:true});
-  window.addEventListener('scroll',reposition,{passive:true});
-  window.addEventListener('resize',function(){clearTimeout(window._dcRT);window._dcRT=setTimeout(function(){inject();reposition();},150);},{passive:true});
+  /* Load task data from IndexedDB once */
+  buildLkFromIDB(function(lk){ _lk=lk; inject(); });
 
   /* ─── Badge alive ─── */
   function ensureBadge(){
     if(document.getElementById('_dcBadgeSt')) return;
     var st=document.createElement('style');
     st.id='_dcBadgeSt';
-    st.textContent='body::after{content:"DC v11 ✓";position:fixed;bottom:8px;right:8px;z-index:2147483647;'+
+    st.textContent='body::after{content:"DC v12 ✓";position:fixed;bottom:8px;right:8px;z-index:2147483647;'+
       'background:#c0392b;color:#fff;font:bold 11px/1 monospace;padding:4px 10px;border-radius:4px;'+
       'pointer-events:none;box-shadow:0 2px 8px rgba(0,0,0,.4);}';
     (document.head||document.body||document.documentElement).appendChild(st);
   }
 
-  /* ─── Poll ─── */
+  /* ─── Poll: 20×300ms then every 2s ─── */
   var _pt=0;
   (function poll(){
     ensureBadge(); inject();
     _pt++;
     if(_pt<20) setTimeout(poll,300);
-    else setInterval(function(){ensureBadge();inject();},2000);
+    else setInterval(function(){ ensureBadge(); inject(); },2000);
   })();
 
+  window.addEventListener('scroll',reposition,{passive:true});
+  window.addEventListener('resize',function(){ clearTimeout(window._dcRT); window._dcRT=setTimeout(function(){ inject(); },150); },{passive:true});
   window.__injectDateCols=inject;
 })();
 </script>
