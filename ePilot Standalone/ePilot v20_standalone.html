@@ -6926,20 +6926,24 @@ html body[class] #vac-gantt td.emp .nm{font-weight:500 !important;}</style>
            <div style="height:30px;...">✓ task title</div>
      ─── */
   function findLabelCol(){
+    /* DOM structure (PlanningPro JSX):
+         <div style="position:sticky;width:230px;...">  ← LABEL COL  (el.parentElement)
+           <div style="height:34px;textTransform:uppercase">Tâche</div>  ← HEADER  (el)
+           <div>  ← phase groups …
+       el = leaf "Tâche" div → el.parentElement = sticky label col */
     var all=document.querySelectorAll('div,span');
     for(var i=0;i<all.length;i++){
       var el=all[i];
       if(el.children.length>0) continue;
       var t=el.textContent.trim();
-      /* textContent is "Tâche"; CSS text-transform:uppercase makes it look like "TÂCHE" */
-      if(t!=='Tâche') continue;
-      var hdrDiv=el.parentElement; if(!hdrDiv) continue;
-      var col=hdrDiv.parentElement; if(!col) continue;
-      var cs=window.getComputedStyle(col);
-      if(cs.position==='sticky') return {col:col, hdr:hdrDiv};
-      /* fallback: walk up one more */
-      var col2=col.parentElement;
-      if(col2){var cs2=window.getComputedStyle(col2); if(cs2.position==='sticky') return {col:col2, hdr:hdrDiv};}
+      if(t!=='Tâche') continue;          /* textContent; CSS uppercases it visually */
+      var labelCol=el.parentElement; if(!labelCol) continue;
+      /* Verify it really is the sticky container */
+      var cs=window.getComputedStyle(labelCol);
+      if(cs.position==='sticky') return {col:labelCol, hdr:el};
+      /* Fallback: try one level up (in case an extra wrapper exists) */
+      var p2=labelCol.parentElement;
+      if(p2&&window.getComputedStyle(p2).position==='sticky') return {col:p2, hdr:el};
     }
     return null;
   }
