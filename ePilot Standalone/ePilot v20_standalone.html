@@ -7126,8 +7126,9 @@ html body[class] #vac-gantt td.emp .nm{font-weight:500 !important;}</style>
   }
 
   function updatePlanningButtons(){
-    /* Create buttons once, appended to body – React never touches body-level elements */
-    if(!_planBtns){
+    /* Create (or re-create if bundler replaced the body) buttons appended to body */
+    if(!_planBtns || !document.body.contains(_planBtns.pb)){
+      _planBtns=null;
       var PICO='<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">'+
         '<polyline points="6 9 6 2 18 2 18 9"/>'+
         '<path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/>'+
@@ -7139,15 +7140,36 @@ html body[class] #vac-gantt td.emp .nm{font-weight:500 !important;}</style>
         pb: _mkBtn('_dcPrintBtn', PICO+' Imprimer', printPlanning),
         eb: _mkBtn('_dcEmailBtn', EICO+' Email',    copyEmailTable)
       };
-      /* Fixed position: top-right corner, below the nav tabs – no anchor needed */
-      _planBtns.pb.style.top='130px'; _planBtns.pb.style.right='220px';
-      _planBtns.eb.style.top='130px'; _planBtns.eb.style.right='116px';
     }
 
-    /* Show only when Planning tab is visible */
-    var vis=!!findLabelCol();
-    _planBtns.pb.style.display=vis?'inline-flex':'none';
-    _planBtns.eb.style.display=vis?'inline-flex':'none';
+    /* Hide when Planning is not visible */
+    if(!findLabelCol()){
+      _planBtns.pb.style.display='none';
+      _planBtns.eb.style.display='none';
+      return;
+    }
+
+    /* Find the "Semaine" button to get the exact toolbar Y position */
+    var toolbarTop=170; /* fallback if not found */
+    var allBtns=document.querySelectorAll('button');
+    for(var i=0;i<allBtns.length;i++){
+      var bt=allBtns[i];
+      if(bt===_planBtns.pb||bt===_planBtns.eb) continue;
+      var txt=bt.textContent.trim();
+      if(txt==='Semaine'||txt==='Mois'||txt==='Semestre'){
+        var r=bt.getBoundingClientRect();
+        if(r.height>0){ toolbarTop=r.top; break; }
+      }
+    }
+
+    _planBtns.pb.style.display='inline-flex';
+    _planBtns.eb.style.display='inline-flex';
+    _planBtns.pb.style.top=toolbarTop+'px';
+    _planBtns.eb.style.top=toolbarTop+'px';
+    /* Place to the left of the right edge, side by side */
+    var ebW=_planBtns.eb.offsetWidth||84;
+    _planBtns.eb.style.right='20px';
+    _planBtns.pb.style.right=(20+ebW+8)+'px';
   }
 
   /* ─── MutationObserver: re-inject when React re-renders the sticky col ─── */
