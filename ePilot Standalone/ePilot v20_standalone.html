@@ -7092,16 +7092,31 @@ html body[class] #vac-gantt td.emp .nm{font-weight:500 !important;}</style>
   }
 
   /* ─── Main inject ─── */
-  var _lk={};
+  var _lk={}, _lcFound=false;
   function inject(){
     var lc=findLabelCol();
     var lcRect=lc?lc.col.getBoundingClientRect():{width:0,height:0};
     var rows=lc?findTaskRowEls(lc.col):[];
     updateDiag({lc:!!lc,lcW:lcRect.width,lcH:lcRect.height,rows:rows.length,lkSize:Object.keys(_lk).length});
+    _lcFound=!!lc;
     if(!lc) return;
     /* Start MO if label col changed */
     if(!_mo||_moTarget!==lc.col) startMO(lc.col);
     injectIntoSticky(lc,_lk);
+  }
+
+  /* Hook clicks on the Planning tab so injection is immediate */
+  function hookPlanningTab(){
+    document.querySelectorAll('a,button,[role="tab"]').forEach(function(el){
+      if(el.__dcTabHooked) return;
+      if(el.textContent.trim().indexOf('Planning')<0) return;
+      el.__dcTabHooked=true;
+      el.addEventListener('click',function(){
+        [80,200,450,900].forEach(function(ms){
+          setTimeout(function(){ inject(); },ms);
+        });
+      },{passive:true});
+    });
   }
 
   /* Load task data; refresh every 5s */
@@ -7122,13 +7137,11 @@ html body[class] #vac-gantt td.emp .nm{font-weight:500 !important;}</style>
     (document.head||document.body||document.documentElement).appendChild(st);
   }
 
-  /* ─── Poll: 20×300ms then every 2s ─── */
-  var _pt=0;
+  /* ─── Adaptive poll: 150ms when Planning not visible, 1.5s when visible ─── */
   (function poll(){
-    ensureBadge(); hookSaveOps(); inject();
-    _pt++;
-    if(_pt<20) setTimeout(poll,300);
-    else setInterval(function(){ ensureBadge(); hookSaveOps(); inject(); },2000);
+    ensureBadge(); hookSaveOps(); hookPlanningTab(); inject();
+    /* Poll faster when Planning isn't rendered yet (no label col found) */
+    setTimeout(poll, _lcFound ? 1500 : 150);
   })();
 
   window.addEventListener('resize',function(){ clearTimeout(window._dcRT); window._dcRT=setTimeout(inject,150); },{passive:true});
