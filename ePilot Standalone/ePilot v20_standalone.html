@@ -6882,15 +6882,15 @@ html body[class] #vac-gantt td.emp .nm{font-weight:500 !important;}</style>
      PLANNING — Colonnes Date début / Date fin dans le Gantt
      ═══════════════════════════════════════════════════════════════ -->
 <script id="__PLANNING_DATE_COLS_v1__">
-/* ePilot date-cols v10 – position:fixed overlay at body level (immune to React) */
+/* ePilot date-cols v11 – diagnostic + position:fixed overlay */
 (function(){
   if(window.__dcInjected) return; window.__dcInjected = 1;
 
   /* ── DEBUG BADGE ── */
   var _bst = document.createElement('style');
   _bst.id = '_dcBadgeSt';
-  _bst.textContent = 'body::after{content:"DC v10 ✓";position:fixed;bottom:8px;right:8px;z-index:2147483647;' +
-    'background:#8e44ad;color:#fff;font:bold 11px/1 monospace;padding:4px 10px;border-radius:4px;' +
+  _bst.textContent = 'body::after{content:"DC v11 ✓";position:fixed;bottom:8px;right:8px;z-index:2147483647;' +
+    'background:#c0392b;color:#fff;font:bold 11px/1 monospace;padding:4px 10px;border-radius:4px;' +
     'pointer-events:none;box-shadow:0 2px 8px rgba(0,0,0,.4);}';
   (document.head || document.documentElement).appendChild(_bst);
 
@@ -6901,9 +6901,9 @@ html body[class] #vac-gantt td.emp .nm{font-weight:500 !important;}</style>
   /* ─── Data helpers ─── */
   function getAllTasks(){
     try{
-      var a = JSON.parse(localStorage.getItem(STORE_KEY) || '{}');
-      var ks = Object.keys(a);
-      return ks.length ? (a[ks[ks.length-1]].taches || []) : [];
+      var a=JSON.parse(localStorage.getItem(STORE_KEY)||'{}');
+      var ks=Object.keys(a);
+      return ks.length?(a[ks[ks.length-1]].taches||[]):[];
     }catch(e){ return []; }
   }
   function addWD(s,n){
@@ -6927,32 +6927,24 @@ html body[class] #vac-gantt td.emp .nm{font-weight:500 !important;}</style>
     'width:'+CW+'px;flex-shrink:0;border-right:1px solid #dee2e6;'+
     'white-space:nowrap;box-sizing:border-box;';
 
-  /* ─── Overlay helpers – elements live at body level, outside React ─── */
+  /* ─── Helpers ─── */
   function getOrCreate(id){
     var el=document.getElementById(id);
     if(!el){ el=document.createElement('div'); el.id=id; el.setAttribute('data-dc','1'); document.body.appendChild(el); }
     return el;
   }
-  function hideOverlay(id){ var el=document.getElementById(id); if(el) el.style.display='none'; }
+  function hideEl(id){ var el=document.getElementById(id); if(el) el.style.display='none'; }
 
-  /* ─── Find TÂCHE text leaf ─── */
   function findTacheEl(){
     var all=document.querySelectorAll('div,span,th');
     for(var i=0;i<all.length;i++){
       var el=all[i];
-      if(el.children.length===0){
-        var t=el.textContent.trim();
-        if(t==='TÂCHE'||t==='Tâche'||t==='TACHE') return el;
-      }
+      if(el.children.length===0){var t=el.textContent.trim(); if(t==='TÂCHE'||t==='Tâche'||t==='TACHE') return el;}
     }
     return null;
   }
-
-  /* Walk up from tEl until we find a container whose width ≥ 80% of taskRows width
-     (that is the TÂCHE column header cell) */
-  function findTacheCell(taskRows){
+  function findTacheCell(tw){
     var tEl=findTacheEl(); if(!tEl) return null;
-    var tw=taskRows.offsetWidth;
     var cur=tEl;
     for(var k=0;k<12;k++){
       if(!cur||cur===document.body) return tEl;
@@ -6962,45 +6954,62 @@ html body[class] #vac-gantt td.emp .nm{font-weight:500 !important;}</style>
     return tEl;
   }
 
-  /* ─── Body column: position:fixed overlay at body level ─── */
+  /* ─── DIAGNOSTIC panel (visible without console) ─── */
+  function updateDiag(tr, taskRows, lk){
+    var p=getOrCreate('_dcDiag');
+    var colR=document.getElementById(COL_ID)?document.getElementById(COL_ID).getBoundingClientRect():null;
+    p.style.cssText='position:fixed;bottom:50px;right:8px;z-index:2147483646;'+
+      'background:rgba(0,0,0,.82);color:#0f0;font:9px/1.5 monospace;'+
+      'padding:5px 7px;border-radius:5px;white-space:pre;pointer-events:none;min-width:210px;';
+    p.textContent=[
+      '── DC v11 diag ──',
+      'TR found: '+(taskRows?'YES ('+taskRows.children.length+' rows)':'NO'),
+      taskRows?'TR rect: '+Math.round(tr.left)+','+Math.round(tr.top)+' '+Math.round(tr.width)+'×'+Math.round(tr.height):'',
+      taskRows?'TR offPar: '+(taskRows.offsetParent?'ok':'NULL←hidden?'):'',
+      'lk tasks: '+Object.keys(lk).length,
+      'col: '+(colR?Math.round(colR.left)+','+Math.round(colR.top)+' '+Math.round(colR.width)+'×'+Math.round(colR.height):'none'),
+    ].filter(Boolean).join('\n');
+  }
+
+  /* ─── Body column overlay ─── */
   function injectBody(taskRows,lk){
     var rows=taskRows.children;
-    if(!rows.length||taskRows.offsetParent===null){ hideOverlay(COL_ID); return; }
-    var rect=taskRows.getBoundingClientRect();
-    if(rect.width===0||rect.height===0){ hideOverlay(COL_ID); return; }
+    var tr=taskRows.getBoundingClientRect();
+    if(!rows.length||taskRows.offsetParent===null||tr.width===0||tr.height===0){
+      hideEl(COL_ID); return;
+    }
 
     var col=getOrCreate(COL_ID);
     col.style.cssText=
       'position:fixed;z-index:9990;pointer-events:none;display:flex;flex-direction:column;'+
-      'left:'+Math.round(rect.right)+'px;top:'+Math.round(rect.top)+'px;'+
-      'width:'+(CW*2)+'px;height:'+Math.round(rect.height)+'px;'+
+      'left:'+Math.round(tr.right)+'px;top:'+Math.round(tr.top)+'px;'+
+      'width:'+(CW*2)+'px;height:'+Math.round(tr.height)+'px;'+
       'overflow:hidden;background:#fff;'+
-      'border-left:1px solid #dee2e6;border-right:2px solid #adb5bd;'+
-      'box-shadow:2px 0 4px rgba(0,0,0,.12);box-sizing:border-box;';
+      'border-left:2px solid #3498db;border-right:2px solid #adb5bd;'+
+      'box-shadow:3px 0 8px rgba(0,0,0,.2);box-sizing:border-box;';
 
-    /* Inner div for scroll-sync via translateY */
     var inner=document.createElement('div');
     inner.setAttribute('data-dc-inner','1');
-    inner.style.cssText='display:flex;flex-direction:column;transform:translateY(-'+taskRows.scrollTop+'px);';
+    inner.style.cssText='display:flex;flex-direction:column;will-change:transform;'+
+      'transform:translateY(-'+taskRows.scrollTop+'px);';
 
     var names=Object.keys(lk).sort(function(a,b){return b.length-a.length;});
     for(var i=0;i<rows.length;i++){
-      var row=rows[i];
-      var h=row.offsetHeight||36;
+      var row=rows[i], h=row.offsetHeight||36;
       var cell=document.createElement('div');
-      cell.style.cssText='display:flex;height:'+h+'px;border-bottom:1px solid #f0f2f4;flex-shrink:0;align-items:center;';
-      var info=null,rText=row.textContent;
+      cell.style.cssText='display:flex;height:'+h+'px;border-bottom:1px solid #f0f2f4;'+
+        'flex-shrink:0;align-items:center;background:#fff;';
+      var info=null, rText=row.textContent;
       for(var n=0;n<names.length;n++){if(rText.indexOf(names[n])>-1){info=lk[names[n]];break;}}
-      var sd=document.createElement('span');sd.style.cssText=cellSt;
-      var sf=document.createElement('span');sf.style.cssText=cellSt;
+      var sd=document.createElement('span'); sd.style.cssText=cellSt;
+      var sf=document.createElement('span'); sf.style.cssText=cellSt;
       if(info){sd.textContent=fmt(info.d);sf.textContent=fmt(info.f);}
-      cell.appendChild(sd);cell.appendChild(sf);
+      cell.appendChild(sd); cell.appendChild(sf);
       inner.appendChild(cell);
     }
     col.innerHTML='';
     col.appendChild(inner);
 
-    /* Scroll sync: sync inner translateY + reposition overlay */
     if(!taskRows._dcScroll){
       taskRows._dcScroll=1;
       taskRows.addEventListener('scroll',function(){
@@ -7013,98 +7022,81 @@ html body[class] #vac-gantt td.emp .nm{font-weight:500 !important;}</style>
         c.style.height=Math.round(r.height)+'px';
       },{passive:true});
     }
+    return tr;
   }
 
-  /* ─── Header column: position:fixed overlay aligned to TÂCHE cell ─── */
+  /* ─── Header overlay ─── */
   function injectHdr(taskRows){
-    var tCell=findTacheCell(taskRows);
-    if(!tCell){ hideOverlay(HDR_ID); return; }
-    var tRect=tCell.getBoundingClientRect();
-    if(tRect.width===0||tRect.height===0){ hideOverlay(HDR_ID); return; }
-
+    var tc=findTacheCell(taskRows.offsetWidth);
+    if(!tc){ hideEl(HDR_ID); return; }
+    var tR=tc.getBoundingClientRect();
+    if(tR.width===0||tR.height===0){ hideEl(HDR_ID); return; }
     var hdr=getOrCreate(HDR_ID);
     hdr.style.cssText=
       'position:fixed;z-index:9991;pointer-events:none;display:flex;align-items:center;'+
-      'left:'+Math.round(tRect.right)+'px;top:'+Math.round(tRect.top)+'px;'+
-      'width:'+(CW*2)+'px;height:'+Math.round(tRect.height)+'px;'+
-      'background:#f0f4f8;'+
-      'border-left:1px solid #dee2e6;border-right:2px solid #adb5bd;'+
-      'box-shadow:2px 0 4px rgba(0,0,0,.12);box-sizing:border-box;';
+      'left:'+Math.round(tR.right)+'px;top:'+Math.round(tR.top)+'px;'+
+      'width:'+(CW*2)+'px;height:'+Math.round(tR.height)+'px;'+
+      'background:#eef2f7;border-left:2px solid #3498db;border-right:2px solid #adb5bd;'+
+      'box-shadow:3px 0 8px rgba(0,0,0,.2);box-sizing:border-box;';
     hdr.innerHTML='';
     var hd=document.createElement('div');hd.style.cssText=hdrSt;hd.textContent='Date Début';
     var hf=document.createElement('div');hf.style.cssText=hdrSt;hf.textContent='Date Fin';
     hdr.appendChild(hd);hdr.appendChild(hf);
   }
 
-  /* ─── Reposition overlays on window scroll / resize ─── */
+  /* ─── Reposition ─── */
   function reposition(){
     var taskRows=document.getElementById('jip-taskRows');
-    if(!taskRows||taskRows.offsetParent===null){ hideOverlay(COL_ID);hideOverlay(HDR_ID);return; }
-    var rect=taskRows.getBoundingClientRect();
+    if(!taskRows||taskRows.offsetParent===null){ hideEl(COL_ID);hideEl(HDR_ID);return; }
+    var tr=taskRows.getBoundingClientRect();
     var col=document.getElementById(COL_ID);
-    if(col&&col.style.display!=='none'){
-      col.style.left=Math.round(rect.right)+'px';
-      col.style.top=Math.round(rect.top)+'px';
-      col.style.height=Math.round(rect.height)+'px';
-    }
-    var tCell=findTacheCell(taskRows);
-    if(tCell){
-      var tRect=tCell.getBoundingClientRect();
+    if(col){ col.style.left=Math.round(tr.right)+'px'; col.style.top=Math.round(tr.top)+'px'; col.style.height=Math.round(tr.height)+'px'; }
+    var tc=findTacheCell(taskRows.offsetWidth);
+    if(tc){
+      var tR=tc.getBoundingClientRect();
       var hdr=document.getElementById(HDR_ID);
-      if(hdr&&hdr.style.display!=='none'){
-        hdr.style.left=Math.round(tRect.right)+'px';
-        hdr.style.top=Math.round(tRect.top)+'px';
-        hdr.style.height=Math.round(tRect.height)+'px';
-      }
+      if(hdr){ hdr.style.left=Math.round(tR.right)+'px'; hdr.style.top=Math.round(tR.top)+'px'; hdr.style.height=Math.round(tR.height)+'px'; }
     }
   }
 
   /* ─── Main inject ─── */
   function inject(){
     var taskRows=document.getElementById('jip-taskRows');
-    window.__dcStatus={
-      v:10,
-      taskRowsFound:!!taskRows,
-      taskRowsKids:taskRows?taskRows.children.length:0,
-      taskRowsRect:taskRows?(function(r){return[Math.round(r.left),Math.round(r.top),Math.round(r.width),Math.round(r.height)];})(taskRows.getBoundingClientRect()):null,
-      colExists:!!document.getElementById(COL_ID),
-      hdrExists:!!document.getElementById(HDR_ID),
-      lsKeys:Object.keys(JSON.parse(localStorage.getItem(STORE_KEY)||'{}')).length,
-      t:new Date().toISOString().slice(11,19)
-    };
+    var lk=buildLk();
+    var tr=taskRows?taskRows.getBoundingClientRect():{width:0,height:0,left:0,top:0,right:0};
+    window.__dcStatus={v:11,taskRowsFound:!!taskRows,taskRowsKids:taskRows?taskRows.children.length:0,
+      taskRowsRect:taskRows?[Math.round(tr.left),Math.round(tr.top),Math.round(tr.width),Math.round(tr.height)]:null,
+      colExists:!!document.getElementById(COL_ID),lkSize:Object.keys(lk).length,
+      t:new Date().toISOString().slice(11,19)};
+    updateDiag(tr,taskRows,lk);
     if(!taskRows||!taskRows.children.length) return;
-    injectBody(taskRows,buildLk());
+    injectBody(taskRows,lk);
     injectHdr(taskRows);
   }
 
-  /* ─── Body MO: detect Planning tab appearing ─── */
+  /* ─── MO ─── */
   var _bmo=new MutationObserver(function(){
-    if(document.getElementById('jip-taskRows')){
-      clearTimeout(_bmo._t);
-      _bmo._t=setTimeout(inject,80);
-    }
+    if(document.getElementById('jip-taskRows')){clearTimeout(_bmo._t);_bmo._t=setTimeout(inject,80);}
   });
   _bmo.observe(document.body,{childList:true,subtree:true});
-
   window.addEventListener('scroll',reposition,{passive:true});
   window.addEventListener('resize',function(){clearTimeout(window._dcRT);window._dcRT=setTimeout(function(){inject();reposition();},150);},{passive:true});
 
-  /* ─── Keep badge alive ─── */
+  /* ─── Badge alive ─── */
   function ensureBadge(){
     if(document.getElementById('_dcBadgeSt')) return;
     var st=document.createElement('style');
     st.id='_dcBadgeSt';
-    st.textContent='body::after{content:"DC v10 ✓";position:fixed;bottom:8px;right:8px;z-index:2147483647;'+
-      'background:#8e44ad;color:#fff;font:bold 11px/1 monospace;padding:4px 10px;border-radius:4px;'+
+    st.textContent='body::after{content:"DC v11 ✓";position:fixed;bottom:8px;right:8px;z-index:2147483647;'+
+      'background:#c0392b;color:#fff;font:bold 11px/1 monospace;padding:4px 10px;border-radius:4px;'+
       'pointer-events:none;box-shadow:0 2px 8px rgba(0,0,0,.4);}';
     (document.head||document.body||document.documentElement).appendChild(st);
   }
 
-  /* ─── Poll: 20× at 300ms then every 2s ─── */
+  /* ─── Poll ─── */
   var _pt=0;
   (function poll(){
-    ensureBadge();
-    inject();
+    ensureBadge(); inject();
     _pt++;
     if(_pt<20) setTimeout(poll,300);
     else setInterval(function(){ensureBadge();inject();},2000);
