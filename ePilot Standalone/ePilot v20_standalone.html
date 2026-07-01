@@ -6886,17 +6886,8 @@ html body[class] #vac-gantt td.emp .nm{font-weight:500 !important;}</style>
 (function(){
   if(window.__dcInjected) return; window.__dcInjected = 1;
 
-  /* ── DEBUG BADGE ── */
-  var _bst = document.createElement('style');
-  _bst.id = '_dcBadgeSt';
-  _bst.textContent = 'body::after{content:"DC v14 ✓";position:fixed;bottom:8px;right:8px;z-index:2147483647;' +
-    'background:#8e44ad;color:#fff;font:bold 11px/1 monospace;padding:4px 10px;border-radius:4px;' +
-    'pointer-events:none;box-shadow:0 2px 8px rgba(0,0,0,.4);}';
-  (document.head || document.documentElement).appendChild(_bst);
-
   var CW = 100;       /* px per date column */
   var LABEL_W = 230;  /* original sticky col width */
-  var DIAG_ID = '_dcDiag';
 
   /* ─── Date format ─── */
   var _M=['Jan','Fév','Mar','Avr','Mai','Jun','Jul','Aoû','Sep','Oct','Nov','Déc'];
@@ -6909,13 +6900,6 @@ html body[class] #vac-gantt td.emp .nm{font-weight:500 !important;}</style>
   var hdrSt='display:flex;align-items:center;padding:0 6px;font-size:11px;font-weight:700;color:#1a2733;'+
     'width:'+CW+'px;flex-shrink:0;border-right:1px solid #dee2e6;'+
     'white-space:nowrap;box-sizing:border-box;height:100%;';
-
-  /* ─── DOM helper ─── */
-  function getOrCreate(id){
-    var el=document.getElementById(id);
-    if(!el){ el=document.createElement('div'); el.id=id; document.body.appendChild(el); }
-    return el;
-  }
 
   /* ─── Find Planning label column via "Tâche" sticky div ─── */
   function findLabelCol(){
@@ -7005,20 +6989,6 @@ html body[class] #vac-gantt td.emp .nm{font-weight:500 !important;}</style>
     return null;
   }
 
-  /* ─── Diagnostic panel ─── */
-  function updateDiag(info){
-    var p=getOrCreate(DIAG_ID);
-    p.style.cssText='position:fixed;bottom:50px;right:8px;z-index:2147483646;'+
-      'background:rgba(0,0,0,.82);color:#0f0;font:9px/1.5 monospace;'+
-      'padding:5px 7px;border-radius:5px;white-space:pre;pointer-events:none;min-width:180px;';
-    p.textContent=[
-      '── DC v14 diag ──',
-      'LC: '+(info.lc?'YES ('+Math.round(info.lcW)+'×'+Math.round(info.lcH)+')':'NO'),
-      'rows: '+info.rows,
-      'lk: '+info.lkSize,
-    ].join('\n');
-  }
-
   /* ─── MutationObserver: re-inject when React re-renders the sticky col ─── */
   var _mo=null, _moTarget=null;
   function startMO(labelCol){
@@ -7095,9 +7065,6 @@ html body[class] #vac-gantt td.emp .nm{font-weight:500 !important;}</style>
   var _lk={}, _lcFound=false;
   function inject(){
     var lc=findLabelCol();
-    var lcRect=lc?lc.col.getBoundingClientRect():{width:0,height:0};
-    var rows=lc?findTaskRowEls(lc.col):[];
-    updateDiag({lc:!!lc,lcW:lcRect.width,lcH:lcRect.height,rows:rows.length,lkSize:Object.keys(_lk).length});
     _lcFound=!!lc;
     if(!lc) return;
     /* Start MO if label col changed */
@@ -7126,21 +7093,9 @@ html body[class] #vac-gantt td.emp .nm{font-weight:500 !important;}</style>
     buildLkFromConnector(function(lk){ _lk=lk; inject(); });
   },5000);
 
-  /* ─── Badge alive ─── */
-  function ensureBadge(){
-    if(document.getElementById('_dcBadgeSt')) return;
-    var st=document.createElement('style');
-    st.id='_dcBadgeSt';
-    st.textContent='body::after{content:"DC v14 ✓";position:fixed;bottom:8px;right:8px;z-index:2147483647;'+
-      'background:#8e44ad;color:#fff;font:bold 11px/1 monospace;padding:4px 10px;border-radius:4px;'+
-      'pointer-events:none;box-shadow:0 2px 8px rgba(0,0,0,.4);}';
-    (document.head||document.body||document.documentElement).appendChild(st);
-  }
-
   /* ─── Adaptive poll: 150ms when Planning not visible, 1.5s when visible ─── */
   (function poll(){
-    ensureBadge(); hookSaveOps(); hookPlanningTab(); inject();
-    /* Poll faster when Planning isn't rendered yet (no label col found) */
+    hookSaveOps(); hookPlanningTab(); inject();
     setTimeout(poll, _lcFound ? 1500 : 150);
   })();
 
