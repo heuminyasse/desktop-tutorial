@@ -6798,6 +6798,38 @@ class Component extends DCLogic {
     if(devCode)return devCode+'.'+cond;
     return cond;
   }
+  // Numérotation « avec état » des bornes d'un équipement (TE/BD). Un connecteur regroupe un potentiel :
+  // chaque fil qui s'y raccorde occupe une borne court-circuitée distincte, d'où W3.1 puis W3.2, navettes W4.1/W4.2…
+  // Retourne { statutKey: { conducteur: repère } }. Résultat commun aux vues Tableau et Câble.
+  _equipTermMap(el){
+    if(!el||el.id==null)return {};
+    this._tmCache=this._tmCache||{};
+    const tes=this.state.tableauxElec||[];const bds=this.state.boitesDeriv||[];
+    const kind=tes.indexOf(el)>=0?'te':(bds.indexOf(el)>=0?'bd':(bds.some(b=>b.id===el.id)?'bd':'te'));
+    const ckey=kind+':'+el.id;
+    if(this._tmCache[ckey])return this._tmCache[ckey];
+    const d=this._vueCableData(kind,el.id);
+    // Ordre déterministe : d'abord les interrupteurs (sortants), puis les autres récepteurs, puis les entrants.
+    // Ainsi l'interrupteur prend le retour W3.1 et la lampe le W3.2 (bornes court-circuitées du même connecteur).
+    const sortSw=d.sortants.filter(cb=>cb.edit&&cb.edit.type==='inter');
+    const sortOther=d.sortants.filter(cb=>!(cb.edit&&cb.edit.type==='inter'));
+    const ordered=[...sortSw,...sortOther,...d.entrants];
+    const rt=el.raccordType||'connecteur';
+    const map={};
+    if(rt==='bornier'){
+      // Bornier : un repère unique et séquentiel par fil (hors PE), numéroté par bloc d'équipement.
+      const block=this._raccordBlock(el);let n=0;
+      ordered.forEach(cb=>{if(cb.bTel!==el&&cb.bAel!==el)return;const mm=map[cb.statutKey]||{};(cb.conds||[]).forEach(x=>{const cond=x[0];if(cond==='PE'){mm[cond]='PE';return;}mm[cond]='X'+block+'.'+(++n);});map[cb.statutKey]=mm;});
+    } else {
+      // Connecteur / répartiteur : un potentiel par connecteur, une borne (rang) par fil raccordé.
+      const pfx=rt==='repartiteur'?'R':'W';
+      const POT={L:1,L1:1,N:2,NAV:3,Nv:3,CMD:3,NAV1:4,NAV2:5,L2:6,L3:7};
+      const counts={};
+      ordered.forEach(cb=>{if(cb.bTel!==el&&cb.bAel!==el)return;const mm=map[cb.statutKey]||{};(cb.conds||[]).forEach(x=>{const cond=x[0];if(cond==='PE'){mm[cond]='PE';return;}const pot=POT[cond]||1;counts[pot]=(counts[pot]||0)+1;mm[cond]=pfx+pot+'.'+counts[pot];});map[cb.statutKey]=mm;});
+    }
+    this._tmCache[ckey]=map;
+    return map;
+  }
   _vueCableData(kind,id){
     const s=this.state;const entrants=[],sortants=[];
     const teCode=t=>{try{return this.genTECode(t,s);}catch(e){return t.code||('TE'+t.id);}};
@@ -6852,6 +6884,7 @@ class Component extends DCLogic {
   }
   renderVueCable(){
     const s=this.state;const c=this.C;const r=this.r;
+    this._tmCache={};
     const tes=s.tableauxElec||[];const bds=s.boitesDeriv||[];
     const tc=t=>{try{return this.genTECode(t,s);}catch(e){return t.code||('TE'+t.id);}};
     const bc=b=>{try{return this.genBDCode(b,s);}catch(e){return b.nom||('BD'+b.id);}};
@@ -6864,12 +6897,13 @@ class Component extends DCLogic {
     const data={entrants:datas.flatMap(d=>d.data.entrants),sortants:datas.flatMap(d=>d.data.sortants)};
     const filt=s.vueCableFilter||'all';
     const fmatch=cb=>filt==='all'||((s.poseStatuts||{})[cb.statutKey]||'')===filt;
+    const endB=(cond,el,devCode,cab,condKeys)=>{if(cond==='PE')return 'PE';if(el){const m=this._equipTermMap(el)[cab.statutKey];if(m&&m[cond]!=null)return m[cond];return this._borneOf(el,cond,condKeys);}if(devCode)return devCode+'.'+cond;return cond;};
     const bars=(cab)=>{const condKeys=(cab.conds||[]).map(x=>x[0]);return r('div',{style:{display:'flex',flexDirection:'column',gap:2,flex:1,minWidth:150}},...(cab.conds||[]).map((x,k)=>r('div',{key:k,style:{display:'flex',alignItems:'center',gap:4}},
-      r('span',{style:{fontSize:7,color:c.muted,fontFamily:c.mono,minWidth:40,textAlign:'right'}},this._endBorne(x[0],cab.bTel,cab.borneT,condKeys)),
+      r('span',{style:{fontSize:7,color:c.muted,fontFamily:c.mono,minWidth:40,textAlign:'right'}},endB(x[0],cab.bTel,cab.borneT,cab,condKeys)),
       r('span',{style:{width:16,fontSize:8,fontWeight:700,color:x[1]==='grad'?'#43a047':x[1],fontFamily:c.mono}},x[0]),
       r('div',{style:{flex:1,height:4,borderRadius:2,background:x[1]==='grad'?'repeating-linear-gradient(45deg,#43a047 0 4px,#fdd835 4px 8px)':x[1]}}),
       r('span',{style:{fontSize:8,color:c.muted,fontFamily:c.mono,minWidth:28,textAlign:'right'}},cab.sec),
-      r('span',{style:{fontSize:7,color:c.muted,fontFamily:c.mono,minWidth:40}},this._endBorne(x[0],cab.bAel,cab.borneA,condKeys)))));};
+      r('span',{style:{fontSize:7,color:c.muted,fontFamily:c.mono,minWidth:40}},endB(x[0],cab.bAel,cab.borneA,cab,condKeys)))));};
     const endBlk=(code,piece,align)=>r('div',{style:{minWidth:74,maxWidth:140,fontSize:9,textAlign:align,flexShrink:0}},
       r('div',{style:{color:c.text2,fontWeight:600,whiteSpace:'normal',lineHeight:1.25}},code||'—'),
       piece?r('div',{style:{color:c.muted,fontSize:8,fontStyle:'italic'}},piece):null);
@@ -7756,6 +7790,7 @@ class Component extends DCLogic {
       };
 
       // ── Cables d'alimentation des tableaux (source/parent -> TE), comme la Vue Câble ──
+      this._tmCache={};
       const isTriProj=((this.state.project||{}).typeAlim)==='triphase';
       const sourceCables=[];
       this.state.tableauxElec.forEach(te=>{
@@ -7814,6 +7849,8 @@ class Component extends DCLogic {
         const aboutissant=getAboutissant(fn);
         // Élément tenant (pour le code des bornes selon raccordement)
         const fnTenantRef=fn.departType==='boite'&&fn.departId!=null?{kind:'bd',id:fn.departId}:(()=>{const dj=this.state.disjoncteurs.find(d=>(d.recepteurs||[]).includes(fn.ref));const te=dj?this.state.tableauxElec.find(t=>t.id===dj.tableauId):(fn.departType==='tableau'&&fn.departId?this.state.tableauxElec.find(t=>String(t.id)===String(fn.departId)):null);return te?{kind:'te',id:te.id}:null;})();
+        // Clé de câble commune à la Vue Câble (pour la numérotation des bornes avec état)
+        const fnStatutKey=fn.departType==='boite'&&fn.departId!=null?'fn'+fn.id:(()=>{const dj=this.state.disjoncteurs.find(d=>(d.recepteurs||[]).includes(fn.ref));return dj?'dj'+dj.id:null;})();
         const fils=schema.map((s,i)=>{
           const ovrKey=wCode+'_fil'+(i+1);
           const ovr=nomenclatureOverrides[ovrKey]||{};
@@ -7838,7 +7875,7 @@ class Component extends DCLogic {
             conducteur:s.k,
             departType:fn.departType||'',
             departId:fn.departId||null,
-            tenantRef:fnTenantRef,aboutRef:null,
+            tenantRef:fnTenantRef,aboutRef:null,statutKey:fnStatutKey,
             longueur:fn.cableLongueur||0,
             fnPieceId:fn.piece?.id||null,
             fnId:fn.id||null,
@@ -7895,7 +7932,7 @@ class Component extends DCLogic {
               statut:ovr.statut||'',
               fnRef:fn.ref,
               fnType:typeInter,
-              tenantRef:interDeptType==='boite'&&interDeptId!=null?{kind:'bd',id:interDeptId}:(interDeptType==='tableau'&&interDeptId!=null?{kind:'te',id:interDeptId}:null),aboutRef:null,
+              tenantRef:interDeptType==='boite'&&interDeptId!=null?{kind:'bd',id:interDeptId}:(interDeptType==='tableau'&&interDeptId!=null?{kind:'te',id:interDeptId}:null),aboutRef:null,statutKey:'int'+inter.id,
               longueur:ovr.longueur!==undefined?ovr.longueur:(inter.cableLongueur||0),
               fnPieceId:null,fnId:null,interId:inter.id,
             };
@@ -7932,7 +7969,7 @@ class Component extends DCLogic {
               rep:ovr.rep||'',racc:ovr.racc||'',test:ovr.test||'',statut:ovr.statut||'',
               fnRef:null,fnType:'bdfeeder',pieceNom:(this.state.pieces.find(p=>p.id===bd.pieceId)||{}).nom||'',
               conducteur:sx.k,departType:'',departId:null,
-              tenantRef:{kind:'te',id:te.id},aboutRef:{kind:'bd',id:bd.id},
+              tenantRef:{kind:'te',id:te.id},aboutRef:{kind:'bd',id:bd.id},statutKey:'dj'+feedDj.id+'bd'+bd.id,
               longueur:ovr.longueur||0,fnPieceId:null,fnId:null,
             };
           });
@@ -8033,9 +8070,9 @@ class Component extends DCLogic {
                     const tenantEl=elOf(fil.tenantRef)||tenantBD||tenantTE;
                     const aboutEl=elOf(fil.aboutRef);
                     const condKeys=cab.fils.map(f=>f.conducteur||f.bt||'L');
-                    const calcBorne=(el,conducteur)=>this._borneOf(el,conducteur,condKeys);
-                    const borneT=ovr.bt!==undefined?ovr.bt:(fil.fixedBt!==undefined?fil.fixedBt:calcBorne(tenantEl,cond));
-                    const borneA=ovr.ba!==undefined?ovr.ba:(fil.fixedBa!==undefined?fil.fixedBa:(aboutEl?calcBorne(aboutEl,cond):fil.ba));
+                    const termB=(el,conducteur)=>{if(el&&el.id!=null&&fil.statutKey){const m=this._equipTermMap(el)[fil.statutKey];if(m&&m[conducteur]!=null)return m[conducteur];}return this._borneOf(el,conducteur,condKeys);};
+                    const borneT=ovr.bt!==undefined?ovr.bt:(fil.fixedBt!==undefined?fil.fixedBt:termB(tenantEl,cond));
+                    const borneA=ovr.ba!==undefined?ovr.ba:(fil.fixedBa!==undefined?fil.fixedBa:(aboutEl?termB(aboutEl,cond):fil.ba));
                     // Equip T = code de l'element tenant
                     const equipT=tenantBD?this.genBDCode(tenantBD,this.state):tenantTE?this.genTECode(tenantTE,this.state):(fil.tenant||'');
                     // Equip A = code du recepteur (déjà dans aboutissant après —)
