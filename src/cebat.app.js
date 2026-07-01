@@ -4580,7 +4580,7 @@ class Component extends DCLogic {
     // Connecteur / répartiteur : un connecteur PAR potentiel (toutes bornes en court-circuit).
     // W1 = phase, W2 = neutre, W3 = retour, W4 = navette 1, W5 = navette 2, etc.
     const pfx=rt==='repartiteur'?'R':'W';
-    const POT={L:1,L1:1,N:2,NAV:3,Nv:3,CMD:3,NAV1:4,NAV2:5,L2:6,L3:7};
+    const POT={L:1,L1:1,N:2,NAV:3,Nv:3,CMD:3,NAV1:4,NAV2:5,L2:6,L3:7,NAVB:8,'BUS+':9,'BUS-':10};
     return pfx+(POT[conductor]||1)+'.1';
   }
   // Repère de borne pour une extrémité de câble (Vue Câble) : équipement à raccordement, borne d'appareil, ou récepteur.
@@ -4615,7 +4615,7 @@ class Component extends DCLogic {
     } else {
       // Connecteur / répartiteur : un potentiel par connecteur, une borne (rang) par fil raccordé.
       const pfx=rt==='repartiteur'?'R':'W';
-      const POT={L:1,L1:1,N:2,NAV:3,Nv:3,CMD:3,NAV1:4,NAV2:5,L2:6,L3:7};
+      const POT={L:1,L1:1,N:2,NAV:3,Nv:3,CMD:3,NAV1:4,NAV2:5,L2:6,L3:7,NAVB:8,'BUS+':9,'BUS-':10};
       const counts={};
       ordered.forEach(cb=>{if(cb.bTel!==el&&cb.bAel!==el)return;const mm=map[cb.statutKey]||{};(cb.conds||[]).forEach(x=>{const cond=x[0];if(cond==='PE'){mm[cond]='PE';return;}const pot=POT[cond]||1;counts[pot]=(counts[pot]||0)+1;mm[cond]=pfx+pot+'.'+counts[pot];});map[cb.statutKey]=mm;});
     }
@@ -4657,7 +4657,7 @@ class Component extends DCLogic {
         let wc='';try{wc=this.genCableCBCode(d,s);}catch(e){wc=d.code||'';}
         entrants.push({wcode:wc,from:teCode(te)+(d.code?' '+d.code:''),to:center.code,conds:this._condsFor(this._poles(d)),sec:(d.section||'1.5')+'mm²',bornes:'',bTel:te,bAel:bd,borneT:'',borneA:'',pieceT:((s.pieces||[]).find(p=>p.id===te.pieceId)||{}).nom||'',pieceA:bdPiece,edit:{type:'dj',id:d.id},statutKey:'dj'+d.id+'bd'+bd.id});
       });
-      const _NAV=['NAV','#7c3aed'],_L=['L','#6d4c41'],_N=['N','#42a5f5'],_PE=['PE','grad'],_NAV1=['NAV1','#f59e0b'],_NAV2=['NAV2','#ec4899'];
+      const _NAV=['NAV','#7c3aed'],_L=['L','#6d4c41'],_N=['N','#42a5f5'],_PE=['PE','grad'],_NAV1=['NAV1','#f59e0b'],_NAV2=['NAV2','#ec4899'],_NAVB=['NAVB','#c2185b'],_BUSA=['BUS+','#d32f2f'],_BUSB=['BUS-','#212121'];
       (s.pieces||[]).forEach(p=>(p.fonctions||[]).forEach(fn=>{if(fn.departType==='boite'&&String(fn.departId)===String(bd.id)){const fi=this.FNS[fn.type]||{};
         const fnCmds=(s.interrupteurs||[]).filter(it=>it.circuitRef===fn.ref&&((it.departType||fn.departType)==='boite')&&String(it.departId!=null?it.departId:fn.departId)===String(bd.id));
         const lampConds=fn.type==='eclairage'&&fnCmds.length?[_NAV,_N,_PE]:this._condsFor(1);
@@ -4666,9 +4666,14 @@ class Component extends DCLogic {
         const pushSw=(it,condsI)=>{let ic='';try{ic=this.genInterCode(it,s);}catch(e){ic=it.nom||'SA';}const itp=it.pieceId?(((s.pieces||[]).find(x=>x.id===it.pieceId)||{}).nom||''):(p.nom||'');sortants.push({wcode:ic,from:center.code,to:ic+(it.nom?' — '+it.nom:''),conds:condsI,sec:'1.5mm²',bornes:ic,bTel:bd,bAel:null,borneT:'',borneA:'',pieceT:bdPiece,pieceA:itp,edit:{type:'inter',id:it.id},statutKey:'int'+it.id});};
         // Va-et-vient : 1er inter = phase + 2 navettes ; suivants = retour + 2 navettes (navettes partagées W4/W5, pas de PE)
         vvCmds.forEach((it,idx)=>pushSw(it,idx===0?[_L,_NAV1,_NAV2]:[_NAV,_NAV1,_NAV2]));
-        // Variateur : phase + neutre + retour + PE ; domotique (KNX) : bus ; simple / poussoir / double : phase + retour + PE
-        const _BUS=['CMD','#0891b2'];
-        otherCmds.forEach(it=>pushSw(it,it.type==='variateur'?[_L,_N,_NAV,_PE]:it.type==='domotique'?[_BUS]:[_L,_NAV,_PE]));
+        // Variateur : phase + neutre + retour + PE ; domotique (KNX) : bus 2 fils (+/−) ;
+        // double allumage : phase commune + 2 retours SÉPARÉS (connecteurs distincts W3/W8, circuits indépendants) + PE ;
+        // simple / poussoir : phase + retour + PE
+        otherCmds.forEach(it=>pushSw(it,
+          it.type==='variateur'?[_L,_N,_NAV,_PE]:
+          it.type==='domotique'?[_BUSA,_BUSB]:
+          it.type==='double'?[_L,_NAV,_NAVB,_PE]:
+          [_L,_NAV,_PE]));
       }}));
       return{entrants,sortants,center};
     }
@@ -4738,11 +4743,11 @@ class Component extends DCLogic {
         r('span',{style:{fontWeight:700,color:c.text2,textTransform:'uppercase',letterSpacing:'.04em'}},'Repères bornes'),
         r('span',null,r('b',{style:{color:c.text2}},'Bornier'),' X{bloc}.{fil} — X1 tableau, X2 boîte…'),
         r('span',{style:{color:c.bdr2}},'│'),
-        r('span',null,r('b',{style:{color:c.text2}},'Connecteur'),' W1 phase · W2 neutre · W3 retour · W4/W5 navettes — bornes court-circuitées : W3.1 puis W3.2…'),
+        r('span',null,r('b',{style:{color:c.text2}},'Connecteur'),' W1 phase · W2 neutre · W3 retour · W4/W5 navettes · W8 retour 2 (double) · W9/W10 bus KNX — bornes court-circuitées : W3.1 puis W3.2…'),
         r('span',{style:{color:c.bdr2}},'│'),
         r('span',null,r('b',{style:{color:c.text2}},'PE'),' commun (sans repère)'),
         r('span',{style:{color:c.bdr2}},'│'),
-        ...[['Phase','#6d4c41'],['Neutre','#42a5f5'],['Retour','#7c3aed'],['Nav.1','#f59e0b'],['Nav.2','#ec4899'],['Terre','#43a047']].map(x=>r('span',{key:x[0],style:{display:'inline-flex',alignItems:'center',gap:3}},r('span',{style:{width:8,height:8,borderRadius:2,background:x[1],display:'inline-block'}}),x[0]))),
+        ...[['Phase','#6d4c41'],['Neutre','#42a5f5'],['Retour','#7c3aed'],['Retour 2','#c2185b'],['Nav.1','#f59e0b'],['Nav.2','#ec4899'],['Bus+','#d32f2f'],['Bus−','#212121'],['Terre','#43a047']].map(x=>r('span',{key:x[0],style:{display:'inline-flex',alignItems:'center',gap:3}},r('span',{style:{width:8,height:8,borderRadius:2,background:x[1],display:'inline-block'}}),x[0]))),
       sel.kind==='all'?r('div',null,...datas.map((d,i)=>r('div',{key:i},
         r('div',{style:{fontSize:11,fontWeight:800,color:c.text,margin:'4px 0 8px',paddingTop:i?10:0,borderTop:i?'1px solid '+c.bdr:'none'}},((d.data.center&&d.data.center.code)||'')+' — '+(equips[i].label||'')),
         equipBlock(d,i)))):equipBlock(datas[0],0));
@@ -5436,7 +5441,7 @@ class Component extends DCLogic {
     const tabBord=()=>{
       const allFnsAll=pieces.flatMap(p=>(p.fonctions||[]).map(fn=>({...fn,piece:p})));
       // Avancement nomenclature
-      const getSchemaLen2=(fnType)=>{if(['rj45','domotique'].includes(fnType))return 1;if(['va_vient','poussoir'].includes(fnType))return 3;if(fnType==='variateur')return 4;return 3;};
+      const getSchemaLen2=(fnType)=>{if(fnType==='rj45')return 1;if(fnType==='domotique')return 2;if(['va_vient','poussoir'].includes(fnType))return 3;if(fnType==='variateur'||fnType==='double')return 4;return 3;};
       let totalCables=0,confCables=0,ncCables=0,resCables=0,wIdx2=1;
       allFnsAll.forEach(fn=>{
         const wCode=this.genCEBATCode(fn,this.state);
@@ -5518,16 +5523,25 @@ class Component extends DCLogic {
         NAV: {hex:'#7c3aed',label:'Violet',       iec:'NAV'},
         NAV1:{hex:'#f59e0b',label:'Navette 1',    iec:'NAV1'},
         NAV2:{hex:'#ec4899',label:'Navette 2',    iec:'NAV2'},
+        NAVB:{hex:'#c2185b',label:'Retour 2',     iec:'NAVB'},
         CMD: {hex:'#0891b2',label:'Bleu clair',   iec:'CMD'},
+        'BUS+':{hex:'#d32f2f',label:'Bus KNX +',  iec:'BUS+'},
+        'BUS-':{hex:'#212121',label:'Bus KNX −',  iec:'BUS-'},
       };
 
       // ── Schema fils par type de circuit (cle -> liste de cles conducteurs) ──
       const getSchema=(fnType)=>{
-        if(['rj45','domotique'].includes(fnType))
+        if(fnType==='rj45')
           return [{k:'CMD',bt:'A',ba:'B'}];
+        if(fnType==='domotique')
+          // Bus KNX 2 fils (paire torsadée +/−), pas de PE ni phase de commande
+          return [{k:'BUS+',bt:'+',ba:'+'},{k:'BUS-',bt:'−',ba:'−'}];
         if(['alarme_intrusion','detecteur_fumee','detecteur_co','visiophone'].includes(fnType))
           return [{k:'L',bt:'L',ba:'L'},{k:'CMD',bt:'COM',ba:'IN'}];
-        if(fnType==='simple'||fnType==='poussoir'||fnType==='double')
+        if(fnType==='double')
+          // Double allumage : phase commune + 2 retours SÉPARÉS (2 circuits indépendants) + PE
+          return [{k:'L',bt:'L',ba:'L'},{k:'NAV',bt:'Nv',ba:'2'},{k:'NAVB',bt:'Nv2',ba:'4'},{k:'PE',bt:'PE',ba:'PE'}];
+        if(fnType==='simple'||fnType==='poussoir')
           return [{k:'L',bt:'L',ba:'L'},{k:'NAV',bt:'Nv',ba:'2'},{k:'PE',bt:'PE',ba:'PE'}];
         if(fnType==='va_vient')
           return [{k:'L',bt:'L',ba:'1'},{k:'N',bt:'N',ba:'N'},{k:'NAV',bt:'Nv',ba:'2'}];
@@ -5786,7 +5800,10 @@ class Component extends DCLogic {
         {k:'L2',hex:'#f97316',label:'Noir — L2'},
         {k:'L3',hex:'#c026d3',label:'Gris — L3'},
         {k:'NAV',hex:'#7c3aed',label:'Violet — Navette'},
+        {k:'NAVB',hex:'#c2185b',label:'Rose — Retour 2 (double)'},
         {k:'CMD',hex:'#0891b2',label:'Bleu clair — CMD'},
+        {k:'BUS+',hex:'#d32f2f',label:'Rouge — Bus KNX +'},
+        {k:'BUS-',hex:'#212121',label:'Noir — Bus KNX −'},
         {k:'BLN',hex:'#ffffff',label:'Blanc'},
         {k:'GRS',hex:'#888888',label:'Gris'},
         {k:'NOR',hex:'#222222',label:'Noir'},
