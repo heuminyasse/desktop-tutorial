@@ -1,0 +1,12 @@
+{
+  "name": "cebat",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Cebat — conception d'installations électriques NF C 15-100 (app web autonome mono-fichier)",
+  "type": "module",
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "validate": "node scripts/validate-cebat.mjs",
+    "check": "node scripts/validate-cebat.mjs && node scripts/build.mjs"
+  }
+}
