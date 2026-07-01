@@ -6882,20 +6882,21 @@ html body[class] #vac-gantt td.emp .nm{font-weight:500 !important;}</style>
      PLANNING — Colonnes Date début / Date fin dans le Gantt
      ═══════════════════════════════════════════════════════════════ -->
 <script id="__PLANNING_DATE_COLS_v1__">
-/* ePilot date-cols v13 – EpilotConnector data + sticky-col DOM discovery */
+/* ePilot date-cols v14 – DOM injection into sticky col (no floating overlay) */
 (function(){
   if(window.__dcInjected) return; window.__dcInjected = 1;
 
   /* ── DEBUG BADGE ── */
   var _bst = document.createElement('style');
   _bst.id = '_dcBadgeSt';
-  _bst.textContent = 'body::after{content:"DC v13 ✓";position:fixed;bottom:8px;right:8px;z-index:2147483647;' +
-    'background:#27ae60;color:#fff;font:bold 11px/1 monospace;padding:4px 10px;border-radius:4px;' +
+  _bst.textContent = 'body::after{content:"DC v14 ✓";position:fixed;bottom:8px;right:8px;z-index:2147483647;' +
+    'background:#8e44ad;color:#fff;font:bold 11px/1 monospace;padding:4px 10px;border-radius:4px;' +
     'pointer-events:none;box-shadow:0 2px 8px rgba(0,0,0,.4);}';
   (document.head || document.documentElement).appendChild(_bst);
 
-  var CW = 100; /* px per date column */
-  var COL_ID = '_dcColBody', HDR_ID = '_dcColHdr', DIAG_ID = '_dcDiag';
+  var CW = 100;       /* px per date column */
+  var LABEL_W = 230;  /* original sticky col width */
+  var DIAG_ID = '_dcDiag';
 
   /* ─── Date format ─── */
   var _M=['Jan','Fév','Mar','Avr','Mai','Jun','Jul','Aoû','Sep','Oct','Nov','Déc'];
@@ -6909,74 +6910,56 @@ html body[class] #vac-gantt td.emp .nm{font-weight:500 !important;}</style>
     'width:'+CW+'px;flex-shrink:0;border-right:1px solid #dee2e6;'+
     'white-space:nowrap;box-sizing:border-box;height:100%;';
 
-  /* ─── DOM helpers ─── */
+  /* ─── DOM helper ─── */
   function getOrCreate(id){
     var el=document.getElementById(id);
-    if(!el){ el=document.createElement('div'); el.id=id; el.setAttribute('data-dc','1'); document.body.appendChild(el); }
+    if(!el){ el=document.createElement('div'); el.id=id; document.body.appendChild(el); }
     return el;
   }
-  function hideEl(id){ var el=document.getElementById(id); if(el){ el.style.display='none'; } }
 
-  /* ─── Find Planning label column via "Tâche" sticky div ───
-     The React PlanningPro component renders:
-       <div style="position:sticky;left:0;width:230px;...">   ← label column
-         <div style="height:34px;...">Tâche</div>             ← header (CSS uppercases it)
-         <div>  ← phase group
-           <div style="height:26px;...">PHASE_NAME</div>
-           <div style="height:30px;...">✓ task title</div>
-     ─── */
+  /* ─── Find Planning label column via "Tâche" sticky div ─── */
   function findLabelCol(){
-    /* DOM structure (PlanningPro JSX):
-         <div style="position:sticky;width:230px;...">  ← LABEL COL  (el.parentElement)
-           <div style="height:34px;textTransform:uppercase">Tâche</div>  ← HEADER  (el)
-           <div>  ← phase groups …
-       el = leaf "Tâche" div → el.parentElement = sticky label col */
     var all=document.querySelectorAll('div,span');
     for(var i=0;i<all.length;i++){
       var el=all[i];
       if(el.children.length>0) continue;
       var t=el.textContent.trim();
-      if(t!=='Tâche') continue;          /* textContent; CSS uppercases it visually */
+      if(t!=='Tâche') continue;
       var labelCol=el.parentElement; if(!labelCol) continue;
-      /* Verify it really is the sticky container */
       var cs=window.getComputedStyle(labelCol);
       if(cs.position==='sticky') return {col:labelCol, hdr:el};
-      /* Fallback: try one level up (in case an extra wrapper exists) */
       var p2=labelCol.parentElement;
       if(p2&&window.getComputedStyle(p2).position==='sticky') return {col:p2, hdr:el};
     }
     return null;
   }
 
-  /* ─── Find task row elements in the label column ───
-     Task rows start with ✓ (U+2713) or ○ (U+25CB). ─── */
+  /* ─── Find task rows (skip our own injected nodes) ─── */
   function findTaskRowEls(labelCol){
     var divs=labelCol.querySelectorAll('div');
     var out=[];
     for(var i=0;i<divs.length;i++){
       var d=divs[i];
+      if(d.getAttribute('data-dc')==='1') continue;
       var ch=d.textContent.trim().charAt(0);
       if(ch!=='✓'&&ch!=='○') continue;
-      /* skip if parent also starts with ✓/○ (nested child) */
       var p=d.parentElement;
+      if(p&&p.getAttribute('data-dc')==='1') continue;
       if(p){ var pch=p.textContent.trim().charAt(0); if(pch==='✓'||pch==='○') continue; }
       out.push(d);
     }
     return out;
   }
 
-  /* ─── Extract task title from row textContent ─── */
+  /* ─── Extract task title ─── */
   function rowTitle(rowEl){
     var txt=rowEl.textContent.trim();
-    txt=txt.replace(/^[✓○]\s*/,''); /* strip ✓/○ prefix */
-    txt=txt.replace(/\s+[A-Z]{1,3}$/,'').trim(); /* strip avatar initials */
+    txt=txt.replace(/^[✓○]\s*/,'');
+    txt=txt.replace(/\s+[A-Z]{1,3}$/,'').trim();
     return txt;
   }
 
-  /* ─── Load task dates via EpilotConnector.buildData() ───
-     Tasks are in epilot_chantier_ops IDB, exposed through EpilotConnector.
-     Polls until connector is ready (app may not have initialised yet).
-     ─── */
+  /* ─── Load task dates via EpilotConnector.buildData() ─── */
   function buildLkFromConnector(cb){
     function tryBuild(){
       if(window.EpilotConnector && typeof window.EpilotConnector.buildData==='function'){
@@ -6998,20 +6981,19 @@ html body[class] #vac-gantt td.emp .nm{font-weight:500 !important;}</style>
     tryBuild();
   }
 
-  /* Intercept EpilotConnector.saveOps so we refresh dates after any save */
+  /* Hook saveOps to refresh after task saves */
   function hookSaveOps(){
     if(!window.EpilotConnector||!window.EpilotConnector.saveOps||window.EpilotConnector.__dcHooked) return;
     window.EpilotConnector.__dcHooked=1;
     var _orig=window.EpilotConnector.saveOps;
     window.EpilotConnector.saveOps=function(jip){
       var r=_orig.apply(this,arguments);
-      /* Refresh lookup ~500ms after save (IDB write needs to complete first) */
       setTimeout(function(){ buildLkFromConnector(function(lk){ _lk=lk; inject(); }); },500);
       return r;
     };
   }
 
-  /* ─── Match title to lookup (exact then substring) ─── */
+  /* ─── Match title to lookup ─── */
   function findInfo(lk,title){
     if(!title) return null;
     if(lk[title]) return lk[title];
@@ -7030,76 +7012,83 @@ html body[class] #vac-gantt td.emp .nm{font-weight:500 !important;}</style>
       'background:rgba(0,0,0,.82);color:#0f0;font:9px/1.5 monospace;'+
       'padding:5px 7px;border-radius:5px;white-space:pre;pointer-events:none;min-width:180px;';
     p.textContent=[
-      '── DC v13 diag ──',
+      '── DC v14 diag ──',
       'LC: '+(info.lc?'YES ('+Math.round(info.lcW)+'×'+Math.round(info.lcH)+')':'NO'),
       'rows: '+info.rows,
       'lk: '+info.lkSize,
-      'col: '+(info.colOk?'OK':'none'),
     ].join('\n');
   }
 
-  /* ─── Body overlay ─── */
-  function injectBody(lc,lk){
-    var lcRect=lc.col.getBoundingClientRect();
-    if(!lcRect||lcRect.width<10||lcRect.height<10){ hideEl(COL_ID); return; }
-    var rows=findTaskRowEls(lc.col);
-    if(!rows.length){ hideEl(COL_ID); return; }
-
-    var col=getOrCreate(COL_ID);
-    col.style.cssText=
-      'position:fixed;z-index:9995;overflow:hidden;box-sizing:border-box;pointer-events:none;'+
-      'left:'+Math.round(lcRect.right)+'px;top:'+Math.round(lcRect.top)+'px;'+
-      'width:'+(CW*2)+'px;height:'+Math.round(lcRect.height)+'px;'+
-      'background:#fff;border-left:2px solid #3498db;border-right:1px solid #dee2e6;'+
-      'box-shadow:4px 0 10px rgba(0,0,0,.18);';
-    col.innerHTML='';
-
-    rows.forEach(function(row){
-      var rRect=row.getBoundingClientRect();
-      var relTop=rRect.top-lcRect.top;
-      var cell=document.createElement('div');
-      cell.style.cssText=
-        'position:absolute;display:flex;align-items:center;left:0;'+
-        'top:'+Math.round(relTop)+'px;width:100%;height:'+Math.round(rRect.height)+'px;'+
-        'border-bottom:1px solid #eef0f3;box-sizing:border-box;';
-      var title=rowTitle(row);
-      var info=findInfo(lk,title);
-      var sd=document.createElement('span'); sd.style.cssText=cellSt;
-      var sf=document.createElement('span'); sf.style.cssText=cellSt;
-      if(info){ sd.textContent=fmt(info.d); sf.textContent=fmt(info.f); }
-      else { sd.textContent='–'; sf.textContent='–'; sd.style.color='#bbb'; sf.style.color='#bbb'; }
-      cell.appendChild(sd); cell.appendChild(sf);
-      col.appendChild(cell);
+  /* ─── MutationObserver: re-inject when React re-renders the sticky col ─── */
+  var _mo=null, _moTarget=null;
+  function startMO(labelCol){
+    if(_mo){ _mo.disconnect(); _mo=null; }
+    _mo=new MutationObserver(function(){
+      clearTimeout(window._dcMoRT);
+      window._dcMoRT=setTimeout(function(){
+        var lc=findLabelCol();
+        if(lc) injectIntoSticky(lc,_lk);
+      },50);
     });
+    _moTarget=labelCol;
+    _mo.observe(labelCol,{childList:true,subtree:true,attributes:true,attributeFilter:['style']});
   }
 
-  /* ─── Header overlay ─── */
-  function injectHdr(lc){
-    if(!lc||!lc.hdr){ hideEl(HDR_ID); return; }
-    var hRect=lc.hdr.getBoundingClientRect();
-    if(!hRect||hRect.width<10){ hideEl(HDR_ID); return; }
-    var hdr=getOrCreate(HDR_ID);
-    hdr.style.cssText=
-      'position:fixed;z-index:9996;display:flex;align-items:center;pointer-events:none;box-sizing:border-box;'+
-      'left:'+Math.round(hRect.right)+'px;top:'+Math.round(hRect.top)+'px;'+
-      'width:'+(CW*2)+'px;height:'+Math.round(hRect.height)+'px;'+
-      'background:#f0f4fa;border-left:2px solid #3498db;border-right:1px solid #dee2e6;'+
-      'box-shadow:4px 0 10px rgba(0,0,0,.18);';
-    hdr.innerHTML='';
-    var hd=document.createElement('div'); hd.style.cssText=hdrSt; hd.textContent='Date Début';
-    var hf=document.createElement('div'); hf.style.cssText=hdrSt; hf.textContent='Date Fin';
-    hdr.appendChild(hd); hdr.appendChild(hf);
-  }
+  /* ─── Inject date cells as absolute children of the sticky col ─── */
+  function injectIntoSticky(lc,lk){
+    if(!lc) return;
+    /* Pause MO to avoid re-entrant loop */
+    if(_mo) _mo.disconnect();
+    try{
+      /* Widen the sticky col to accommodate the two new date columns */
+      lc.col.style.width=(LABEL_W+CW*2)+'px';
+      lc.col.style.minWidth=(LABEL_W+CW*2)+'px';
+      lc.col.style.overflow='visible';
 
-  /* ─── Reposition existing overlays ─── */
-  function reposition(){
-    var lc=findLabelCol(); if(!lc){ hideEl(COL_ID); hideEl(HDR_ID); return; }
-    var lcRect=lc.col.getBoundingClientRect();
-    var c=document.getElementById(COL_ID);
-    if(c){ c.style.left=Math.round(lcRect.right)+'px'; c.style.top=Math.round(lcRect.top)+'px'; c.style.height=Math.round(lcRect.height)+'px'; }
-    var hRect=lc.hdr.getBoundingClientRect();
-    var h=document.getElementById(HDR_ID);
-    if(h){ h.style.left=Math.round(hRect.right)+'px'; h.style.top=Math.round(hRect.top)+'px'; h.style.height=Math.round(hRect.height)+'px'; }
+      /* Remove stale injections */
+      var old=lc.col.querySelectorAll('[data-dc="1"]');
+      for(var j=0;j<old.length;j++) old[j].parentNode.removeChild(old[j]);
+
+      var colRect=lc.col.getBoundingClientRect();
+
+      /* Header row */
+      var hRect=lc.hdr.getBoundingClientRect();
+      var hCont=document.createElement('div');
+      hCont.setAttribute('data-dc','1');
+      hCont.style.cssText='position:absolute;left:'+LABEL_W+'px;top:'+Math.round(hRect.top-colRect.top)+'px;'+
+        'width:'+(CW*2)+'px;height:'+Math.round(hRect.height)+'px;'+
+        'display:flex;align-items:center;background:#f0f4fa;'+
+        'border-left:1px solid #dee2e6;border-bottom:1px solid #dee2e6;box-sizing:border-box;';
+      var hd=document.createElement('div'); hd.style.cssText=hdrSt; hd.textContent='Date Début';
+      var hf=document.createElement('div'); hf.style.cssText=hdrSt; hf.textContent='Date Fin';
+      hCont.appendChild(hd); hCont.appendChild(hf);
+      lc.col.appendChild(hCont);
+
+      /* Task row cells */
+      var rows=findTaskRowEls(lc.col);
+      rows.forEach(function(row){
+        var rRect=row.getBoundingClientRect();
+        var cell=document.createElement('div');
+        cell.setAttribute('data-dc','1');
+        cell.style.cssText='position:absolute;left:'+LABEL_W+'px;top:'+Math.round(rRect.top-colRect.top)+'px;'+
+          'width:'+(CW*2)+'px;height:'+Math.round(rRect.height)+'px;'+
+          'display:flex;align-items:center;background:#fff;'+
+          'border-left:1px solid #dee2e6;border-bottom:1px solid #eef0f3;box-sizing:border-box;';
+        var title=rowTitle(row);
+        var info=findInfo(lk,title);
+        var sd=document.createElement('span'); sd.style.cssText=cellSt;
+        var sf=document.createElement('span'); sf.style.cssText=cellSt;
+        if(info){ sd.textContent=fmt(info.d); sf.textContent=fmt(info.f); }
+        else{ sd.textContent='–'; sf.textContent='–'; sd.style.color='#bbb'; sf.style.color='#bbb'; }
+        cell.appendChild(sd); cell.appendChild(sf);
+        lc.col.appendChild(cell);
+      });
+    }finally{
+      /* Reconnect MO */
+      if(_mo&&_moTarget){
+        _mo.observe(_moTarget,{childList:true,subtree:true,attributes:true,attributeFilter:['style']});
+      }
+    }
   }
 
   /* ─── Main inject ─── */
@@ -7108,13 +7097,14 @@ html body[class] #vac-gantt td.emp .nm{font-weight:500 !important;}</style>
     var lc=findLabelCol();
     var lcRect=lc?lc.col.getBoundingClientRect():{width:0,height:0};
     var rows=lc?findTaskRowEls(lc.col):[];
-    updateDiag({lc:!!lc,lcW:lcRect.width,lcH:lcRect.height,rows:rows.length,lkSize:Object.keys(_lk).length,colOk:!!document.getElementById(COL_ID)});
-    if(!lc){ hideEl(COL_ID); hideEl(HDR_ID); return; }
-    injectBody(lc,_lk);
-    injectHdr(lc);
+    updateDiag({lc:!!lc,lcW:lcRect.width,lcH:lcRect.height,rows:rows.length,lkSize:Object.keys(_lk).length});
+    if(!lc) return;
+    /* Start MO if label col changed */
+    if(!_mo||_moTarget!==lc.col) startMO(lc.col);
+    injectIntoSticky(lc,_lk);
   }
 
-  /* Load task data via EpilotConnector; re-load every 5s to pick up changes */
+  /* Load task data; refresh every 5s */
   buildLkFromConnector(function(lk){ _lk=lk; inject(); });
   setInterval(function(){
     hookSaveOps();
@@ -7126,8 +7116,8 @@ html body[class] #vac-gantt td.emp .nm{font-weight:500 !important;}</style>
     if(document.getElementById('_dcBadgeSt')) return;
     var st=document.createElement('style');
     st.id='_dcBadgeSt';
-    st.textContent='body::after{content:"DC v13 ✓";position:fixed;bottom:8px;right:8px;z-index:2147483647;'+
-      'background:#27ae60;color:#fff;font:bold 11px/1 monospace;padding:4px 10px;border-radius:4px;'+
+    st.textContent='body::after{content:"DC v14 ✓";position:fixed;bottom:8px;right:8px;z-index:2147483647;'+
+      'background:#8e44ad;color:#fff;font:bold 11px/1 monospace;padding:4px 10px;border-radius:4px;'+
       'pointer-events:none;box-shadow:0 2px 8px rgba(0,0,0,.4);}';
     (document.head||document.body||document.documentElement).appendChild(st);
   }
@@ -7141,8 +7131,7 @@ html body[class] #vac-gantt td.emp .nm{font-weight:500 !important;}</style>
     else setInterval(function(){ ensureBadge(); hookSaveOps(); inject(); },2000);
   })();
 
-  window.addEventListener('scroll',reposition,{passive:true});
-  window.addEventListener('resize',function(){ clearTimeout(window._dcRT); window._dcRT=setTimeout(function(){ inject(); },150); },{passive:true});
+  window.addEventListener('resize',function(){ clearTimeout(window._dcRT); window._dcRT=setTimeout(inject,150); },{passive:true});
   window.__injectDateCols=inject;
 })();
 </script>
