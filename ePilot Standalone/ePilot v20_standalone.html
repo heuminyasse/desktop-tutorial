@@ -7126,7 +7126,7 @@ html body[class] #vac-gantt td.emp .nm{font-weight:500 !important;}</style>
   }
 
   function updatePlanningButtons(){
-    /* Create buttons once (appended to body, never removed by React) */
+    /* Create buttons once, appended to body – React never touches body-level elements */
     if(!_planBtns){
       var PICO='<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">'+
         '<polyline points="6 9 6 2 18 2 18 9"/>'+
@@ -7139,38 +7139,15 @@ html body[class] #vac-gantt td.emp .nm{font-weight:500 !important;}</style>
         pb: _mkBtn('_dcPrintBtn', PICO+' Imprimer', printPlanning),
         eb: _mkBtn('_dcEmailBtn', EICO+' Email',    copyEmailTable)
       };
+      /* Fixed position: top-right corner, below the nav tabs – no anchor needed */
+      _planBtns.pb.style.top='130px'; _planBtns.pb.style.right='220px';
+      _planBtns.eb.style.top='130px'; _planBtns.eb.style.right='116px';
     }
 
-    /* Hide when Planning is not visible */
-    if(!findLabelCol()){
-      _planBtns.pb.style.display='none';
-      _planBtns.eb.style.display='none';
-      return;
-    }
-
-    /* Find "+ Nouvelle tâche" anchor (skip our own buttons) */
-    var anchor=null;
-    var allBtns=document.querySelectorAll('button');
-    for(var i=0;i<allBtns.length;i++){
-      var b=allBtns[i];
-      if(b===_planBtns.pb||b===_planBtns.eb) continue;
-      if(b.textContent.indexOf('Nouvelle')>=0){ anchor=b; break; }
-    }
-    if(!anchor){ _planBtns.pb.style.display='none'; _planBtns.eb.style.display='none'; return; }
-
-    var rect=anchor.getBoundingClientRect();
-    _planBtns.pb.style.display='inline-flex';
-    _planBtns.eb.style.display='inline-flex';
-
-    /* Measure widths then position immediately to the left of the anchor */
-    var ebW=_planBtns.eb.offsetWidth||82;
-    var pbW=_planBtns.pb.offsetWidth||106;
-    _planBtns.eb.style.left=(rect.left - ebW - 8)+'px';
-    _planBtns.eb.style.top=rect.top+'px';
-    _planBtns.eb.style.height=rect.height+'px';
-    _planBtns.pb.style.left=(rect.left - ebW - pbW - 16)+'px';
-    _planBtns.pb.style.top=rect.top+'px';
-    _planBtns.pb.style.height=rect.height+'px';
+    /* Show only when Planning tab is visible */
+    var vis=!!findLabelCol();
+    _planBtns.pb.style.display=vis?'inline-flex':'none';
+    _planBtns.eb.style.display=vis?'inline-flex':'none';
   }
 
   /* ─── MutationObserver: re-inject when React re-renders the sticky col ─── */
