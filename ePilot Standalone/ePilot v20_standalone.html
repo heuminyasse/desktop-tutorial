@@ -6882,15 +6882,15 @@ html body[class] #vac-gantt td.emp .nm{font-weight:500 !important;}</style>
      PLANNING — Colonnes Date début / Date fin dans le Gantt
      ═══════════════════════════════════════════════════════════════ -->
 <script id="__PLANNING_DATE_COLS_v1__">
-/* ePilot date-cols v12 – IndexedDB data + sticky-col DOM discovery */
+/* ePilot date-cols v13 – EpilotConnector data + sticky-col DOM discovery */
 (function(){
   if(window.__dcInjected) return; window.__dcInjected = 1;
 
   /* ── DEBUG BADGE ── */
   var _bst = document.createElement('style');
   _bst.id = '_dcBadgeSt';
-  _bst.textContent = 'body::after{content:"DC v12 ✓";position:fixed;bottom:8px;right:8px;z-index:2147483647;' +
-    'background:#c0392b;color:#fff;font:bold 11px/1 monospace;padding:4px 10px;border-radius:4px;' +
+  _bst.textContent = 'body::after{content:"DC v13 ✓";position:fixed;bottom:8px;right:8px;z-index:2147483647;' +
+    'background:#27ae60;color:#fff;font:bold 11px/1 monospace;padding:4px 10px;border-radius:4px;' +
     'pointer-events:none;box-shadow:0 2px 8px rgba(0,0,0,.4);}';
   (document.head || document.documentElement).appendChild(_bst);
 
@@ -6973,31 +6973,42 @@ html body[class] #vac-gantt td.emp .nm{font-weight:500 !important;}</style>
     return txt;
   }
 
-  /* ─── IndexedDB: read all tasks from epilot_chantier_v2 ───
-     Each chantier record has: { tasks:[{id,title,start,end,progress,phase}] }
-     start/end are ISO date strings (YYYY-MM-DD). ─── */
-  function buildLkFromIDB(cb){
-    try{
-      var req=indexedDB.open('epilot_chantier_v2');
-      req.onsuccess=function(e){
-        var db=e.target.result;
-        if(!db.objectStoreNames.contains('chantiers')){ db.close(); cb({}); return; }
-        var tx=db.transaction('chantiers','readonly');
-        var allReq=tx.objectStore('chantiers').getAll();
-        allReq.onsuccess=function(){
-          db.close();
-          var lk={};
-          (allReq.result||[]).forEach(function(ch){
-            (ch.tasks||[]).forEach(function(t){
-              if(t.title) lk[t.title]={d:t.start||'',f:t.end||''};
+  /* ─── Load task dates via EpilotConnector.buildData() ───
+     Tasks are in epilot_chantier_ops IDB, exposed through EpilotConnector.
+     Polls until connector is ready (app may not have initialised yet).
+     ─── */
+  function buildLkFromConnector(cb){
+    function tryBuild(){
+      if(window.EpilotConnector && typeof window.EpilotConnector.buildData==='function'){
+        try{
+          window.EpilotConnector.buildData({all:true}).then(function(d){
+            var lk={};
+            (d.jips||[]).forEach(function(jip){
+              (jip.tasks||[]).forEach(function(t){
+                if(t.title) lk[t.title]={d:t.start||'',f:t.end||''};
+              });
             });
-          });
-          cb(lk);
-        };
-        allReq.onerror=function(){ db.close(); cb({}); };
-      };
-      req.onerror=function(){ cb({}); };
-    }catch(e){ cb({}); }
+            cb(lk);
+          }).catch(function(){ cb({}); });
+        }catch(e){ cb({}); }
+      } else {
+        setTimeout(tryBuild,400);
+      }
+    }
+    tryBuild();
+  }
+
+  /* Intercept EpilotConnector.saveOps so we refresh dates after any save */
+  function hookSaveOps(){
+    if(!window.EpilotConnector||!window.EpilotConnector.saveOps||window.EpilotConnector.__dcHooked) return;
+    window.EpilotConnector.__dcHooked=1;
+    var _orig=window.EpilotConnector.saveOps;
+    window.EpilotConnector.saveOps=function(jip){
+      var r=_orig.apply(this,arguments);
+      /* Refresh lookup ~500ms after save (IDB write needs to complete first) */
+      setTimeout(function(){ buildLkFromConnector(function(lk){ _lk=lk; inject(); }); },500);
+      return r;
+    };
   }
 
   /* ─── Match title to lookup (exact then substring) ─── */
@@ -7019,7 +7030,7 @@ html body[class] #vac-gantt td.emp .nm{font-weight:500 !important;}</style>
       'background:rgba(0,0,0,.82);color:#0f0;font:9px/1.5 monospace;'+
       'padding:5px 7px;border-radius:5px;white-space:pre;pointer-events:none;min-width:180px;';
     p.textContent=[
-      '── DC v12 diag ──',
+      '── DC v13 diag ──',
       'LC: '+(info.lc?'YES ('+Math.round(info.lcW)+'×'+Math.round(info.lcH)+')':'NO'),
       'rows: '+info.rows,
       'lk: '+info.lkSize,
@@ -7103,16 +7114,20 @@ html body[class] #vac-gantt td.emp .nm{font-weight:500 !important;}</style>
     injectHdr(lc);
   }
 
-  /* Load task data from IndexedDB once */
-  buildLkFromIDB(function(lk){ _lk=lk; inject(); });
+  /* Load task data via EpilotConnector; re-load every 5s to pick up changes */
+  buildLkFromConnector(function(lk){ _lk=lk; inject(); });
+  setInterval(function(){
+    hookSaveOps();
+    buildLkFromConnector(function(lk){ _lk=lk; inject(); });
+  },5000);
 
   /* ─── Badge alive ─── */
   function ensureBadge(){
     if(document.getElementById('_dcBadgeSt')) return;
     var st=document.createElement('style');
     st.id='_dcBadgeSt';
-    st.textContent='body::after{content:"DC v12 ✓";position:fixed;bottom:8px;right:8px;z-index:2147483647;'+
-      'background:#c0392b;color:#fff;font:bold 11px/1 monospace;padding:4px 10px;border-radius:4px;'+
+    st.textContent='body::after{content:"DC v13 ✓";position:fixed;bottom:8px;right:8px;z-index:2147483647;'+
+      'background:#27ae60;color:#fff;font:bold 11px/1 monospace;padding:4px 10px;border-radius:4px;'+
       'pointer-events:none;box-shadow:0 2px 8px rgba(0,0,0,.4);}';
     (document.head||document.body||document.documentElement).appendChild(st);
   }
@@ -7120,10 +7135,10 @@ html body[class] #vac-gantt td.emp .nm{font-weight:500 !important;}</style>
   /* ─── Poll: 20×300ms then every 2s ─── */
   var _pt=0;
   (function poll(){
-    ensureBadge(); inject();
+    ensureBadge(); hookSaveOps(); inject();
     _pt++;
     if(_pt<20) setTimeout(poll,300);
-    else setInterval(function(){ ensureBadge(); inject(); },2000);
+    else setInterval(function(){ ensureBadge(); hookSaveOps(); inject(); },2000);
   })();
 
   window.addEventListener('scroll',reposition,{passive:true});
