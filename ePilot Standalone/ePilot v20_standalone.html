@@ -6989,6 +6989,161 @@ html body[class] #vac-gantt td.emp .nm{font-weight:500 !important;}</style>
     return null;
   }
 
+  /* ─── Print & Email helpers ─── */
+
+  function getPlanningTitle(){
+    /* Try main heading first */
+    var h=document.querySelector('h1,h2');
+    if(h){ var t=h.textContent.trim(); if(t.length>4) return t; }
+    return document.title||'Planning';
+  }
+
+  function escHtml(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+  function padEnd(s,n){ s=String(s); return s.length>=n?s.substring(0,n):s+' '.repeat(n-s.length); }
+
+  /* Build structured phases+tasks from the sticky col DOM */
+  function buildPlanningData(lc,lk){
+    var result=[];
+    var cols=lc.col.children;
+    for(var i=0;i<cols.length;i++){
+      var child=cols[i];
+      if(child.getAttribute('data-dc')==='1') continue;
+      var childTxt=child.textContent.trim();
+      if(!childTxt||childTxt==='Tâche') continue;
+      var phCh=child.children; if(!phCh.length) continue;
+      var phHdr=phCh[0].textContent.trim();
+      var phaseName=phHdr.replace(/\s+\d+%\s*$/,'').trim();
+      var phasePercent=(phHdr.match(/(\d+)%/)||['','–'])[1];
+      var tasks=[];
+      for(var j=1;j<phCh.length;j++){
+        var taskEl=phCh[j];
+        if(taskEl.getAttribute('data-dc')==='1') continue;
+        var tt=taskEl.textContent.trim();
+        var ch=tt.charAt(0);
+        if(ch!=='✓'&&ch!=='○') continue;
+        var title=rowTitle(taskEl);
+        var info=findInfo(lk,title);
+        tasks.push({done:ch==='✓',title:title,
+          debut:info?fmt(info.d):'–',fin:info?fmt(info.f):'–'});
+      }
+      if(tasks.length) result.push({phase:phaseName,percent:phasePercent,tasks:tasks});
+    }
+    return result;
+  }
+
+  function printPlanning(){
+    var lc=findLabelCol(); if(!lc){alert('Ouvrez l\'onglet Planning pour imprimer.');return;}
+    var title=getPlanningTitle();
+    var data=buildPlanningData(lc,_lk);
+    var rows='';
+    data.forEach(function(ph){
+      rows+='<tr><td colspan="3" style="padding:7px 12px;font-weight:700;color:#c0392b;'+
+        'text-transform:uppercase;letter-spacing:.04em;background:#f8f9fa;'+
+        'border-top:2px solid #c0392b;font-size:12px;">'+
+        escHtml(ph.phase)+' <span style="font-weight:400;color:#999;text-transform:none;">('+ph.percent+'% terminé)</span></td></tr>';
+      ph.tasks.forEach(function(t){
+        rows+='<tr>'+
+          '<td style="padding:6px 12px;border-bottom:1px solid #eee;">'+
+          (t.done?'<span style="color:#27ae60;font-weight:700;">✓</span>':
+                  '<span style="color:#aaa;">○</span>')+
+          ' '+escHtml(t.title)+'</td>'+
+          '<td style="padding:6px 12px;border-bottom:1px solid #eee;white-space:nowrap;color:#555;">'+escHtml(t.debut)+'</td>'+
+          '<td style="padding:6px 12px;border-bottom:1px solid #eee;white-space:nowrap;color:#555;">'+escHtml(t.fin)+'</td>'+
+          '</tr>';
+      });
+    });
+    var today=new Date().toLocaleDateString('fr-FR',{day:'2-digit',month:'long',year:'numeric'});
+    var html='<!DOCTYPE html><html><head><meta charset="utf-8"><title>'+escHtml(title)+'</title>'+
+      '<style>*{box-sizing:border-box;margin:0;padding:0}'+
+      'body{font-family:Arial,Helvetica,sans-serif;padding:28px 36px;color:#1a2733;font-size:13px}'+
+      'h1{font-size:17px;font-weight:700;margin-bottom:3px}'+
+      '.sub{color:#888;font-size:11px;margin-bottom:22px}'+
+      'table{width:100%;border-collapse:collapse}'+
+      'thead th{background:#1a2733;color:#fff;padding:8px 12px;text-align:left;font-size:12px;font-weight:600}'+
+      'tbody tr:nth-child(even):not(.ph){background:#fafbfc}'+
+      '@media print{@page{size:A4 landscape;margin:12mm}body{padding:0}}'+
+      '</style></head><body>'+
+      '<h1>'+escHtml(title)+'</h1>'+
+      '<p class="sub">Planning · Imprimé le '+today+'</p>'+
+      '<table><thead><tr>'+
+      '<th style="width:55%">Tâche</th><th>Date Début</th><th>Date Fin</th>'+
+      '</tr></thead><tbody>'+rows+'</tbody></table></body></html>';
+    var w=window.open('','_blank','width=960,height=720');
+    w.document.write(html); w.document.close(); w.focus();
+    setTimeout(function(){ w.print(); },600);
+  }
+
+  function copyEmailTable(){
+    var lc=findLabelCol(); if(!lc) return;
+    var title=getPlanningTitle();
+    var data=buildPlanningData(lc,_lk);
+    var today=new Date().toLocaleDateString('fr-FR',{day:'2-digit',month:'long',year:'numeric'});
+    var lines=['Planning – '+title,'Date : '+today,''];
+    data.forEach(function(ph){
+      lines.push('▸ '+ph.phase.toUpperCase()+' ('+ph.percent+'% terminé)');
+      ph.tasks.forEach(function(t){
+        lines.push((t.done?'  ✓  ':'  ○  ')+padEnd(t.title,34)+' '+padEnd(t.debut,14)+'→  '+t.fin);
+      });
+      lines.push('');
+    });
+    var text=lines.join('\n');
+    if(navigator.clipboard&&navigator.clipboard.writeText){
+      navigator.clipboard.writeText(text).then(showCopyToast).catch(function(){
+        window.prompt('Sélectionnez tout (Ctrl+A) puis copiez (Ctrl+C) :',text);
+      });
+    } else {
+      window.prompt('Sélectionnez tout (Ctrl+A) puis copiez (Ctrl+C) :',text);
+    }
+  }
+
+  function showCopyToast(){
+    var t=document.createElement('div');
+    t.textContent='✓ Tableau copié dans le presse-papier';
+    t.style.cssText='position:fixed;bottom:24px;left:50%;transform:translateX(-50%);z-index:2147483647;'+
+      'background:#1a2733;color:#fff;font:600 13px/1 Arial,sans-serif;'+
+      'padding:11px 24px;border-radius:8px;box-shadow:0 4px 18px rgba(0,0,0,.35);'+
+      'pointer-events:none;white-space:nowrap;';
+    document.body.appendChild(t);
+    setTimeout(function(){ t.style.transition='opacity .4s'; t.style.opacity='0'; },2200);
+    setTimeout(function(){ t.parentNode&&t.parentNode.removeChild(t); },2700);
+  }
+
+  /* Inject "Imprimer" and "Email" buttons into the Planning toolbar */
+  function injectPlanningButtons(){
+    if(!findLabelCol()) return; /* only when Planning tab is visible */
+    if(document.getElementById('_dcPrintBtn')) return; /* already there */
+    /* Anchor: the "+ Nouvelle tâche" button */
+    var btns=document.querySelectorAll('button');
+    var anchor=null;
+    for(var i=0;i<btns.length;i++){
+      if(btns[i].textContent.indexOf('Nouvelle')>=0){ anchor=btns[i]; break; }
+    }
+    if(!anchor) return;
+    var bSt='cursor:pointer;border-radius:6px;font-size:12px;font-weight:600;'+
+      'padding:6px 13px;border:1.5px solid #c9d0d8;background:#fff;color:#1a2733;'+
+      'margin-right:6px;display:inline-flex;align-items:center;gap:5px;'+
+      'transition:background .12s,border-color .12s;';
+    /* PDF button */
+    var pb=document.createElement('button'); pb.id='_dcPrintBtn';
+    pb.innerHTML='<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">'+
+      '<polyline points="6 9 6 2 18 2 18 9"/>'+
+      '<path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/>'+
+      '<rect x="6" y="14" width="12" height="8"/></svg> Imprimer';
+    pb.style.cssText=bSt; pb.onclick=printPlanning;
+    pb.onmouseover=function(){ this.style.background='#f0f4fa'; this.style.borderColor='#aab'; };
+    pb.onmouseout =function(){ this.style.background='#fff';    this.style.borderColor='#c9d0d8'; };
+    /* Email button */
+    var eb=document.createElement('button'); eb.id='_dcEmailBtn';
+    eb.innerHTML='<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">'+
+      '<rect x="2" y="4" width="20" height="16" rx="2"/>'+
+      '<polyline points="2,4 12,13 22,4"/></svg> Email';
+    eb.style.cssText=bSt; eb.onclick=copyEmailTable;
+    eb.onmouseover=function(){ this.style.background='#f0f4fa'; this.style.borderColor='#aab'; };
+    eb.onmouseout =function(){ this.style.background='#fff';    this.style.borderColor='#c9d0d8'; };
+    anchor.parentNode.insertBefore(pb,anchor);
+    anchor.parentNode.insertBefore(eb,anchor);
+  }
+
   /* ─── MutationObserver: re-inject when React re-renders the sticky col ─── */
   var _mo=null, _moTarget=null;
   function startMO(labelCol){
@@ -7080,7 +7235,7 @@ html body[class] #vac-gantt td.emp .nm{font-weight:500 !important;}</style>
       el.__dcTabHooked=true;
       el.addEventListener('click',function(){
         [80,200,450,900].forEach(function(ms){
-          setTimeout(function(){ inject(); },ms);
+          setTimeout(function(){ inject(); injectPlanningButtons(); },ms);
         });
       },{passive:true});
     });
@@ -7095,7 +7250,7 @@ html body[class] #vac-gantt td.emp .nm{font-weight:500 !important;}</style>
 
   /* ─── Adaptive poll: 150ms when Planning not visible, 1.5s when visible ─── */
   (function poll(){
-    hookSaveOps(); hookPlanningTab(); inject();
+    hookSaveOps(); hookPlanningTab(); inject(); injectPlanningButtons();
     setTimeout(poll, _lcFound ? 1500 : 150);
   })();
 
