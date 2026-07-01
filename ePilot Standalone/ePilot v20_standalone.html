@@ -7108,40 +7108,69 @@ html body[class] #vac-gantt td.emp .nm{font-weight:500 !important;}</style>
     setTimeout(function(){ t.parentNode&&t.parentNode.removeChild(t); },2700);
   }
 
-  /* Inject "Imprimer" and "Email" buttons into the Planning toolbar */
-  function injectPlanningButtons(){
-    if(!findLabelCol()) return; /* only when Planning tab is visible */
-    if(document.getElementById('_dcPrintBtn')) return; /* already there */
-    /* Anchor: the "+ Nouvelle tâche" button */
-    var btns=document.querySelectorAll('button');
-    var anchor=null;
-    for(var i=0;i<btns.length;i++){
-      if(btns[i].textContent.indexOf('Nouvelle')>=0){ anchor=btns[i]; break; }
+  /* ─── Planning toolbar buttons – position:fixed, track "+ Nouvelle tâche" ─── */
+  var _planBtns=null;
+
+  function _mkBtn(id,html,handler){
+    var b=document.createElement('button'); b.id=id;
+    b.innerHTML=html;
+    b.style.cssText='position:fixed;z-index:9990;display:none;align-items:center;gap:5px;'+
+      'cursor:pointer;border-radius:6px;font-size:12px;font-weight:600;'+
+      'padding:0 13px;border:1.5px solid #c9d0d8;background:#fff;color:#1a2733;'+
+      'box-shadow:0 1px 4px rgba(0,0,0,.10);box-sizing:border-box;';
+    b.onclick=handler;
+    b.onmouseover=function(){ this.style.background='#f0f4fa'; this.style.borderColor='#8899aa'; };
+    b.onmouseout =function(){ this.style.background='#fff';    this.style.borderColor='#c9d0d8'; };
+    document.body.appendChild(b);
+    return b;
+  }
+
+  function updatePlanningButtons(){
+    /* Create buttons once (appended to body, never removed by React) */
+    if(!_planBtns){
+      var PICO='<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">'+
+        '<polyline points="6 9 6 2 18 2 18 9"/>'+
+        '<path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/>'+
+        '<rect x="6" y="14" width="12" height="8"/></svg>';
+      var EICO='<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">'+
+        '<rect x="2" y="4" width="20" height="16" rx="2"/>'+
+        '<polyline points="2,4 12,13 22,4"/></svg>';
+      _planBtns={
+        pb: _mkBtn('_dcPrintBtn', PICO+' Imprimer', printPlanning),
+        eb: _mkBtn('_dcEmailBtn', EICO+' Email',    copyEmailTable)
+      };
     }
-    if(!anchor) return;
-    var bSt='cursor:pointer;border-radius:6px;font-size:12px;font-weight:600;'+
-      'padding:6px 13px;border:1.5px solid #c9d0d8;background:#fff;color:#1a2733;'+
-      'margin-right:6px;display:inline-flex;align-items:center;gap:5px;'+
-      'transition:background .12s,border-color .12s;';
-    /* PDF button */
-    var pb=document.createElement('button'); pb.id='_dcPrintBtn';
-    pb.innerHTML='<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">'+
-      '<polyline points="6 9 6 2 18 2 18 9"/>'+
-      '<path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/>'+
-      '<rect x="6" y="14" width="12" height="8"/></svg> Imprimer';
-    pb.style.cssText=bSt; pb.onclick=printPlanning;
-    pb.onmouseover=function(){ this.style.background='#f0f4fa'; this.style.borderColor='#aab'; };
-    pb.onmouseout =function(){ this.style.background='#fff';    this.style.borderColor='#c9d0d8'; };
-    /* Email button */
-    var eb=document.createElement('button'); eb.id='_dcEmailBtn';
-    eb.innerHTML='<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">'+
-      '<rect x="2" y="4" width="20" height="16" rx="2"/>'+
-      '<polyline points="2,4 12,13 22,4"/></svg> Email';
-    eb.style.cssText=bSt; eb.onclick=copyEmailTable;
-    eb.onmouseover=function(){ this.style.background='#f0f4fa'; this.style.borderColor='#aab'; };
-    eb.onmouseout =function(){ this.style.background='#fff';    this.style.borderColor='#c9d0d8'; };
-    anchor.parentNode.insertBefore(pb,anchor);
-    anchor.parentNode.insertBefore(eb,anchor);
+
+    /* Hide when Planning is not visible */
+    if(!findLabelCol()){
+      _planBtns.pb.style.display='none';
+      _planBtns.eb.style.display='none';
+      return;
+    }
+
+    /* Find "+ Nouvelle tâche" anchor (skip our own buttons) */
+    var anchor=null;
+    var allBtns=document.querySelectorAll('button');
+    for(var i=0;i<allBtns.length;i++){
+      var b=allBtns[i];
+      if(b===_planBtns.pb||b===_planBtns.eb) continue;
+      if(b.textContent.indexOf('Nouvelle')>=0){ anchor=b; break; }
+    }
+    if(!anchor){ _planBtns.pb.style.display='none'; _planBtns.eb.style.display='none'; return; }
+
+    var rect=anchor.getBoundingClientRect();
+    _planBtns.pb.style.display='inline-flex';
+    _planBtns.eb.style.display='inline-flex';
+
+    /* Measure widths then position immediately to the left of the anchor */
+    var ebW=_planBtns.eb.offsetWidth||82;
+    var pbW=_planBtns.pb.offsetWidth||106;
+    _planBtns.eb.style.left=(rect.left - ebW - 8)+'px';
+    _planBtns.eb.style.top=rect.top+'px';
+    _planBtns.eb.style.height=rect.height+'px';
+    _planBtns.pb.style.left=(rect.left - ebW - pbW - 16)+'px';
+    _planBtns.pb.style.top=rect.top+'px';
+    _planBtns.pb.style.height=rect.height+'px';
   }
 
   /* ─── MutationObserver: re-inject when React re-renders the sticky col ─── */
@@ -7235,7 +7264,7 @@ html body[class] #vac-gantt td.emp .nm{font-weight:500 !important;}</style>
       el.__dcTabHooked=true;
       el.addEventListener('click',function(){
         [80,200,450,900].forEach(function(ms){
-          setTimeout(function(){ inject(); injectPlanningButtons(); },ms);
+          setTimeout(function(){ inject(); updatePlanningButtons(); },ms);
         });
       },{passive:true});
     });
@@ -7250,11 +7279,12 @@ html body[class] #vac-gantt td.emp .nm{font-weight:500 !important;}</style>
 
   /* ─── Adaptive poll: 150ms when Planning not visible, 1.5s when visible ─── */
   (function poll(){
-    hookSaveOps(); hookPlanningTab(); inject(); injectPlanningButtons();
+    hookSaveOps(); hookPlanningTab(); inject(); updatePlanningButtons();
     setTimeout(poll, _lcFound ? 1500 : 150);
   })();
 
-  window.addEventListener('resize',function(){ clearTimeout(window._dcRT); window._dcRT=setTimeout(inject,150); },{passive:true});
+  window.addEventListener('resize',function(){ clearTimeout(window._dcRT); window._dcRT=setTimeout(function(){ inject(); updatePlanningButtons(); },150); },{passive:true});
+  window.addEventListener('scroll',updatePlanningButtons,{passive:true});
   window.__injectDateCols=inject;
 })();
 </script>
