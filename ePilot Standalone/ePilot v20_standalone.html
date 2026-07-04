@@ -6891,6 +6891,7 @@ html body[class] #vac-gantt td.emp .nm{font-weight:500 !important;}</style>
   var BV = 80;        /* Valeur (F) column width */
   var BP = 55;        /* Poids (%) column width */
   var BC = 80;        /* Consommation (F) column width */
+  var BA = 48;        /* Avancement (%) column width */
 
   /* ─── Date format ─── */
   var _M=['Jan','Fév','Mar','Avr','Mai','Jun','Jul','Aoû','Sep','Oct','Nov','Déc'];
@@ -7157,7 +7158,7 @@ html body[class] #vac-gantt td.emp .nm{font-weight:500 !important;}</style>
     var data=buildPlanningData(lc,_lk);
     var rows='';
     data.forEach(function(ph){
-      rows+='<tr><td colspan="6" style="padding:7px 12px;font-weight:700;color:#c0392b;text-transform:uppercase;'+
+      rows+='<tr><td colspan="7" style="padding:7px 12px;font-weight:700;color:#c0392b;text-transform:uppercase;'+
         'letter-spacing:.04em;background:#f8f9fa;border-top:2px solid #c0392b;font-size:12px;">'+
         escHtml(ph.phase)+' <span style="font-weight:400;color:#999;text-transform:none;">('+ph.percent+'% terminé)</span></td></tr>';
       ph.tasks.forEach(function(t){
@@ -7165,6 +7166,7 @@ html body[class] #vac-gantt td.emp .nm{font-weight:500 !important;}</style>
           '<td style="padding:6px 12px;border-bottom:1px solid #eee;">'+(t.done?'<span style="color:#27ae60;font-weight:700;">✓</span>':'<span style="color:#aaa;">○</span>')+' '+escHtml(t.title)+'</td>'+
           '<td style="padding:6px 12px;border-bottom:1px solid #eee;white-space:nowrap;color:#555;">'+escHtml(t.debut)+'</td>'+
           '<td style="padding:6px 12px;border-bottom:1px solid #eee;white-space:nowrap;color:#555;">'+escHtml(t.fin)+'</td>'+
+          '<td style="padding:6px 12px;border-bottom:1px solid #eee;text-align:right;color:'+(t.pct>=100?'#27ae60':t.pct>0?'#e67e22':'#aaa')+';font-weight:600;">'+t.pct+'%</td>'+
           '<td style="padding:6px 12px;border-bottom:1px solid #eee;text-align:right;color:#1a2733;">'+(t.valeur?fF(t.valeur):'–')+'</td>'+
           '<td style="padding:6px 12px;border-bottom:1px solid #eee;text-align:right;color:'+(t.poids>100?'#e74c3c':'#555')+';">'+(t.valeur&&oa?fPct(t.poids):'–')+'</td>'+
           '<td style="padding:6px 12px;border-bottom:1px solid #eee;text-align:right;color:#27ae60;">'+(t.conso?fF(t.conso):'–')+'</td>'+
@@ -7182,7 +7184,7 @@ html body[class] #vac-gantt td.emp .nm{font-weight:500 !important;}</style>
       '<h1>'+escHtml(title)+'</h1><p class="sub">Planning · Budget OA : '+oaFmt+' · Imprimé le '+today+'</p>'+
       '<table><thead><tr>'+
         '<th style="width:32%">Tâche</th><th>Date Début</th><th>Date Fin</th>'+
-        '<th class="num">Valeur (F)</th><th class="num">Poids (%)</th><th class="num">Conso (F)</th>'+
+        '<th class="num">Av. (%)</th><th class="num">Valeur (F)</th><th class="num">Poids (%)</th><th class="num">Conso (F)</th>'+
       '</tr></thead><tbody>'+rows+'</tbody></table></body></html>';
     var w=window.open('','_blank','width=1100,height=720');
     w.document.write(html); w.document.close(); w.focus();
@@ -7431,7 +7433,7 @@ html body[class] #vac-gantt td.emp .nm{font-weight:500 !important;}</style>
     var pi=getPI();
     var oa=getOABudget(pi);
     var tv=loadTV(pi);
-    var TOTAL_W=LABEL_W+CW*2+BV+BP+BC;
+    var TOTAL_W=LABEL_W+CW*2+BA+BV+BP+BC;
     try{
       lc.col.style.width=TOTAL_W+'px';
       lc.col.style.minWidth=TOTAL_W+'px';
@@ -7445,7 +7447,7 @@ html body[class] #vac-gantt td.emp .nm{font-weight:500 !important;}</style>
       var hCont=document.createElement('div');
       hCont.setAttribute('data-dc','1');
       hCont.style.cssText='position:absolute;left:'+LABEL_W+'px;top:'+Math.round(hRect.top-colRect.top)+'px;'+
-        'width:'+(CW*2+BV+BP+BC)+'px;height:'+Math.round(hRect.height)+'px;'+
+        'width:'+(CW*2+BA+BV+BP+BC)+'px;height:'+Math.round(hRect.height)+'px;'+
         'display:flex;align-items:stretch;background:#f0f4fa;'+
         'border-left:1px solid #dee2e6;border-bottom:1px solid #dee2e6;box-sizing:border-box;';
 
@@ -7471,6 +7473,7 @@ html body[class] #vac-gantt td.emp .nm{font-weight:500 !important;}</style>
 
       hCont.appendChild(mkHdrCell('Date Début',undefined,CW));
       hCont.appendChild(mkHdrCell('Date Fin',undefined,CW));
+      hCont.appendChild(mkHdrCell('Av. (%)',undefined,BA,'a'));
       hCont.appendChild(mkHdrCell('Valeur (F)','Σ –',BV,'v'));
       hCont.appendChild(mkHdrCell('Poids (%)','OA: '+(oa?fF(oa)+' F':'–'),BP,'p'));
       hCont.appendChild(mkHdrCell('Conso (F)','Σ –',BC,'c'));
@@ -7483,7 +7486,7 @@ html body[class] #vac-gantt td.emp .nm{font-weight:500 !important;}</style>
         var cell=document.createElement('div');
         cell.setAttribute('data-dc','1');
         cell.style.cssText='position:absolute;left:'+LABEL_W+'px;top:'+Math.round(rRect.top-colRect.top)+'px;'+
-          'width:'+(CW*2+BV+BP+BC)+'px;height:'+Math.round(rRect.height)+'px;'+
+          'width:'+(CW*2+BA+BV+BP+BC)+'px;height:'+Math.round(rRect.height)+'px;'+
           'display:flex;align-items:center;background:#fff;'+
           'border-left:1px solid #dee2e6;border-bottom:1px solid #eef0f3;box-sizing:border-box;';
 
@@ -7493,11 +7496,23 @@ html body[class] #vac-gantt td.emp .nm{font-weight:500 !important;}</style>
         var rawV=tv[title]||'';
         var valNum=parseVal(rawV);
 
+        /* Avancement % hoisted for Av column and Conso column */
+        var taskPct=info?(info.pct!==null&&info.pct!==undefined?info.pct:(done?100:0)):(done?100:0);
+
         /* Date cells */
         var sd=document.createElement('span'); sd.style.cssText=cellSt;
         var sf=document.createElement('span'); sf.style.cssText=cellSt;
         if(info){ sd.textContent=fmt(info.d); sf.textContent=fmt(info.f); }
         else{ sd.textContent='–'; sf.textContent='–'; sd.style.color='#bbb'; sf.style.color='#bbb'; }
+
+        /* Avancement span */
+        var aColor=taskPct>=100?'#27ae60':taskPct>0?'#e67e22':'#bbb';
+        var spA=document.createElement('span');
+        spA.style.cssText='display:flex;align-items:center;justify-content:flex-end;'+
+          'width:'+BA+'px;flex-shrink:0;border-right:1px solid #dee2e6;'+
+          'font-size:11px;font-weight:600;padding:0 5px;box-sizing:border-box;white-space:nowrap;height:100%;'+
+          'color:'+aColor+';';        
+        spA.textContent=taskPct+'%';
 
         /* Valeur input */
         var inp=document.createElement('input');
@@ -7533,7 +7548,6 @@ html body[class] #vac-gantt td.emp .nm{font-weight:500 !important;}</style>
         spP.textContent=(valNum&&oa)?fPct(pctVal):'–';
 
         /* Consommation span — Poids × avancement tâche */
-        var taskPct=info?(info.pct!==null&&info.pct!==undefined?info.pct:(done?100:0)):(done?100:0);
         var consoVal=Math.round(valNum*taskPct/100);
         var spC=document.createElement('span');
         spC.style.cssText='display:flex;align-items:center;justify-content:flex-end;'+
@@ -7543,7 +7557,7 @@ html body[class] #vac-gantt td.emp .nm{font-weight:500 !important;}</style>
         spC.textContent=consoVal?fF(consoVal):'–';
 
         cell.appendChild(sd); cell.appendChild(sf);
-        cell.appendChild(inp); cell.appendChild(spP); cell.appendChild(spC);
+        cell.appendChild(spA); cell.appendChild(inp); cell.appendChild(spP); cell.appendChild(spC);
         lc.col.appendChild(cell);
       });
 
