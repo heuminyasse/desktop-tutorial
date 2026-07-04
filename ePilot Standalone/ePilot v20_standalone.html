@@ -8261,59 +8261,73 @@ html body[class] #vac-gantt td.emp .nm{font-weight:500 !important;}</style>
     return phases;
   }
 
+  /* ── Connected user helper ── */
+  function getConnectedUser(){
+    try{
+      var p=(window.PERSONNEL_DATA||[]).find(function(x){
+        return x.statut==='Actif'||x.statut==='actif'||!x.statut;
+      });
+      if(p) return ((p.prenoms||'')+' '+(p.nom||'')).trim();
+    }catch(e){}
+    try{
+      var u=localStorage.getItem('epilot_current_user')||localStorage.getItem('ep_user');
+      if(u) return JSON.parse(u).nom||JSON.parse(u).name||u;
+    }catch(e){}
+    return '';
+  }
+
+  /* ── Active HR employees ── */
+  function getActivePersonnel(){
+    try{
+      return (window.PERSONNEL_DATA||[]).filter(function(p){
+        var s=(p.statut||p.status||'').toLowerCase();
+        return !s || s==='actif' || s==='active' || s==='en poste';
+      });
+    }catch(e){ return []; }
+  }
+
   /* ── Build modal HTML ── */
   function buildModal(pi, tasks, personnel){
     var phases = groupByPhase(tasks);
+
+    /* Phase rows — sans colonne avancement */
     var phaseRows = '';
     Object.keys(phases).forEach(function(ph){
-      var avg = 0;
-      phases[ph].forEach(function(t){ avg += (t.pct||0); });
-      avg = Math.round(avg / phases[ph].length);
-      phaseRows += '<tr data-phase="'+ph+'">' +
-        '<td style="padding:6px 8px;font-size:12px;font-weight:500">'+ph+'</td>' +
-        '<td style="padding:6px 8px;font-size:11px;color:#555">'+phases[ph].map(function(t){return t.nom;}).join(', ')+'</td>' +
-        '<td style="padding:6px 8px;width:160px">' +
-          '<div style="display:flex;align-items:center;gap:6px">' +
-            '<input type="range" min="0" max="100" value="'+avg+'" class="ra-pct-range" data-ph="'+ph+'" ' +
-              'style="flex:1;accent-color:#0069d9" oninput="this.nextElementSibling.textContent=this.value+\'%\'">' +
-            '<span style="width:34px;font-size:12px;font-weight:600;color:#0069d9">'+avg+'%</span>' +
-          '</div>' +
-        '</td></tr>';
+      phaseRows += '<tr>' +
+        '<td style="padding:7px 10px;font-size:12px;font-weight:600;color:#1e3a5f;border-bottom:1px solid #f1f5f9">'+ph+'</td>' +
+        '<td style="padding:7px 10px;font-size:11.5px;color:#555;border-bottom:1px solid #f1f5f9">'
+          +phases[ph].map(function(t){return t.nom;}).join(' · ')+'</td></tr>';
     });
-
-    var personnelChk = '';
-    var pers = getPersonnel();
-    if(pers.length){
-      pers.forEach(function(p){
-        var label = (p.prenoms||'') + ' ' + (p.nom||p.matricule||'');
-        personnelChk += '<label style="display:flex;align-items:center;gap:6px;padding:4px 0;font-size:12px;cursor:pointer">' +
-          '<input type="checkbox" value="'+(p.matricule||label.trim())+'" data-name="'+label.trim()+'" class="ra-pers-chk" ' +
-          'style="width:14px;height:14px;accent-color:#0069d9"> '+label.trim()+'</label>';
-      });
-    } else {
-      personnelChk = '<p style="font-size:12px;color:#777">Aucun personnel enregistré.</p>';
-    }
 
     var now = new Date();
     var dateVal = now.toISOString().slice(0,10);
     var hDeb = String(now.getHours()).padStart(2,'0');
     var hFin = String((now.getHours()+8)%24).padStart(2,'0');
+    var signataire = getConnectedUser();
 
-    return '<div id="rapact-overlay" style="position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:99999;' +
+    /* Active HR list for datalist */
+    var actifs = getActivePersonnel();
+    var dlOpts = actifs.map(function(p){
+      var n=((p.prenoms||'')+' '+(p.nom||'')).trim();
+      return '<option value="'+n.replace(/"/g,'&quot;')+'">';
+    }).join('');
+
+    return '<div id="rapact-overlay" style="position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:99999;' +
       'display:flex;align-items:center;justify-content:center;padding:16px;animation:fadeIn .15s">' +
-      '<div id="rapact-modal" style="background:#fff;border-radius:12px;width:100%;max-width:680px;max-height:90vh;' +
+      '<datalist id="ra-pers-dl">'+dlOpts+'</datalist>' +
+      '<div id="rapact-modal" style="background:#fff;border-radius:12px;width:100%;max-width:720px;max-height:93vh;' +
       'overflow-y:auto;box-shadow:0 8px 40px rgba(0,0,0,.3);display:flex;flex-direction:column">' +
 
       /* Header */
       '<div style="background:linear-gradient(135deg,#0069d9,#0050a0);color:#fff;padding:14px 18px;border-radius:12px 12px 0 0;' +
       'display:flex;justify-content:space-between;align-items:center;flex-shrink:0">' +
-      '<div><div style="font-size:15px;font-weight:700">📊 Rapport d\'activité</div>' +
+      '<div><div style="font-size:15px;font-weight:700">📋 PV de chantier</div>' +
       '<div style="font-size:12px;opacity:.85;margin-top:2px">'+pi+'</div></div>' +
       '<button onclick="document.getElementById(\'rapact-overlay\').remove()" ' +
       'style="background:rgba(255,255,255,.2);border:none;color:#fff;width:30px;height:30px;border-radius:6px;font-size:16px;cursor:pointer;line-height:1">&times;</button></div>' +
 
       /* Date / Time row */
-      '<div style="padding:12px 18px;border-bottom:1px solid #eee;display:flex;gap:16px;flex-wrap:wrap;background:#f8f9fa;flex-shrink:0">' +
+      '<div style="padding:11px 18px;border-bottom:1px solid #e9ecef;display:flex;gap:14px;flex-wrap:wrap;background:#f8f9fa;flex-shrink:0">' +
       '<label style="display:flex;align-items:center;gap:6px;font-size:12px;font-weight:600">' +
       '📅 Date :<input id="ra-date" type="date" value="'+dateVal+'" style="padding:4px 8px;border:1px solid #ced4da;border-radius:4px;font-size:12px"></label>' +
       '<label style="display:flex;align-items:center;gap:6px;font-size:12px;font-weight:600">' +
@@ -8322,102 +8336,260 @@ html body[class] #vac-gantt td.emp .nm{font-weight:500 !important;}</style>
       '→ Fin :<input id="ra-hfin" type="time" value="'+hFin+':30" style="padding:4px 8px;border:1px solid #ced4da;border-radius:4px;font-size:12px"></label>' +
       '</div>' +
 
-      /* Body */
-      '<div style="padding:16px 18px;flex:1;overflow-y:auto">' +
+      '<div style="padding:14px 18px;flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:16px">' +
 
-      /* A — Phases */
-      '<div style="margin-bottom:16px">' +
-      '<div style="font-size:12px;font-weight:700;color:#0069d9;margin-bottom:8px;letter-spacing:.5px">A) PHASES & AVANCEMENT</div>' +
-      '<table id="ra-phases-table" style="width:100%;border-collapse:collapse;font-size:12px">' +
-      '<thead><tr style="background:#f0f4ff"><th style="padding:6px 8px;text-align:left;font-size:11px;border-bottom:2px solid #dee2e6">Phase</th>' +
-      '<th style="padding:6px 8px;text-align:left;font-size:11px;border-bottom:2px solid #dee2e6">Tâches</th>' +
-      '<th style="padding:6px 8px;text-align:left;font-size:11px;border-bottom:2px solid #dee2e6;width:160px">Avancement</th></tr></thead>' +
-      '<tbody>'+phaseRows+'</tbody></table></div>' +
+      /* PAGE 1 — Équipe présente */
+      '<div style="border:1px solid #e2e8f0;border-radius:10px;overflow:hidden">' +
+      '<div style="background:#0069d9;color:#fff;padding:9px 14px;font-size:12px;font-weight:700;letter-spacing:.4px">Page 1 — ÉQUIPE PRÉSENTE</div>' +
+      '<div style="padding:12px 14px">' +
+      /* Recherche HR */
+      '<div style="display:flex;gap:8px;margin-bottom:10px">' +
+      '<input id="ra-pers-search" list="ra-pers-dl" placeholder="🔍 Rechercher dans les RH actifs…" ' +
+        'style="flex:1;padding:7px 10px;border:1px solid #ced4da;border-radius:6px;font-size:12px">' +
+      '<button id="ra-pers-add-btn" style="padding:7px 14px;background:#0069d9;color:#fff;border:none;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap">+ Ajouter</button>' +
+      '</div>' +
+      /* Liste équipe */
+      '<div id="ra-equipe-list" style="display:flex;flex-direction:column;gap:5px;margin-bottom:10px"></div>' +
+      '<button id="ra-pers-new" style="padding:5px 12px;background:#f0f4ff;color:#0069d9;border:1px dashed #0069d9;border-radius:6px;font-size:11.5px;cursor:pointer">+ Ajouter manuellement</button>' +
+      '</div></div>' +
 
-      /* B — Observations */
-      '<div style="margin-bottom:16px">' +
-      '<div style="font-size:12px;font-weight:700;color:#0069d9;margin-bottom:8px;letter-spacing:.5px">B) OBSERVATIONS / INCIDENTS</div>' +
-      '<textarea id="ra-obs" rows="4" placeholder="Saisir les observations, incidents, points bloquants..." ' +
-      'style="width:100%;border:1px solid #ced4da;border-radius:6px;padding:8px;font-size:12px;resize:vertical;font-family:inherit"></textarea></div>' +
+      /* Signataire */
+      '<div style="border:1px solid #e2e8f0;border-radius:10px;padding:12px 14px">' +
+      '<div style="font-size:10px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.4px;margin-bottom:7px">Signataire</div>' +
+      '<input id="ra-signataire" type="text" value="'+signataire+'" placeholder="Nom du signataire" ' +
+        'style="width:100%;box-sizing:border-box;padding:7px 10px;border:1px solid #ced4da;border-radius:6px;font-size:12.5px">' +
+      '</div>' +
 
-      /* C — Personnel */
-      '<div>' +
-      '<div style="font-size:12px;font-weight:700;color:#0069d9;margin-bottom:8px;letter-spacing:.5px">C) ÉQUIPE PRÉSENTE</div>' +
-      '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:2px;' +
-      'background:#f8f9fa;border:1px solid #dee2e6;border-radius:6px;padding:10px">'+personnelChk+'</div></div>' +
+      /* PAGE 3 — Tâches */
+      '<div style="border:1px solid #e2e8f0;border-radius:10px;overflow:hidden">' +
+      '<div style="background:#334155;color:#fff;padding:9px 14px;font-size:12px;font-weight:700;letter-spacing:.4px">Page 3 — TÂCHES</div>' +
+      '<table style="width:100%;border-collapse:collapse">' +
+      '<thead><tr style="background:#f8fafc">' +
+      '<th style="padding:7px 10px;text-align:left;font-size:10.5px;color:#64748b;font-weight:700;text-transform:uppercase;border-bottom:1px solid #e2e8f0">Phase</th>' +
+      '<th style="padding:7px 10px;text-align:left;font-size:10.5px;color:#64748b;font-weight:700;text-transform:uppercase;border-bottom:1px solid #e2e8f0">Tâches réalisées</th>' +
+      '</tr></thead>' +
+      '<tbody>'+phaseRows+'</tbody></table>' +
+      (phaseRows===''?'<p style="padding:12px 14px;font-size:12px;color:#94a3b8">Aucune tâche enregistrée pour ce chantier.</p>':'')+
+      '</div>' +
+
+      /* PAGE 3 — Contraintes */
+      '<div style="border:1px solid #e2e8f0;border-radius:10px;overflow:hidden">' +
+      '<div style="background:#334155;color:#fff;padding:9px 14px;display:flex;align-items:center;justify-content:space-between">' +
+      '<span style="font-size:12px;font-weight:700;letter-spacing:.4px">Page 3 — CONTRAINTES</span>' +
+      '<button id="ra-cntr-add" style="padding:4px 11px;background:rgba(255,255,255,.2);color:#fff;border:1px solid rgba(255,255,255,.4);border-radius:5px;font-size:11px;cursor:pointer">+ Ajouter</button>' +
+      '</div>' +
+      '<div id="ra-cntr-list" style="padding:10px 14px;display:flex;flex-direction:column;gap:8px">' +
+      '<p id="ra-cntr-empty" style="font-size:12px;color:#94a3b8;margin:4px 0">Aucune contrainte. Cliquez « + Ajouter » pour en saisir une.</p>' +
+      '</div></div>' +
 
       '</div>' + /* end body */
 
       /* Footer */
       '<div style="padding:12px 18px;border-top:1px solid #eee;display:flex;gap:8px;flex-wrap:wrap;background:#f8f9fa;border-radius:0 0 12px 12px;flex-shrink:0">' +
-      '<button id="ra-print-btn" style="flex:1;min-width:120px;padding:8px;background:#6c757d;color:#fff;border:none;border-radius:6px;font-size:12px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:5px;font-weight:500">' +
-      '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>Imprimer</button>' +
-      '<button id="ra-mail-btn" style="flex:1;min-width:120px;padding:8px;background:#17a2b8;color:#fff;border:none;border-radius:6px;font-size:12px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:5px;font-weight:500">' +
-      '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>Envoyer par mail</button>' +
-      '<button id="ra-save-btn" style="flex:1;min-width:120px;padding:8px;background:#28a745;color:#fff;border:none;border-radius:6px;font-size:12px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:5px;font-weight:500">' +
-      '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>Enregistrer</button>' +
+      '<button id="ra-print-btn" style="flex:1;min-width:120px;padding:8px;background:#6c757d;color:#fff;border:none;border-radius:6px;font-size:12px;cursor:pointer;font-weight:500">🖨 Imprimer</button>' +
+      '<button id="ra-mail-btn" style="flex:1;min-width:120px;padding:8px;background:#17a2b8;color:#fff;border:none;border-radius:6px;font-size:12px;cursor:pointer;font-weight:500">📧 Envoyer par mail</button>' +
+      '<button id="ra-save-btn" style="flex:1;min-width:120px;padding:8px;background:#28a745;color:#fff;border:none;border-radius:6px;font-size:12px;cursor:pointer;font-weight:500">💾 Enregistrer</button>' +
       '</div>' +
 
       '</div></div>'; /* end modal + overlay */
   }
 
+  /* ── Wire equipe + contraintes logic ── */
+  function wireModal(pi){
+    /* ── Équipe: add row ── */
+    function mkEquipeRow(nom, heures){
+      var row = document.createElement('div');
+      row.className = 'ra-eq-row';
+      row.style.cssText = 'display:flex;align-items:center;gap:8px;padding:5px 8px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:7px';
+      var nInp = document.createElement('input');
+      nInp.type='text'; nInp.value=nom||''; nInp.placeholder='Nom prénom';
+      nInp.className='ra-eq-nom';
+      nInp.style.cssText='flex:1;border:none;background:transparent;font-size:12.5px;outline:none;min-width:0';
+      var hInp = document.createElement('input');
+      hInp.type='number'; hInp.value=heures||'8'; hInp.min='0'; hInp.max='24'; hInp.step='0.5';
+      hInp.className='ra-eq-h';
+      hInp.style.cssText='width:52px;border:1px solid #d1d5db;border-radius:5px;padding:3px 6px;font-size:12px;text-align:right';
+      var hLbl = document.createElement('span');
+      hLbl.textContent='h'; hLbl.style.cssText='font-size:12px;color:#64748b;';
+      var del = document.createElement('button');
+      del.textContent='✕'; del.style.cssText='border:none;background:none;color:#94a3b8;cursor:pointer;font-size:13px;line-height:1;padding:2px 4px';
+      del.onclick=function(){ row.remove(); };
+      row.appendChild(nInp); row.appendChild(hInp); row.appendChild(hLbl); row.appendChild(del);
+      return row;
+    }
+    var eqList = document.getElementById('ra-equipe-list');
+    var srch   = document.getElementById('ra-pers-search');
+    var addBtn = document.getElementById('ra-pers-add-btn');
+    var newBtn = document.getElementById('ra-pers-new');
+    if(addBtn) addBtn.onclick = function(){
+      var v = srch?srch.value.trim():'';
+      if(!v){ if(srch) srch.focus(); return; }
+      eqList.appendChild(mkEquipeRow(v,'8'));
+      if(srch) srch.value='';
+    };
+    if(newBtn) newBtn.onclick = function(){ eqList.appendChild(mkEquipeRow('','8')); };
+
+    /* ── Contraintes: add row ── */
+    var etats = ['Ouvert','En cours','Résolu','Bloquant'];
+    function mkCntrRow(c){
+      c=c||{};
+      var row = document.createElement('div');
+      row.className='ra-cntr-row';
+      row.style.cssText='display:grid;grid-template-columns:3fr 1fr 1fr 2fr 1fr auto;gap:5px;align-items:center;background:#fff;border:1px solid #e2e8f0;border-radius:8px;padding:7px 9px';
+      function mkIn(val,ph,w){
+        var i=document.createElement('input'); i.type='text'; i.value=val||''; i.placeholder=ph||'';
+        i.style.cssText='width:100%;box-sizing:border-box;border:1px solid #e2e8f0;border-radius:5px;padding:5px 7px;font-size:11.5px;'+(w?'min-width:0':'');
+        return i;
+      }
+      function mkSel(val){
+        var s=document.createElement('select');
+        s.style.cssText='width:100%;border:1px solid #e2e8f0;border-radius:5px;padding:5px 4px;font-size:11.5px;background:#fff;cursor:pointer';
+        etats.forEach(function(e){ var o=document.createElement('option'); o.value=e; o.textContent=e; if(e===val) o.selected=true; s.appendChild(o); });
+        return s;
+      }
+      var iDesc=mkIn(c.description,'Description de la contrainte',true);
+      var iEtat=mkSel(c.etat||'Ouvert');
+      var iDate=mkIn(c.date,'Date constat'); iDate.type='date';
+      var iResp=mkIn(c.responsable,'Responsable action');
+      var iEch =mkIn(c.echeance,'Échéance'); iEch.type='date';
+      var del=document.createElement('button');
+      del.textContent='✕'; del.style.cssText='border:none;background:none;color:#94a3b8;cursor:pointer;font-size:13px;line-height:1;padding:2px 4px';
+      del.onclick=function(){ row.remove(); refreshEmpty(); };
+      row.appendChild(iDesc); row.appendChild(iEtat); row.appendChild(iDate); row.appendChild(iResp); row.appendChild(iEch); row.appendChild(del);
+      row.querySelector('input').focus && setTimeout(function(){ row.querySelector('input').focus(); },50);
+      return row;
+    }
+    function refreshEmpty(){
+      var cnt=document.querySelectorAll('.ra-cntr-row').length;
+      var emp=document.getElementById('ra-cntr-empty'); if(emp) emp.style.display=cnt?'none':'block';
+    }
+    /* header labels above first row */
+    var cntrList = document.getElementById('ra-cntr-list');
+    var cntrHdr = document.createElement('div');
+    cntrHdr.style.cssText='display:grid;grid-template-columns:3fr 1fr 1fr 2fr 1fr auto;gap:5px;padding:0 9px;margin-bottom:2px';
+    ['Description','État','Date constat','Responsable','Échéance',''].forEach(function(l){
+      var s=document.createElement('span'); s.textContent=l;
+      s.style.cssText='font-size:9.5px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.3px';
+      cntrHdr.appendChild(s);
+    });
+    cntrList.insertBefore(cntrHdr, cntrList.firstChild);
+    var addCntr = document.getElementById('ra-cntr-add');
+    if(addCntr) addCntr.onclick = function(){
+      cntrList.appendChild(mkCntrRow());
+      refreshEmpty();
+    };
+  }
+
   /* ── Collect form data ── */
   function collectFormData(){
-    var date  = document.getElementById('ra-date').value;
-    var hdeb  = document.getElementById('ra-hdeb').value;
-    var hfin  = document.getElementById('ra-hfin').value;
-    var obs   = document.getElementById('ra-obs').value.trim();
-    var phases = {};
-    document.querySelectorAll('.ra-pct-range').forEach(function(r){
-      phases[r.getAttribute('data-ph')] = parseInt(r.value)||0;
-    });
+    var date  = (document.getElementById('ra-date')||{}).value||'';
+    var hdeb  = (document.getElementById('ra-hdeb')||{}).value||'';
+    var hfin  = (document.getElementById('ra-hfin')||{}).value||'';
+    var signataire = ((document.getElementById('ra-signataire')||{}).value||'').trim();
     var equipe = [];
-    document.querySelectorAll('.ra-pers-chk:checked').forEach(function(c){
-      equipe.push({ matricule: c.value, nom: c.getAttribute('data-name') });
+    document.querySelectorAll('.ra-eq-row').forEach(function(row){
+      var nom    = ((row.querySelector('.ra-eq-nom')||{}).value||'').trim();
+      var heures = ((row.querySelector('.ra-eq-h')||{}).value||'8');
+      if(nom) equipe.push({ nom: nom, heures: heures });
     });
-    return { date: date, hdeb: hdeb, hfin: hfin, obs: obs, phases: phases, equipe: equipe };
+    var contraintes = [];
+    document.querySelectorAll('.ra-cntr-row').forEach(function(row){
+      var inps = row.querySelectorAll('input,select');
+      contraintes.push({
+        description: (inps[0]||{}).value||'',
+        etat:        (inps[1]||{}).value||'',
+        date:        (inps[2]||{}).value||'',
+        responsable: (inps[3]||{}).value||'',
+        echeance:    (inps[4]||{}).value||''
+      });
+    });
+    return { date: date, hdeb: hdeb, hfin: hfin, signataire: signataire, equipe: equipe, contraintes: contraintes };
   }
 
   /* ── Build printable HTML for the report ── */
   function buildPrintHTML(data, pi){
-    var css = window.__printCSS ? window.__printCSS() : '<style>body{font-family:Arial,sans-serif;font-size:12px;padding:20px}</style>';
+    var css = window.__printCSS ? window.__printCSS() :
+      '<style>body{font-family:Arial,sans-serif;font-size:12px;padding:24px;color:#1e293b}' +
+      'h1{font-size:18px;color:#0050a0;margin-bottom:4px}' +
+      'h2{font-size:13px;background:#0069d9;color:#fff;padding:6px 10px;border-radius:4px;margin:18px 0 8px}' +
+      'table{width:100%;border-collapse:collapse;font-size:11.5px}' +
+      'th{background:#f1f5f9;text-align:left;padding:6px 8px;border:1px solid #e2e8f0;font-size:10px;text-transform:uppercase;color:#475569}' +
+      'td{padding:6px 8px;border:1px solid #e2e8f0;vertical-align:top}' +
+      '.badge{background:#0069d9;color:#fff;font-weight:700;padding:4px 12px;border-radius:20px;font-size:13px;display:inline-block}' +
+      '.hdr{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:16px;border-bottom:2px solid #0069d9;padding-bottom:10px}' +
+      '</style>';
     var c = window.__clientInfo ? window.__clientInfo() : {};
-    var dateLabel = data.date ? new Date(data.date).toLocaleDateString('fr-FR') : data.date;
-    var phRows = Object.keys(data.phases).map(function(ph){
-      var pct = data.phases[ph];
-      return '<tr><td>'+ph+'</td><td style="width:200px">' +
-        '<div style="background:#e9ecef;border-radius:4px;height:10px;overflow:hidden">' +
-        '<div style="width:'+pct+'%;background:#0069d9;height:100%"></div></div></td>' +
-        '<td style="text-align:center;font-weight:bold">'+pct+'%</td></tr>';
+    var dateLabel = data.date ? new Date(data.date+'T00:00:00').toLocaleDateString('fr-FR',{weekday:'long',year:'numeric',month:'long',day:'numeric'}) : '—';
+
+    /* Équipe présente */
+    var eqRows = (data.equipe||[]).map(function(e){
+      return '<tr><td>'+e.nom+'</td><td style="text-align:right">'+e.heures+' h</td></tr>';
     }).join('');
-    var teamList = data.equipe.map(function(e){ return e.nom; }).join(', ') || '—';
-    return '<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Rapport d\'activité</title>'+css+
+
+    /* Tâches par phase (récupérées depuis getTasks) */
+    var tasks = getTasks(pi);
+    var phases = groupByPhase(tasks);
+    var taskRows = Object.keys(phases).map(function(ph){
+      return '<tr><td style="font-weight:600;color:#1e3a5f">'+ph+'</td>' +
+        '<td>'+phases[ph].map(function(t){return t.nom;}).join(' · ')+'</td></tr>';
+    }).join('') || '<tr><td colspan="2" style="color:#94a3b8;font-style:italic">Aucune tâche.</td></tr>';
+
+    /* Contraintes */
+    var cntrRows = (data.contraintes||[]).map(function(cn){
+      var d=cn.date?new Date(cn.date+'T00:00:00').toLocaleDateString('fr-FR'):'';
+      var ec=cn.echeance?new Date(cn.echeance+'T00:00:00').toLocaleDateString('fr-FR'):'';
+      return '<tr><td>'+cn.description+'</td><td>'+cn.etat+'</td><td>'+d+'</td><td>'+cn.responsable+'</td><td>'+ec+'</td></tr>';
+    }).join('') || '<tr><td colspan="5" style="color:#94a3b8;font-style:italic">Aucune contrainte.</td></tr>';
+
+    return '<!DOCTYPE html><html><head><meta charset="UTF-8">' +
+      '<title>PV de chantier — '+pi+'</title>'+css+
       '</head><body>' +
-      '<div class="header"><div><h1>Rapport d\'activité</h1>' +
-      '<p>Client : <b>'+(c.client||'—')+'</b> — '+(c.desc||'')+'</p>' +
-      '<p>Date : <b>'+dateLabel+'</b> · Horaire : '+data.hdeb+' → '+data.hfin+'</p></div>' +
-      '<div class="badge">'+(pi||c.pi||'—')+'</div></div>' +
-      '<h2>A) Phases & Avancement</h2>' +
-      '<table><thead><tr><th>Phase</th><th>Avancement</th><th>%</th></tr></thead><tbody>'+phRows+'</tbody></table>' +
-      '<h2>B) Observations / Incidents</h2>' +
-      '<p style="white-space:pre-wrap;padding:8px;background:#f8f9fa;border:1px solid #dee2e6;border-radius:4px">'+(data.obs||'Aucune observation.')+'</p>' +
-      '<h2>C) Équipe présente</h2><p>'+teamList+'</p>' +
-      '<p style="margin-top:20px;font-size:10px;color:#999">Généré le '+new Date().toLocaleString('fr-FR')+'</p>' +
+      '<div class="hdr"><div>' +
+      '<h1>PV de chantier</h1>' +
+      '<p style="margin:0;font-size:12px">Client : <b>'+(c.client||'—')+'</b>'+(c.desc?' — '+c.desc:'')+'</p>' +
+      '<p style="margin:4px 0 0;font-size:12px">Date : <b>'+dateLabel+'</b> &nbsp;·&nbsp; Horaire : '+data.hdeb+' → '+data.hfin+'</p>' +
+      '</div><div class="badge">'+pi+'</div></div>' +
+
+      '<h2>Page 1 — Équipe présente</h2>' +
+      '<table><thead><tr><th>Nom</th><th style="width:70px;text-align:right">Heures</th></tr></thead>' +
+      '<tbody>'+(eqRows||'<tr><td colspan="2" style="color:#94a3b8;font-style:italic">Aucun membre renseigné.</td></tr>')+'</tbody></table>' +
+      '<p style="margin:8px 0 0;font-size:11.5px"><b>Signataire :</b> '+(data.signataire||'—')+'</p>' +
+
+      '<h2>Page 3 — Tâches réalisées</h2>' +
+      '<table><thead><tr><th>Phase</th><th>Tâches</th></tr></thead>' +
+      '<tbody>'+taskRows+'</tbody></table>' +
+
+      '<h2>Page 3 — Contraintes</h2>' +
+      '<table><thead><tr><th>Description</th><th>État</th><th>Date constat</th><th>Responsable</th><th>Échéance</th></tr></thead>' +
+      '<tbody>'+cntrRows+'</tbody></table>' +
+
+      '<p style="margin-top:24px;font-size:10px;color:#94a3b8;text-align:right">Généré le '+new Date().toLocaleString('fr-FR')+'</p>' +
       '</body></html>';
   }
 
   /* ── Send by mail (mailto) ── */
   function sendByMail(data, pi){
-    var dateLabel = data.date ? new Date(data.date).toLocaleDateString('fr-FR') : data.date;
-    var subject = encodeURIComponent('Rapport d\'activité ' + pi + ' — ' + dateLabel);
-    var lines = ['Rapport d\'activité — ' + pi, 'Date : ' + dateLabel,
-      'Horaire : ' + data.hdeb + ' → ' + data.hfin, '',
-      'PHASES & AVANCEMENT :'];
-    Object.keys(data.phases).forEach(function(ph){
-      lines.push('  • ' + ph + ' : ' + data.phases[ph] + '%');
+    var dateLabel = data.date ? new Date(data.date+'T00:00:00').toLocaleDateString('fr-FR') : '—';
+    var subject = encodeURIComponent('PV de chantier ' + pi + ' — ' + dateLabel);
+    var lines = [
+      'PV DE CHANTIER — ' + pi,
+      'Date : ' + dateLabel,
+      'Horaire : ' + data.hdeb + ' → ' + data.hfin,
+      'Signataire : ' + (data.signataire||'—'),
+      '',
+      'ÉQUIPE PRÉSENTE :'
+    ];
+    (data.equipe||[]).forEach(function(e){
+      lines.push('  • ' + e.nom + ' — ' + e.heures + ' h');
     });
-    lines.push('', 'OBSERVATIONS :', data.obs || 'Aucune.', '',
-      'ÉQUIPE PRÉSENTE :', data.equipe.map(function(e){ return '  • '+e.nom; }).join('\n') || '  Aucun');
+    if(!(data.equipe||[]).length) lines.push('  Aucun membre renseigné.');
+    lines.push('', 'CONTRAINTES :');
+    (data.contraintes||[]).forEach(function(cn){
+      var d=cn.date?new Date(cn.date+'T00:00:00').toLocaleDateString('fr-FR'):'';
+      var ec=cn.echeance?new Date(cn.echeance+'T00:00:00').toLocaleDateString('fr-FR'):'';
+      lines.push('  • '+cn.description+' ['+cn.etat+']'+(d?' | Constat : '+d:'')+(cn.responsable?' | Resp : '+cn.responsable:'')+(ec?' | Échéance : '+ec:''));
+    });
+    if(!(data.contraintes||[]).length) lines.push('  Aucune contrainte.');
     var body = encodeURIComponent(lines.join('\n'));
     window.location.href = 'mailto:?subject=' + subject + '&body=' + body;
   }
@@ -8431,13 +8603,12 @@ html body[class] #vac-gantt td.emp .nm{font-weight:500 !important;}</style>
       date: data.date,
       hdeb: data.hdeb,
       hfin: data.hfin,
-      obs: data.obs,
-      phases: data.phases,
+      signataire: data.signataire,
       equipe: data.equipe,
+      contraintes: data.contraintes,
       createdAt: new Date().toISOString()
     });
     saveReports(reports);
-    /* Flash save button */
     var btn = document.getElementById('ra-save-btn');
     if(btn){
       btn.textContent = '✓ Enregistré !';
@@ -8451,11 +8622,10 @@ html body[class] #vac-gantt td.emp .nm{font-weight:500 !important;}</style>
     var pi = currentPI();
     var tasks = getTasks(pi);
     var personnel = getPersonnel();
-    /* Remove existing */
     var old = document.getElementById('rapact-overlay');
     if(old) old.remove();
     document.body.insertAdjacentHTML('beforeend', buildModal(pi, tasks, personnel));
-    /* Wire buttons */
+    wireModal(pi);
     document.getElementById('ra-print-btn').onclick = function(){
       var data = collectFormData();
       var html = buildPrintHTML(data, pi);
@@ -8469,7 +8639,6 @@ html body[class] #vac-gantt td.emp .nm{font-weight:500 !important;}</style>
     document.getElementById('ra-save-btn').onclick = function(){
       saveReport(collectFormData(), pi);
     };
-    /* Close on overlay click */
     document.getElementById('rapact-overlay').addEventListener('click', function(e){
       if(e.target === this) this.remove();
     });
