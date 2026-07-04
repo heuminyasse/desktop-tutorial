@@ -7260,7 +7260,7 @@ html body[class] #vac-gantt td.emp .nm{font-weight:500 !important;}</style>
       clearTimeout(window._dcMoRT);
       window._dcMoRT=setTimeout(function(){
         var lc=findLabelCol();
-        if(lc) injectIntoSticky(lc,_lk);
+        if(lc && !lc.col.querySelector('[data-dc="1"] input:focus')) injectIntoSticky(lc,_lk);
       },50);
     });
     _moTarget=labelCol;
@@ -7403,6 +7403,7 @@ html body[class] #vac-gantt td.emp .nm{font-weight:500 !important;}</style>
     var lc=findLabelCol();
     _lcFound=!!lc;
     if(!lc) return;
+    if(lc.col.querySelector('[data-dc="1"] input:focus')) return;
     if(!_mo||_moTarget!==lc.col) startMO(lc.col);
     injectIntoSticky(lc,_lk);
   }
@@ -7421,7 +7422,7 @@ html body[class] #vac-gantt td.emp .nm{font-weight:500 !important;}</style>
   }
 
   buildLkFromConnector(function(lk){ _lk=lk; inject(); });
-  setInterval(function(){ hookSaveOps(); buildLkFromConnector(function(lk){ _lk=lk; inject(); }); },5000);
+  setInterval(function(){ hookSaveOps(); buildLkFromConnector(function(lk){ _lk=lk; if(!document.querySelector('[data-dc="1"] input:focus')) inject(); }); },5000);
 
   (function poll(){
     hookSaveOps(); hookPlanningTab(); inject(); updatePlanningButtons();
