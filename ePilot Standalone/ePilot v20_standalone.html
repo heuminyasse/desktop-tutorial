@@ -7809,13 +7809,19 @@ html body[class] #vac-gantt td.emp .nm{font-weight:500 !important;}</style>
       "<button className=\"btn btn-s btn-sm\" onClick={()=>setDoc('avancement')}>📈 Rapport d'avancement</button>\n        ",
       "");
 
+    /* 22. Page 2 : remplace résumé box encombrant par en-tête compact + slider avancement */
+    src=cwp('step2-header',src,
+      "<div style={{ background:'var(--s2)',border:'1px solid var(--border)',borderRadius:'var(--rl)',padding:'14px 16px',marginBottom:16 }}>\n                <div style={{ fontSize:11,fontWeight:700,color:'var(--t2)',textTransform:'uppercase',letterSpacing:'.06em',marginBottom:10 }}>Résumé du PV</div>\n                <div className=\"g2\" style={{ gap:10,marginBottom:12 }}>\n                  {[\n                    ['Date',fmtD(f.date)],['Météo',`${f.meteo} ${f.temperature}°C`],\n                    ['Horaires',`${f.heureDebut} – ${f.heureFin}`],['Équipe',`${f.equipePresente.length} pers. \xb7 ${totalHeures}h`],\n                    ['Activités',f.activites.filter(a=>a.description).length+' enregistrées'],\n                    ['JSA',jsaOk?'✓ Conforme':'⚠ Incomplet'],\n                  ].map(([l,v])=>(\n                    <div key={l} className=\"irow\" style={{ padding:'5px 0' }}><span className=\"ilbl\" style={{ minWidth:90 }}>{l}</span><span className=\"ival\">{v}</span></div>\n                  ))}\n                </div>\n              </div>",
+      "<div style={{ background:'var(--s2)',border:'1px solid var(--border)',borderRadius:'var(--r)',padding:'10px 14px',marginBottom:12,display:'flex',alignItems:'center',gap:12,flexWrap:'wrap' }}>\n                <span style={{ fontSize:11,color:'var(--t2)' }}>{fmtD(f.date)} \xb7 <b>{f.equipePresente.length} pers.</b> \xb7 JSA <b style={{color:jsaOk?'var(--ok)':'var(--crit)'}}>{jsaOk?'✓':'⚠'}</b></span>\n                <div style={{ display:'flex',alignItems:'center',gap:8,flex:1,minWidth:200 }}>\n                  <label style={{ fontSize:11,fontWeight:700,color:'var(--t2)',whiteSpace:'nowrap' }}>Avancement global :</label>\n                  <input type=\"range\" min=\"0\" max=\"100\" step=\"5\" value={f.avancementGlobal} onChange={e=>set('avancementGlobal',Number(e.target.value))} style={{ flex:1,accentColor:'var(--acc)' }}/>\n                  <span style={{ fontSize:13,fontWeight:800,minWidth:32,textAlign:'right',color:'var(--acc)' }}>{f.avancementGlobal}%</span>\n                </div>\n              </div>");
+
     el.textContent=src;
   }
   setTimeout(patch,0);
 })();
 </script>
 
-<!-- PV Print: génère un rapport PDF A4 depuis les données JSON d'un PV -->
+
+<!-- PV Print: rapport d'avancement -->
 <script id="__PV_PRINT_v1__">
 (function(){
   function fD(d){if(!d)return '';try{return new Date(d+'T00:00:00').toLocaleDateString('fr-FR',{day:'2-digit',month:'long',year:'numeric'});}catch(e){return d;}}
@@ -7830,86 +7836,89 @@ html body[class] #vac-gantt td.emp .nm{font-weight:500 !important;}</style>
     var nom=_be.nom||'Home Business Office';
     var adr=_be.adresse||'Douala, Cameroun';
     var tel=_be.tel||'+237 677 19 22 49';
-    var mail=_be.email||'contact@hbo.cm';
     var logo=_be.logo||'';
 
     var clientName='';
     try{ var cl=(window.CLIENTS_DATA||[]).find(function(c){return c.id===(jip&&jip.clientId);}); clientName=cl?(cl.name||cl.nom||''):''; }catch(_){}
     var projRef=jip?(jip.imputation||jip.id||''):(pv.jipId||'');
     var projNom=jip?(jip.description||jip.id||''):(pv.jipId||'');
+    var avancement=typeof pv.avancementGlobal!=='undefined'?pv.avancementGlobal:(jip&&jip.progress)||0;
+    var dateStr=fD(pv.date);
 
-    var eqRows=(pv.equipePresente||[]).map(function(e,i){
-      return '<tr><td>'+(i+1)+'</td><td>'+esc(e.nom||'')+'</td><td>'+esc(e.role||'')+'</td><td style="text-align:center">'+esc(e.heures||0)+'h</td></tr>';
+    /* Tâches planning */
+    var tasks=(jip&&jip.tasks)||[];
+    var taskRows=tasks.map(function(t){
+      var pct=t.progress||0;
+      var col=pct>=100?'#166534':pct>=50?'#854d0e':'#991b1b';
+      return '<tr><td>'+(t.phase?'['+esc(t.phase)+'] ':'')+esc(t.title||t.nom||'')+'</td><td>'+esc(fD(t.start||t.debut))+'</td><td>'+esc(fD(t.end||t.fin))+'</td>'
+        +'<td style="text-align:center;font-weight:700;color:'+col+'">'+pct+'%</td><td>'+esc(t.status||t.statut||'')+'</td></tr>';
     }).join('');
 
-    var cntrArr=Array.isArray(pv.contraintes)?pv.contraintes:(pv.contraintes?[{description:pv.contraintes,etat:'',dateConstat:'',responsable:'',echeance:''}]:[]);
-    var cntrHtml='';
-    if(cntrArr.length>0){
-      cntrHtml='<table class="ptbl"><thead><tr><th>Description</th><th>État</th><th>Date constat</th><th>Responsable</th><th>Échéance</th></tr></thead><tbody>'
-        +cntrArr.map(function(c){return '<tr><td>'+esc(c.description||'')+'</td><td>'+esc(c.etat||'')+'</td><td>'+esc(c.dateConstat||'')+'</td><td>'+esc(c.responsable||'')+'</td><td>'+esc(c.echeance||'')+'</td></tr>';}).join('')
-        +'</tbody></table>';
-    }
-
-    var actRows=(pv.activites||[]).filter(function(a){return a.description;}).map(function(a){
-      return '<tr><td>'+esc(a.description||'')+'</td><td>'+esc(a.zone||'')+'</td><td>'+esc(a.qteJour||0)+' '+esc(a.unite||'')+'</td><td>'+esc(a.qteCumulee||0)+'</td><td>'+esc(a.avancement||0)+'%</td></tr>';
+    /* Activités du jour */
+    var acts=(pv.activites||[]).filter(function(a){return a.description;});
+    var actRows=acts.map(function(a){
+      return '<tr><td>'+esc(a.description)+'</td><td>'+esc(a.zone||'')+'</td><td style="text-align:center">'+esc(a.qteJour||'—')+' '+esc(a.unite||'')+'</td></tr>';
     }).join('');
 
-    var risques=(pv.jsa&&pv.jsa.risques||[]);
-    var jsaBriefing=pv.jsa&&pv.jsa.briefingFait;
-    var jsaEpi=pv.jsa&&pv.jsa.epiVerifies;
-    var signataire=(pv.jsa&&pv.jsa.signataire)||'';
+    /* Contraintes ouvertes */
+    var cntrArr=Array.isArray(pv.contraintes)?pv.contraintes:(pv.contraintes?[{description:pv.contraintes,etat:'Ouvert'}]:[]);
+    var openCntr=cntrArr.filter(function(c){return c.etat!=='Résolu';});
+    var cntrRows=openCntr.map(function(c){
+      return '<tr><td>'+esc(c.description||'')+'</td><td>'+esc(c.etat||'')+'</td><td>'+esc(c.responsable||'')+'</td><td>'+esc(c.echeance||'')+'</td></tr>';
+    }).join('');
+
+    var jsa=pv.jsa||{};
+    var signataire=jsa.signataire||'';
 
     var css='body{font-family:Arial,Helvetica,sans-serif;font-size:11px;color:#111;margin:0;padding:0}'
-      +'.page{width:210mm;min-height:297mm;margin:0 auto;padding:13mm 14mm 10mm;box-sizing:border-box}'
+      +'.page{width:210mm;min-height:297mm;margin:0 auto;padding:12mm 14mm 10mm;box-sizing:border-box}'
       +'.hdr{display:flex;align-items:flex-start;justify-content:space-between;border-bottom:3px solid '+acc+';padding-bottom:8px;margin-bottom:10px}'
       +'.hdr-l{display:flex;align-items:center;gap:10px}'
-      +'.hdr-logo{height:38px;width:auto;object-fit:contain}'
-      +'.hdr-info .title{font-size:19px;font-weight:900;color:'+acc+';margin:0;line-height:1}'
+      +'.hdr-logo{height:36px;width:auto;object-fit:contain}'
+      +'.hdr-info .title{font-size:18px;font-weight:900;color:'+acc+';margin:0;line-height:1}'
       +'.hdr-info .sub{font-size:10px;color:#555;margin:3px 0 0}'
-      +'.hdr-r{text-align:right;font-size:9.5px;color:#888;line-height:1.5}'
-      +'.hdr-r .num{font-size:15px;font-weight:900;color:#1e3a5f;margin-bottom:2px}'
-      +'.meta{display:grid;grid-template-columns:repeat(3,1fr);gap:5px 16px;background:#f4f6fa;border:1px solid #dce3ec;border-radius:6px;padding:8px 12px;margin-bottom:10px}'
-      +'.mi label{display:block;font-size:8.5px;font-weight:700;color:#7a8ca0;text-transform:uppercase;letter-spacing:.5px;margin-bottom:1px}'
-      +'.mi span{font-size:11px;font-weight:600;color:#1a2035}'
-      +'h3{font-size:10.5px;font-weight:900;text-transform:uppercase;letter-spacing:.5px;color:#1e3a5f;border-left:3px solid '+acc+';padding-left:7px;margin:10px 0 5px}'
+      +'.hdr-r{text-align:right;font-size:9px;color:#888;line-height:1.5}'
+      +'.hdr-r .ref{font-size:12px;font-weight:800;color:#1e3a5f}'
+      +'.av-box{display:flex;align-items:center;gap:16px;background:#f0f9ff;border:2px solid '+acc+';border-radius:8px;padding:10px 16px;margin-bottom:12px}'
+      +'.av-pct{font-size:30px;font-weight:900;color:'+acc+';white-space:nowrap}'
+      +'.av-bar{flex:1;height:12px;background:#e0f2fe;border-radius:6px;overflow:hidden}'
+      +'.av-fill{height:100%;background:'+acc+';border-radius:6px}'
+      +'.av-meta{text-align:right;min-width:100px;font-size:9px;color:#555;line-height:1.6}'
+      +'h3{font-size:10px;font-weight:900;text-transform:uppercase;letter-spacing:.5px;color:#1e3a5f;border-left:3px solid '+acc+';padding-left:7px;margin:10px 0 5px}'
       +'.ptbl{width:100%;border-collapse:collapse;margin-bottom:6px;font-size:10px}'
-      +'.ptbl th{background:'+acc+';color:#fff;padding:4px 8px;text-align:left;font-size:9px;font-weight:700;letter-spacing:.3px}'
+      +'.ptbl th{background:'+acc+';color:#fff;padding:4px 8px;text-align:left;font-size:9px;font-weight:700}'
       +'.ptbl td{padding:4px 8px;border-bottom:1px solid #eef0f5}'
       +'.ptbl tr:nth-child(even) td{background:#f8faff}'
-      +'.badge{display:inline-block;padding:2px 8px;border-radius:100px;font-size:9px;font-weight:700;margin-right:4px}'
+      +'.badge{display:inline-block;padding:2px 7px;border-radius:100px;font-size:9px;font-weight:700;margin-right:3px}'
       +'.ok{background:#dcfce7;color:#166534}.nok{background:#fee2e2;color:#991b1b}'
-      +'.risque{display:inline-block;padding:2px 7px;border-radius:100px;font-size:9px;background:#fff7ed;border:1px solid #fed7aa;color:#9a3412;margin:1px}'
-      +'.block{background:#f8faff;border:1px solid #dce3ec;border-radius:4px;padding:6px 10px;font-size:10.5px;white-space:pre-wrap;min-height:18px}'
-      +'.sig-grid{display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-top:18px}'
-      +'.sig-box p{font-size:9.5px;color:#555;margin:0 0 14px}'
+      +'.block{background:#f8faff;border:1px solid #dce3ec;border-radius:4px;padding:6px 10px;font-size:10.5px;white-space:pre-wrap;min-height:16px}'
+      +'.sig-grid{display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-top:16px}'
+      +'.sig-box p{font-size:9px;color:#555;margin:0 0 14px}'
       +'.sig-line{border-top:1.5px solid #1e3a5f;padding-top:3px;font-size:9px;color:#888}'
       +'@media print{@page{size:A4;margin:0}.page{padding:10mm 12mm}}';
 
-    var html='<!DOCTYPE html><html lang="fr"><head><meta charset="utf-8"><title>PV de Chantier N°'+esc(pv.numero)+'</title><style>'+css+'</style></head><body><div class="page">'
+    var html='<!DOCTYPE html><html lang="fr"><head><meta charset="utf-8"><title>Rapport d'avancement — '+esc(projRef)+'</title><style>'+css+'</style></head><body><div class="page">'
       +'<div class="hdr">'
-      +'<div class="hdr-l">'
-      +(logo?'<img class="hdr-logo" src="'+esc(logo)+'" alt="logo"/>':'')
-      +'<div class="hdr-info"><div class="title">PV de Chantier</div><div class="sub">'+esc(projRef)+(projNom?' &mdash; '+esc(projNom):'')+(clientName?' &mdash; '+esc(clientName):'')+'</div></div>'
+      +'<div class="hdr-l">'+(logo?'<img class="hdr-logo" src="'+esc(logo)+'" alt="logo"/>':'')
+      +'<div class="hdr-info"><div class="title">Rapport d'avancement</div><div class="sub">'+esc(projRef)+(projNom?' &mdash; '+esc(projNom):'')+(clientName?' &mdash; '+esc(clientName):'')+'</div></div></div>'
+      +'<div class="hdr-r"><div>'+esc(nom)+(adr?'<br>'+esc(adr):'')+(tel?'<br>'+esc(tel):'')+'</div><div class="ref">PV N° '+esc(pv.numero)+'</div><div>'+esc(dateStr)+'</div></div>'
       +'</div>'
-      +'<div class="hdr-r"><div class="num">N°&nbsp;'+esc(pv.numero)+'</div><div>'+esc(fD(pv.date))+'</div><div style="margin-top:4px;font-size:9px">'+esc(nom)+'<br>'+esc(adr)+(tel?'<br>'+esc(tel):'')+(mail?'<br>'+esc(mail):'')+'</div></div>'
+      +'<div class="av-box">'
+      +'<div class="av-pct">'+esc(avancement)+'%</div>'
+      +'<div style="flex:1"><div class="av-bar"><div class="av-fill" style="width:'+Math.min(100,avancement)+'%"></div></div>'
+      +'<div style="font-size:9px;color:#64748b;margin-top:3px">Avancement global du chantier</div></div>'
+      +'<div class="av-meta">PV du '+esc(dateStr)+(jip&&jip.dateFin?'<br>Fin prévue : '+esc(fD(jip.dateFin)):'')+'</div>'
       +'</div>'
-      +'<div class="meta">'
-      +'<div class="mi"><label>Date</label><span>'+esc(fD(pv.date))+'</span></div>'
-      +'<div class="mi"><label>Météo</label><span>'+esc(pv.meteo||'')+(pv.temperature?' &middot; '+esc(pv.temperature)+'°C':'')+'</span></div>'
-      +'<div class="mi"><label>Horaires</label><span>'+esc(pv.heureDebut||'')+'&nbsp;&ndash;&nbsp;'+esc(pv.heureFin||'')+'</span></div>'
-      +'<div class="mi"><label>Statut</label><span>'+esc(pv.status||'')+'</span></div>'
-      +'<div class="mi"><label>Équipe</label><span>'+((pv.equipePresente||[]).length)+' pers. &mdash; '+((pv.equipePresente||[]).reduce(function(s,e){return s+(Number(e.heures)||0);},0))+'h</span></div>'
-      +'</div>'
-      +'<h3>Équipe présente</h3>'
-      +(eqRows?'<table class="ptbl"><thead><tr><th>#</th><th>Nom</th><th>Rôle</th><th>Heures</th></tr></thead><tbody>'+eqRows+'</tbody></table>':'<p style="color:#aaa;font-style:italic;font-size:10px;margin:3px 0">Aucun membre enregistré.</p>')
-      +'<h3>JSA &mdash; Job Safety Analysis</h3>'
-      +'<p style="margin:0 0 5px"><span class="badge '+(jsaBriefing?'ok':'nok')+'">Briefing '+(jsaBriefing?'✓':'✗')+'</span><span class="badge '+(jsaEpi?'ok':'nok')+'">EPI '+(jsaEpi?'✓':'✗')+'</span></p>'
-      +(risques.length>0?'<p style="margin:3px 0">Risques&nbsp;: '+risques.map(function(r){return '<span class="risque">'+esc(r)+'</span>';}).join('')+'</p>':'')
-      +'<p style="margin:4px 0 6px;font-size:10.5px">Signataire&nbsp;: <strong>'+esc(signataire||'—')+'</strong></p>'
-      +(actRows?'<h3>Activités</h3><table class="ptbl"><thead><tr><th>Description</th><th>Zone</th><th>Qté jour</th><th>Qté cum.</th><th>Avancement</th></tr></thead><tbody>'+actRows+'</tbody></table>':'')
-      +(cntrArr.length>0?'<h3>Contraintes &amp; blocages</h3>'+cntrHtml:'')
+      +(taskRows?'<h3>Planning &mdash; Tâches</h3><table class="ptbl"><thead><tr><th>Tâche</th><th>Début</th><th>Fin</th><th>Av.</th><th>Statut</th></tr></thead><tbody>'+taskRows+'</tbody></table>':'')
+      +(actRows?'<h3>Activités réalisées</h3><table class="ptbl"><thead><tr><th>Description</th><th>Zone</th><th>Qté</th></tr></thead><tbody>'+actRows+'</tbody></table>':'')
+      +'<h3>Sécurité (JSA)</h3>'
+      +'<p style="margin:0 0 5px"><span class="badge '+(jsa.briefingFait?'ok':'nok')+'">Briefing '+(jsa.briefingFait?'✓':'✗')+'</span>'
+      +'<span class="badge '+(jsa.epiVerifies?'ok':'nok')+'">EPI '+(jsa.epiVerifies?'✓':'✗')+'</span>'
+      +(signataire?'<span style="font-size:10px;margin-left:5px">Signataire : <b>'+esc(signataire)+'</b></span>':'')
+      +'</p>'
+      +(openCntr.length>0?'<h3>Contraintes &amp; blocages</h3><table class="ptbl"><thead><tr><th>Description</th><th>État</th><th>Responsable</th><th>Échéance</th></tr></thead><tbody>'+cntrRows+'</tbody></table>':'')
       +(pv.incidents?'<h3>Incidents / Accidents</h3><div class="block">'+esc(pv.incidents)+'</div>':'')
-      +(pv.notes?'<h3>Notes &amp; observations</h3><div class="block">'+esc(pv.notes)+'</div>':'')
+      +(pv.notes?'<h3>Observations</h3><div class="block">'+esc(pv.notes)+'</div>':'')
       +'<div class="sig-grid">'
       +'<div class="sig-box"><p>Chef de chantier / Signataire</p><div class="sig-line">'+esc(signataire)+'</div></div>'
       +'<div class="sig-box"><p>Client / Représentant</p><div class="sig-line">&nbsp;</div></div>'
@@ -7926,11 +7935,10 @@ html body[class] #vac-gantt td.emp .nm{font-weight:500 !important;}</style>
 })();
 </script>
 
-<!-- PV Email: génère un mailto: depuis les données JSON d'un PV -->
+<!-- PV Email: extrait avancement + observations -->
 <script id="__PV_EMAIL_v1__">
 (function(){
   function fD(d){if(!d)return '';try{return new Date(d+'T00:00:00').toLocaleDateString('fr-FR',{day:'2-digit',month:'long',year:'numeric'});}catch(e){return d;}}
-  function ln(label,val){return val?(label+' : '+val+'\n'):'';}
 
   window.__pvEmail=function(pv,jip){
     if(!pv) return;
@@ -7944,62 +7952,75 @@ html body[class] #vac-gantt td.emp .nm{font-weight:500 !important;}</style>
     }catch(_){}
     var projRef=jip?(jip.imputation||jip.id||''):(pv.jipId||'');
     var projNom=jip?(jip.description||jip.id||''):(pv.jipId||'');
+    var avancement=typeof pv.avancementGlobal!=='undefined'?pv.avancementGlobal:(jip&&jip.progress)||0;
 
-    var subject='PV de Chantier N°'+(pv.numero||'?')+(projRef?' – '+projRef:'')+(clientName?' – '+clientName:'');
+    var subject='Rapport d'avancement – '+projRef+(clientName?' – '+clientName:'')+' – '+fD(pv.date);
+    var body='Bonjour'+(clientName?' '+clientName:'')+',
 
-    var body='Bonjour'+(clientName?' '+clientName:'')+',\n\n';
-    body+='Veuillez trouver ci-dessous le compte-rendu de chantier du '+fD(pv.date)+'.\n\n';
-    body+='━━━━━━━━━━━━━━━━━━━━━━━━\n';
-    body+=ln('PV N°',pv.numero||'?');
-    body+=ln('Projet',projRef+(projNom?' – '+projNom:''));
-    body+=ln('Date',fD(pv.date));
-    body+=ln('Météo',pv.meteo+(pv.temperature?' / '+pv.temperature+'°C':''));
-    body+=ln('Horaires',(pv.heureDebut||'?')+' – '+(pv.heureFin||'?'));
-    body+='━━━━━━━━━━━━━━━━━━━━━━━━\n\n';
+';
+    body+='Voici le point d'avancement du chantier au '+fD(pv.date)+'.
 
-    var eq=pv.equipePresente||[];
-    if(eq.length>0){
-      body+='ÉQUIPE PRÉSENTE\n';
-      eq.forEach(function(e){
-        body+='  • '+(e.nom||'N/A')+(e.role?' ('+e.role+')':'')+(e.heures?' – '+e.heures+'h':'')+'\n';
+';
+    body+='AVANCEMENT GLOBAL : '+avancement+'%
+';
+    body+='━━━━━━━━━━━━━━━━━━━━━━━━
+
+';
+
+    var tasks=(jip&&jip.tasks)||[];
+    if(tasks.length>0){
+      body+='PLANNING
+';
+      tasks.forEach(function(t){
+        body+='  '+(t.progress>=100?'✓':'○')+' '+(t.title||t.nom||'')+(t.phase?' ['+t.phase+']':'')+' — '+(t.progress||0)+'%
+';
       });
-      body+='\n';
+      body+='
+';
     }
-
-    var jsa=pv.jsa||{};
-    body+='SÉCURITÉ (JSA)\n';
-    body+='  • Briefing sécurité : '+(jsa.briefingFait?'✓ Réalisé':'✗ Non réalisé')+'\n';
-    body+='  • EPI vérifiés : '+(jsa.epiVerifies?'✓ Vérifiés':'✗ Non vérifiés')+'\n';
-    if((jsa.risques||[]).length>0) body+='  • Risques identifiés : '+(jsa.risques||[]).join(', ')+'\n';
-    if(jsa.signataire) body+='  • Signataire : '+jsa.signataire+'\n';
-    body+='\n';
 
     var acts=(pv.activites||[]).filter(function(a){return a.description;});
     if(acts.length>0){
-      body+='ACTIVITÉS DU JOUR\n';
+      body+='ACTIVITÉS DU JOUR
+';
       acts.forEach(function(a){
-        body+='  • '+a.description+(a.zone?' ['+a.zone+']':'')+(a.qteJour?' — '+a.qteJour+' '+(a.unite||'u'):'')+'\n';
+        body+='  • '+a.description+(a.zone?' ['+a.zone+']':'')+'
+';
       });
-      body+='\n';
+      body+='
+';
     }
 
-    var cntrArr=Array.isArray(pv.contraintes)?pv.contraintes:(pv.contraintes?[{description:pv.contraintes,etat:'',responsable:'',echeance:''}]:[]);
-    if(cntrArr.length>0){
-      body+='CONTRAINTES & BLOCAGES\n';
-      cntrArr.forEach(function(c){
-        body+='  • '+(c.description||'N/A')+(c.etat?' ['+c.etat+']':'')+(c.responsable?' – Resp: '+c.responsable:'')+(c.echeance?' – Échéance: '+c.echeance:'')+'\n';
+    var cntrArr=Array.isArray(pv.contraintes)?pv.contraintes:(pv.contraintes?[{description:pv.contraintes,etat:'Ouvert'}]:[]);
+    var open=cntrArr.filter(function(c){return c.etat!=='Résolu';});
+    if(open.length>0){
+      body+='POINTS DE VIGILANCE
+';
+      open.forEach(function(c){
+        body+='  ⚠ '+c.description+(c.etat?' ['+c.etat+']':'')+(c.responsable?' – Resp : '+c.responsable:'')+'
+';
       });
-      body+='\n';
+      body+='
+';
     }
 
-    if(pv.incidents) body+='INCIDENTS / ACCIDENTS\n'+pv.incidents+'\n\n';
-    if(pv.notes) body+='NOTES & OBSERVATIONS\n'+pv.notes+'\n\n';
+    if(pv.incidents) body+='INCIDENTS
+'+pv.incidents+'
 
-    body+='━━━━━━━━━━━━━━━━━━━━━━━━\n';
-    body+='Cordialement,\n';
-    body+=(_be.nom||'Home Business Office')+'\n';
-    if(_be.tel) body+=_be.tel+'\n';
-    if(_be.email) body+=_be.email+'\n';
+';
+    if(pv.notes) body+='OBSERVATIONS
+'+pv.notes+'
+
+';
+
+    body+='━━━━━━━━━━━━━━━━━━━━━━━━
+';
+    body+=(_be.nom||'Home Business Office')+'
+';
+    if(_be.tel) body+=_be.tel+'
+';
+    if(_be.email) body+=_be.email+'
+';
 
     var mailto='mailto:'+(clientEmail||'')+'?subject='+encodeURIComponent(subject)+'&body='+encodeURIComponent(body);
     var a=document.createElement('a');
@@ -8008,6 +8029,7 @@ html body[class] #vac-gantt td.emp .nm{font-weight:500 !important;}</style>
   };
 })();
 </script>
+
 
 <!-- WA React Patch: fix KPI Avancement + slider label to show weighted % -->
 <script id="__WA_REACT_PATCH_v1__">
