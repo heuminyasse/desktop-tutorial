@@ -7789,10 +7789,10 @@ html body[class] #vac-gantt td.emp .nm{font-weight:500 !important;}</style>
       'onNewPV={j => setPVTarget({ jip: j })}/>}',
       'onNewPV={j => setPVTarget({ jip: j })} onEditPV={function(pv){var _j=jips.find(function(j){return j.id===pv.jipId;});if(_j)setPVTarget({jip:_j,pv:pv});}} onPrintPV={function(pv){var _j=jips.find(function(j){return j.id===pv.jipId;});window.__pvPrint&&window.__pvPrint(pv,_j);}}/>}');
 
-    /* 18. Normalize contraintes to flat string when loading existingPV (textarea form) */
+    /* 18. Convert legacy string contraintes to array when loading existingPV */
     src=cwp('existing-cntr',src,
       'const [f, setF] = usePV(existingPV ? { ...existingPV } : blank);',
-      'const [f, setF] = usePV(existingPV ? Object.assign({},existingPV,{contraintes:Array.isArray(existingPV.contraintes)?existingPV.contraintes.map(function(c){return c.description||\'\'}).filter(Boolean).join(\', \'):(existingPV.contraintes||\'\')}): blank);');
+      'const [f, setF] = usePV(existingPV ? Object.assign({},existingPV,{contraintes:Array.isArray(existingPV.contraintes)?existingPV.contraintes:(existingPV.contraintes?[{description:existingPV.contraintes,etat:\'Ouvert\',dateConstat:\'\',responsable:\'\',echeance:\'\'}]:[])}) : blank);');
 
     /* 19. Fix RapportAvancementBody table: array-safe contraintes render */
     src=cwp('rapport-avancement-cntr',src,
