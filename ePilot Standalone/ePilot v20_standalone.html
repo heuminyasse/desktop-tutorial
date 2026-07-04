@@ -7752,7 +7752,8 @@ html body[class] #vac-gantt td.emp .nm{font-weight:500 !important;}</style>
       if(id===pi){rec=jd[i];break;}
     }
     if(!rec) return null;
-    var oa=parseVal(String(rec.budgetContractuel||rec.budgetOA||''));
+    var _oaRaw=rec.budgetContractuel||rec.budgetOA||0;
+    var oa=typeof _oaRaw==='number'?_oaRaw:(+String(_oaRaw).replace(/[\s]/g,'')||0);
     if(!oa) return null;
     var tvRaw=localStorage.getItem('ep_ptv_'+pi);
     if(!tvRaw) return null;
