@@ -7830,6 +7830,34 @@ html body[class] #vac-gantt td.emp .nm{font-weight:500 !important;}</style>
         sib.textContent=wa+'%';
       }
     }
+
+    // C -- KPI header cards (Avancement + Consommation) live DOM update
+    var _conso=(window._epilotWA&&window._epilotWA.pi&&window._epilotWA.pi.toUpperCase()===pi)?window._epilotWA.conso:null;
+    function _fmtM(n){if(!n)return '—';if(n>=1000000)return (n/1000000).toFixed(2)+'M F';if(n>=1000)return Math.round(n/1000)+'k F';return n+' F';}
+    var kpiRoot=document.getElementById('chantiers-root')||document.body;
+    var kpiWalk=document.createTreeWalker(kpiRoot,NodeFilter.SHOW_TEXT,null,false);
+    var kpiNd;
+    while((kpiNd=kpiWalk.nextNode())){
+      var kpiT=kpiNd.textContent.trim();
+      if(kpiT!=='Avancement'&&kpiT!=='Consommation') continue;
+      var kpiLbl=kpiNd.parentElement;
+      if(!kpiLbl||kpiLbl.offsetParent===null) continue;
+      var kpiPar=kpiLbl.parentElement;
+      if(!kpiPar) continue;
+      var kids=kpiPar.children;
+      for(var ki=0;ki<kids.length;ki++){
+        if(kids[ki]===kpiLbl) continue;
+        var kt=kids[ki].textContent.trim();
+        if(/^\d+%$/.test(kt)){
+          if(kt!==wa+'%') kids[ki].textContent=wa+'%';
+          var kCol=wa>=70?'#27ae60':wa>=40?'#e67e22':'#c0392b';
+          kids[ki].style.color=kCol;
+        } else if(kpiT==='Consommation'&&(kt==='—'||kt.charAt(0)==='≈')){
+          var newSub=_conso?'≈ '+_fmtM(_conso):'—';
+          if(kt!==newSub) kids[ki].textContent=newSub;
+        }
+      }
+    }
   }
 
   var _t=null;
