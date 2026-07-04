@@ -7661,6 +7661,48 @@ html body[class] #vac-gantt td.emp .nm{font-weight:500 !important;}</style>
 })();
 </script>
 
+<!-- WA React Patch: fix KPI Avancement + slider label to show weighted % -->
+<script id="__WA_REACT_PATCH_v1__">
+(function(){
+  var _tries=0;
+  function patch(){
+    var el=document.getElementById('ch-src');
+    if(!el){ if(++_tries<300) setTimeout(patch,50); return; }
+    if(window.__chReady) return;
+    var src=el.textContent;
+    if(src.indexOf('function CompactKPIs(')<0){ if(++_tries<300) setTimeout(patch,50); return; }
+    if(src.indexOf('__WA_REACT_V1__')>=0) return;
+
+    function cwp(name,s,find,repl){
+      if(s.indexOf(find)<0){ try{console.warn('[WA React] patch "'+name+'" introuvable.');}catch(_){} return s; }
+      return s.replace(find,repl);
+    }
+
+    var helper='/* __WA_REACT_V1__ */ function getWA(jip){'
+      +'var oa=Number(jip.budgetContractuel||jip.budgetOA||0);'
+      +'if(!oa)return null;'
+      +'var pi=jip.imputation||jip.id||"";if(!pi)return null;'
+      +'var tvRaw=localStorage.getItem("ep_ptv_"+pi);if(!tvRaw)return null;'
+      +'var tv;try{tv=JSON.parse(tvRaw);}catch(_){return null;}'
+      +'var phases=jip.phases||[];if(!phases.length)return null;'
+      +'var c=0;'
+      +'phases.forEach(function(ph){'
+      +'(ph.taches||ph.tasks||[]).forEach(function(t){'
+      +'var title=t.titre||t.title||t.nom||"";'
+      +'var val=parseFloat(tv[title]||0);'
+      +'var pct=t.avancement!==undefined?t.avancement:(t.pct!==undefined?t.pct:0);'
+      +'c+=Math.round(val*(pct/100));});});'
+      +'return Math.min(100,Math.round(c/oa*100));}';
+
+    src=cwp('wa-helper',src,'function CompactKPIs(',helper+'\nfunction CompactKPIs(');
+    src=cwp('wa-kpi',src,"{ l:'Avancement', v:jip.progress+'%'","{ l:'Avancement', v:(getWA(jip)!==null?getWA(jip):jip.progress)+'%'");
+    src=cwp('wa-slider',src,"minWidth:38, textAlign:'right', color:'var(--acc)' }}>{jip.progress}%</span>","minWidth:38, textAlign:'right', color:'var(--acc)' }}>{getWA(jip)!==null?getWA(jip):jip.progress}%</span>");
+    el.textContent=src;
+  }
+  setTimeout(patch,0);
+})();
+</script>
+
 <!-- Weighted Avancement: Planning title-bar badge + Ring + Slider -->
 <script id="__WA_INJECT_v1__">
 (function(){
