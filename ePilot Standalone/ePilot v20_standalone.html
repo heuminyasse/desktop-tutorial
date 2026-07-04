@@ -7809,70 +7809,105 @@ html body[class] #vac-gantt td.emp .nm{font-weight:500 !important;}</style>
     var nom=_be.nom||'Home Business Office';
     var adr=_be.adresse||'';
     var tel=_be.tel||'';
+    var email=_be.email||'project@hbocameroon.com';
     var logo=_be.logo||'';
 
     var cl=((window.CLIENTS_DATA||{}).clients||[]).find(function(c){return c.id===(jip&&jip.clientId);})||{};
-    var clientName=(cl.name||cl.nom||'').toUpperCase();
+    var clientName=(cl.name||cl.nom||cl.Nom||'').toUpperCase();
     var projNom=(jip?(jip.description||jip.id||''):(pv.jipId||'')).toUpperCase();
+    var jipId=(jip&&jip.id)||pv.jipId||'';
+    var rapRef='RAP'+(pv.numero||pv.id||'__')+'  –  Chantier '+jipId;
     var dateStr=fD(pv.date);
+    var superviseur=pv.signataire||(pv.jsa&&pv.jsa.signataire)||nom;
 
     var tasks=(jip&&jip.tasks)||[];
+    var totalPct=tasks.length?Math.round(tasks.reduce(function(s,t){return s+(Number(t.progress)||0);},0)/tasks.length):0;
     var taskRows=tasks.map(function(t,i){
-      var pct=t.progress||0;
-      var col=pct>=100?'#166534':pct>=50?'#854d0e':'#991b1b';
-      return '<tr><td>'+(i+1)+'- '+esc(t.title||t.nom||'')+'</td><td style="text-align:right;font-weight:700;color:'+col+'">'+pct+'%</td></tr>';
+      var pct=Number(t.progress||0);
+      var barCol=pct>=100?'#166534':pct>=75?'#15803d':pct>=50?'#854d0e':'#991b1b';
+      var bar='<div style="display:inline-block;vertical-align:middle;width:60px;height:6px;background:#e5e7eb;border-radius:3px;margin-right:5px">'
+        +'<div style="width:'+Math.min(pct,100)+'%;height:100%;background:'+barCol+';border-radius:3px"></div></div>';
+      return '<tr><td style="width:22px;color:#888;text-align:center">'+(i+1)+'</td>'
+        +'<td>'+esc(t.title||t.nom||'')+'</td>'
+        +'<td style="white-space:nowrap;text-align:right">'+bar+'<b style="color:'+barCol+'">'+pct+'%</b></td></tr>';
     }).join('');
 
     var cntrArr=Array.isArray(pv.contraintes)?pv.contraintes:(pv.contraintes?[{description:pv.contraintes,etat:'Ouvert'}]:[]);
-    var cntrTxt=cntrArr.map(function(c){return c.description||'';}).filter(Boolean).join('\n');
-    var eqTxt=(pv.equipePresente||[]).map(function(e){return e.nom+(e.role?' – '+e.role:'');}).join('\n');
+    var cntrRows=cntrArr.filter(function(c){return c.description;}).map(function(c){
+      var stCol=c.etat==='Clotôuré'?'#166534':c.etat==='En cours'?'#854d0e':'#991b1b';
+      return '<tr><td>'+esc(c.description||'')+'</td>'
+        +'<td style="white-space:nowrap"><span style="display:inline-block;padding:1px 6px;border-radius:10px;font-size:9px;font-weight:700;background:'+stCol+'22;color:'+stCol+'">'+esc(c.etat||'Ouvert')+'</span></td>'
+        +'<td>'+esc(c.responsable||'—')+'</td>'
+        +'<td>'+esc(c.echeance||'—')+'</td></tr>';
+    }).join('');
+
+    var eqRows=(pv.equipePresente||[]).map(function(e){
+      return '<tr><td>'+esc(e.nom||'')+'</td><td style="color:#555">'+esc(e.role||'')+'</td></tr>';
+    }).join('');
 
     var css='*{box-sizing:border-box;margin:0;padding:0}'
       +'body{font-family:Arial,Helvetica,sans-serif;font-size:11px;color:#111}'
       +'.page{width:210mm;min-height:297mm;margin:0 auto;padding:12mm 14mm 10mm}'
-      +'.hdr{display:flex;align-items:flex-start;justify-content:space-between;border-bottom:3px solid '+acc+';padding-bottom:8px;margin-bottom:12px}'
+      +'.hdr{display:flex;align-items:flex-start;justify-content:space-between;border-bottom:3px solid '+acc+';padding-bottom:8px;margin-bottom:10px}'
       +'.hdr-l{display:flex;align-items:center;gap:10px}'
       +'.logo{height:36px;object-fit:contain}'
-      +'.title{font-size:17px;font-weight:900;color:'+acc+';line-height:1}'
-      +'.sub{font-size:10px;color:#555;margin-top:3px}'
+      +'.title{font-size:16px;font-weight:900;color:'+acc+';line-height:1.1;text-transform:uppercase}'
+      +'.rap-ref{font-size:9.5px;color:#555;margin-top:4px}'
       +'.hdr-r{text-align:right;font-size:9px;color:#888;line-height:1.6}'
-      +'h3{font-size:10px;font-weight:900;text-transform:uppercase;letter-spacing:.5px;color:'+acc+';border-left:3px solid '+acc+';padding-left:7px;margin:12px 0 5px}'
-      +'.meta{display:flex;gap:24px;background:#f8faff;border:1px solid #dce3ec;border-radius:4px;padding:7px 12px;margin-bottom:10px;font-size:11px}'
-      +'.meta b{font-weight:700}'
+      +'.meta{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:10px}'
+      +'.meta-card{background:#f8faff;border:1px solid #dce3ec;border-radius:4px;padding:6px 10px}'
+      +'.meta-card .lbl{font-size:8.5px;text-transform:uppercase;letter-spacing:.5px;color:#888;margin-bottom:2px}'
+      +'.meta-card .val{font-size:11px;font-weight:700;color:#111}'
+      +'.meta-card .val2{font-size:10px;color:#444}'
+      +'.av-bar{height:10px;background:#e5e7eb;border-radius:5px;}'
+      +'.av-fill{height:100%;border-radius:5px;background:'+acc+'}'
+      +'h3{font-size:10px;font-weight:900;text-transform:uppercase;letter-spacing:.5px;color:'+acc+';border-left:3px solid '+acc+';padding-left:7px;margin:10px 0 5px}'
       +'.tbl{width:100%;border-collapse:collapse;margin-bottom:6px}'
-      +'.tbl th{background:'+acc+';color:#fff;padding:4px 8px;text-align:left;font-size:9.5px}'
-      +'.tbl td{padding:4px 8px;border-bottom:1px solid #eef0f5;font-size:10.5px}'
+      +'.tbl th{background:'+acc+';color:#fff;padding:4px 8px;text-align:left;font-size:9px;font-weight:700}'
+      +'.tbl td{padding:4px 8px;border-bottom:1px solid #eef0f5;font-size:10px}'
       +'.tbl tr:nth-child(even) td{background:#f8faff}'
       +'.blk{background:#f8faff;border:1px solid #dce3ec;border-radius:4px;padding:7px 10px;font-size:10.5px;white-space:pre-wrap;min-height:18px;margin-bottom:4px}'
+      +'.sigs{display:grid;grid-template-columns:1fr 1fr;gap:32px;margin-top:24px;padding-top:12px;border-top:1px solid #dce3ec}'
+      +'.sig-box .sig-lbl{font-size:8.5px;color:#888;margin-bottom:20px}'
+      +'.sig-box .sig-line{border-top:1.5px solid #333;padding-top:4px;font-size:9px;color:#555}'
       +'@media print{@page{size:A4;margin:0}.page{padding:10mm 12mm}}';
 
-    var html='<!DOCTYPE html><html lang="fr"><head><meta charset="utf-8">'
-      +'<title>Rapport d'activité – '+esc(clientName)+'</title>'
+    var htmlDoc='<!DOCTYPE html><html lang="fr"><head><meta charset="utf-8">'
+      +'<title>Rapport d'Avancement – '+esc(clientName)+'</title>'
       +'<style>'+css+'</style></head><body><div class="page">'
       +'<div class="hdr">'
       +'<div class="hdr-l">'+(logo?'<img class="logo" src="'+esc(logo)+'" alt=""/>':'')
-      +'<div><div class="title">Rapport d'activité</div><div class="sub">'+esc(clientName)+(projNom?'<br>'+esc(projNom):'')+'</div></div>'
-      +'</div>'
-      +'<div class="hdr-r">'+esc(nom)+(adr?'<br>'+esc(adr):'')+(tel?'<br>'+esc(tel):'')+'<br><b>'+esc(dateStr)+'</b></div>'
+      +'<div><div class="title">Rapport d'Avancement</div>'
+      +'<div class="rap-ref">'+esc(rapRef)+'</div>'
+      +'</div></div>'
+      +'<div class="hdr-r">'+esc(nom)+(adr?'<br>'+esc(adr):'')+(tel?'<br>'+esc(tel):'')+(email?'<br>'+esc(email):'')+'<br><b>'+esc(dateStr)+'</b></div>'
       +'</div>'
       +'<div class="meta">'
-      +'<span>Date : <b>'+esc(dateStr)+'</b></span>'
-      +'<span>Début : <b>'+(pv.heureDebut||'__h__')+'</b></span>'
-      +'<span>Fin : <b>'+(pv.heureFin||'__h__')+'</b></span>'
+      +'<div class="meta-card"><div class="lbl">Client</div><div class="val">'+esc(clientName||'—')+'</div></div>'
+      +'<div class="meta-card"><div class="lbl">Projet</div><div class="val2">'+esc(projNom||'—')+'</div></div>'
+      +'<div class="meta-card"><div class="lbl">Date</div><div class="val">'+esc(dateStr)+'</div>'
+      +'<div class="val2">'+esc(pv.heureDebut||'__h__')+' → '+esc(pv.heureFin||'__h__')+'</div></div>'
       +'</div>'
-      +(taskRows?'<h3>A- Tâches</h3><table class="tbl"><thead><tr><th>Tâche</th><th style="text-align:right;width:60px">Av.</th></tr></thead><tbody>'+taskRows+'</tbody></table>':'')
-      +'<h3>B- Observations</h3><div class="blk">'+esc(pv.notes||'—')+'</div>'
-      +'<h3>C- Contraintes</h3><div class="blk">'+esc(cntrTxt||'—')+'</div>'
-      +'<h3>D- Équipe</h3><div class="blk">'+esc(eqTxt||'—')+'</div>'
-      +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-top:20px">'
-      +'<div><p style="font-size:9px;color:#555;margin-bottom:14px">Chef de chantier / Signataire</p><div style="border-top:1.5px solid #1e3a5f;padding-top:3px;font-size:9px;color:#888">'+(pv.jsa&&pv.jsa.signataire?esc(pv.jsa.signataire):'&nbsp;')+'</div></div>'
-      +'<div><p style="font-size:9px;color:#555;margin-bottom:14px">Client / Représentant</p><div style="border-top:1.5px solid #1e3a5f;padding-top:3px;font-size:9px;color:#888">&nbsp;</div></div>'
+      +(tasks.length?'<div style="background:#f8faff;border:1px solid #dce3ec;border-radius:4px;padding:7px 12px;margin-bottom:10px;display:flex;align-items:center;gap:12px">'
+        +'<span style="font-size:9.5px;color:#888;white-space:nowrap">Avancement global</span>'
+        +'<div class="av-bar" style="flex:1"><div class="av-fill" style="width:'+Math.min(totalPct,100)+'%"></div></div>'
+        +'<b style="font-size:13px;color:'+acc+';white-space:nowrap">'+totalPct+'%</b>'
+        +'</div>':'')
+      +(taskRows?'<h3>A– Tâches</h3><table class="tbl"><thead><tr><th>N°</th><th>Description</th><th style="width:110px;text-align:right">Avancement</th></tr></thead><tbody>'+taskRows+'</tbody></table>':'')
+      +'<h3>B– Observations</h3><div class="blk">'+esc(pv.notes||'—')+'</div>'
+      +(cntrRows?'<h3>C– Contraintes</h3><table class="tbl"><thead><tr><th>Description</th><th style="width:80px">État</th><th style="width:90px">Responsable</th><th style="width:80px">Échéance</th></tr></thead><tbody>'+cntrRows+'</tbody></table>'
+        :'<h3>C– Contraintes</h3><div class="blk">—</div>')
+      +(eqRows?'<h3>D– Équipe présente</h3><table class="tbl"><thead><tr><th>Nom</th><th>Fonction</th></tr></thead><tbody>'+eqRows+'</tbody></table>'
+        :'<h3>D– Équipe présente</h3><div class="blk">—</div>')
+      +'<div class="sigs">'
+      +'<div class="sig-box"><div class="sig-lbl">Superviseur chantier</div><div class="sig-line">'+esc(superviseur)+'</div></div>'
+      +'<div class="sig-box"><div class="sig-lbl">Client / Représentant</div><div class="sig-line">&nbsp;</div></div>'
       +'</div>'
       +'</div></body></html>';
 
     var w=window.open('','_blank','width=900,height=800,scrollbars=yes');
     if(!w){alert('Veuillez autoriser les popups pour imprimer.');return;}
-    w.document.write(html);
+    w.document.write(htmlDoc);
     w.document.close();
     w.focus();
     setTimeout(function(){w.print();},400);
