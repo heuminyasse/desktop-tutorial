@@ -7013,6 +7013,7 @@ html body[class] #vac-gantt td.emp .nm{font-weight:500 !important;}</style>
       hdrP.style.color=pct>100?'#e74c3c':(pct>90?'#e67e22':'#27ae60');
     }
     if(hdrC) hdrC.textContent='Σ '+fF(totalConso);
+    window._epilotWA={ pi:pi, wa: oa>0 ? Math.min(100,Math.round(totalConso/oa*100)) : null, conso:totalConso, oa:oa };
   }
 
   function findLabelCol(){
@@ -7643,6 +7644,127 @@ html body[class] #vac-gantt td.emp .nm{font-weight:500 !important;}</style>
       reactChange(sel,'En cours');
     }
   },true);
+})();
+</script>
+
+<!-- Weighted Avancement: Planning title-bar badge + Ring + Slider -->
+<script id="__WA_INJECT_v1__">
+(function(){
+  /* helpers */
+  function getActivePI(){
+    var h=(window.location.hash||'').match(/PI\d{4,6}/i);
+    if(h) return h[0].toUpperCase();
+    var root=document.getElementById('chantiers-root')||document.body;
+    var els=root.querySelectorAll('.mono,[class*="mono"],[class*="imputation"]');
+    for(var i=0;i<els.length;i++){
+      var t=els[i].textContent.trim();
+      if(/^PI\d{4,6}$/i.test(t)&&els[i].offsetParent!==null) return t.toUpperCase();
+    }
+    var walk=document.createTreeWalker(root,NodeFilter.SHOW_TEXT,null,false);
+    var node;
+    while((node=walk.nextNode())){
+      var m=node.textContent.match(/\bPI\d{4,6}\b/i);
+      if(m&&node.parentElement&&node.parentElement.offsetParent!==null) return m[0].toUpperCase();
+    }
+    return null;
+  }
+
+  function computeWA(pi){
+    if(!pi) return null;
+    var d=window._epilotWA;
+    if(d&&d.pi&&d.pi.toUpperCase()===pi&&d.wa!==null&&d.wa!==undefined) return d.wa;
+    var jd=window.JIP_DATA||[];
+    var rec=null;
+    for(var i=0;i<jd.length;i++){
+      var id=(jd[i].Imputation||jd[i].imputation||jd[i].id||'').toUpperCase();
+      if(id===pi){rec=jd[i];break;}
+    }
+    if(!rec) return null;
+    var oa=rec.budgetContractuel||rec.budgetOA||0;
+    if(!oa) return null;
+    var tvRaw=localStorage.getItem('ep_ptv_'+pi);
+    if(!tvRaw) return null;
+    var tv;
+    try{tv=JSON.parse(tvRaw);}catch(_){return null;}
+    var phases=rec.phases||[];
+    var totalConso=0;
+    phases.forEach(function(ph){
+      (ph.taches||ph.tasks||[]).forEach(function(t){
+        var title=t.titre||t.title||t.nom||'';
+        var val=parseFloat(tv[title]||0);
+        var pct=t.avancement!==undefined?t.avancement:(t.pct!==undefined?t.pct:0);
+        totalConso+=Math.round(val*(pct/100));
+      });
+    });
+    return Math.min(100,Math.round(totalConso/oa*100));
+  }
+
+  function applyWA(){
+    var pi=getActivePI();
+    var wa=computeWA(pi);
+    if(wa===null||wa===undefined) return;
+    var waLabel='Av. pondere : '+wa+'%';
+
+    // A -- Planning title bar badge (when Planning tab visible)
+    var all=document.querySelectorAll('#chantiers-root *');
+    var planEl=null;
+    for(var i=0;i<all.length;i++){
+      var e=all[i];
+      if(e.children.length===0&&(e.textContent.indexOf('t\u00e2ches termin\u00e9es')>=0||e.textContent.indexOf('taches terminees')>=0)){
+        planEl=e; break;
+      }
+    }
+    if(planEl){
+      var par=planEl.parentElement||planEl;
+      var badge=par.querySelector('[data-wa="1"]');
+      if(!badge){
+        badge=document.createElement('span');
+        badge.setAttribute('data-wa','1');
+        badge.style.cssText='margin-left:10px;padding:2px 9px;background:#c0392b;color:#fff;border-radius:10px;font-size:11px;font-weight:700;vertical-align:middle;';
+        par.appendChild(badge);
+      }
+      badge.textContent=waLabel;
+    }
+
+    // B -- Ring SVG
+    var svg=document.querySelector('#chantiers-root svg[style*="rotate(-90deg)"]');
+    if(svg){
+      var txt=svg.querySelector('text');
+      if(txt&&txt.textContent.trim()!==String(wa)) txt.textContent=wa;
+      var circles=svg.querySelectorAll('circle');
+      if(circles.length>=2){
+        var r=parseFloat(circles[1].getAttribute('r')||'0');
+        if(r>0){
+          var circ=2*Math.PI*r;
+          var off=parseFloat((circ-(wa/100)*circ).toFixed(2));
+          var cur=parseFloat(circles[1].getAttribute('stroke-dashoffset')||circ);
+          if(Math.abs(cur-off)>0.5){
+            circles[1].setAttribute('stroke-dashoffset',off);
+            var col=wa>=100?'#27ae60':wa>=70?'#2ecc71':wa>=40?'#e67e22':'#c0392b';
+            circles[1].setAttribute('stroke',col);
+            if(txt) txt.setAttribute('fill',col);
+          }
+        }
+      }
+    }
+
+    // B -- Avancement label next to slider
+    var slider=document.querySelector('#chantiers-root input[type="range"][step="5"]');
+    if(slider){
+      var sib=slider.nextElementSibling;
+      if(sib&&/^\d/.test(sib.textContent.trim())&&sib.textContent.trim()!==wa+'%'){
+        sib.textContent=wa+'%';
+      }
+    }
+  }
+
+  var _t=null;
+  function schedule(){ clearTimeout(_t); _t=setTimeout(applyWA,120); }
+  var mo=new MutationObserver(schedule);
+  mo.observe(document.body,{childList:true,subtree:true,characterData:true,
+    attributes:true,attributeFilter:['stroke-dashoffset','style','class','value']});
+  setInterval(applyWA,2000);
+  applyWA();
 })();
 </script>
 
