@@ -6924,7 +6924,7 @@ html body[class] #vac-gantt td.emp .nm{font-weight:500 !important;}</style>
     for(var i=0;i<jd.length;i++){
       var j=jd[i];
       if(j.Imputation===pi||j.imputation===pi||j.id===pi){
-        var v=Number(j.budgetContractuel||j.budgetOA||0);
+        var v=parseVal(String(j.budgetContractuel||j.budgetOA||''));
         if(v>0){ _oaCache[pi]=v; return v; }
       }
     }
@@ -7015,6 +7015,7 @@ html body[class] #vac-gantt td.emp .nm{font-weight:500 !important;}</style>
     }
     if(hdrC) hdrC.textContent='Σ '+fF(totalConso);
     window._epilotWA={ pi:pi, wa: oa>0 ? Math.min(100,Math.round(totalConso/oa*100)) : null, conso:totalConso, oa:oa };
+    try{localStorage.setItem('epilot_wa_cache',JSON.stringify(window._epilotWA));}catch(_){}
   }
 
   function findLabelCol(){
@@ -7678,17 +7679,24 @@ html body[class] #vac-gantt td.emp .nm{font-weight:500 !important;}</style>
       return s.replace(find,repl);
     }
 
-    // Read directly from window._epilotWA set by updateBudgetTotals (Planning columns)
+    // Read from _epilotWA (Planning columns) → localStorage cache → computeWA fallback
     var helper='/* __WA_REACT_V1__ */'
       +' function getWA(jip){'
       +'var pi=(jip.imputation||jip.id||"").toUpperCase();if(!pi)return null;'
       +'var w=window._epilotWA;'
       +'if(w&&w.pi&&w.pi.toUpperCase()===pi&&w.wa!==null&&w.wa!==undefined)return w.wa;'
+      +'try{var lc=JSON.parse(localStorage.getItem("epilot_wa_cache")||"null");'
+      +'if(lc&&lc.pi&&lc.pi.toUpperCase()===pi&&lc.wa!==null&&lc.wa!==undefined){window._epilotWA=lc;return lc.wa;}'
+      +'}catch(_){}'
+      +'if(typeof window._epilotComputeWA==="function"){var r=window._epilotComputeWA(pi);if(r!==null&&r!==undefined)return r;}'
       +'return null;}'
       +' function getConsoAmt(jip){'
       +'var pi=(jip.imputation||jip.id||"").toUpperCase();if(!pi)return null;'
       +'var w=window._epilotWA;'
       +'if(w&&w.pi&&w.pi.toUpperCase()===pi&&w.conso!==null&&w.conso!==undefined)return w.conso;'
+      +'try{var lc=JSON.parse(localStorage.getItem("epilot_wa_cache")||"null");'
+      +'if(lc&&lc.pi&&lc.pi.toUpperCase()===pi&&lc.conso!==null&&lc.conso!==undefined){return lc.conso;}'
+      +'}catch(_){}'
       +'return null;}';
 
     src=cwp('wa-helper',src,'function CompactKPIs(',helper+'\nfunction CompactKPIs(');
@@ -7730,6 +7738,13 @@ html body[class] #vac-gantt td.emp .nm{font-weight:500 !important;}</style>
     if(!pi) return null;
     var d=window._epilotWA;
     if(d&&d.pi&&d.pi.toUpperCase()===pi&&d.wa!==null&&d.wa!==undefined) return d.wa;
+    // Restore from localStorage cache (set each time Planning columns are computed)
+    try{
+      var lc=JSON.parse(localStorage.getItem('epilot_wa_cache')||'null');
+      if(lc&&lc.pi&&lc.pi.toUpperCase()===pi&&lc.wa!==null&&lc.wa!==undefined){
+        window._epilotWA=lc; return lc.wa;
+      }
+    }catch(_){}
     var jd=window.JIP_DATA||[];
     var rec=null;
     for(var i=0;i<jd.length;i++){
@@ -7737,7 +7752,7 @@ html body[class] #vac-gantt td.emp .nm{font-weight:500 !important;}</style>
       if(id===pi){rec=jd[i];break;}
     }
     if(!rec) return null;
-    var oa=rec.budgetContractuel||rec.budgetOA||0;
+    var oa=parseVal(String(rec.budgetContractuel||rec.budgetOA||''));
     if(!oa) return null;
     var tvRaw=localStorage.getItem('ep_ptv_'+pi);
     if(!tvRaw) return null;
@@ -7755,6 +7770,7 @@ html body[class] #vac-gantt td.emp .nm{font-weight:500 !important;}</style>
     });
     return Math.min(100,Math.round(totalConso/oa*100));
   }
+  window._epilotComputeWA=computeWA;
 
   function applyWA(){
     var pi=getActivePI();
