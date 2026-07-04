@@ -7706,10 +7706,10 @@ html body[class] #vac-gantt td.emp .nm{font-weight:500 !important;}</style>
       "</div>"+
       "\n              </div>");
 
-    /* 5. STEP_LABELS: remove Activités */
+    /* 5. STEP_LABELS: rename steps */
     src=cwp('step-labels',src,
       "const STEP_LABELS = ['Équipe & JSA','Activités','Synthèse & Envoi'];",
-      "const STEP_LABELS = ['Équipe & JSA','Synthèse & Envoi'];");
+      "const STEP_LABELS = ['Sécurité & Équipe','Compte-rendu'];");
 
     /* 6. Hide step 2 content (Activités) */
     src=cwp('hide-step2',src,
@@ -7799,6 +7799,16 @@ html body[class] #vac-gantt td.emp .nm{font-weight:500 !important;}</style>
       "{pv.notes||pv.contraintes||'—'}",
       "{pv.notes||(Array.isArray(pv.contraintes)?pv.contraintes.map(function(c){return c.description||'';}).filter(Boolean).join(' · '):pv.contraintes)||'—'}");
 
+    /* 20. PVModal final buttons: 💾 Brouillon + 📧 Email + 📄 PDF */
+    src=cwp('pv-final-btns',src,
+      "<>\n                <button className=\"btn btn-s\" onClick={()=>handleSave('Brouillon')}>Sauvegarder brouillon</button>\n                <button className=\"btn btn-p\" onClick={()=>handleSave('Soumis')}>Soumettre au client</button>\n              </>",
+      "<>\n                <button className=\"btn btn-s\" onClick={()=>handleSave('Brouillon')}>💾 Brouillon</button>\n                <button className=\"btn btn-s\" onClick={()=>{if(window.__pvEmail)window.__pvEmail(f,jip);handleSave('Brouillon');}}>📧 Email</button>\n                <button className=\"btn btn-p\" onClick={()=>{if(window.__pvPrint)window.__pvPrint(f,jip);handleSave('Soumis');}}>📄 PDF</button>\n              </>");
+
+    /* 21. RapportsTab: remove avancement button (unifié via PV du jour) */
+    src=cwp('rapports-no-avancement',src,
+      "<button className=\"btn btn-s btn-sm\" onClick={()=>setDoc('avancement')}>📈 Rapport d'avancement</button>\n        ",
+      "");
+
     el.textContent=src;
   }
   setTimeout(patch,0);
@@ -7813,17 +7823,25 @@ html body[class] #vac-gantt td.emp .nm{font-weight:500 !important;}</style>
 
   window.__pvPrint=function(pv,jip){
     if(!pv) return;
+    var _bs=(typeof window!=='undefined'&&window.EPILOT_SETTINGS)||{};
+    var _be=_bs.entreprise||{};
+    var _bd=_bs.design||{};
+    var acc=_bd.accent||'#0ea5e9';
+    var nom=_be.nom||'Home Business Office';
+    var adr=_be.adresse||'Douala, Cameroun';
+    var tel=_be.tel||'+237 677 19 22 49';
+    var mail=_be.email||'contact@hbo.cm';
+    var logo=_be.logo||'';
+
     var clientName='';
     try{ var cl=(window.CLIENTS_DATA||[]).find(function(c){return c.id===(jip&&jip.clientId);}); clientName=cl?(cl.name||cl.nom||''):''; }catch(_){}
     var projRef=jip?(jip.imputation||jip.id||''):(pv.jipId||'');
     var projNom=jip?(jip.description||jip.id||''):(pv.jipId||'');
 
-    /* Équipe */
     var eqRows=(pv.equipePresente||[]).map(function(e,i){
       return '<tr><td>'+(i+1)+'</td><td>'+esc(e.nom||'')+'</td><td>'+esc(e.role||'')+'</td><td style="text-align:center">'+esc(e.heures||0)+'h</td></tr>';
     }).join('');
 
-    /* Contraintes (array ou legacy string) */
     var cntrArr=Array.isArray(pv.contraintes)?pv.contraintes:(pv.contraintes?[{description:pv.contraintes,etat:'',dateConstat:'',responsable:'',echeance:''}]:[]);
     var cntrHtml='';
     if(cntrArr.length>0){
@@ -7832,7 +7850,6 @@ html body[class] #vac-gantt td.emp .nm{font-weight:500 !important;}</style>
         +'</tbody></table>';
     }
 
-    /* Activités */
     var actRows=(pv.activites||[]).filter(function(a){return a.description;}).map(function(a){
       return '<tr><td>'+esc(a.description||'')+'</td><td>'+esc(a.zone||'')+'</td><td>'+esc(a.qteJour||0)+' '+esc(a.unite||'')+'</td><td>'+esc(a.qteCumulee||0)+'</td><td>'+esc(a.avancement||0)+'%</td></tr>';
     }).join('');
@@ -7840,39 +7857,42 @@ html body[class] #vac-gantt td.emp .nm{font-weight:500 !important;}</style>
     var risques=(pv.jsa&&pv.jsa.risques||[]);
     var jsaBriefing=pv.jsa&&pv.jsa.briefingFait;
     var jsaEpi=pv.jsa&&pv.jsa.epiVerifies;
-    var signataire=pv.jsa&&pv.jsa.signataire||'';
+    var signataire=(pv.jsa&&pv.jsa.signataire)||'';
 
     var css='body{font-family:Arial,Helvetica,sans-serif;font-size:11px;color:#111;margin:0;padding:0}'
       +'.page{width:210mm;min-height:297mm;margin:0 auto;padding:13mm 14mm 10mm;box-sizing:border-box}'
-      +'.hdr{display:flex;align-items:flex-start;justify-content:space-between;border-bottom:3px solid #b91c1c;padding-bottom:8px;margin-bottom:10px}'
-      +'.hdr-l .title{font-size:20px;font-weight:900;color:#b91c1c;margin:0;line-height:1}'
-      +'.hdr-l .sub{font-size:11px;color:#555;margin:3px 0 0}'
-      +'.hdr-r{text-align:right;font-size:10px;color:#888}'
-      +'.hdr-r .num{font-size:16px;font-weight:900;color:#1e3a5f}'
+      +'.hdr{display:flex;align-items:flex-start;justify-content:space-between;border-bottom:3px solid '+acc+';padding-bottom:8px;margin-bottom:10px}'
+      +'.hdr-l{display:flex;align-items:center;gap:10px}'
+      +'.hdr-logo{height:38px;width:auto;object-fit:contain}'
+      +'.hdr-info .title{font-size:19px;font-weight:900;color:'+acc+';margin:0;line-height:1}'
+      +'.hdr-info .sub{font-size:10px;color:#555;margin:3px 0 0}'
+      +'.hdr-r{text-align:right;font-size:9.5px;color:#888;line-height:1.5}'
+      +'.hdr-r .num{font-size:15px;font-weight:900;color:#1e3a5f;margin-bottom:2px}'
       +'.meta{display:grid;grid-template-columns:repeat(3,1fr);gap:5px 16px;background:#f4f6fa;border:1px solid #dce3ec;border-radius:6px;padding:8px 12px;margin-bottom:10px}'
       +'.mi label{display:block;font-size:8.5px;font-weight:700;color:#7a8ca0;text-transform:uppercase;letter-spacing:.5px;margin-bottom:1px}'
       +'.mi span{font-size:11px;font-weight:600;color:#1a2035}'
-      +'h3{font-size:10.5px;font-weight:900;text-transform:uppercase;letter-spacing:.5px;color:#1e3a5f;border-left:3px solid #b91c1c;padding-left:7px;margin:10px 0 5px}'
+      +'h3{font-size:10.5px;font-weight:900;text-transform:uppercase;letter-spacing:.5px;color:#1e3a5f;border-left:3px solid '+acc+';padding-left:7px;margin:10px 0 5px}'
       +'.ptbl{width:100%;border-collapse:collapse;margin-bottom:6px;font-size:10px}'
-      +'.ptbl th{background:#1e3a5f;color:#fff;padding:4px 8px;text-align:left;font-size:9px;font-weight:700;letter-spacing:.3px}'
+      +'.ptbl th{background:'+acc+';color:#fff;padding:4px 8px;text-align:left;font-size:9px;font-weight:700;letter-spacing:.3px}'
       +'.ptbl td{padding:4px 8px;border-bottom:1px solid #eef0f5}'
       +'.ptbl tr:nth-child(even) td{background:#f8faff}'
       +'.badge{display:inline-block;padding:2px 8px;border-radius:100px;font-size:9px;font-weight:700;margin-right:4px}'
-      +'.ok{background:#dcfce7;color:#166534}.nok{background:#fee2e2;color:#b91c1c}'
+      +'.ok{background:#dcfce7;color:#166534}.nok{background:#fee2e2;color:#991b1b}'
       +'.risque{display:inline-block;padding:2px 7px;border-radius:100px;font-size:9px;background:#fff7ed;border:1px solid #fed7aa;color:#9a3412;margin:1px}'
-      +'.block{background:#fffdf4;border:1px solid #fde68a;border-radius:4px;padding:6px 10px;font-size:10.5px;white-space:pre-wrap;min-height:18px}'
+      +'.block{background:#f8faff;border:1px solid #dce3ec;border-radius:4px;padding:6px 10px;font-size:10.5px;white-space:pre-wrap;min-height:18px}'
       +'.sig-grid{display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-top:18px}'
       +'.sig-box p{font-size:9.5px;color:#555;margin:0 0 14px}'
       +'.sig-line{border-top:1.5px solid #1e3a5f;padding-top:3px;font-size:9px;color:#888}'
       +'@media print{@page{size:A4;margin:0}.page{padding:10mm 12mm}}';
 
     var html='<!DOCTYPE html><html lang="fr"><head><meta charset="utf-8"><title>PV de Chantier N°'+esc(pv.numero)+'</title><style>'+css+'</style></head><body><div class="page">'
-      // Header
       +'<div class="hdr">'
-      +'<div class="hdr-l"><div class="title">PV de Chantier</div><div class="sub">'+esc(projRef)+(projNom?' &mdash; '+esc(projNom):'')+(clientName?' &mdash; '+esc(clientName):'')+'</div></div>'
-      +'<div class="hdr-r"><div class="num">N°&nbsp;'+esc(pv.numero)+'</div><div>'+esc(fD(pv.date))+'</div></div>'
+      +'<div class="hdr-l">'
+      +(logo?'<img class="hdr-logo" src="'+esc(logo)+'" alt="logo"/>':'')
+      +'<div class="hdr-info"><div class="title">PV de Chantier</div><div class="sub">'+esc(projRef)+(projNom?' &mdash; '+esc(projNom):'')+(clientName?' &mdash; '+esc(clientName):'')+'</div></div>'
       +'</div>'
-      // Meta
+      +'<div class="hdr-r"><div class="num">N°&nbsp;'+esc(pv.numero)+'</div><div>'+esc(fD(pv.date))+'</div><div style="margin-top:4px;font-size:9px">'+esc(nom)+'<br>'+esc(adr)+(tel?'<br>'+esc(tel):'')+(mail?'<br>'+esc(mail):'')+'</div></div>'
+      +'</div>'
       +'<div class="meta">'
       +'<div class="mi"><label>Date</label><span>'+esc(fD(pv.date))+'</span></div>'
       +'<div class="mi"><label>Météo</label><span>'+esc(pv.meteo||'')+(pv.temperature?' &middot; '+esc(pv.temperature)+'°C':'')+'</span></div>'
@@ -7880,35 +7900,111 @@ html body[class] #vac-gantt td.emp .nm{font-weight:500 !important;}</style>
       +'<div class="mi"><label>Statut</label><span>'+esc(pv.status||'')+'</span></div>'
       +'<div class="mi"><label>Équipe</label><span>'+((pv.equipePresente||[]).length)+' pers. &mdash; '+((pv.equipePresente||[]).reduce(function(s,e){return s+(Number(e.heures)||0);},0))+'h</span></div>'
       +'</div>'
-      // Équipe
       +'<h3>Équipe présente</h3>'
-      +(eqRows?'<table class="ptbl"><thead><tr><th>#</th><th>Nom</th><th>Rôle</th><th>Heures</th></tr></thead><tbody>'+eqRows+'</tbody></table>':'<p style="color:#888;font-style:italic;font-size:10px;margin:3px 0">Aucun membre enregistré.</p>')
-      // JSA
+      +(eqRows?'<table class="ptbl"><thead><tr><th>#</th><th>Nom</th><th>Rôle</th><th>Heures</th></tr></thead><tbody>'+eqRows+'</tbody></table>':'<p style="color:#aaa;font-style:italic;font-size:10px;margin:3px 0">Aucun membre enregistré.</p>')
       +'<h3>JSA &mdash; Job Safety Analysis</h3>'
       +'<p style="margin:0 0 5px"><span class="badge '+(jsaBriefing?'ok':'nok')+'">Briefing '+(jsaBriefing?'✓':'✗')+'</span><span class="badge '+(jsaEpi?'ok':'nok')+'">EPI '+(jsaEpi?'✓':'✗')+'</span></p>'
       +(risques.length>0?'<p style="margin:3px 0">Risques&nbsp;: '+risques.map(function(r){return '<span class="risque">'+esc(r)+'</span>';}).join('')+'</p>':'')
       +'<p style="margin:4px 0 6px;font-size:10.5px">Signataire&nbsp;: <strong>'+esc(signataire||'—')+'</strong></p>'
-      // Activités (si non vides)
       +(actRows?'<h3>Activités</h3><table class="ptbl"><thead><tr><th>Description</th><th>Zone</th><th>Qté jour</th><th>Qté cum.</th><th>Avancement</th></tr></thead><tbody>'+actRows+'</tbody></table>':'')
-      // Contraintes
       +(cntrArr.length>0?'<h3>Contraintes &amp; blocages</h3>'+cntrHtml:'')
-      // Incidents
       +(pv.incidents?'<h3>Incidents / Accidents</h3><div class="block">'+esc(pv.incidents)+'</div>':'')
-      // Notes
       +(pv.notes?'<h3>Notes &amp; observations</h3><div class="block">'+esc(pv.notes)+'</div>':'')
-      // Signatures
       +'<div class="sig-grid">'
       +'<div class="sig-box"><p>Chef de chantier / Signataire</p><div class="sig-line">'+esc(signataire)+'</div></div>'
       +'<div class="sig-box"><p>Client / Représentant</p><div class="sig-line">&nbsp;</div></div>'
       +'</div>'
       +'</div></body></html>';
 
-    var w=window.open('','_blank','width=920,height=750,scrollbars=yes');
+    var w=window.open('','_blank','width=960,height=800,scrollbars=yes');
     if(!w){ alert('Veuillez autoriser les fenêtres popup pour imprimer.'); return; }
     w.document.write(html);
     w.document.close();
     w.focus();
     setTimeout(function(){ w.print(); },450);
+  };
+})();
+</script>
+
+<!-- PV Email: génère un mailto: depuis les données JSON d'un PV -->
+<script id="__PV_EMAIL_v1__">
+(function(){
+  function fD(d){if(!d)return '';try{return new Date(d+'T00:00:00').toLocaleDateString('fr-FR',{day:'2-digit',month:'long',year:'numeric'});}catch(e){return d;}}
+  function ln(label,val){return val?(label+' : '+val+'\n'):'';}
+
+  window.__pvEmail=function(pv,jip){
+    if(!pv) return;
+    var _bs=(typeof window!=='undefined'&&window.EPILOT_SETTINGS)||{};
+    var _be=_bs.entreprise||{};
+    var clientName='',clientEmail='';
+    try{
+      var cl=(window.CLIENTS_DATA||[]).find(function(c){return c.id===(jip&&jip.clientId);});
+      clientName=cl?(cl.name||cl.nom||''):'';
+      clientEmail=cl?(cl.email||cl.mail||''):'';
+    }catch(_){}
+    var projRef=jip?(jip.imputation||jip.id||''):(pv.jipId||'');
+    var projNom=jip?(jip.description||jip.id||''):(pv.jipId||'');
+
+    var subject='PV de Chantier N°'+(pv.numero||'?')+(projRef?' – '+projRef:'')+(clientName?' – '+clientName:'');
+
+    var body='Bonjour'+(clientName?' '+clientName:'')+',\n\n';
+    body+='Veuillez trouver ci-dessous le compte-rendu de chantier du '+fD(pv.date)+'.\n\n';
+    body+='━━━━━━━━━━━━━━━━━━━━━━━━\n';
+    body+=ln('PV N°',pv.numero||'?');
+    body+=ln('Projet',projRef+(projNom?' – '+projNom:''));
+    body+=ln('Date',fD(pv.date));
+    body+=ln('Météo',pv.meteo+(pv.temperature?' / '+pv.temperature+'°C':''));
+    body+=ln('Horaires',(pv.heureDebut||'?')+' – '+(pv.heureFin||'?'));
+    body+='━━━━━━━━━━━━━━━━━━━━━━━━\n\n';
+
+    var eq=pv.equipePresente||[];
+    if(eq.length>0){
+      body+='ÉQUIPE PRÉSENTE\n';
+      eq.forEach(function(e){
+        body+='  • '+(e.nom||'N/A')+(e.role?' ('+e.role+')':'')+(e.heures?' – '+e.heures+'h':'')+'\n';
+      });
+      body+='\n';
+    }
+
+    var jsa=pv.jsa||{};
+    body+='SÉCURITÉ (JSA)\n';
+    body+='  • Briefing sécurité : '+(jsa.briefingFait?'✓ Réalisé':'✗ Non réalisé')+'\n';
+    body+='  • EPI vérifiés : '+(jsa.epiVerifies?'✓ Vérifiés':'✗ Non vérifiés')+'\n';
+    if((jsa.risques||[]).length>0) body+='  • Risques identifiés : '+(jsa.risques||[]).join(', ')+'\n';
+    if(jsa.signataire) body+='  • Signataire : '+jsa.signataire+'\n';
+    body+='\n';
+
+    var acts=(pv.activites||[]).filter(function(a){return a.description;});
+    if(acts.length>0){
+      body+='ACTIVITÉS DU JOUR\n';
+      acts.forEach(function(a){
+        body+='  • '+a.description+(a.zone?' ['+a.zone+']':'')+(a.qteJour?' — '+a.qteJour+' '+(a.unite||'u'):'')+'\n';
+      });
+      body+='\n';
+    }
+
+    var cntrArr=Array.isArray(pv.contraintes)?pv.contraintes:(pv.contraintes?[{description:pv.contraintes,etat:'',responsable:'',echeance:''}]:[]);
+    if(cntrArr.length>0){
+      body+='CONTRAINTES & BLOCAGES\n';
+      cntrArr.forEach(function(c){
+        body+='  • '+(c.description||'N/A')+(c.etat?' ['+c.etat+']':'')+(c.responsable?' – Resp: '+c.responsable:'')+(c.echeance?' – Échéance: '+c.echeance:'')+'\n';
+      });
+      body+='\n';
+    }
+
+    if(pv.incidents) body+='INCIDENTS / ACCIDENTS\n'+pv.incidents+'\n\n';
+    if(pv.notes) body+='NOTES & OBSERVATIONS\n'+pv.notes+'\n\n';
+
+    body+='━━━━━━━━━━━━━━━━━━━━━━━━\n';
+    body+='Cordialement,\n';
+    body+=(_be.nom||'Home Business Office')+'\n';
+    if(_be.tel) body+=_be.tel+'\n';
+    if(_be.email) body+=_be.email+'\n';
+
+    var mailto='mailto:'+(clientEmail||'')+'?subject='+encodeURIComponent(subject)+'&body='+encodeURIComponent(body);
+    var a=document.createElement('a');
+    a.href=mailto;
+    a.click();
   };
 })();
 </script>
