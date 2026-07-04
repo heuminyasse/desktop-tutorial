@@ -6882,26 +6882,126 @@ html body[class] #vac-gantt td.emp .nm{font-weight:500 !important;}</style>
      PLANNING — Colonnes Date début / Date fin dans le Gantt
      ═══════════════════════════════════════════════════════════════ -->
 <script id="__PLANNING_DATE_COLS_v1__">
-/* ePilot date-cols v14 – DOM injection into sticky col (no floating overlay) */
+/* ePilot date-cols v15 – Date + Budget columns (Valeur / Poids / Consommation) */
 (function(){
   if(window.__dcInjected) return; window.__dcInjected = 1;
 
   var CW = 100;       /* px per date column */
   var LABEL_W = 230;  /* original sticky col width */
+  var BV = 95;        /* Valeur (F) column width */
+  var BP = 65;        /* Poids (%) column width */
+  var BC = 95;        /* Consommation (F) column width */
 
   /* ─── Date format ─── */
   var _M=['Jan','Fév','Mar','Avr','Mai','Jun','Jul','Aoû','Sep','Oct','Nov','Déc'];
   function fmt(s){ if(!s) return '–'; var d=new Date(s); return isNaN(d.getTime())?'–':d.getDate()+' '+_M[d.getMonth()]+' '+d.getFullYear(); }
 
-  /* ─── Styles ─── */
+  /* ─── Cell styles (date columns) ─── */
   var cellSt='display:flex;align-items:center;padding:0 6px;font-size:11px;color:#333;'+
     'width:'+CW+'px;flex-shrink:0;border-right:1px solid #dee2e6;'+
     'white-space:nowrap;overflow:hidden;box-sizing:border-box;height:100%;';
-  var hdrSt='display:flex;align-items:center;padding:0 6px;font-size:11px;font-weight:700;color:#1a2733;'+
-    'width:'+CW+'px;flex-shrink:0;border-right:1px solid #dee2e6;'+
-    'white-space:nowrap;box-sizing:border-box;height:100%;';
 
-  /* ─── Find Planning label column via "Tâche" sticky div ─── */
+  /* ─── PI detection ─── */
+  function getPI(){
+    var h=window.location.hash||'';
+    var m=h.match(/PI\d{4,6}/i);
+    if(m) return m[0].toUpperCase();
+    var monos=document.querySelectorAll('.mono');
+    for(var i=0;i<monos.length;i++){
+      var t=monos[i].textContent.trim();
+      if(/^PI\d{4,6}$/i.test(t)) return t.toUpperCase();
+    }
+    return null;
+  }
+
+  /* ─── OA Budget from QUOTE_DATA ─── */
+  function getOABudget(pi){
+    if(!pi||!window.QUOTE_DATA) return 0;
+    var row=null;
+    var qd=window.QUOTE_DATA||[];
+    for(var i=0;i<qd.length;i++){
+      if(qd[i].Dossier===pi||qd[i].dossier===pi){ row=qd[i]; break; }
+    }
+    if(!row) return 0;
+    var raw=row.MontantHT||row.montantHT||row.Budget||'';
+    return parseVal(String(raw));
+  }
+
+  /* ─── Number helpers ─── */
+  function parseVal(s){
+    if(!s) return 0;
+    s=String(s).trim();
+    s=s.replace(/\s/g,'');
+    /* French format: 1234567,89 (comma=decimal) vs 1,234,567.89 (comma=thousands) */
+    var lastComma=s.lastIndexOf(',');
+    var lastDot=s.lastIndexOf('.');
+    if(lastComma>lastDot){
+      /* comma is decimal separator */
+      s=s.replace(/\./g,'').replace(',','.');
+    } else {
+      /* dot is decimal separator, commas are thousands */
+      s=s.replace(/,/g,'');
+    }
+    s=s.replace(/[^\d\.]/g,'');
+    var v=parseFloat(s);
+    return isNaN(v)?0:v;
+  }
+
+  function fF(n){
+    if(!n&&n!==0) return '–';
+    n=Math.round(n);
+    var s=n.toString();
+    var result=''; var count=0;
+    for(var i=s.length-1;i>=0;i--){
+      if(count>0&&count%3===0) result=' '+result;
+      result=s[i]+result; count++;
+    }
+    return result;
+  }
+
+  function fPct(n){
+    if(!n&&n!==0) return '–';
+    return n.toFixed(1)+'%';
+  }
+
+  /* ─── Task value storage ─── */
+  var _tvCache={};
+  function loadTV(pi){
+    if(!pi) return {};
+    if(_tvCache[pi]) return _tvCache[pi];
+    try{ _tvCache[pi]=JSON.parse(localStorage.getItem('ep_ptv_'+pi)||'{}'); }
+    catch(e){ _tvCache[pi]={}; }
+    return _tvCache[pi];
+  }
+  function saveTV(pi,v){
+    if(!pi) return;
+    _tvCache[pi]=v;
+    try{ localStorage.setItem('ep_ptv_'+pi,JSON.stringify(v)); }catch(e){}
+  }
+
+  /* ─── Update header sub-labels with totals ─── */
+  function updateBudgetTotals(lc,pi,oa,tv){
+    if(!lc) return;
+    var rows=findTaskRowEls(lc.col);
+    var totalVal=0, totalConso=0;
+    rows.forEach(function(row){
+      var title=rowTitle(row);
+      var val=parseVal(tv[title]||'');
+      totalVal+=val;
+      if(row.textContent.trim().charAt(0)==='✓') totalConso+=val;
+    });
+    var hdrV=lc.col.querySelector('[data-dc-hdr="v"] [data-dc-sub]');
+    var hdrP=lc.col.querySelector('[data-dc-hdr="p"] [data-dc-sub]');
+    var hdrC=lc.col.querySelector('[data-dc-hdr="c"] [data-dc-sub]');
+    if(hdrV) hdrV.textContent='Σ '+fF(totalVal);
+    if(hdrP){
+      var pct=oa>0?(totalVal/oa*100):0;
+      hdrP.textContent=oa>0?fPct(pct):'–';
+      hdrP.style.color=pct>100?'#e74c3c':(pct>90?'#e67e22':'#27ae60');
+    }
+    if(hdrC) hdrC.textContent='Σ '+fF(totalConso);
+  }
+
   function findLabelCol(){
     var all=document.querySelectorAll('div,span');
     for(var i=0;i<all.length;i++){
@@ -6918,7 +7018,6 @@ html body[class] #vac-gantt td.emp .nm{font-weight:500 !important;}</style>
     return null;
   }
 
-  /* ─── Find task rows (skip our own injected nodes) ─── */
   function findTaskRowEls(labelCol){
     var divs=labelCol.querySelectorAll('div');
     var out=[];
@@ -6935,7 +7034,6 @@ html body[class] #vac-gantt td.emp .nm{font-weight:500 !important;}</style>
     return out;
   }
 
-  /* ─── Extract task title ─── */
   function rowTitle(rowEl){
     var txt=rowEl.textContent.trim();
     txt=txt.replace(/^[✓○]\s*/,'');
@@ -6943,7 +7041,6 @@ html body[class] #vac-gantt td.emp .nm{font-weight:500 !important;}</style>
     return txt;
   }
 
-  /* ─── Load task dates via EpilotConnector.buildData() ─── */
   function buildLkFromConnector(cb){
     function tryBuild(){
       if(window.EpilotConnector && typeof window.EpilotConnector.buildData==='function'){
@@ -6958,14 +7055,11 @@ html body[class] #vac-gantt td.emp .nm{font-weight:500 !important;}</style>
             cb(lk);
           }).catch(function(){ cb({}); });
         }catch(e){ cb({}); }
-      } else {
-        setTimeout(tryBuild,400);
-      }
+      } else { setTimeout(tryBuild,400); }
     }
     tryBuild();
   }
 
-  /* Hook saveOps to refresh after task saves */
   function hookSaveOps(){
     if(!window.EpilotConnector||!window.EpilotConnector.saveOps||window.EpilotConnector.__dcHooked) return;
     window.EpilotConnector.__dcHooked=1;
@@ -6977,7 +7071,6 @@ html body[class] #vac-gantt td.emp .nm{font-weight:500 !important;}</style>
     };
   }
 
-  /* ─── Match title to lookup ─── */
   function findInfo(lk,title){
     if(!title) return null;
     if(lk[title]) return lk[title];
@@ -6989,10 +7082,7 @@ html body[class] #vac-gantt td.emp .nm{font-weight:500 !important;}</style>
     return null;
   }
 
-  /* ─── Print & Email helpers ─── */
-
   function getPlanningTitle(){
-    /* Try main heading first */
     var h=document.querySelector('h1,h2');
     if(h){ var t=h.textContent.trim(); if(t.length>4) return t; }
     return document.title||'Planning';
@@ -7001,8 +7091,11 @@ html body[class] #vac-gantt td.emp .nm{font-weight:500 !important;}</style>
   function escHtml(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
   function padEnd(s,n){ s=String(s); return s.length>=n?s.substring(0,n):s+' '.repeat(n-s.length); }
 
-  /* Build structured phases+tasks from the sticky col DOM */
+  /* ─── Data builder for print/email ─── */
   function buildPlanningData(lc,lk){
+    var pi=getPI();
+    var oa=getOABudget(pi);
+    var tv=loadTV(pi);
     var result=[];
     var cols=lc.col.children;
     for(var i=0;i<cols.length;i++){
@@ -7023,66 +7116,75 @@ html body[class] #vac-gantt td.emp .nm{font-weight:500 !important;}</style>
         if(ch!=='✓'&&ch!=='○') continue;
         var title=rowTitle(taskEl);
         var info=findInfo(lk,title);
-        tasks.push({done:ch==='✓',title:title,
-          debut:info?fmt(info.d):'–',fin:info?fmt(info.f):'–'});
+        var val=parseVal(tv[title]||'');
+        var done=ch==='✓';
+        tasks.push({done:done,title:title,
+          debut:info?fmt(info.d):'–',fin:info?fmt(info.f):'–',
+          valeur:val,poids:oa>0?(val/oa*100):0,conso:done?val:0});
       }
       if(tasks.length) result.push({phase:phaseName,percent:phasePercent,tasks:tasks});
     }
     return result;
   }
 
+  /* ─── Print ─── */
   function printPlanning(){
     var lc=findLabelCol(); if(!lc){alert('Ouvrez l\'onglet Planning pour imprimer.');return;}
+    var pi=getPI();
+    var oa=getOABudget(pi);
     var title=getPlanningTitle();
     var data=buildPlanningData(lc,_lk);
     var rows='';
     data.forEach(function(ph){
-      rows+='<tr><td colspan="3" style="padding:7px 12px;font-weight:700;color:#c0392b;'+
-        'text-transform:uppercase;letter-spacing:.04em;background:#f8f9fa;'+
-        'border-top:2px solid #c0392b;font-size:12px;">'+
+      rows+='<tr><td colspan="6" style="padding:7px 12px;font-weight:700;color:#c0392b;text-transform:uppercase;'+
+        'letter-spacing:.04em;background:#f8f9fa;border-top:2px solid #c0392b;font-size:12px;">'+
         escHtml(ph.phase)+' <span style="font-weight:400;color:#999;text-transform:none;">('+ph.percent+'% terminé)</span></td></tr>';
       ph.tasks.forEach(function(t){
         rows+='<tr>'+
-          '<td style="padding:6px 12px;border-bottom:1px solid #eee;">'+
-          (t.done?'<span style="color:#27ae60;font-weight:700;">✓</span>':
-                  '<span style="color:#aaa;">○</span>')+
-          ' '+escHtml(t.title)+'</td>'+
+          '<td style="padding:6px 12px;border-bottom:1px solid #eee;">'+(t.done?'<span style="color:#27ae60;font-weight:700;">✓</span>':'<span style="color:#aaa;">○</span>')+' '+escHtml(t.title)+'</td>'+
           '<td style="padding:6px 12px;border-bottom:1px solid #eee;white-space:nowrap;color:#555;">'+escHtml(t.debut)+'</td>'+
           '<td style="padding:6px 12px;border-bottom:1px solid #eee;white-space:nowrap;color:#555;">'+escHtml(t.fin)+'</td>'+
+          '<td style="padding:6px 12px;border-bottom:1px solid #eee;text-align:right;color:#1a2733;">'+(t.valeur?fF(t.valeur):'–')+'</td>'+
+          '<td style="padding:6px 12px;border-bottom:1px solid #eee;text-align:right;color:'+(t.poids>100?'#e74c3c':'#555')+';">'+(t.valeur&&oa?fPct(t.poids):'–')+'</td>'+
+          '<td style="padding:6px 12px;border-bottom:1px solid #eee;text-align:right;color:#27ae60;">'+(t.conso?fF(t.conso):'–')+'</td>'+
           '</tr>';
       });
     });
     var today=new Date().toLocaleDateString('fr-FR',{day:'2-digit',month:'long',year:'numeric'});
+    var oaFmt=oa?fF(oa)+' F':'–';
     var html='<!DOCTYPE html><html><head><meta charset="utf-8"><title>'+escHtml(title)+'</title>'+
-      '<style>*{box-sizing:border-box;margin:0;padding:0}'+
-      'body{font-family:Arial,Helvetica,sans-serif;padding:28px 36px;color:#1a2733;font-size:13px}'+
-      'h1{font-size:17px;font-weight:700;margin-bottom:3px}'+
-      '.sub{color:#888;font-size:11px;margin-bottom:22px}'+
-      'table{width:100%;border-collapse:collapse}'+
-      'thead th{background:#1a2733;color:#fff;padding:8px 12px;text-align:left;font-size:12px;font-weight:600}'+
-      'tbody tr:nth-child(even):not(.ph){background:#fafbfc}'+
-      '@media print{@page{size:A4 landscape;margin:12mm}body{padding:0}}'+
-      '</style></head><body>'+
-      '<h1>'+escHtml(title)+'</h1>'+
-      '<p class="sub">Planning · Imprimé le '+today+'</p>'+
+      '<style>*{box-sizing:border-box;margin:0;padding:0}body{font-family:Arial,Helvetica,sans-serif;padding:28px 36px;color:#1a2733;font-size:13px}'+
+      'h1{font-size:17px;font-weight:700;margin-bottom:3px}.sub{color:#888;font-size:11px;margin-bottom:22px}'+
+      'table{width:100%;border-collapse:collapse}thead th{background:#1a2733;color:#fff;padding:8px 12px;text-align:left;font-size:12px;font-weight:600}'+
+      'thead th.num{text-align:right}tbody tr:nth-child(even):not(.ph){background:#fafbfc}'+
+      '@media print{@page{size:A4 landscape;margin:12mm}body{padding:0}}</style></head><body>'+
+      '<h1>'+escHtml(title)+'</h1><p class="sub">Planning · Budget OA : '+oaFmt+' · Imprimé le '+today+'</p>'+
       '<table><thead><tr>'+
-      '<th style="width:55%">Tâche</th><th>Date Début</th><th>Date Fin</th>'+
+        '<th style="width:32%">Tâche</th><th>Date Début</th><th>Date Fin</th>'+
+        '<th class="num">Valeur (F)</th><th class="num">Poids (%)</th><th class="num">Conso (F)</th>'+
       '</tr></thead><tbody>'+rows+'</tbody></table></body></html>';
-    var w=window.open('','_blank','width=960,height=720');
+    var w=window.open('','_blank','width=1100,height=720');
     w.document.write(html); w.document.close(); w.focus();
     setTimeout(function(){ w.print(); },600);
   }
 
+  /* ─── Email copy ─── */
   function copyEmailTable(){
     var lc=findLabelCol(); if(!lc) return;
+    var pi=getPI();
+    var oa=getOABudget(pi);
     var title=getPlanningTitle();
     var data=buildPlanningData(lc,_lk);
     var today=new Date().toLocaleDateString('fr-FR',{day:'2-digit',month:'long',year:'numeric'});
-    var lines=['Planning – '+title,'Date : '+today,''];
+    var lines=['Planning – '+title,'Date : '+today,'Budget OA : '+(oa?fF(oa)+' F':'–'),''];
     data.forEach(function(ph){
       lines.push('▸ '+ph.phase.toUpperCase()+' ('+ph.percent+'% terminé)');
       ph.tasks.forEach(function(t){
-        lines.push((t.done?'  ✓  ':'  ○  ')+padEnd(t.title,34)+' '+padEnd(t.debut,14)+'→  '+t.fin);
+        var valStr=t.valeur?fF(t.valeur)+' F':'–';
+        var pStr=(t.valeur&&oa)?fPct(t.poids):'–';
+        var cStr=t.conso?fF(t.conso)+' F':'–';
+        lines.push((t.done?'  ✓  ':'  ○  ')+padEnd(t.title,30)+' '+padEnd(t.debut,14)+
+          '→ '+padEnd(t.fin,14)+' '+padEnd(valStr,14)+' '+padEnd(pStr,8)+' '+cStr);
       });
       lines.push('');
     });
@@ -7091,32 +7193,29 @@ html body[class] #vac-gantt td.emp .nm{font-weight:500 !important;}</style>
       navigator.clipboard.writeText(text).then(showCopyToast).catch(function(){
         window.prompt('Sélectionnez tout (Ctrl+A) puis copiez (Ctrl+C) :',text);
       });
-    } else {
-      window.prompt('Sélectionnez tout (Ctrl+A) puis copiez (Ctrl+C) :',text);
-    }
+    } else { window.prompt('Sélectionnez tout (Ctrl+A) puis copiez (Ctrl+C) :',text); }
   }
 
   function showCopyToast(){
     var t=document.createElement('div');
     t.textContent='✓ Tableau copié dans le presse-papier';
     t.style.cssText='position:fixed;bottom:24px;left:50%;transform:translateX(-50%);z-index:2147483647;'+
-      'background:#1a2733;color:#fff;font:600 13px/1 Arial,sans-serif;'+
-      'padding:11px 24px;border-radius:8px;box-shadow:0 4px 18px rgba(0,0,0,.35);'+
-      'pointer-events:none;white-space:nowrap;';
+      'background:#1a2733;color:#fff;font:600 13px/1 Arial,sans-serif;padding:11px 24px;'+
+      'border-radius:8px;box-shadow:0 4px 18px rgba(0,0,0,.35);pointer-events:none;white-space:nowrap;';
     document.body.appendChild(t);
     setTimeout(function(){ t.style.transition='opacity .4s'; t.style.opacity='0'; },2200);
     setTimeout(function(){ t.parentNode&&t.parentNode.removeChild(t); },2700);
   }
 
-  /* ─── Planning toolbar buttons – position:fixed, track "+ Nouvelle tâche" ─── */
+  /* ─── Toolbar buttons ─── */
   var _planBtns=null;
 
   function _mkBtn(id,html,handler){
     var b=document.createElement('button'); b.id=id;
     b.innerHTML=html;
-    b.style.cssText='position:fixed;z-index:9990;display:none;align-items:center;gap:5px;'+
-      'cursor:pointer;border-radius:6px;font-size:12px;font-weight:600;'+
-      'padding:0 13px;border:1.5px solid #c9d0d8;background:#fff;color:#1a2733;'+
+    b.style.cssText='position:fixed;z-index:9990;display:none;align-items:center;gap:5px;cursor:pointer;'+
+      'border-radius:6px;font-size:12px;font-weight:600;padding:0 13px;'+
+      'border:1.5px solid #c9d0d8;background:#fff;color:#1a2733;'+
       'box-shadow:0 1px 4px rgba(0,0,0,.10);box-sizing:border-box;';
     b.onclick=handler;
     b.onmouseover=function(){ this.style.background='#f0f4fa'; this.style.borderColor='#8899aa'; };
@@ -7126,31 +7225,17 @@ html body[class] #vac-gantt td.emp .nm{font-weight:500 !important;}</style>
   }
 
   function updatePlanningButtons(){
-    /* Create (or re-create if bundler replaced the body) buttons appended to body */
     if(!_planBtns || !document.body.contains(_planBtns.pb)){
       _planBtns=null;
-      var PICO='<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">'+
-        '<polyline points="6 9 6 2 18 2 18 9"/>'+
-        '<path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/>'+
-        '<rect x="6" y="14" width="12" height="8"/></svg>';
-      var EICO='<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">'+
-        '<rect x="2" y="4" width="20" height="16" rx="2"/>'+
-        '<polyline points="2,4 12,13 22,4"/></svg>';
-      _planBtns={
-        pb: _mkBtn('_dcPrintBtn', PICO+' Imprimer', printPlanning),
-        eb: _mkBtn('_dcEmailBtn', EICO+' Email',    copyEmailTable)
-      };
+      var PICO='<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>';
+      var EICO='<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><polyline points="2,4 12,13 22,4"/></svg>';
+      _planBtns={ pb: _mkBtn('_dcPrintBtn', PICO+' Imprimer', printPlanning),
+                  eb: _mkBtn('_dcEmailBtn', EICO+' Email', copyEmailTable) };
     }
-
-    /* Hide when Planning is not visible */
     if(!findLabelCol()){
-      _planBtns.pb.style.display='none';
-      _planBtns.eb.style.display='none';
-      return;
+      _planBtns.pb.style.display='none'; _planBtns.eb.style.display='none'; return;
     }
-
-    /* Find the "Semaine" button to get the exact toolbar Y position */
-    var toolbarTop=170; /* fallback if not found */
+    var toolbarTop=170;
     var allBtns=document.querySelectorAll('button');
     for(var i=0;i<allBtns.length;i++){
       var bt=allBtns[i];
@@ -7161,18 +7246,13 @@ html body[class] #vac-gantt td.emp .nm{font-weight:500 !important;}</style>
         if(r.height>0){ toolbarTop=r.top; break; }
       }
     }
-
-    _planBtns.pb.style.display='inline-flex';
-    _planBtns.eb.style.display='inline-flex';
-    _planBtns.pb.style.top=toolbarTop+'px';
-    _planBtns.eb.style.top=toolbarTop+'px';
-    /* Place to the left of the right edge, side by side */
+    _planBtns.pb.style.display='inline-flex'; _planBtns.eb.style.display='inline-flex';
+    _planBtns.pb.style.top=toolbarTop+'px'; _planBtns.eb.style.top=toolbarTop+'px';
     var ebW=_planBtns.eb.offsetWidth||84;
-    _planBtns.eb.style.right='20px';
-    _planBtns.pb.style.right=(20+ebW+8)+'px';
+    _planBtns.eb.style.right='20px'; _planBtns.pb.style.right=(20+ebW+8)+'px';
   }
 
-  /* ─── MutationObserver: re-inject when React re-renders the sticky col ─── */
+  /* ─── MutationObserver ─── */
   var _mo=null, _moTarget=null;
   function startMO(labelCol){
     if(_mo){ _mo.disconnect(); _mo=null; }
@@ -7187,75 +7267,146 @@ html body[class] #vac-gantt td.emp .nm{font-weight:500 !important;}</style>
     _mo.observe(labelCol,{childList:true,subtree:true,attributes:true,attributeFilter:['style']});
   }
 
-  /* ─── Inject date cells as absolute children of the sticky col ─── */
+  /* ─── Main injection ─── */
   function injectIntoSticky(lc,lk){
     if(!lc) return;
-    /* Pause MO to avoid re-entrant loop */
     if(_mo) _mo.disconnect();
+    var pi=getPI();
+    var oa=getOABudget(pi);
+    var tv=loadTV(pi);
+    var TOTAL_W=LABEL_W+CW*2+BV+BP+BC;
     try{
-      /* Widen the sticky col to accommodate the two new date columns */
-      lc.col.style.width=(LABEL_W+CW*2)+'px';
-      lc.col.style.minWidth=(LABEL_W+CW*2)+'px';
+      lc.col.style.width=TOTAL_W+'px';
+      lc.col.style.minWidth=TOTAL_W+'px';
       lc.col.style.overflow='visible';
-
-      /* Remove stale injections */
       var old=lc.col.querySelectorAll('[data-dc="1"]');
       for(var j=0;j<old.length;j++) old[j].parentNode.removeChild(old[j]);
-
       var colRect=lc.col.getBoundingClientRect();
-
-      /* Header row */
       var hRect=lc.hdr.getBoundingClientRect();
+
+      /* ── Header row ── */
       var hCont=document.createElement('div');
       hCont.setAttribute('data-dc','1');
       hCont.style.cssText='position:absolute;left:'+LABEL_W+'px;top:'+Math.round(hRect.top-colRect.top)+'px;'+
-        'width:'+(CW*2)+'px;height:'+Math.round(hRect.height)+'px;'+
-        'display:flex;align-items:center;background:#f0f4fa;'+
+        'width:'+(CW*2+BV+BP+BC)+'px;height:'+Math.round(hRect.height)+'px;'+
+        'display:flex;align-items:stretch;background:#f0f4fa;'+
         'border-left:1px solid #dee2e6;border-bottom:1px solid #dee2e6;box-sizing:border-box;';
-      var hd=document.createElement('div'); hd.style.cssText=hdrSt; hd.textContent='Date Début';
-      var hf=document.createElement('div'); hf.style.cssText=hdrSt; hf.textContent='Date Fin';
-      hCont.appendChild(hd); hCont.appendChild(hf);
+
+      function mkHdrCell(label,sub,w,dcHdrId){
+        var d=document.createElement('div');
+        if(dcHdrId) d.setAttribute('data-dc-hdr',dcHdrId);
+        d.style.cssText='display:flex;flex-direction:column;justify-content:center;align-items:flex-start;'+
+          'padding:2px 5px;width:'+w+'px;flex-shrink:0;border-right:1px solid #dee2e6;'+
+          'box-sizing:border-box;overflow:hidden;';
+        var lbl=document.createElement('span');
+        lbl.style.cssText='font-size:10px;font-weight:700;color:#1a2733;white-space:nowrap;line-height:1.3;';
+        lbl.textContent=label;
+        d.appendChild(lbl);
+        if(sub!==undefined){
+          var sv=document.createElement('span');
+          sv.setAttribute('data-dc-sub','1');
+          sv.style.cssText='font-size:9px;color:#888;white-space:nowrap;line-height:1.3;';
+          sv.textContent=sub;
+          d.appendChild(sv);
+        }
+        return d;
+      }
+
+      hCont.appendChild(mkHdrCell('Date Début',undefined,CW));
+      hCont.appendChild(mkHdrCell('Date Fin',undefined,CW));
+      hCont.appendChild(mkHdrCell('Valeur (F)','Σ –',BV,'v'));
+      hCont.appendChild(mkHdrCell('Poids (%)','OA: '+(oa?fF(oa)+' F':'–'),BP,'p'));
+      hCont.appendChild(mkHdrCell('Conso (F)','Σ –',BC,'c'));
       lc.col.appendChild(hCont);
 
-      /* Task row cells */
+      /* ── Task rows ── */
       var rows=findTaskRowEls(lc.col);
       rows.forEach(function(row){
         var rRect=row.getBoundingClientRect();
         var cell=document.createElement('div');
         cell.setAttribute('data-dc','1');
         cell.style.cssText='position:absolute;left:'+LABEL_W+'px;top:'+Math.round(rRect.top-colRect.top)+'px;'+
-          'width:'+(CW*2)+'px;height:'+Math.round(rRect.height)+'px;'+
+          'width:'+(CW*2+BV+BP+BC)+'px;height:'+Math.round(rRect.height)+'px;'+
           'display:flex;align-items:center;background:#fff;'+
           'border-left:1px solid #dee2e6;border-bottom:1px solid #eef0f3;box-sizing:border-box;';
+
         var title=rowTitle(row);
         var info=findInfo(lk,title);
+        var done=row.textContent.trim().charAt(0)==='✓';
+        var rawV=tv[title]||'';
+        var valNum=parseVal(rawV);
+
+        /* Date cells */
         var sd=document.createElement('span'); sd.style.cssText=cellSt;
         var sf=document.createElement('span'); sf.style.cssText=cellSt;
         if(info){ sd.textContent=fmt(info.d); sf.textContent=fmt(info.f); }
         else{ sd.textContent='–'; sf.textContent='–'; sd.style.color='#bbb'; sf.style.color='#bbb'; }
+
+        /* Valeur input */
+        var inp=document.createElement('input');
+        inp.type='text'; inp.value=rawV; inp.placeholder='0';
+        inp.title='Valeur pour : '+title;
+        inp.style.cssText='width:'+BV+'px;height:calc(100% - 2px);border:none;border-right:1px solid #dee2e6;'+
+          'padding:0 6px;font-size:11px;color:#1a2733;background:transparent;outline:none;'+
+          'box-sizing:border-box;text-align:right;cursor:text;font-family:inherit;';
+        (function(inp_,title_,pi_){
+          inp_.onfocus=function(){ this.style.background='#fffbe6'; this.select(); };
+          inp_.onblur=function(){
+            this.style.background='transparent';
+            var tv2=loadTV(pi_);
+            if(this.value.trim()) tv2[title_]=this.value.trim();
+            else delete tv2[title_];
+            saveTV(pi_,tv2);
+            delete _tvCache[pi_];
+            var lc2=findLabelCol();
+            if(lc2) setTimeout(function(){ injectIntoSticky(lc2,_lk); },0);
+          };
+          inp_.onkeydown=function(e){
+            if(e.key==='Enter'||e.key==='Tab'){ e.preventDefault(); this.blur(); }
+          };
+        })(inp,title,pi);
+
+        /* Poids span */
+        var pctVal=oa>0?(valNum/oa*100):0;
+        var spP=document.createElement('span');
+        spP.style.cssText='display:flex;align-items:center;justify-content:flex-end;'+
+          'width:'+BP+'px;flex-shrink:0;border-right:1px solid #dee2e6;'+
+          'font-size:11px;padding:0 5px;box-sizing:border-box;overflow:hidden;white-space:nowrap;height:100%;'+
+          'color:'+(valNum>0?(pctVal>50?'#e67e22':'#2980b9'):'#bbb')+';';
+        spP.textContent=(valNum&&oa)?fPct(pctVal):'–';
+
+        /* Consommation span */
+        var consoVal=done?valNum:0;
+        var spC=document.createElement('span');
+        spC.style.cssText='display:flex;align-items:center;justify-content:flex-end;'+
+          'width:'+BC+'px;flex-shrink:0;'+
+          'font-size:11px;padding:0 5px;box-sizing:border-box;overflow:hidden;white-space:nowrap;height:100%;'+
+          'color:'+(consoVal>0?'#27ae60':'#bbb')+';';
+        spC.textContent=consoVal?fF(consoVal):'–';
+
         cell.appendChild(sd); cell.appendChild(sf);
+        cell.appendChild(inp); cell.appendChild(spP); cell.appendChild(spC);
         lc.col.appendChild(cell);
       });
+
+      updateBudgetTotals(lc,pi,oa,tv);
+
     }finally{
-      /* Reconnect MO */
       if(_mo&&_moTarget){
         _mo.observe(_moTarget,{childList:true,subtree:true,attributes:true,attributeFilter:['style']});
       }
     }
   }
 
-  /* ─── Main inject ─── */
   var _lk={}, _lcFound=false;
   function inject(){
     var lc=findLabelCol();
     _lcFound=!!lc;
     if(!lc) return;
-    /* Start MO if label col changed */
     if(!_mo||_moTarget!==lc.col) startMO(lc.col);
     injectIntoSticky(lc,_lk);
   }
 
-  /* Hook clicks on the Planning tab so injection is immediate */
   function hookPlanningTab(){
     document.querySelectorAll('a,button,[role="tab"]').forEach(function(el){
       if(el.__dcTabHooked) return;
@@ -7269,14 +7420,9 @@ html body[class] #vac-gantt td.emp .nm{font-weight:500 !important;}</style>
     });
   }
 
-  /* Load task data; refresh every 5s */
   buildLkFromConnector(function(lk){ _lk=lk; inject(); });
-  setInterval(function(){
-    hookSaveOps();
-    buildLkFromConnector(function(lk){ _lk=lk; inject(); });
-  },5000);
+  setInterval(function(){ hookSaveOps(); buildLkFromConnector(function(lk){ _lk=lk; inject(); }); },5000);
 
-  /* ─── Adaptive poll: 150ms when Planning not visible, 1.5s when visible ─── */
   (function poll(){
     hookSaveOps(); hookPlanningTab(); inject(); updatePlanningButtons();
     setTimeout(poll, _lcFound ? 1500 : 150);
