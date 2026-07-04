@@ -7463,6 +7463,55 @@ html body[class] #vac-gantt td.emp .nm{font-weight:500 !important;}</style>
 </script>
 
 <!-- ═══════════════════════════════════════════════════════════════
+     AUTO-TERMINÉ — quand avancement atteint 100, statut → Terminé
+     ═══════════════════════════════════════════════════════════════ -->
+<script id="__PLAN_AUTO_TERMINE_v1__">
+(function(){
+  /* Déclenche le onChange React d'un élément DOM */
+  function reactChange(el, value){
+    var pk=Object.keys(el).find(function(k){ return k.startsWith('__reactProps'); });
+    if(pk && el[pk] && el[pk].onChange){
+      el[pk].onChange({target:{value:value}});
+      return;
+    }
+    /* fallback : native setter + event */
+    var proto=el.tagName==='SELECT'?HTMLSelectElement.prototype:HTMLInputElement.prototype;
+    try{ Object.getOwnPropertyDescriptor(proto,'value').set.call(el,value); }catch(_){}
+    el.dispatchEvent(new Event('change',{bubbles:true}));
+  }
+
+  /* Cherche le <select> avec option "Terminé" le plus proche de l'input */
+  function findTermineSelect(inp){
+    var node=inp.parentElement;
+    for(var d=0; d<12 && node && node!==document.body; d++){
+      var sels=node.querySelectorAll('select');
+      for(var i=0;i<sels.length;i++){
+        var sel=sels[i];
+        var hasT=Array.prototype.some.call(sel.options,function(o){
+          return o.value==='Terminé'||o.text==='Terminé';
+        });
+        if(hasT) return sel;
+      }
+      node=node.parentElement;
+    }
+    return null;
+  }
+
+  /* Écoute tous les changements sur inputs numériques/range */
+  document.addEventListener('change',function(e){
+    var el=e.target;
+    if(!el||el.tagName!=='INPUT') return;
+    var t=(el.getAttribute('type')||'text').toLowerCase();
+    if(t!=='number'&&t!=='range') return;
+    if(parseInt(el.value,10)!==100) return;
+    var sel=findTermineSelect(el);
+    if(!sel||sel.value==='Terminé') return;
+    reactChange(sel,'Terminé');
+  },true);
+})();
+</script>
+
+<!-- ═══════════════════════════════════════════════════════════════
      PRINT BUTTONS — Visite de Site, Cahier des Charges, Planning
      ═══════════════════════════════════════════════════════════════ -->
 <script id="__PRINT_TABS_v1__">
