@@ -7662,6 +7662,104 @@ html body[class] #vac-gantt td.emp .nm{font-weight:500 !important;}</style>
 })();
 </script>
 
+<!-- PV Modal Patch: Page 2 supprimée, équipe 8h + HR search, signataire auto, contraintes structurées -->
+<script id="__PV_MODAL_PATCH_v1__">
+(function(){
+  var _tries=0;
+  function patch(){
+    var el=document.getElementById('ch-src');
+    if(!el){ if(++_tries<300) setTimeout(patch,50); return; }
+    if(window.__chReady) return;
+    var src=el.textContent;
+    if(src.indexOf('function PVModal(')<0){ if(++_tries<300) setTimeout(patch,50); return; }
+    if(src.indexOf('__PV_PATCH_V1__')>=0) return;
+    src='/* __PV_PATCH_V1__ */'+src;
+
+    function cwp(name,s,find,repl){
+      if(s.indexOf(find)<0){ try{console.warn('[PV Patch] "'+name+'" introuvable.');}catch(_){} return s; }
+      return s.replace(find,repl);
+    }
+
+    /* 1. heures default 9→8 in blank */
+    src=cwp('h9-blank',src,
+      '{ nom:emp.name, role:emp.role, heures:9 } : null',
+      '{ nom:emp.name, role:emp.role, heures:8 } : null');
+
+    /* 2. contraintes: '' → [] */
+    src=cwp('cntr-arr',src,
+      "contraintes: '',",
+      "contraintes: [],");
+
+    /* 3. signataire auto-fill from connected user */
+    src=cwp('signataire-auto',src,
+      "risques:[], signataire:'' },",
+      "risques:[], signataire:(function(){try{var _u=localStorage.getItem('epilot_current_user');if(_u){var _j=JSON.parse(_u);if(_j.nom||_j.name)return _j.nom||_j.name;}var _p=(window.PERSONNEL_DATA||[]).find(function(x){return !x.statut||x.statut==='Actif'||x.statut==='actif';});if(_p)return((_p.prenoms||_p.prenom||'')+' '+(_p.nom||'')).trim();}catch(_e){}return '';})() },");
+
+    /* 4. Add HR datalist + search before equipe add button, 9→8 in add button */
+    src=cwp('equipe-hr',src,
+      "{nom:'',role:'',heures:9}]}))}>"+"\n                  + Ajouter personne\n                </button>\n              </div>",
+      "{nom:'',role:'',heures:8}]}))}>"+"\n                  + Ajouter manuellement\n                </button>"+
+      "\n                <datalist id=\"pv-emp-dl\">{(employees||[]).filter(function(e){var st=(e.statut||e.status||'').toLowerCase();return !st||st==='actif'||st==='active'||st==='en poste';}).map(function(e,i){return <option key={i} value={((e.prenoms||e.prenom||e.name||'')+' '+(e.nom||'')).trim().replace(/  +/g,' ')}/>;})}</datalist>"+
+      "\n                <div style={{display:'flex',gap:6,marginTop:8}}>"+
+      "<input id=\"pv-emp-search\" list=\"pv-emp-dl\" className=\"finp\" placeholder=\"🔍 Rechercher dans les RH actifs…\" style={{flex:1,fontSize:12}}/>"+
+      "<button className=\"btn btn-s btn-sm\" type=\"button\" onClick={function(){var v=(document.getElementById('pv-emp-search')||{}).value||'';if(!v)return;setF(function(p){return Object.assign({},p,{equipePresente:[...p.equipePresente,{nom:v,role:'',heures:8}]});});try{document.getElementById('pv-emp-search').value='';}catch(e){}}}>+ Ajouter</button>"+
+      "</div>"+
+      "\n              </div>");
+
+    /* 5. STEP_LABELS: remove Activités */
+    src=cwp('step-labels',src,
+      "const STEP_LABELS = ['Équipe & JSA','Activités','Synthèse & Envoi'];",
+      "const STEP_LABELS = ['Équipe & JSA','Synthèse & Envoi'];");
+
+    /* 6. Hide step 2 content (Activités) */
+    src=cwp('hide-step2',src,
+      "{step===2 && (",
+      "{false && (");
+
+    /* 7. Remap step 3 → step 2 (Synthèse) */
+    src=cwp('remap-step3',src,
+      "{step===3 && (",
+      "{step===2 && (");
+
+    /* 8. Navigation step<3 → step<2 */
+    src=cwp('nav-step',src,
+      "{step<3",
+      "{step<2");
+
+    /* 9. Remove avancement global slider */
+    src=cwp('rm-avancement',src,
+      "\n              <div style={{ display:'grid',gridTemplateColumns:'1fr 1fr',gap:14,marginBottom:14 }}>\n                <div className=\"fg\">\n                  <label className=\"flbl\">Avancement global du chantier (%)</label>\n                  <div style={{ display:'flex',alignItems:'center',gap:8 }}>\n                    <input type=\"range\" min=\"0\" max=\"100\" step=\"5\" value={f.avancementGlobal} onChange={e=>set('avancementGlobal',Number(e.target.value))} style={{ flex:1,accentColor:'var(--acc)' }}/>\n                    <span style={{ fontSize:14,fontWeight:700,minWidth:36,textAlign:'right',color:'var(--acc)' }}>{f.avancementGlobal}%</span>\n                  </div>\n                </div>\n              </div>\n",
+      '');
+
+    /* 10. Replace contraintes textarea → structured grid */
+    src=cwp('cntr-grid',src,
+      "<div className=\"fg\"><label className=\"flbl\">Contraintes & blocages</label><textarea className=\"ftxt\" value={f.contraintes} onChange={e=>set('contraintes',e.target.value)} rows={2} placeholder=\"Ex: Accès refusé zone X, livraison en retard…\"/></div>",
+      "<div>"+
+      "<div style={{fontSize:11,fontWeight:700,color:'var(--t2)',textTransform:'uppercase',letterSpacing:'.06em',marginBottom:6}}>Contraintes & blocages</div>"+
+      "{(f.contraintes||[]).length>0&&<div style={{display:'grid',gridTemplateColumns:'3fr 1fr 1fr 2fr 1fr 24px',gap:4,padding:'0 4px 4px',marginBottom:2}}>"+
+      "{['Description','État','Date constat','Responsable','Échéance',''].map(function(l,i){return <span key={i} style={{fontSize:9.5,fontWeight:700,color:'var(--t2)',textTransform:'uppercase',letterSpacing:'.3px'}}>{l}</span>;})}"+
+      "</div>}"+
+      "{(f.contraintes||[]).map(function(cn,ci){return("+
+      "<div key={ci} style={{display:'grid',gridTemplateColumns:'3fr 1fr 1fr 2fr 1fr 24px',gap:4,alignItems:'center',border:'1px solid var(--border)',borderRadius:'var(--r)',padding:'6px 8px',marginBottom:4,background:'var(--s2)'}}>"+
+      "<input className=\"finp\" value={cn.description||''} onChange={function(e){var v=e.target.value;setF(function(p){return Object.assign({},p,{contraintes:p.contraintes.map(function(c,i){return i===ci?Object.assign({},c,{description:v}):c;})});});}} placeholder=\"Description\" style={{fontSize:11.5,padding:'4px 6px'}}/>"+
+      "<select className=\"fsel\" value={cn.etat||'Ouvert'} onChange={function(e){var v=e.target.value;setF(function(p){return Object.assign({},p,{contraintes:p.contraintes.map(function(c,i){return i===ci?Object.assign({},c,{etat:v}):c;})});});}} style={{fontSize:11.5,padding:'4px 3px'}}>"+
+      "{['Ouvert','En cours','Résolu','Bloquant'].map(function(et){return <option key={et} value={et}>{et}</option>;})}"+
+      "</select>"+
+      "<input className=\"finp\" type=\"date\" value={cn.dateConstat||''} onChange={function(e){var v=e.target.value;setF(function(p){return Object.assign({},p,{contraintes:p.contraintes.map(function(c,i){return i===ci?Object.assign({},c,{dateConstat:v}):c;})});});}} style={{fontSize:11.5,padding:'4px 6px'}}/>"+
+      "<input className=\"finp\" value={cn.responsable||''} onChange={function(e){var v=e.target.value;setF(function(p){return Object.assign({},p,{contraintes:p.contraintes.map(function(c,i){return i===ci?Object.assign({},c,{responsable:v}):c;})});});}} placeholder=\"Responsable\" style={{fontSize:11.5,padding:'4px 6px'}}/>"+
+      "<input className=\"finp\" type=\"date\" value={cn.echeance||''} onChange={function(e){var v=e.target.value;setF(function(p){return Object.assign({},p,{contraintes:p.contraintes.map(function(c,i){return i===ci?Object.assign({},c,{echeance:v}):c;})});});}} style={{fontSize:11.5,padding:'4px 6px'}}/>"+
+      "<button type=\"button\" onClick={function(){setF(function(p){return Object.assign({},p,{contraintes:p.contraintes.filter(function(_,i){return i!==ci;})});});}} style={{background:'none',border:'none',color:'var(--crit)',cursor:'pointer',fontSize:12,padding:2}}>✕</button>"+
+      "</div>"+
+      ");})}"+
+      "<button className=\"btn btn-s btn-sm\" type=\"button\" style={{marginTop:4}} onClick={function(){setF(function(p){return Object.assign({},p,{contraintes:[...(p.contraintes||[]),{description:'',etat:'Ouvert',dateConstat:'',responsable:'',echeance:''}]});});}}>+ Contrainte</button>"+
+      "</div>");
+
+    el.textContent=src;
+  }
+  setTimeout(patch,0);
+})();
+</script>
+
 <!-- WA React Patch: fix KPI Avancement + slider label to show weighted % -->
 <script id="__WA_REACT_PATCH_v1__">
 (function(){
