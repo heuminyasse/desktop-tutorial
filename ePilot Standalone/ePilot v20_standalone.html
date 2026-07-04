@@ -7726,33 +7726,6 @@ html body[class] #vac-gantt td.emp .nm{font-weight:500 !important;}</style>
       "{step<3",
       "{step<2");
 
-    /* 9. Remove avancement global slider */
-    src=cwp('rm-avancement',src,
-      "\n              <div style={{ display:'grid',gridTemplateColumns:'1fr 1fr',gap:14,marginBottom:14 }}>\n                <div className=\"fg\">\n                  <label className=\"flbl\">Avancement global du chantier (%)</label>\n                  <div style={{ display:'flex',alignItems:'center',gap:8 }}>\n                    <input type=\"range\" min=\"0\" max=\"100\" step=\"5\" value={f.avancementGlobal} onChange={e=>set('avancementGlobal',Number(e.target.value))} style={{ flex:1,accentColor:'var(--acc)' }}/>\n                    <span style={{ fontSize:14,fontWeight:700,minWidth:36,textAlign:'right',color:'var(--acc)' }}>{f.avancementGlobal}%</span>\n                  </div>\n                </div>\n              </div>\n",
-      '');
-
-    /* 10. Replace contraintes textarea → structured grid */
-    src=cwp('cntr-grid',src,
-      "<div className=\"fg\"><label className=\"flbl\">Contraintes & blocages</label><textarea className=\"ftxt\" value={f.contraintes} onChange={e=>set('contraintes',e.target.value)} rows={2} placeholder=\"Ex: Accès refusé zone X, livraison en retard…\"/></div>",
-      "<div>"+
-      "<div style={{fontSize:11,fontWeight:700,color:'var(--t2)',textTransform:'uppercase',letterSpacing:'.06em',marginBottom:6}}>Contraintes & blocages</div>"+
-      "{(f.contraintes||[]).length>0&&<div style={{display:'grid',gridTemplateColumns:'3fr 1fr 1fr 2fr 1fr 24px',gap:4,padding:'0 4px 4px',marginBottom:2}}>"+
-      "{['Description','État','Date constat','Responsable','Échéance',''].map(function(l,i){return <span key={i} style={{fontSize:9.5,fontWeight:700,color:'var(--t2)',textTransform:'uppercase',letterSpacing:'.3px'}}>{l}</span>;})}"+
-      "</div>}"+
-      "{(f.contraintes||[]).map(function(cn,ci){return("+
-      "<div key={ci} style={{display:'grid',gridTemplateColumns:'3fr 1fr 1fr 2fr 1fr 24px',gap:4,alignItems:'center',border:'1px solid var(--border)',borderRadius:'var(--r)',padding:'6px 8px',marginBottom:4,background:'var(--s2)'}}>"+
-      "<input className=\"finp\" value={cn.description||''} onChange={function(e){var v=e.target.value;setF(function(p){return Object.assign({},p,{contraintes:p.contraintes.map(function(c,i){return i===ci?Object.assign({},c,{description:v}):c;})});});}} placeholder=\"Description\" style={{fontSize:11.5,padding:'4px 6px'}}/>"+
-      "<select className=\"fsel\" value={cn.etat||'Ouvert'} onChange={function(e){var v=e.target.value;setF(function(p){return Object.assign({},p,{contraintes:p.contraintes.map(function(c,i){return i===ci?Object.assign({},c,{etat:v}):c;})});});}} style={{fontSize:11.5,padding:'4px 3px'}}>"+
-      "{['Ouvert','En cours','Résolu','Bloquant'].map(function(et){return <option key={et} value={et}>{et}</option>;})}"+
-      "</select>"+
-      "<input className=\"finp\" type=\"date\" value={cn.dateConstat||''} onChange={function(e){var v=e.target.value;setF(function(p){return Object.assign({},p,{contraintes:p.contraintes.map(function(c,i){return i===ci?Object.assign({},c,{dateConstat:v}):c;})});});}} style={{fontSize:11.5,padding:'4px 6px'}}/>"+
-      "<input className=\"finp\" value={cn.responsable||''} onChange={function(e){var v=e.target.value;setF(function(p){return Object.assign({},p,{contraintes:p.contraintes.map(function(c,i){return i===ci?Object.assign({},c,{responsable:v}):c;})});});}} placeholder=\"Responsable\" style={{fontSize:11.5,padding:'4px 6px'}}/>"+
-      "<input className=\"finp\" type=\"date\" value={cn.echeance||''} onChange={function(e){var v=e.target.value;setF(function(p){return Object.assign({},p,{contraintes:p.contraintes.map(function(c,i){return i===ci?Object.assign({},c,{echeance:v}):c;})});});}} style={{fontSize:11.5,padding:'4px 6px'}}/>"+
-      "<button type=\"button\" onClick={function(){setF(function(p){return Object.assign({},p,{contraintes:p.contraintes.filter(function(_,i){return i!==ci;})});});}} style={{background:'none',border:'none',color:'var(--crit)',cursor:'pointer',fontSize:12,padding:2}}>✕</button>"+
-      "</div>"+
-      ");})}"+
-      "<button className=\"btn btn-s btn-sm\" type=\"button\" style={{marginTop:4}} onClick={function(){setF(function(p){return Object.assign({},p,{contraintes:[...(p.contraintes||[]),{description:'',etat:'Ouvert',dateConstat:'',responsable:'',echeance:''}]});});}}>+ Contrainte</button>"+
-      "</div>");
 
     /* 11. JipDetail signature: add onEditPV, onPrintPV */
     src=cwp('jipdetail-sig',src,
@@ -7802,17 +7775,17 @@ html body[class] #vac-gantt td.emp .nm{font-weight:500 !important;}</style>
     /* 20. PVModal final buttons: 💾 Brouillon + 📧 Email + 📄 PDF */
     src=cwp('pv-final-btns',src,
       "<>\n                <button className=\"btn btn-s\" onClick={()=>handleSave('Brouillon')}>Sauvegarder brouillon</button>\n                <button className=\"btn btn-p\" onClick={()=>handleSave('Soumis')}>Soumettre au client</button>\n              </>",
-      "<>\n                <button className=\"btn btn-s\" onClick={()=>handleSave('Brouillon')}>💾 Brouillon</button>\n                <button className=\"btn btn-s\" onClick={()=>{if(window.__pvEmail)window.__pvEmail(f,jip);handleSave('Brouillon');}}>📧 Email</button>\n                <button className=\"btn btn-p\" onClick={()=>{if(window.__pvPrint)window.__pvPrint(f,jip);handleSave('Soumis');}}>📄 PDF</button>\n              </>");
+      "<>\n                <button className=\"btn btn-s\" onClick={()=>handleSave('Brouillon')}>💾 Brouillon</button>\n                <button className=\"btn btn-s\" onClick={()=>{try{var _el=document.getElementById('pv-apercu');if(_el&&navigator.clipboard)navigator.clipboard.writeText(_el.value);}catch(_e){}}}>📋 Copier</button>\n                <button className=\"btn btn-p\" onClick={()=>{if(window.__pvPrint)window.__pvPrint(f,jip);handleSave('Soumis');}}>📄 PDF</button>\n              </>");
 
     /* 21. RapportsTab: remove avancement button (unifié via PV du jour) */
     src=cwp('rapports-no-avancement',src,
       "<button className=\"btn btn-s btn-sm\" onClick={()=>setDoc('avancement')}>📈 Rapport d'avancement</button>\n        ",
       "");
 
-    /* 22. Page 2 : remplace résumé box encombrant par en-tête compact + slider avancement */
-    src=cwp('step2-header',src,
-      "<div style={{ background:'var(--s2)',border:'1px solid var(--border)',borderRadius:'var(--rl)',padding:'14px 16px',marginBottom:16 }}>\n                <div style={{ fontSize:11,fontWeight:700,color:'var(--t2)',textTransform:'uppercase',letterSpacing:'.06em',marginBottom:10 }}>Résumé du PV</div>\n                <div className=\"g2\" style={{ gap:10,marginBottom:12 }}>\n                  {[\n                    ['Date',fmtD(f.date)],['Météo',`${f.meteo} ${f.temperature}°C`],\n                    ['Horaires',`${f.heureDebut} – ${f.heureFin}`],['Équipe',`${f.equipePresente.length} pers. \xb7 ${totalHeures}h`],\n                    ['Activités',f.activites.filter(a=>a.description).length+' enregistrées'],\n                    ['JSA',jsaOk?'✓ Conforme':'⚠ Incomplet'],\n                  ].map(([l,v])=>(\n                    <div key={l} className=\"irow\" style={{ padding:'5px 0' }}><span className=\"ilbl\" style={{ minWidth:90 }}>{l}</span><span className=\"ival\">{v}</span></div>\n                  ))}\n                </div>\n              </div>",
-      "<div style={{ background:'var(--s2)',border:'1px solid var(--border)',borderRadius:'var(--r)',padding:'10px 14px',marginBottom:12,display:'flex',alignItems:'center',gap:12,flexWrap:'wrap' }}>\n                <span style={{ fontSize:11,color:'var(--t2)' }}>{fmtD(f.date)} \xb7 <b>{f.equipePresente.length} pers.</b> \xb7 JSA <b style={{color:jsaOk?'var(--ok)':'var(--crit)'}}>{jsaOk?'✓':'⚠'}</b></span>\n                <div style={{ display:'flex',alignItems:'center',gap:8,flex:1,minWidth:200 }}>\n                  <label style={{ fontSize:11,fontWeight:700,color:'var(--t2)',whiteSpace:'nowrap' }}>Avancement global :</label>\n                  <input type=\"range\" min=\"0\" max=\"100\" step=\"5\" value={f.avancementGlobal} onChange={e=>set('avancementGlobal',Number(e.target.value))} style={{ flex:1,accentColor:'var(--acc)' }}/>\n                  <span style={{ fontSize:13,fontWeight:800,minWidth:32,textAlign:'right',color:'var(--acc)' }}>{f.avancementGlobal}%</span>\n                </div>\n              </div>");
+    /* 22. Page 2 : rapport d'activité 2 colonnes (gauche: formulaire, droite: aperçu) */
+    src=cwp('rapport-activite-p2',src,
+      "<div style={{ background:'var(--s2)',border:'1px solid var(--border)',borderRadius:'var(--rl)',padding:'14px 16px',marginBottom:16 }}>\n                <div style={{ fontSize:11,fontWeight:700,color:'var(--t2)',textTransform:'uppercase',letterSpacing:'.06em',marginBottom:10 }}>Résumé du PV</div>\n                <div className=\"g2\" style={{ gap:10,marginBottom:12 }}>\n                  {[\n                    ['Date',fmtD(f.date)],['Météo',`${f.meteo} ${f.temperature}°C`],\n                    ['Horaires',`${f.heureDebut} – ${f.heureFin}`],['Équipe',`${f.equipePresente.length} pers. · ${totalHeures}h`],\n                    ['Activités',f.activites.filter(a=>a.description).length+' enregistrées'],\n                    ['JSA',jsaOk?'✓ Conforme':'⚠ Incomplet'],\n                  ].map(([l,v])=>(\n                    <div key={l} className=\"irow\" style={{ padding:'5px 0' }}><span className=\"ilbl\" style={{ minWidth:90 }}>{l}</span><span className=\"ival\">{v}</span></div>\n                  ))}\n                </div>\n              </div>\n\n              <div style={{ display:'grid',gridTemplateColumns:'1fr 1fr',gap:14,marginBottom:14 }}>\n                <div className=\"fg\">\n                  <label className=\"flbl\">Avancement global du chantier (%)</label>\n                  <div style={{ display:'flex',alignItems:'center',gap:8 }}>\n                    <input type=\"range\" min=\"0\" max=\"100\" step=\"5\" value={f.avancementGlobal} onChange={e=>set('avancementGlobal',Number(e.target.value))} style={{ flex:1,accentColor:'var(--acc)' }}/>\n                    <span style={{ fontSize:14,fontWeight:700,minWidth:36,textAlign:'right',color:'var(--acc)' }}>{f.avancementGlobal}%</span>\n                  </div>\n                </div>\n              </div>\n\n              <div className=\"fg\"><label className=\"flbl\">Incidents / Accidents (si aucun, laisser vide)</label><textarea className=\"ftxt\" value={f.incidents} onChange={e=>set('incidents',e.target.value)} rows={2} placeholder=\"Aucun incident à signaler…\"/></div>\n              <div className=\"fg\"><label className=\"flbl\">Contraintes & blocages</label><textarea className=\"ftxt\" value={f.contraintes} onChange={e=>set('contraintes',e.target.value)} rows={2} placeholder=\"Ex: Accès refusé zone X, livraison en retard…\"/></div>\n              <div className=\"fg\"><label className=\"flbl\">Notes & observations générales</label><textarea className=\"ftxt\" value={f.notes} onChange={e=>set('notes',e.target.value)} rows={2} placeholder=\"Remarques, RDV prévus, suite des travaux…\"/></div>\n\n              {!jsaOk && (\n                <div style={{ padding:'10px 14px',background:'var(--crit-bg)',border:'1px solid #fca5a5',borderRadius:'var(--r)',fontSize:12,color:'#b91c1c',marginBottom:12 }}>\n                  ⚠ La JSA est incomplète — vérifiez les cases briefing, EPI, risques et signataire.\n                </div>\n              )}",
+      "<div style={{ display:'grid',gridTemplateColumns:'1fr 1fr',gap:0,border:'1px solid var(--border)',borderRadius:'var(--r)',overflow:'hidden',marginBottom:12 }}>\n  <div style={{ padding:'14px',borderRight:'1px solid var(--border)',overflowY:'auto',maxHeight:480 }}>\n    <div className=\"fg\"><label className=\"flbl\">CLIENT</label>\n      <div style={{ padding:'6px 10px',background:'var(--s2)',border:'1px solid var(--border)',borderRadius:'var(--r)',fontSize:13 }}>{(function(){var _c=(window.CLIENTS_DATA||[]).find(function(x){return x.id===jip.clientId;})||{};return _c.name||_c.nom||'—';})()}</div>\n    </div>\n    <div className=\"fg\"><label className=\"flbl\">TITRE DU PROJET</label>\n      <div style={{ padding:'6px 10px',background:'var(--s2)',border:'1px solid var(--border)',borderRadius:'var(--r)',fontSize:13 }}>{jip.description||jip.id||'—'}</div>\n    </div>\n    <div style={{ display:'grid',gridTemplateColumns:'1fr 1fr',gap:8 }}>\n      <div className=\"fg\"><label className=\"flbl\">DATE</label>\n        <div style={{ padding:'6px 10px',background:'var(--s2)',border:'1px solid var(--border)',borderRadius:'var(--r)',fontSize:13 }}>{fmtD(f.date)}</div>\n      </div>\n      <div className=\"fg\"><label className=\"flbl\">HORAIRES</label>\n        <div style={{ padding:'6px 10px',background:'var(--s2)',border:'1px solid var(--border)',borderRadius:'var(--r)',fontSize:13 }}>{f.heureDebut||'__h__'} → {f.heureFin||'__h__'}</div>\n      </div>\n    </div>\n    <div className=\"fg\"><label className=\"flbl\" style={{ color:'var(--acc)',fontWeight:700 }}>A- Tâches</label>\n      <div style={{ background:'var(--s2)',border:'1px solid var(--border)',borderRadius:'var(--r)',padding:'6px 10px' }}>\n        {(jip.tasks||[]).length===0&&<span style={{fontSize:11.5,color:'var(--t3)'}}>Aucune tâche</span>}\n        {(jip.tasks||[]).map(function(t,i){return(\n          <div key={i} style={{display:'flex',justifyContent:'space-between',fontSize:11.5,padding:'3px 0',borderBottom:i<(jip.tasks||[]).length-1?'1px solid var(--border)':'none'}}>\n            <span>{i+1}- {t.title||t.nom||''}</span>\n            <span style={{fontWeight:700,color:'var(--acc)',minWidth:36,textAlign:'right'}}>{t.progress||0}%</span>\n          </div>\n        );})}  \n      </div>\n    </div>\n    <div className=\"fg\"><label className=\"flbl\" style={{ color:'var(--acc)',fontWeight:700 }}>B- Observations (une par ligne)</label>\n      <textarea className=\"ftxt\" value={f.notes||''} onChange={e=>set('notes',e.target.value)} rows={3} placeholder=\"- Travaux en cours&#10;- Besoin matériel\"/>\n    </div>\n    <div className=\"fg\"><label className=\"flbl\" style={{ color:'var(--acc)',fontWeight:700 }}>C- Contraintes (une par ligne)</label>\n      <textarea className=\"ftxt\"\n        value={Array.isArray(f.contraintes)?f.contraintes.map(function(c){return c.description||'';}).filter(Boolean).join('\\n'):(f.contraintes||'')}\n        onChange={function(e){var _lns=e.target.value.split('\\n');setF(function(p){return Object.assign({},p,{contraintes:_lns.filter(Boolean).map(function(l){return {description:l,etat:'Ouvert',dateConstat:'',responsable:'',echeance:''};});});}}}\n        rows={3} placeholder=\"dégager camion > 7 Juil > Responsable > Urgent\"/>\n    </div>\n    <div className=\"fg\"><label className=\"flbl\" style={{ color:'var(--acc)',fontWeight:700 }}>D- Équipe</label>\n      <div style={{ background:'var(--s2)',border:'1px solid var(--border)',borderRadius:'var(--r)',padding:'6px 10px',fontSize:12 }}>\n        {f.equipePresente.map(function(e,i){return <div key={i}>{e.nom}{e.role?' – '+e.role:''}</div>;})} \n        {f.equipePresente.length===0&&<span style={{color:'var(--t3)'}}>—</span>}\n      </div>\n    </div>\n  </div>\n  <div style={{ padding:'14px',display:'flex',flexDirection:'column',gap:8 }}>\n    <div style={{ fontSize:10,fontWeight:700,color:'var(--t2)',textTransform:'uppercase',letterSpacing:'.06em' }}>APERÇU — COPIER AVANT ENVOI</div>\n    <textarea id=\"pv-apercu\" className=\"ftxt\" style={{ flex:1,fontFamily:'monospace',fontSize:11,resize:'none',lineHeight:1.5,minHeight:350 }}\n      readOnly\n      value={(function(){\n        var _c=(window.CLIENTS_DATA||[]).find(function(x){return x.id===jip.clientId;})||{};\n        var _cN=(_c.name||_c.nom||'').toUpperCase();\n        var _pN=(jip.description||jip.id||'').toUpperCase();\n        var _cnTxt=Array.isArray(f.contraintes)?f.contraintes.map(function(c){return c.description||'';}).filter(Boolean).join('\\n'):(f.contraintes||'');\n        var _eqTxt=f.equipePresente.map(function(e){return e.nom+(e.role?' – '+e.role:'');}).join('\\n');\n        var _ls=['Rapport d\\'activité – '+_cN+' – '+fmtD(f.date),_pN,'','Début : '+(f.heureDebut||'__h__')+' – Fin : '+(f.heureFin||'__h__'),'','A- Tâches'];\n        (jip.tasks||[]).forEach(function(t,i){_ls.push((i+1)+'- '+(t.title||t.nom||'')+'    '+(t.progress||0)+'%');});\n        _ls.push('','B- Observations');if(f.notes)_ls.push(f.notes);\n        _ls.push('','C- Contraintes');if(_cnTxt)_ls.push(_cnTxt);\n        _ls.push('','D- Equipe');if(_eqTxt)_ls.push(_eqTxt);\n        return _ls.join('\\n');\n      })()}\n      onChange={function(){}}\n    />\n  </div>\n</div>");
 
     el.textContent=src;
   }
@@ -7821,7 +7794,7 @@ html body[class] #vac-gantt td.emp .nm{font-weight:500 !important;}</style>
 </script>
 
 
-<!-- PV Print: rapport d'avancement -->
+<!-- PV Print: rapport d'activité -->
 <script id="__PV_PRINT_v1__">
 (function(){
   function fD(d){if(!d)return '';try{return new Date(d+'T00:00:00').toLocaleDateString('fr-FR',{day:'2-digit',month:'long',year:'numeric'});}catch(e){return d;}}
@@ -7834,201 +7807,79 @@ html body[class] #vac-gantt td.emp .nm{font-weight:500 !important;}</style>
     var _bd=_bs.design||{};
     var acc=_bd.accent||'#0ea5e9';
     var nom=_be.nom||'Home Business Office';
-    var adr=_be.adresse||'Douala, Cameroun';
-    var tel=_be.tel||'+237 677 19 22 49';
+    var adr=_be.adresse||'';
+    var tel=_be.tel||'';
     var logo=_be.logo||'';
 
-    var clientName='';
-    try{ var cl=(window.CLIENTS_DATA||[]).find(function(c){return c.id===(jip&&jip.clientId);}); clientName=cl?(cl.name||cl.nom||''):''; }catch(_){}
-    var projRef=jip?(jip.imputation||jip.id||''):(pv.jipId||'');
-    var projNom=jip?(jip.description||jip.id||''):(pv.jipId||'');
-    var avancement=typeof pv.avancementGlobal!=='undefined'?pv.avancementGlobal:(jip&&jip.progress)||0;
+    var cl=(window.CLIENTS_DATA||[]).find(function(c){return c.id===(jip&&jip.clientId);})||{};
+    var clientName=(cl.name||cl.nom||'').toUpperCase();
+    var projNom=(jip?(jip.description||jip.id||''):(pv.jipId||'')).toUpperCase();
     var dateStr=fD(pv.date);
 
-    /* Tâches planning */
     var tasks=(jip&&jip.tasks)||[];
-    var taskRows=tasks.map(function(t){
+    var taskRows=tasks.map(function(t,i){
       var pct=t.progress||0;
       var col=pct>=100?'#166534':pct>=50?'#854d0e':'#991b1b';
-      return '<tr><td>'+(t.phase?'['+esc(t.phase)+'] ':'')+esc(t.title||t.nom||'')+'</td><td>'+esc(fD(t.start||t.debut))+'</td><td>'+esc(fD(t.end||t.fin))+'</td>'
-        +'<td style="text-align:center;font-weight:700;color:'+col+'">'+pct+'%</td><td>'+esc(t.status||t.statut||'')+'</td></tr>';
+      return '<tr><td>'+(i+1)+'- '+esc(t.title||t.nom||'')+'</td><td style="text-align:right;font-weight:700;color:'+col+'">'+pct+'%</td></tr>';
     }).join('');
 
-    /* Activités du jour */
-    var acts=(pv.activites||[]).filter(function(a){return a.description;});
-    var actRows=acts.map(function(a){
-      return '<tr><td>'+esc(a.description)+'</td><td>'+esc(a.zone||'')+'</td><td style="text-align:center">'+esc(a.qteJour||'—')+' '+esc(a.unite||'')+'</td></tr>';
-    }).join('');
-
-    /* Contraintes ouvertes */
     var cntrArr=Array.isArray(pv.contraintes)?pv.contraintes:(pv.contraintes?[{description:pv.contraintes,etat:'Ouvert'}]:[]);
-    var openCntr=cntrArr.filter(function(c){return c.etat!=='Résolu';});
-    var cntrRows=openCntr.map(function(c){
-      return '<tr><td>'+esc(c.description||'')+'</td><td>'+esc(c.etat||'')+'</td><td>'+esc(c.responsable||'')+'</td><td>'+esc(c.echeance||'')+'</td></tr>';
-    }).join('');
+    var cntrTxt=cntrArr.map(function(c){return c.description||'';}).filter(Boolean).join('\n');
+    var eqTxt=(pv.equipePresente||[]).map(function(e){return e.nom+(e.role?' – '+e.role:'');}).join('\n');
 
-    var jsa=pv.jsa||{};
-    var signataire=jsa.signataire||'';
-
-    var css='body{font-family:Arial,Helvetica,sans-serif;font-size:11px;color:#111;margin:0;padding:0}'
-      +'.page{width:210mm;min-height:297mm;margin:0 auto;padding:12mm 14mm 10mm;box-sizing:border-box}'
-      +'.hdr{display:flex;align-items:flex-start;justify-content:space-between;border-bottom:3px solid '+acc+';padding-bottom:8px;margin-bottom:10px}'
+    var css='*{box-sizing:border-box;margin:0;padding:0}'
+      +'body{font-family:Arial,Helvetica,sans-serif;font-size:11px;color:#111}'
+      +'.page{width:210mm;min-height:297mm;margin:0 auto;padding:12mm 14mm 10mm}'
+      +'.hdr{display:flex;align-items:flex-start;justify-content:space-between;border-bottom:3px solid '+acc+';padding-bottom:8px;margin-bottom:12px}'
       +'.hdr-l{display:flex;align-items:center;gap:10px}'
-      +'.hdr-logo{height:36px;width:auto;object-fit:contain}'
-      +'.hdr-info .title{font-size:18px;font-weight:900;color:'+acc+';margin:0;line-height:1}'
-      +'.hdr-info .sub{font-size:10px;color:#555;margin:3px 0 0}'
-      +'.hdr-r{text-align:right;font-size:9px;color:#888;line-height:1.5}'
-      +'.hdr-r .ref{font-size:12px;font-weight:800;color:#1e3a5f}'
-      +'.av-box{display:flex;align-items:center;gap:16px;background:#f0f9ff;border:2px solid '+acc+';border-radius:8px;padding:10px 16px;margin-bottom:12px}'
-      +'.av-pct{font-size:30px;font-weight:900;color:'+acc+';white-space:nowrap}'
-      +'.av-bar{flex:1;height:12px;background:#e0f2fe;border-radius:6px;overflow:hidden}'
-      +'.av-fill{height:100%;background:'+acc+';border-radius:6px}'
-      +'.av-meta{text-align:right;min-width:100px;font-size:9px;color:#555;line-height:1.6}'
-      +'h3{font-size:10px;font-weight:900;text-transform:uppercase;letter-spacing:.5px;color:#1e3a5f;border-left:3px solid '+acc+';padding-left:7px;margin:10px 0 5px}'
-      +'.ptbl{width:100%;border-collapse:collapse;margin-bottom:6px;font-size:10px}'
-      +'.ptbl th{background:'+acc+';color:#fff;padding:4px 8px;text-align:left;font-size:9px;font-weight:700}'
-      +'.ptbl td{padding:4px 8px;border-bottom:1px solid #eef0f5}'
-      +'.ptbl tr:nth-child(even) td{background:#f8faff}'
-      +'.badge{display:inline-block;padding:2px 7px;border-radius:100px;font-size:9px;font-weight:700;margin-right:3px}'
-      +'.ok{background:#dcfce7;color:#166534}.nok{background:#fee2e2;color:#991b1b}'
-      +'.block{background:#f8faff;border:1px solid #dce3ec;border-radius:4px;padding:6px 10px;font-size:10.5px;white-space:pre-wrap;min-height:16px}'
-      +'.sig-grid{display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-top:16px}'
-      +'.sig-box p{font-size:9px;color:#555;margin:0 0 14px}'
-      +'.sig-line{border-top:1.5px solid #1e3a5f;padding-top:3px;font-size:9px;color:#888}'
+      +'.logo{height:36px;object-fit:contain}'
+      +'.title{font-size:17px;font-weight:900;color:'+acc+';line-height:1}'
+      +'.sub{font-size:10px;color:#555;margin-top:3px}'
+      +'.hdr-r{text-align:right;font-size:9px;color:#888;line-height:1.6}'
+      +'h3{font-size:10px;font-weight:900;text-transform:uppercase;letter-spacing:.5px;color:'+acc+';border-left:3px solid '+acc+';padding-left:7px;margin:12px 0 5px}'
+      +'.meta{display:flex;gap:24px;background:#f8faff;border:1px solid #dce3ec;border-radius:4px;padding:7px 12px;margin-bottom:10px;font-size:11px}'
+      +'.meta b{font-weight:700}'
+      +'.tbl{width:100%;border-collapse:collapse;margin-bottom:6px}'
+      +'.tbl th{background:'+acc+';color:#fff;padding:4px 8px;text-align:left;font-size:9.5px}'
+      +'.tbl td{padding:4px 8px;border-bottom:1px solid #eef0f5;font-size:10.5px}'
+      +'.tbl tr:nth-child(even) td{background:#f8faff}'
+      +'.blk{background:#f8faff;border:1px solid #dce3ec;border-radius:4px;padding:7px 10px;font-size:10.5px;white-space:pre-wrap;min-height:18px;margin-bottom:4px}'
       +'@media print{@page{size:A4;margin:0}.page{padding:10mm 12mm}}';
 
-    var html='<!DOCTYPE html><html lang="fr"><head><meta charset="utf-8"><title>Rapport d'avancement — '+esc(projRef)+'</title><style>'+css+'</style></head><body><div class="page">'
+    var html='<!DOCTYPE html><html lang="fr"><head><meta charset="utf-8">'
+      +'<title>Rapport d'activité – '+esc(clientName)+'</title>'
+      +'<style>'+css+'</style></head><body><div class="page">'
       +'<div class="hdr">'
-      +'<div class="hdr-l">'+(logo?'<img class="hdr-logo" src="'+esc(logo)+'" alt="logo"/>':'')
-      +'<div class="hdr-info"><div class="title">Rapport d'avancement</div><div class="sub">'+esc(projRef)+(projNom?' &mdash; '+esc(projNom):'')+(clientName?' &mdash; '+esc(clientName):'')+'</div></div></div>'
-      +'<div class="hdr-r"><div>'+esc(nom)+(adr?'<br>'+esc(adr):'')+(tel?'<br>'+esc(tel):'')+'</div><div class="ref">PV N° '+esc(pv.numero)+'</div><div>'+esc(dateStr)+'</div></div>'
+      +'<div class="hdr-l">'+(logo?'<img class="logo" src="'+esc(logo)+'" alt=""/>':'')
+      +'<div><div class="title">Rapport d'activité</div><div class="sub">'+esc(clientName)+(projNom?'<br>'+esc(projNom):'')+'</div></div>'
       +'</div>'
-      +'<div class="av-box">'
-      +'<div class="av-pct">'+esc(avancement)+'%</div>'
-      +'<div style="flex:1"><div class="av-bar"><div class="av-fill" style="width:'+Math.min(100,avancement)+'%"></div></div>'
-      +'<div style="font-size:9px;color:#64748b;margin-top:3px">Avancement global du chantier</div></div>'
-      +'<div class="av-meta">PV du '+esc(dateStr)+(jip&&jip.dateFin?'<br>Fin prévue : '+esc(fD(jip.dateFin)):'')+'</div>'
+      +'<div class="hdr-r">'+esc(nom)+(adr?'<br>'+esc(adr):'')+(tel?'<br>'+esc(tel):'')+'<br><b>'+esc(dateStr)+'</b></div>'
       +'</div>'
-      +(taskRows?'<h3>Planning &mdash; Tâches</h3><table class="ptbl"><thead><tr><th>Tâche</th><th>Début</th><th>Fin</th><th>Av.</th><th>Statut</th></tr></thead><tbody>'+taskRows+'</tbody></table>':'')
-      +(actRows?'<h3>Activités réalisées</h3><table class="ptbl"><thead><tr><th>Description</th><th>Zone</th><th>Qté</th></tr></thead><tbody>'+actRows+'</tbody></table>':'')
-      +'<h3>Sécurité (JSA)</h3>'
-      +'<p style="margin:0 0 5px"><span class="badge '+(jsa.briefingFait?'ok':'nok')+'">Briefing '+(jsa.briefingFait?'✓':'✗')+'</span>'
-      +'<span class="badge '+(jsa.epiVerifies?'ok':'nok')+'">EPI '+(jsa.epiVerifies?'✓':'✗')+'</span>'
-      +(signataire?'<span style="font-size:10px;margin-left:5px">Signataire : <b>'+esc(signataire)+'</b></span>':'')
-      +'</p>'
-      +(openCntr.length>0?'<h3>Contraintes &amp; blocages</h3><table class="ptbl"><thead><tr><th>Description</th><th>État</th><th>Responsable</th><th>Échéance</th></tr></thead><tbody>'+cntrRows+'</tbody></table>':'')
-      +(pv.incidents?'<h3>Incidents / Accidents</h3><div class="block">'+esc(pv.incidents)+'</div>':'')
-      +(pv.notes?'<h3>Observations</h3><div class="block">'+esc(pv.notes)+'</div>':'')
-      +'<div class="sig-grid">'
-      +'<div class="sig-box"><p>Chef de chantier / Signataire</p><div class="sig-line">'+esc(signataire)+'</div></div>'
-      +'<div class="sig-box"><p>Client / Représentant</p><div class="sig-line">&nbsp;</div></div>'
+      +'<div class="meta">'
+      +'<span>Date : <b>'+esc(dateStr)+'</b></span>'
+      +'<span>Début : <b>'+(pv.heureDebut||'__h__')+'</b></span>'
+      +'<span>Fin : <b>'+(pv.heureFin||'__h__')+'</b></span>'
+      +'</div>'
+      +(taskRows?'<h3>A- Tâches</h3><table class="tbl"><thead><tr><th>Tâche</th><th style="text-align:right;width:60px">Av.</th></tr></thead><tbody>'+taskRows+'</tbody></table>':'')
+      +'<h3>B- Observations</h3><div class="blk">'+esc(pv.notes||'—')+'</div>'
+      +'<h3>C- Contraintes</h3><div class="blk">'+esc(cntrTxt||'—')+'</div>'
+      +'<h3>D- Équipe</h3><div class="blk">'+esc(eqTxt||'—')+'</div>'
+      +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-top:20px">'
+      +'<div><p style="font-size:9px;color:#555;margin-bottom:14px">Chef de chantier / Signataire</p><div style="border-top:1.5px solid #1e3a5f;padding-top:3px;font-size:9px;color:#888">'+(pv.jsa&&pv.jsa.signataire?esc(pv.jsa.signataire):'&nbsp;')+'</div></div>'
+      +'<div><p style="font-size:9px;color:#555;margin-bottom:14px">Client / Représentant</p><div style="border-top:1.5px solid #1e3a5f;padding-top:3px;font-size:9px;color:#888">&nbsp;</div></div>'
       +'</div>'
       +'</div></body></html>';
 
-    var w=window.open('','_blank','width=960,height=800,scrollbars=yes');
-    if(!w){ alert('Veuillez autoriser les fenêtres popup pour imprimer.'); return; }
+    var w=window.open('','_blank','width=900,height=800,scrollbars=yes');
+    if(!w){alert('Veuillez autoriser les popups pour imprimer.');return;}
     w.document.write(html);
     w.document.close();
     w.focus();
-    setTimeout(function(){ w.print(); },450);
+    setTimeout(function(){w.print();},400);
   };
 })();
 </script>
 
-<!-- PV Email: extrait avancement + observations -->
-<script id="__PV_EMAIL_v1__">
-(function(){
-  function fD(d){if(!d)return '';try{return new Date(d+'T00:00:00').toLocaleDateString('fr-FR',{day:'2-digit',month:'long',year:'numeric'});}catch(e){return d;}}
-
-  window.__pvEmail=function(pv,jip){
-    if(!pv) return;
-    var _bs=(typeof window!=='undefined'&&window.EPILOT_SETTINGS)||{};
-    var _be=_bs.entreprise||{};
-    var clientName='',clientEmail='';
-    try{
-      var cl=(window.CLIENTS_DATA||[]).find(function(c){return c.id===(jip&&jip.clientId);});
-      clientName=cl?(cl.name||cl.nom||''):'';
-      clientEmail=cl?(cl.email||cl.mail||''):'';
-    }catch(_){}
-    var projRef=jip?(jip.imputation||jip.id||''):(pv.jipId||'');
-    var projNom=jip?(jip.description||jip.id||''):(pv.jipId||'');
-    var avancement=typeof pv.avancementGlobal!=='undefined'?pv.avancementGlobal:(jip&&jip.progress)||0;
-
-    var subject='Rapport d'avancement – '+projRef+(clientName?' – '+clientName:'')+' – '+fD(pv.date);
-    var body='Bonjour'+(clientName?' '+clientName:'')+',
-
-';
-    body+='Voici le point d'avancement du chantier au '+fD(pv.date)+'.
-
-';
-    body+='AVANCEMENT GLOBAL : '+avancement+'%
-';
-    body+='━━━━━━━━━━━━━━━━━━━━━━━━
-
-';
-
-    var tasks=(jip&&jip.tasks)||[];
-    if(tasks.length>0){
-      body+='PLANNING
-';
-      tasks.forEach(function(t){
-        body+='  '+(t.progress>=100?'✓':'○')+' '+(t.title||t.nom||'')+(t.phase?' ['+t.phase+']':'')+' — '+(t.progress||0)+'%
-';
-      });
-      body+='
-';
-    }
-
-    var acts=(pv.activites||[]).filter(function(a){return a.description;});
-    if(acts.length>0){
-      body+='ACTIVITÉS DU JOUR
-';
-      acts.forEach(function(a){
-        body+='  • '+a.description+(a.zone?' ['+a.zone+']':'')+'
-';
-      });
-      body+='
-';
-    }
-
-    var cntrArr=Array.isArray(pv.contraintes)?pv.contraintes:(pv.contraintes?[{description:pv.contraintes,etat:'Ouvert'}]:[]);
-    var open=cntrArr.filter(function(c){return c.etat!=='Résolu';});
-    if(open.length>0){
-      body+='POINTS DE VIGILANCE
-';
-      open.forEach(function(c){
-        body+='  ⚠ '+c.description+(c.etat?' ['+c.etat+']':'')+(c.responsable?' – Resp : '+c.responsable:'')+'
-';
-      });
-      body+='
-';
-    }
-
-    if(pv.incidents) body+='INCIDENTS
-'+pv.incidents+'
-
-';
-    if(pv.notes) body+='OBSERVATIONS
-'+pv.notes+'
-
-';
-
-    body+='━━━━━━━━━━━━━━━━━━━━━━━━
-';
-    body+=(_be.nom||'Home Business Office')+'
-';
-    if(_be.tel) body+=_be.tel+'
-';
-    if(_be.email) body+=_be.email+'
-';
-
-    var mailto='mailto:'+(clientEmail||'')+'?subject='+encodeURIComponent(subject)+'&body='+encodeURIComponent(body);
-    var a=document.createElement('a');
-    a.href=mailto;
-    a.click();
-  };
-})();
-</script>
 
 
 <!-- WA React Patch: fix KPI Avancement + slider label to show weighted % -->
