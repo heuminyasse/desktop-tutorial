@@ -7678,8 +7678,7 @@ html body[class] #vac-gantt td.emp .nm{font-weight:500 !important;}</style>
       return s.replace(find,repl);
     }
 
-    var helper='/* __WA_REACT_V1__ */ function getWA(jip){'
-      +'var oa=Number(jip.budgetContractuel||jip.budgetOA||0);'
+    var _waBody='var oa=Number(jip.budgetContractuel||jip.budgetOA||0);'
       +'if(!oa)return null;'
       +'var pi=jip.imputation||jip.id||"";if(!pi)return null;'
       +'var tvRaw=localStorage.getItem("ep_ptv_"+pi);if(!tvRaw)return null;'
@@ -7691,12 +7690,18 @@ html body[class] #vac-gantt td.emp .nm{font-weight:500 !important;}</style>
       +'var title=t.titre||t.title||t.nom||"";'
       +'var val=parseFloat(tv[title]||0);'
       +'var pct=t.avancement!==undefined?t.avancement:(t.pct!==undefined?t.pct:0);'
-      +'c+=Math.round(val*(pct/100));});});'
-      +'return Math.min(100,Math.round(c/oa*100));}';
+      +'c+=Math.round(val*(pct/100));});});';
+    var helper='/* __WA_REACT_V1__ */'
+      +' function getWA(jip){'+_waBody+'return Math.min(100,Math.round(c/oa*100));}'
+      +' function getConsoAmt(jip){'+_waBody+'return c;}';
 
     src=cwp('wa-helper',src,'function CompactKPIs(',helper+'\nfunction CompactKPIs(');
     src=cwp('wa-kpi',src,"{ l:'Avancement', v:jip.progress+'%'","{ l:'Avancement', v:(getWA(jip)!==null?getWA(jip):jip.progress)+'%'");
     src=cwp('wa-slider',src,"minWidth:38, textAlign:'right', color:'var(--acc)' }}>{jip.progress}%</span>","minWidth:38, textAlign:'right', color:'var(--acc)' }}>{getWA(jip)!==null?getWA(jip):jip.progress}%</span>");
+    src=cwp('wa-consommation',src,
+      "sub:`vs ${expectedPct(jip)}%`, cls:cAvancement },",
+      "sub:`vs ${expectedPct(jip)}%`, cls:cAvancement },{ l:'Consommation', v:(getWA(jip)!==null?getWA(jip):0)+'%', sub:(getConsoAmt(jip)?'≈ '+fmtM(getConsoAmt(jip)):'—'), cls:(function(w){return w===null?'kpi-warn':w>=70?'kpi-ok':w>=40?'kpi-warn':'kpi-crit';})(getWA(jip)) },"
+    );
     el.textContent=src;
   }
   setTimeout(patch,0);
@@ -8430,6 +8435,478 @@ html body[class] #vac-gantt td.emp .nm{font-weight:500 !important;}</style>
   }
 
   window.__openRapportActivite = openModal;
+})();
+</script>
+
+<!-- ═══════════════════════════════════════════════════════════════
+     JIP RAPPORT D'AVANCEMENT — snapshot + viewer + print + email
+     ═══════════════════════════════════════════════════════════════ -->
+<script id="__JIP_RAPPORT_v1__">
+/* Rapport d'avancement JIP : bouton Planning → liste historique → snapshot → print/email */
+(function(){
+'use strict';
+var STORE='epilot_jip_rapports';
+
+function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+function fmtF(n){var v=Number(n||0);try{return v.toLocaleString('fr-FR',{maximumFractionDigits:0})+' F';}catch(e){return v+' F';}}
+function todayFR(){return new Date().toLocaleDateString('fr-FR');}
+function nowISO(){return new Date().toISOString();}
+function waCol(w){return w>=100?'#16a34a':w>=70?'#2563eb':w>=40?'#e67e22':'#dc2626';}
+
+function getPI(){
+  var h=(window.location.hash||'').match(/PI\d{4,6}/i);
+  if(h) return h[0].toUpperCase();
+  var all=document.querySelectorAll('#chantiers-root *');
+  for(var i=0;i<all.length;i++){
+    var e=all[i];
+    if(e.children.length===0&&/^PI\d{4,6}$/.test(e.textContent.trim())&&e.offsetParent!==null)
+      return e.textContent.trim().toUpperCase();
+  }
+  return null;
+}
+function getJIPRec(pi){
+  var jd=window.JIP_DATA||[];
+  for(var i=0;i<jd.length;i++){
+    var id=(jd[i].Imputation||jd[i].imputation||jd[i].id||'').toUpperCase();
+    if(id===pi) return jd[i];
+  }
+  return null;
+}
+function loadAll(){try{return JSON.parse(localStorage.getItem(STORE)||'[]');}catch(e){return [];}}
+function saveAll(list){localStorage.setItem(STORE,JSON.stringify(list));}
+function getReportsForPI(pi){return loadAll().filter(function(r){return r.pi===pi;});}
+function nextNum(pi){return String(getReportsForPI(pi).length+1).padStart(3,'0');}
+function deleteReport(id){saveAll(loadAll().filter(function(r){return r.id!==id;}));}
+
+/* ── Snapshot builder ── */
+function buildSnapshot(pi,obs,lk){
+  var rec=getJIPRec(pi);
+  if(!rec) return null;
+  var oa=Number(rec.budgetContractuel||rec.budgetOA||0);
+  var tv={};
+  try{tv=JSON.parse(localStorage.getItem('ep_ptv_'+pi)||'{}');}catch(e){}
+  lk=lk||{};
+  var totalConso=0,totalVal=0;
+  function fmtDate(d){
+    if(!d) return '';
+    if(/^\d{4}-\d{2}-\d{2}/.test(d)){try{return new Date(d).toLocaleDateString('fr-FR');}catch(e){}}
+    return d;
+  }
+  var phases=(rec.phases||[]).map(function(ph){
+    var nom=ph.nom||ph.name||ph.titre||ph.title||'Phase';
+    var taches=(ph.taches||ph.tasks||[]).map(function(t){
+      var title=t.titre||t.title||t.nom||t.name||'';
+      var val=parseFloat(tv[title]||0);
+      var av=t.avancement!==undefined?Number(t.avancement):(t.pct!==undefined?Number(t.pct):0);
+      var conso=Math.round(val*av/100);
+      totalConso+=conso; totalVal+=val;
+      var debut=t.dateDebut||t.debut||t.start||'';
+      var fin=t.dateFin||t.fin||t.end||'';
+      if(!debut&&lk[title]){debut=lk[title].d||'';fin=lk[title].f||'';}
+      return {titre:title,duree:Number(t.duree||t.duration||t.jours||0),poids:oa>0?val/oa:0,
+        debut:fmtDate(debut),fin:fmtDate(fin),avancement:av,valeur:val,conso:conso};
+    });
+    return {nom:nom,taches:taches};
+  });
+  if(!phases.length){
+    var flat=rec.tasks||rec.taches||[];
+    if(flat.length){
+      var ft=flat.map(function(t){
+        var title=t.title||t.titre||t.nom||'';
+        var val=parseFloat(tv[title]||0);
+        var av=Number(t.pct||t.avancement||t.progress||0);
+        var c=Math.round(val*av/100);
+        totalConso+=c; totalVal+=val;
+        return {titre:title,duree:Number(t.duree||0),poids:oa>0?val/oa:0,
+          debut:fmtDate(t.start||t.debut||''),fin:fmtDate(t.end||t.fin||''),avancement:av,valeur:val,conso:c};
+      });
+      phases=[{nom:'Tâches',taches:ft}];
+    }
+  }
+  var wa=oa>0?Math.min(100,Math.round(totalConso/oa*100)):0;
+  var num=nextNum(pi);
+  return {
+    id:'RAP-'+pi+'-'+num,num:num,pi:pi,
+    date:todayFR(),snapshotDate:nowISO(),
+    projet:rec.Description||rec.description||rec.designation||rec.titre||'',
+    client:rec.Client||rec.client||'',
+    superviseur:rec.superviseur||rec.Superviseur||rec.chefChantier||'',
+    contact:rec.contact||rec.Contact||'',
+    oa:oa,conso:totalConso,totalVal:totalVal,
+    avancementGlobal:wa,phases:phases,observations:obs||''
+  };
+}
+
+/* ── Ring SVG ── */
+function ring(pct,size){
+  size=size||76;
+  var col=waCol(pct),r=(size-10)/2,c=size/2,circ=2*Math.PI*r;
+  var off=parseFloat((circ-(pct/100)*circ).toFixed(2));
+  return '<svg width="'+size+'" height="'+size+'" style="transform:rotate(-90deg)">'
+    +'<circle cx="'+c+'" cy="'+c+'" r="'+r+'" fill="none" stroke="#e9ecef" stroke-width="5.5"/>'
+    +'<circle cx="'+c+'" cy="'+c+'" r="'+r+'" fill="none" stroke="'+col+'" stroke-width="5.5" stroke-linecap="round"'
+    +' stroke-dasharray="'+circ+'" stroke-dashoffset="'+off+'"/>'
+    +'<text x="'+c+'" y="'+(c+1)+'" text-anchor="middle" dominant-baseline="middle"'
+    +' font-size="'+(size*0.21)+'" font-weight="800" fill="'+col+'" transform="rotate(90,'+c+','+c+')"'
+    +' style="font-family:system-ui,sans-serif">'+pct+'</text></svg>';
+}
+
+/* ── Progress bar ── */
+function pbar(pct,w,h){
+  w=w||100;h=h||8;
+  return '<div style="background:#e9ecef;border-radius:4px;height:'+h+'px;width:'+w+'px;display:inline-block;vertical-align:middle;overflow:hidden">'
+    +'<div style="background:'+waCol(pct)+';height:100%;border-radius:4px;width:'+Math.min(100,Math.max(0,pct))+'%"></div></div>';
+}
+
+/* ── Render report HTML ── */
+function renderReport(snap){
+  var wa=snap.avancementGlobal,wc=waCol(wa);
+  var rows='';
+  (snap.phases||[]).forEach(function(ph){
+    if(!(ph.taches||[]).length) return;
+    rows+='<tr style="background:#1e3a5f"><td colspan="7" style="padding:8px 14px;color:#fff;font-weight:700;font-size:11px;letter-spacing:.6px;text-transform:uppercase">'
+      +'▶ '+esc(ph.nom)+'</td></tr>';
+    ph.taches.forEach(function(t){
+      var av=Number(t.avancement||0),ac=waCol(av);
+      rows+='<tr style="border-bottom:1px solid #f1f5f9">'
+        +'<td style="padding:7px 12px 7px 22px;font-size:11.5px;color:#1e293b">'+esc(t.titre)+'</td>'
+        +'<td style="text-align:center;font-size:11px;color:#64748b">'+t.duree+'</td>'
+        +'<td style="text-align:center;font-size:11px;color:#64748b">'+(t.poids*100).toFixed(1)+'%</td>'
+        +'<td style="text-align:center;font-size:10.5px;color:#64748b;white-space:nowrap">'+esc(t.debut||'—')+'</td>'
+        +'<td style="text-align:center;font-size:10.5px;color:#64748b;white-space:nowrap">'+esc(t.fin||'—')+'</td>'
+        +'<td style="text-align:center;font-weight:700;font-size:12px;color:'+ac+'">'+av+'%</td>'
+        +'<td style="padding:7px 10px">'+pbar(av,100,8)+'</td></tr>';
+    });
+  });
+  var phov='';
+  (snap.phases||[]).forEach(function(ph){
+    if(!(ph.taches||[]).length) return;
+    var pc=ph.taches.reduce(function(s,t){return s+t.conso;},0);
+    var pv=ph.taches.reduce(function(s,t){return s+t.valeur;},0);
+    var pw=pv>0?Math.min(100,Math.round(pc/pv*100)):0,pwc=waCol(pw);
+    phov+='<div style="margin-bottom:8px"><div style="display:flex;justify-content:space-between;margin-bottom:3px">'
+      +'<span style="font-size:10.5px;color:#1e293b;font-weight:600">'+esc(ph.nom)+'</span>'
+      +'<span style="font-size:10.5px;font-weight:700;color:'+pwc+'">'+pw+'%</span></div>'
+      +'<div style="height:5px;border-radius:3px;background:#e9ecef;overflow:hidden">'
+      +'<div style="height:100%;border-radius:3px;background:'+pwc+';width:'+pw+'%"></div></div></div>';
+  });
+  return '<div style="font-family:\'Segoe UI\',system-ui,sans-serif;background:#fff;max-width:900px;margin:0 auto">'
+    +'<div style="background:#1e3a5f;color:#fff;padding:16px 22px;border-radius:8px 8px 0 0;display:flex;align-items:center;justify-content:space-between">'
+    +'<div style="display:flex;align-items:center;gap:12px">'
+    +'<div style="background:#fff;border-radius:6px;padding:4px 9px;font-size:19px;font-weight:900;color:#1e3a5f;line-height:1.1;letter-spacing:-1px">HBO</div>'
+    +'<div><div style="font-size:16px;font-weight:800;letter-spacing:.3px">RAPPORT D\'AVANCEMENT</div>'
+    +'<div style="font-size:10.5px;opacity:.8;margin-top:2px">'+esc(snap.projet||'—')+'</div></div></div>'
+    +'<div style="text-align:right;font-size:11px;line-height:1.9">'
+    +'<div><b>N° </b>'+esc(snap.id)+'</div>'
+    +'<div><b>Date </b>'+esc(snap.date)+'</div>'
+    +'<div><b>Chantier </b>'+esc(snap.pi)+'</div></div></div>'
+    +'<div style="background:#f0f4f8;padding:10px 22px;display:grid;grid-template-columns:repeat(3,1fr);gap:10px;border-bottom:2px solid #1e3a5f">'
+    +'<div><div style="font-size:9.5px;color:#64748b;text-transform:uppercase;letter-spacing:.5px">Client</div><b style="font-size:12.5px">'+esc(snap.client||'—')+'</b></div>'
+    +'<div><div style="font-size:9.5px;color:#64748b;text-transform:uppercase;letter-spacing:.5px">Superviseur</div><b style="font-size:12.5px">'+esc(snap.superviseur||'—')+'</b></div>'
+    +'<div><div style="font-size:9.5px;color:#64748b;text-transform:uppercase;letter-spacing:.5px">Contact</div><b style="font-size:12.5px">'+esc(snap.contact||'—')+'</b></div></div>'
+    +'<div style="padding:14px 22px;display:flex;gap:18px;align-items:flex-start;border-bottom:1px solid #e9ecef">'
+    +'<div style="flex-shrink:0">'+ring(wa,76)+'</div>'
+    +'<div style="flex:1">'
+    +'<div style="font-size:11.5px;font-weight:700;color:#1e3a5f;margin-bottom:7px;text-transform:uppercase;letter-spacing:.3px">Avancement pondéré global — <span style="color:'+wc+'">'+wa+'%</span></div>'
+    +'<div style="height:11px;border-radius:6px;background:#e9ecef;overflow:hidden;margin-bottom:11px"><div style="height:100%;border-radius:6px;background:'+wc+';width:'+wa+'%"></div></div>'
+    +'<div style="display:flex;gap:12px;flex-wrap:wrap">'
+    +'<div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:8px 12px;text-align:center">'
+    +'<div style="font-size:14px;font-weight:800;color:#1e3a5f">'+fmtF(snap.oa)+'</div>'
+    +'<div style="font-size:9px;color:#64748b;text-transform:uppercase;margin-top:2px">Budget OA</div></div>'
+    +'<div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:8px 12px;text-align:center">'
+    +'<div style="font-size:14px;font-weight:800;color:'+wc+'">'+fmtF(snap.conso)+'</div>'
+    +'<div style="font-size:9px;color:#64748b;text-transform:uppercase;margin-top:2px">Consommé</div></div>'
+    +'<div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:8px 12px;text-align:center">'
+    +'<div style="font-size:14px;font-weight:800;color:#94a3b8">'+fmtF(Math.max(0,(snap.oa||0)-(snap.conso||0)))+'</div>'
+    +'<div style="font-size:9px;color:#64748b;text-transform:uppercase;margin-top:2px">Restant</div></div></div></div>'
+    +'<div style="flex-shrink:0;min-width:155px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:10px 13px">'
+    +'<div style="font-size:9px;color:#64748b;text-transform:uppercase;letter-spacing:.4px;margin-bottom:8px;font-weight:700">Par phase</div>'+phov+'</div></div>'
+    +'<table style="width:100%;border-collapse:collapse">'
+    +'<thead><tr style="background:#e2e8f0;font-size:10px;text-transform:uppercase;color:#64748b;letter-spacing:.3px">'
+    +'<th style="padding:7px 12px;text-align:left;border-bottom:2px solid #cbd5e1">Désignation</th>'
+    +'<th style="padding:7px 6px;text-align:center;border-bottom:2px solid #cbd5e1">Jrs</th>'
+    +'<th style="padding:7px 6px;text-align:center;border-bottom:2px solid #cbd5e1">Poids</th>'
+    +'<th style="padding:7px 6px;text-align:center;border-bottom:2px solid #cbd5e1">Début</th>'
+    +'<th style="padding:7px 6px;text-align:center;border-bottom:2px solid #cbd5e1">Fin</th>'
+    +'<th style="padding:7px 6px;text-align:center;border-bottom:2px solid #cbd5e1">Av.</th>'
+    +'<th style="padding:7px 10px;text-align:left;border-bottom:2px solid #cbd5e1">Progression</th>'
+    +'</tr></thead><tbody>'+rows+'</tbody></table>'
+    +(snap.observations?'<div style="padding:13px 22px;border-top:2px solid #1e3a5f"><div style="font-size:9px;text-transform:uppercase;color:#64748b;letter-spacing:.5px;margin-bottom:5px;font-weight:700">Observations</div><div style="font-size:12.5px;line-height:1.6;color:#334155">'+esc(snap.observations)+'</div></div>':'')
+    +'<div style="background:#1e3a5f;color:rgba(255,255,255,.75);padding:9px 22px;border-radius:0 0 8px 8px;display:flex;justify-content:space-between;font-size:10px">'
+    +'<div>ePilot — Rapport généré le '+esc(snap.date)+'</div><div>Home Business Office</div></div>'
+    +'</div>';
+}
+
+/* ── Copy as text ── */
+function copyText(snap){
+  var L=['RAPPORT D\'AVANCEMENT — '+snap.id,'Date: '+snap.date+' | Chantier: '+snap.pi,
+    'Projet: '+(snap.projet||'—'),'Client: '+(snap.client||'—')+' | Superviseur: '+(snap.superviseur||'—'),
+    'Avancement global: '+snap.avancementGlobal+'%','Budget OA: '+fmtF(snap.oa)+' | Consommé: '+fmtF(snap.conso),''];
+  (snap.phases||[]).forEach(function(ph){
+    L.push('▶ '+ph.nom.toUpperCase());
+    (ph.taches||[]).forEach(function(t){
+      L.push('  • '+t.titre+' | Poids: '+(t.poids*100).toFixed(1)+'% | Début: '+(t.debut||'—')+' → '+(t.fin||'—')+' | Av: '+t.avancement+'%');
+    });
+  });
+  if(snap.observations){L.push('');L.push('Observations: '+snap.observations);}
+  var txt=L.join('\n');
+  try{navigator.clipboard.writeText(txt);}
+  catch(e){var el=document.createElement('textarea');el.value=txt;document.body.appendChild(el);el.select();try{document.execCommand('copy');}catch(_){}el.remove();}
+}
+
+/* ── Print popup ── */
+function printReport(snap){
+  var w=window.open('','_blank','width=980,height=860');
+  if(!w) return;
+  var html='<!DOCTYPE html><html><head><meta charset="utf-8"><title>'+esc(snap.id)+'</title>'
+    +'<style>*{box-sizing:border-box}body{font-family:\'Segoe UI\',system-ui,sans-serif;background:#fff;padding:14px;margin:0}'
+    +'@media print{.nop{display:none!important}body{padding:0}@page{margin:10mm;size:A4}}</style>'
+    +'</head><body>'
+    +'<div class="nop" style="margin-bottom:12px;display:flex;gap:8px">'
+    +'<button onclick="window.print()" style="padding:8px 18px;background:#1e3a5f;color:#fff;border:none;border-radius:6px;font-size:13px;font-weight:700;cursor:pointer">🖨 Imprimer / Sauvegarder PDF</button>'
+    +'<button onclick="window.close()" style="padding:8px 14px;background:#64748b;color:#fff;border:none;border-radius:6px;font-size:12px;cursor:pointer">Fermer</button></div>'
+    +renderReport(snap)+'</body></html>';
+  w.document.write(html);
+  w.document.close();
+  setTimeout(function(){try{w.focus();w.print();}catch(e){}},450);
+}
+
+/* ── Email ── */
+function sendEmail(snap){
+  var subj='Rapport d\'avancement — '+snap.id+' — '+snap.pi;
+  var B=['Bonjour,','','Veuillez trouver ci-dessous le rapport d\'avancement du chantier '+snap.pi+'.','',
+    'N° Rapport : '+snap.id,'Date : '+snap.date,'Projet : '+(snap.projet||'—'),
+    'Client : '+(snap.client||'—'),'Avancement global : '+snap.avancementGlobal+'%',
+    'Budget OA : '+fmtF(snap.oa)+' | Consommé : '+fmtF(snap.conso),''];
+  (snap.phases||[]).forEach(function(ph){
+    B.push('['+ph.nom.toUpperCase()+']');
+    (ph.taches||[]).forEach(function(t){B.push('  '+t.titre+' : '+t.avancement+'%');});
+  });
+  if(snap.observations){B.push('');B.push('Observations : '+snap.observations);}
+  B.push('','Cordialement,');
+  window.open('mailto:?subject='+encodeURIComponent(subj)+'&body='+encodeURIComponent(B.join('\n')),'_blank');
+}
+
+/* ── Viewer modal ── */
+function openViewer(snap){
+  var ID='jip-viewer-ov';var old=document.getElementById(ID);if(old)old.remove();
+  var ov=document.createElement('div');
+  ov.id=ID;
+  ov.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.72);z-index:99995;display:flex;align-items:center;justify-content:center;font-family:system-ui,sans-serif';
+  var box=document.createElement('div');
+  box.style.cssText='background:#f8fafc;width:96%;max-width:960px;max-height:94vh;border-radius:12px;overflow:hidden;display:flex;flex-direction:column;box-shadow:0 24px 60px rgba(0,0,0,.45)';
+  var tb=document.createElement('div');
+  tb.style.cssText='background:#1e3a5f;color:#fff;display:flex;align-items:center;gap:7px;padding:10px 14px;flex-shrink:0';
+  tb.innerHTML='<span style="flex:1;font-weight:700;font-size:13px">'+esc(snap.id)+' · '+esc(snap.date)+'</span>';
+  function mkB(label,bg,fg,fn){
+    var b=document.createElement('button');
+    b.innerHTML=label;
+    b.style.cssText='padding:6px 12px;background:'+bg+';color:'+(fg||'#fff')+';border:none;border-radius:6px;font-size:11.5px;font-weight:600;cursor:pointer;white-space:nowrap';
+    b.onclick=fn; return b;
+  }
+  tb.appendChild(mkB('🖨️ Imprimer / PDF','#fff','#1e3a5f',function(){printReport(snap);}));
+  tb.appendChild(mkB('📋 Copier','#2563eb',null,function(e){copyText(snap);var t=e.target||e.srcElement;t.innerHTML='✓ Copié';setTimeout(function(){t.innerHTML='📋 Copier';},1800);}));
+  tb.appendChild(mkB('📧 Email','#16a34a',null,function(){sendEmail(snap);}));
+  tb.appendChild(mkB('✕','rgba(255,255,255,.18)',null,function(){ov.remove();}));
+  var content=document.createElement('div');
+  content.style.cssText='overflow-y:auto;padding:18px;flex:1;background:#f1f5f9';
+  content.innerHTML=renderReport(snap);
+  box.appendChild(tb); box.appendChild(content);
+  ov.appendChild(box);
+  ov.addEventListener('click',function(e){if(e.target===ov)ov.remove();});
+  document.body.appendChild(ov);
+}
+
+/* ── New report preview + save ── */
+function openNewReport(pi,lk){
+  var ID='jip-newrep-ov';var old=document.getElementById(ID);if(old)old.remove();
+  var snap=buildSnapshot(pi,'',lk);
+  if(!snap){
+    try{window.__cwToast('Aucune donnée disponible pour '+pi);}
+    catch(e){alert('Aucune donnée disponible pour '+pi);}
+    return;
+  }
+  var ov=document.createElement('div');
+  ov.id=ID;
+  ov.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.72);z-index:99996;display:flex;align-items:center;justify-content:center;font-family:system-ui,sans-serif';
+  var box=document.createElement('div');
+  box.style.cssText='background:#fff;width:92%;max-width:880px;max-height:93vh;border-radius:12px;overflow:hidden;display:flex;flex-direction:column;box-shadow:0 24px 60px rgba(0,0,0,.45)';
+  var hdr=document.createElement('div');
+  hdr.style.cssText='background:#1e3a5f;color:#fff;padding:12px 18px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0';
+  var closeH=document.createElement('button');
+  closeH.innerHTML='✕';
+  closeH.style.cssText='background:rgba(255,255,255,.15);color:#fff;border:none;border-radius:6px;padding:5px 10px;font-size:13px;cursor:pointer';
+  closeH.onclick=function(){ov.remove();};
+  hdr.innerHTML='<div><div style="font-weight:800;font-size:14px">📊 Nouveau rapport — '+esc(pi)+'</div>'
+    +'<div style="font-size:10.5px;opacity:.7;margin-top:1px">ID '+esc(snap.id)+'</div></div>';
+  hdr.appendChild(closeH);
+  var scroll=document.createElement('div');
+  scroll.style.cssText='overflow-y:auto;flex:1;padding:14px 18px;background:#f1f5f9';
+  scroll.innerHTML=renderReport(snap);
+  var obsWrap=document.createElement('div');
+  obsWrap.style.cssText='padding:13px 18px;border-top:1px solid #e2e8f0;background:#fff;flex-shrink:0';
+  obsWrap.innerHTML='<label style="font-size:10.5px;font-weight:700;color:#64748b;text-transform:uppercase;display:block;margin-bottom:6px">Observations (optionnel)</label>';
+  var obsTA=document.createElement('textarea');
+  obsTA.style.cssText='width:100%;height:52px;border:1px solid #e2e8f0;border-radius:6px;padding:7px 10px;font-size:12px;resize:vertical;font-family:inherit;outline:none';
+  obsTA.placeholder='Remarques, avancement global, commentaires pour le client…';
+  obsWrap.appendChild(obsTA);
+  var foot=document.createElement('div');
+  foot.style.cssText='padding:12px 18px;border-top:1px solid #e2e8f0;background:#fff;display:flex;justify-content:flex-end;gap:8px;flex-shrink:0';
+  var cancelBtn=document.createElement('button');
+  cancelBtn.innerHTML='Annuler';
+  cancelBtn.style.cssText='padding:8px 18px;background:#f1f5f9;color:#64748b;border:1px solid #e2e8f0;border-radius:6px;font-size:12px;cursor:pointer';
+  cancelBtn.onclick=function(){ov.remove();};
+  var saveBtn=document.createElement('button');
+  saveBtn.innerHTML='💾 Enregistrer le rapport';
+  saveBtn.style.cssText='padding:8px 20px;background:#1e3a5f;color:#fff;border:none;border-radius:6px;font-size:12px;font-weight:700;cursor:pointer';
+  saveBtn.onclick=function(){
+    snap.observations=obsTA.value.trim();
+    saveAll(loadAll().concat([snap]));
+    ov.remove();
+    openManager(pi);
+    try{window.__cwToast('✓ Rapport '+snap.id+' enregistré !');}catch(e){}
+  };
+  foot.appendChild(cancelBtn); foot.appendChild(saveBtn);
+  box.appendChild(hdr); box.appendChild(scroll); box.appendChild(obsWrap); box.appendChild(foot);
+  ov.appendChild(box);
+  ov.addEventListener('click',function(e){if(e.target===ov)ov.remove();});
+  document.body.appendChild(ov);
+}
+
+/* ── Manager modal ── */
+function openManager(pi){
+  if(!pi){try{window.__cwToast('Aucun chantier actif');}catch(e){alert('Aucun chantier actif');}return;}
+  var ID='jip-manager-ov';var old=document.getElementById(ID);if(old)old.remove();
+  var ov=document.createElement('div');
+  ov.id=ID;
+  ov.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:99994;display:flex;align-items:center;justify-content:center;font-family:system-ui,sans-serif';
+  var box=document.createElement('div');
+  box.style.cssText='background:#fff;width:88%;max-width:780px;max-height:90vh;border-radius:12px;overflow:hidden;display:flex;flex-direction:column;box-shadow:0 20px 50px rgba(0,0,0,.4)';
+  var list=document.createElement('div');
+  list.style.cssText='overflow-y:auto;flex:1';
+  function rebuildList(){
+    var reps=getReportsForPI(pi).slice().sort(function(a,b){return a.snapshotDate>b.snapshotDate?-1:1;});
+    list.innerHTML='';
+    if(!reps.length){
+      list.innerHTML='<div style="padding:36px;text-align:center;color:#94a3b8;font-size:13px">'
+        +'Aucun rapport enregistré pour <b>'+esc(pi)+'</b>.<br><small style="font-size:11px">Cliquez « Nouveau rapport » pour générer le premier.</small></div>';
+      return;
+    }
+    reps.forEach(function(r){
+      var wc=waCol(r.avancementGlobal);
+      var row=document.createElement('div');
+      row.style.cssText='display:flex;align-items:center;gap:12px;padding:13px 16px;border-bottom:1px solid #f1f5f9';
+      row.innerHTML='<div style="background:#1e3a5f;border-radius:8px;padding:8px 11px;text-align:center;flex-shrink:0;min-width:60px">'
+        +'<div style="font-size:17px;font-weight:800;color:'+wc+'">'+r.avancementGlobal+'%</div>'
+        +'<div style="font-size:8.5px;color:rgba(255,255,255,.6);margin-top:1px">pondéré</div></div>'
+        +'<div style="flex:1;min-width:0">'
+        +'<div style="font-weight:700;color:#1e293b;font-size:12.5px">'+esc(r.id)+'</div>'
+        +'<div style="font-size:11px;color:#64748b;margin-top:2px">Généré le '+esc(r.date)+'</div>'
+        +'<div style="height:4px;border-radius:2px;background:#e9ecef;margin-top:6px;overflow:hidden"><div style="height:100%;background:'+wc+';width:'+r.avancementGlobal+'%"></div></div></div>'
+        +'<div style="display:flex;gap:5px;flex-shrink:0">'
+        +'<button data-id="'+esc(r.id)+'" data-act="view" style="padding:5px 11px;background:#eff6ff;color:#1d4ed8;border:1px solid #bfdbfe;border-radius:6px;font-size:11px;font-weight:600;cursor:pointer">👁 Voir</button>'
+        +'<button data-id="'+esc(r.id)+'" data-act="print" style="padding:5px 11px;background:#f0fdf4;color:#15803d;border:1px solid #bbf7d0;border-radius:6px;font-size:11px;font-weight:600;cursor:pointer">🖨 PDF</button>'
+        +'<button data-id="'+esc(r.id)+'" data-act="email" style="padding:5px 11px;background:#fefce8;color:#a16207;border:1px solid #fde68a;border-radius:6px;font-size:11px;font-weight:600;cursor:pointer">📧</button>'
+        +'<button data-id="'+esc(r.id)+'" data-act="del" style="padding:5px 9px;background:#fef2f2;color:#b91c1c;border:1px solid #fecaca;border-radius:6px;font-size:11px;cursor:pointer">🗑</button></div>';
+      list.appendChild(row);
+    });
+  }
+  var hdr=document.createElement('div');
+  hdr.style.cssText='background:#1e3a5f;color:#fff;padding:13px 18px;display:flex;align-items:center;gap:10px;flex-shrink:0;border-bottom:1px solid rgba(255,255,255,.1)';
+  hdr.innerHTML='<div style="font-size:18px">📊</div>'
+    +'<div style="flex:1"><div style="font-weight:800;font-size:14px">Rapports JIP — '+esc(pi)+'</div>'
+    +'<div style="font-size:10.5px;opacity:.7;margin-top:1px">Historique des rapports d\'avancement</div></div>';
+  var newBtn=document.createElement('button');
+  newBtn.innerHTML='+ Nouveau rapport';
+  newBtn.style.cssText='padding:7px 14px;background:#2563eb;color:#fff;border:none;border-radius:7px;font-size:12px;font-weight:700;cursor:pointer';
+  newBtn.onclick=function(){
+    ov.remove();
+    if(window.EpilotConnector&&typeof window.EpilotConnector.buildData==='function'){
+      try{
+        window.EpilotConnector.buildData({all:true}).then(function(d){
+          var lk={};
+          (d.jips||[]).forEach(function(j){
+            var jid=(j.imputation||j.id||'').toUpperCase();
+            if(jid===pi)(j.tasks||[]).forEach(function(t){if(t.title)lk[t.title]={d:t.start||'',f:t.end||''};});
+          });
+          openNewReport(pi,lk);
+        }).catch(function(){openNewReport(pi,{});});
+      }catch(e){openNewReport(pi,{});}
+    } else { openNewReport(pi,{}); }
+  };
+  var closeBtn=document.createElement('button');
+  closeBtn.innerHTML='✕';
+  closeBtn.style.cssText='padding:6px 11px;background:rgba(255,255,255,.15);color:#fff;border:none;border-radius:6px;font-size:13px;cursor:pointer;margin-left:6px';
+  closeBtn.onclick=function(){ov.remove();};
+  hdr.appendChild(newBtn); hdr.appendChild(closeBtn);
+  rebuildList();
+  list.addEventListener('click',function(e){
+    var btn=e.target&&e.target.closest?e.target.closest('[data-act]'):e.target;
+    if(!btn||!btn.getAttribute) return;
+    var act=btn.getAttribute('data-act'),id=btn.getAttribute('data-id');
+    if(!act||!id) return;
+    var all=loadAll(),snap=null;
+    for(var i=0;i<all.length;i++){if(all[i].id===id){snap=all[i];break;}}
+    if(!snap) return;
+    if(act==='view') openViewer(snap);
+    else if(act==='print') printReport(snap);
+    else if(act==='email') sendEmail(snap);
+    else if(act==='del'){
+      if(confirm('Supprimer le rapport '+id+' ?')){deleteReport(id);rebuildList();}
+    }
+  });
+  box.appendChild(hdr); box.appendChild(list);
+  ov.appendChild(box);
+  ov.addEventListener('click',function(e){if(e.target===ov)ov.remove();});
+  document.body.appendChild(ov);
+}
+
+window.__openJIPRapports=function(){openManager(getPI());};
+
+/* ── Button injection ── */
+var _inj=false;
+function tryInject(){
+  if(_inj&&document.querySelector('[data-jip-btn]')) return;
+  _inj=false;
+  var toolbarRow=null;
+  var all=document.querySelectorAll('*');
+  for(var i=0;i<all.length;i++){
+    var e=all[i];
+    if(e.children.length===0&&e.textContent.indexOf('tâches terminées')>-1){
+      var cur=e.parentElement;
+      for(var k=0;k<8;k++){
+        if(!cur||cur===document.body) break;
+        var d=cur.style.display||(window.getComputedStyle?window.getComputedStyle(cur).display:'');
+        if(d==='flex'&&cur.children.length>=2){toolbarRow=cur;break;}
+        cur=cur.parentElement;
+      }
+      break;
+    }
+  }
+  if(!toolbarRow||toolbarRow.querySelector('[data-jip-btn]')) return;
+  var btn=document.createElement('button');
+  btn.setAttribute('data-jip-btn','1');
+  btn.innerHTML='📋 JIP';
+  btn.title='Rapports d\'avancement JIP';
+  btn.style.cssText='padding:6px 13px;background:#1e3a5f;color:#fff;border:none;border-radius:6px;font-size:12px;font-weight:700;cursor:pointer;letter-spacing:.2px';
+  btn.onclick=function(){window.__openJIPRapports();};
+  var fc=toolbarRow.firstElementChild;
+  var sc=fc?fc.nextElementSibling:null;
+  if(sc) toolbarRow.insertBefore(btn,sc); else toolbarRow.appendChild(btn);
+  _inj=true;
+}
+
+var _tries=0;
+var _iv=setInterval(function(){
+  if(_inj&&!document.querySelector('[data-jip-btn]')) _inj=false;
+  tryInject();
+  if(++_tries>600) clearInterval(_iv);
+},500);
+var _mo=new MutationObserver(function(){
+  clearTimeout(_mo._t);
+  _mo._t=setTimeout(function(){if(!document.querySelector('[data-jip-btn]'))_inj=false;tryInject();},250);
+});
+_mo.observe(document.body,{childList:true,subtree:true});
 })();
 </script>
 
