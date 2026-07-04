@@ -7136,10 +7136,11 @@ html body[class] #vac-gantt td.emp .nm{font-weight:500 !important;}</style>
         var info=findInfo(lk,title);
         var val=parseVal(tv[title]||'');
         var done=ch==='✓';
-        tasks.push({done:done,title:title,
+        var taskPct=info?(info.pct!==null&&info.pct!==undefined?info.pct:(done?100:0)):(done?100:0);
+        tasks.push({done:done,title:title,pct:taskPct,
           debut:info?fmt(info.d):'–',fin:info?fmt(info.f):'–',
           valeur:val,poids:oa>0?(val/oa*100):0,
-          conso:Math.round(val*(info?(info.pct!==null&&info.pct!==undefined?info.pct:(done?100:0)):(done?100:0))/100)});
+          conso:Math.round(val*taskPct/100)});
       }
       if(tasks.length) result.push({phase:phaseName,percent:phasePercent,tasks:tasks});
     }
@@ -7187,42 +7188,171 @@ html body[class] #vac-gantt td.emp .nm{font-weight:500 !important;}</style>
     setTimeout(function(){ w.print(); },600);
   }
 
-  /* ─── Email copy ─── */
+  /* ─── Rapport d'activité (modal Email) ─── */
   function copyEmailTable(){
     var lc=findLabelCol(); if(!lc) return;
     var pi=getPI();
-    var oa=getOABudget(pi);
-    var title=getPlanningTitle();
     var data=buildPlanningData(lc,_lk);
-    var today=new Date().toLocaleDateString('fr-FR',{day:'2-digit',month:'long',year:'numeric'});
-    var lines=['Planning – '+title,'Date : '+today,'Budget OA : '+(oa?fF(oa)+' F':'–'),''];
-    data.forEach(function(ph){
-      lines.push('▸ '+ph.phase.toUpperCase()+' ('+ph.percent+'% terminé)');
-      ph.tasks.forEach(function(t){
-        var valStr=t.valeur?fF(t.valeur)+' F':'–';
-        var pStr=(t.valeur&&oa)?fPct(t.poids):'–';
-        var cStr=t.conso?fF(t.conso)+' F':'–';
-        lines.push((t.done?'  ✓  ':'  ○  ')+padEnd(t.title,30)+' '+padEnd(t.debut,14)+
-          '→ '+padEnd(t.fin,14)+' '+padEnd(valStr,14)+' '+padEnd(pStr,8)+' '+cStr);
-      });
-      lines.push('');
+    var today=new Date().toLocaleDateString('fr-FR',{day:'2-digit',month:'2-digit',year:'numeric'});
+
+    /* Client & désignation depuis JIP_DATA */
+    var client='', desig='';
+    (window.JIP_DATA||[]).forEach(function(j){
+      if(j.Imputation===pi||j.imputation===pi||j.id===pi){
+        client=j.Client||j.client||j.Societe||j.societe||'';
+        desig=j.Designation||j.designation||j.Description||j.description||'';
+      }
     });
-    var text=lines.join('\n');
-    /* Copy via hidden textarea + execCommand (works on file://) */
-    var ta=document.createElement('textarea');
-    ta.value=text;
-    ta.style.cssText='position:fixed;top:-9999px;left:-9999px;opacity:0;';
-    document.body.appendChild(ta);
-    ta.focus(); ta.select();
-    var ok=false;
-    try{ ok=document.execCommand('copy'); }catch(e){}
-    document.body.removeChild(ta);
-    if(ok){ showCopyToast(); }
-    else if(navigator.clipboard&&navigator.clipboard.writeText){
-      navigator.clipboard.writeText(text).then(showCopyToast).catch(function(){
-        window.prompt('Sélectionnez tout (Ctrl+A) puis copiez (Ctrl+C) :',text);
+    if(!desig) desig=getPlanningTitle();
+
+    /* Génère le texte du rapport */
+    function buildRapport(cl,ti,dt,deb,fi,obs,cntr,eq){
+      var L=[];
+      L.push('Rapport d\'activité'+(cl?' - '+cl.toUpperCase():'')+' - '+dt);
+      if(ti) L.push(ti.toUpperCase());
+      L.push('');
+      L.push('Début : '+(deb||'__h__')+' - Fin : '+(fi||'__h__'));
+      L.push('');
+      L.push('A- Tâches');
+      L.push('');
+      var n=0;
+      data.forEach(function(ph){
+        ph.tasks.forEach(function(t){
+          n++;
+          var pct=typeof t.pct==='number'?t.pct:(t.done?100:0);
+          var label=n+'- '+t.title;
+          var pad=Math.max(2,42-label.length);
+          L.push(label+' '.repeat(pad)+pct+'%');
+        });
       });
-    } else { window.prompt('Sélectionnez tout (Ctrl+A) puis copiez (Ctrl+C) :',text); }
+      L.push('');
+      L.push('B- Observations ');
+      if(obs&&obs.trim()){
+        obs.split('\n').forEach(function(l){ var s=l.replace(/^[-•*]\s*/,'').trim(); if(s) L.push('- '+s); });
+      }
+      L.push('');
+      L.push('C- Contraintes');
+      if(cntr&&cntr.trim()){
+        cntr.split('\n').forEach(function(l){ var s=l.replace(/^[*•]\s*/,'').trim(); if(s) L.push('* '+s); });
+      }
+      L.push('');
+      L.push('D- Equipe');
+      if(eq&&eq.trim()){
+        eq.split('\n').filter(function(l){return l.trim();}).forEach(function(m,i){ L.push((i+1)+'- '+m.trim()); });
+      }
+      return L.join('\n');
+    }
+
+    function doCopy(text,btn){
+      var ta=document.createElement('textarea'); ta.value=text;
+      ta.style.cssText='position:fixed;top:-9999px;left:-9999px;';
+      document.body.appendChild(ta); ta.focus(); ta.select();
+      var ok=false; try{ ok=document.execCommand('copy'); }catch(_){}
+      document.body.removeChild(ta);
+      if(!ok&&navigator.clipboard&&navigator.clipboard.writeText){
+        navigator.clipboard.writeText(text).then(function(){ ok=true; });
+      }
+      if(btn){ btn.innerHTML='✓ Copié !'; btn.style.background='#16a34a';
+        setTimeout(function(){ btn.innerHTML='📋 Copier'; btn.style.background='#1a2733'; },2200); }
+    }
+
+    /* Supprimer ancien modal */
+    var old=document.getElementById('_rapportModal'); if(old) old.remove();
+
+    /* Overlay */
+    var ov=document.createElement('div'); ov.id='_rapportModal';
+    ov.style.cssText='position:fixed;inset:0;z-index:99999;background:rgba(10,20,30,.6);display:flex;align-items:center;justify-content:center;padding:16px;font-family:Arial,Helvetica,sans-serif;';
+    ov.onclick=function(e){ if(e.target===ov) ov.remove(); };
+
+    /* Modal box */
+    var box=document.createElement('div');
+    box.style.cssText='background:#fff;border-radius:12px;box-shadow:0 8px 40px rgba(0,0,0,.35);width:min(860px,100%);max-height:92vh;display:flex;flex-direction:column;overflow:hidden;';
+
+    /* Header */
+    var H=document.createElement('div');
+    H.style.cssText='display:flex;align-items:center;padding:13px 18px;border-bottom:1px solid #e5e7eb;background:#f8fafc;flex-shrink:0;';
+    H.innerHTML='<span style="font-weight:700;font-size:14px;color:#1a2733;">📋 Rapport d\'activité</span>';
+    var xb=document.createElement('button'); xb.textContent='✕';
+    xb.style.cssText='margin-left:auto;border:none;background:none;font-size:16px;cursor:pointer;color:#94a3b8;line-height:1;';
+    xb.onclick=function(){ ov.remove(); };
+    H.appendChild(xb); box.appendChild(H);
+
+    /* Body */
+    var body=document.createElement('div');
+    body.style.cssText='display:flex;flex:1;overflow:hidden;';
+
+    /* ── Left panel ── */
+    var L=document.createElement('div');
+    L.style.cssText='width:310px;min-width:260px;padding:14px;overflow-y:auto;border-right:1px solid #e5e7eb;display:flex;flex-direction:column;gap:10px;flex-shrink:0;';
+
+    function grp(label,el){ var g=document.createElement('div');
+      var lb=document.createElement('label'); lb.textContent=label;
+      lb.style.cssText='font-size:10px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.06em;display:block;margin-bottom:3px;';
+      g.appendChild(lb); g.appendChild(el); return g; }
+    function inp(val,ph){ var i=document.createElement('input'); i.value=val; i.placeholder=ph||'';
+      i.style.cssText='width:100%;box-sizing:border-box;padding:6px 9px;border:1px solid #d1d5db;border-radius:6px;font-size:12.5px;'; return i; }
+    function ta(val,ph,rows){ var t=document.createElement('textarea'); t.value=val; t.placeholder=ph||''; t.rows=rows||4;
+      t.style.cssText='width:100%;box-sizing:border-box;padding:6px 9px;border:1px solid #d1d5db;border-radius:6px;font-size:12.5px;resize:vertical;line-height:1.5;'; return t; }
+
+    var iCl=inp(client,'ex: ADDAX PETROLEUM');
+    var iTi=inp(desig,'Titre du projet');
+    iTi.style.fontWeight='700';
+    var iDt=inp(today,'03/07/2026');
+    var iDeb=inp('','07h30'); iDeb.style.flex='1';
+    var iFin=inp('','15h30'); iFin.style.flex='1';
+    var hRow=document.createElement('div'); hRow.style.cssText='display:flex;gap:6px;align-items:center;';
+    var sep=document.createElement('span'); sep.textContent='→'; sep.style.color='#94a3b8';
+    hRow.appendChild(iDeb); hRow.appendChild(sep); hRow.appendChild(iFin);
+    var gH=document.createElement('div');
+    var lbH=document.createElement('label'); lbH.textContent='Horaires';
+    lbH.style.cssText='font-size:10px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.06em;display:block;margin-bottom:3px;';
+    gH.appendChild(lbH); gH.appendChild(hRow);
+
+    var iObs=ta('','- Travaux en cours\n- Besoin matériel',5);
+    var iCntr=ta('','dégager camion > 7 Juil > Responsable > Urgent',4);
+    var iEq=ta('','Adrielle\nAndy\nTeam fouille',4);
+
+    L.appendChild(grp('Client',iCl));
+    L.appendChild(grp('Titre du projet',iTi));
+    L.appendChild(grp('Date',iDt));
+    L.appendChild(gH);
+    L.appendChild(grp('B- Observations (une par ligne)',iObs));
+    L.appendChild(grp('C- Contraintes (une par ligne)',iCntr));
+    L.appendChild(grp('D- Équipe (une personne par ligne)',iEq));
+    body.appendChild(L);
+
+    /* ── Right panel: preview ── */
+    var R=document.createElement('div');
+    R.style.cssText='flex:1;display:flex;flex-direction:column;overflow:hidden;min-width:0;';
+    var pH=document.createElement('div');
+    pH.style.cssText='padding:9px 14px;font-size:10px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.06em;border-bottom:1px solid #e5e7eb;background:#f8fafc;flex-shrink:0;';
+    pH.textContent='Aperçu — modifiable avant copie';
+    var pTA=document.createElement('textarea'); pTA.id='_rapportPreview';
+    pTA.style.cssText='flex:1;margin:0;padding:14px;font-family:"Courier New",Courier,monospace;font-size:11.5px;line-height:1.65;border:none;outline:none;resize:none;width:100%;height:100%;box-sizing:border-box;color:#1a2733;background:#fafbfc;';
+    pTA.spellcheck=false;
+    R.appendChild(pH); R.appendChild(pTA);
+    body.appendChild(R);
+    box.appendChild(body);
+
+    /* Footer */
+    var F=document.createElement('div');
+    F.style.cssText='display:flex;justify-content:flex-end;gap:10px;padding:11px 18px;border-top:1px solid #e5e7eb;background:#f8fafc;flex-shrink:0;';
+    var cpBtn=document.createElement('button'); cpBtn.innerHTML='📋 Copier';
+    cpBtn.style.cssText='padding:8px 18px;background:#1a2733;color:#fff;border:none;border-radius:7px;font-size:13px;font-weight:600;cursor:pointer;';
+    cpBtn.onclick=function(){ doCopy(pTA.value,cpBtn); };
+    var clBtn=document.createElement('button'); clBtn.textContent='Fermer';
+    clBtn.style.cssText='padding:8px 16px;background:#fff;color:#1a2733;border:1px solid #d1d5db;border-radius:7px;font-size:13px;cursor:pointer;';
+    clBtn.onclick=function(){ ov.remove(); };
+    F.appendChild(cpBtn); F.appendChild(clBtn);
+    box.appendChild(F);
+    ov.appendChild(box);
+    document.body.appendChild(ov);
+
+    /* Live preview update */
+    function update(){ pTA.value=buildRapport(iCl.value,iTi.value,iDt.value,iDeb.value,iFin.value,iObs.value,iCntr.value,iEq.value); }
+    [iCl,iTi,iDt,iDeb,iFin,iObs,iCntr,iEq].forEach(function(el){ el.addEventListener('input',update); });
+    update();
+    setTimeout(function(){ iDeb.focus(); },120);
   }
 
   function showCopyToast(){
@@ -7503,10 +7633,15 @@ html body[class] #vac-gantt td.emp .nm{font-weight:500 !important;}</style>
     if(!el||el.tagName!=='INPUT') return;
     var t=(el.getAttribute('type')||'text').toLowerCase();
     if(t!=='number'&&t!=='range') return;
-    if(parseInt(el.value,10)!==100) return;
+    var v=parseInt(el.value,10);
+    if(isNaN(v)) return;
     var sel=findTermineSelect(el);
-    if(!sel||sel.value==='Terminé') return;
-    reactChange(sel,'Terminé');
+    if(!sel) return;
+    if(v===100 && sel.value!=='Terminé'){
+      reactChange(sel,'Terminé');
+    } else if(v>0 && v<100 && sel.value==='Planifié'){
+      reactChange(sel,'En cours');
+    }
   },true);
 })();
 </script>
