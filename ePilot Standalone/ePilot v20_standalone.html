@@ -7208,7 +7208,17 @@ html body[class] #vac-gantt td.emp .nm{font-weight:500 !important;}</style>
       lines.push('');
     });
     var text=lines.join('\n');
-    if(navigator.clipboard&&navigator.clipboard.writeText){
+    /* Copy via hidden textarea + execCommand (works on file://) */
+    var ta=document.createElement('textarea');
+    ta.value=text;
+    ta.style.cssText='position:fixed;top:-9999px;left:-9999px;opacity:0;';
+    document.body.appendChild(ta);
+    ta.focus(); ta.select();
+    var ok=false;
+    try{ ok=document.execCommand('copy'); }catch(e){}
+    document.body.removeChild(ta);
+    if(ok){ showCopyToast(); }
+    else if(navigator.clipboard&&navigator.clipboard.writeText){
       navigator.clipboard.writeText(text).then(showCopyToast).catch(function(){
         window.prompt('Sélectionnez tout (Ctrl+A) puis copiez (Ctrl+C) :',text);
       });
@@ -7244,31 +7254,28 @@ html body[class] #vac-gantt td.emp .nm{font-weight:500 !important;}</style>
   }
 
   function updatePlanningButtons(){
-    if(!_planBtns || !document.body.contains(_planBtns.pb)){
+    if(!_planBtns || !document.body.contains(_planBtns.eb)){
       _planBtns=null;
-      var PICO='<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>';
       var EICO='<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><polyline points="2,4 12,13 22,4"/></svg>';
-      _planBtns={ pb: _mkBtn('_dcPrintBtn', PICO+' Imprimer', printPlanning),
-                  eb: _mkBtn('_dcEmailBtn', EICO+' Email', copyEmailTable) };
+      _planBtns={ eb: _mkBtn('_dcEmailBtn', EICO+' Email', copyEmailTable) };
     }
     if(!findLabelCol()){
-      _planBtns.pb.style.display='none'; _planBtns.eb.style.display='none'; return;
+      _planBtns.eb.style.display='none'; return;
     }
     var toolbarTop=170;
     var allBtns=document.querySelectorAll('button');
     for(var i=0;i<allBtns.length;i++){
       var bt=allBtns[i];
-      if(bt===_planBtns.pb||bt===_planBtns.eb) continue;
+      if(bt===_planBtns.eb) continue;
       var txt=bt.textContent.trim();
       if(txt==='Semaine'||txt==='Mois'||txt==='Semestre'){
         var r=bt.getBoundingClientRect();
         if(r.height>0){ toolbarTop=r.top; break; }
       }
     }
-    _planBtns.pb.style.display='inline-flex'; _planBtns.eb.style.display='inline-flex';
-    _planBtns.pb.style.top=toolbarTop+'px'; _planBtns.eb.style.top=toolbarTop+'px';
-    var ebW=_planBtns.eb.offsetWidth||84;
-    _planBtns.eb.style.right='20px'; _planBtns.pb.style.right=(20+ebW+8)+'px';
+    _planBtns.eb.style.display='inline-flex';
+    _planBtns.eb.style.top=toolbarTop+'px';
+    _planBtns.eb.style.right='20px';
   }
 
   /* ─── MutationObserver ─── */
