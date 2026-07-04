@@ -7775,7 +7775,7 @@ html body[class] #vac-gantt td.emp .nm{font-weight:500 !important;}</style>
     /* 20. PVModal final buttons: 💾 Brouillon + 📧 Email + 📄 PDF */
     src=cwp('pv-final-btns',src,
       "<>\n                <button className=\"btn btn-s\" onClick={()=>handleSave('Brouillon')}>Sauvegarder brouillon</button>\n                <button className=\"btn btn-p\" onClick={()=>handleSave('Soumis')}>Soumettre au client</button>\n              </>",
-      "<>\n                <button className=\"btn btn-s\" onClick={()=>handleSave('Brouillon')}>💾 Brouillon</button>\n                <button className=\"btn btn-s\" onClick={()=>{try{var _el=document.getElementById('pv-apercu');if(_el&&navigator.clipboard)navigator.clipboard.writeText(_el.value);}catch(_e){}}}>📋 Copier</button>\n                <button className=\"btn btn-p\" onClick={()=>{if(window.__pvPrint)window.__pvPrint(f,jip);handleSave('Soumis');}}>📄 PDF</button>\n              </>");
+      "<>\n                <button className=\"btn btn-s\" onClick={()=>handleSave('Brouillon')}>💾 Enregistrer</button>\n                <button className=\"btn btn-s\" onClick={()=>{try{var _el=document.getElementById('pv-apercu');if(_el&&navigator.clipboard)navigator.clipboard.writeText(_el.value);}catch(_e){}}}>📋 Copier</button>\n                <button className=\"btn btn-p\" onClick={()=>{if(window.__pvPrint)window.__pvPrint(f,jip);handleSave('Soumis');}}>📄 PDF</button>\n              </>");
 
     /* 21. RapportsTab: remove avancement button (unifié via PV du jour) */
     src=cwp('rapports-no-avancement',src,
