@@ -7678,12 +7678,24 @@ html body[class] #vac-gantt td.emp .nm{font-weight:500 !important;}</style>
       return s.replace(find,repl);
     }
 
-    var _waBody='var oa=Number(jip.budgetContractuel||jip.budgetOA||0);'
+    // Shared body: resolve budget+phases from jip prop then JIP_DATA fallback
+    var _waBody
+      ='var pi=(jip.imputation||jip.id||"").toUpperCase();if(!pi)return null;'
+      +'var oa=Number(jip.budgetContractuel||jip.budgetOA||0);'
+      +'var phases=jip.phases||[];'
+      +'if(!oa||!phases.length){'  // fallback to window.JIP_DATA
+      +'var _jd=window.JIP_DATA||[];'
+      +'for(var _i=0;_i<_jd.length;_i++){'
+      +'var _rid=(_jd[_i].Imputation||_jd[_i].imputation||_jd[_i].id||"").toUpperCase();'
+      +'if(_rid===pi){'
+      +'if(!oa) oa=Number(_jd[_i].budgetContractuel||_jd[_i].budgetOA||0);'
+      +'if(!phases.length) phases=_jd[_i].phases||[];'
+      +'break;}}'
+      +'}'
       +'if(!oa)return null;'
-      +'var pi=jip.imputation||jip.id||"";if(!pi)return null;'
       +'var tvRaw=localStorage.getItem("ep_ptv_"+pi);if(!tvRaw)return null;'
       +'var tv;try{tv=JSON.parse(tvRaw);}catch(_){return null;}'
-      +'var phases=jip.phases||[];if(!phases.length)return null;'
+      +'if(!phases.length)return null;'
       +'var c=0;'
       +'phases.forEach(function(ph){'
       +'(ph.taches||ph.tasks||[]).forEach(function(t){'
