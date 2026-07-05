@@ -42,6 +42,8 @@
       width: 280px;
       height: 100vh;
       overflow-y: auto;
+      display: flex;
+      flex-direction: column;
     }
 
     .sidebar-header {
@@ -89,6 +91,7 @@
       display: flex;
       align-items: center;
       gap: 10px;
+      text-decoration: none;
     }
 
     .menu-item:hover {
@@ -438,6 +441,16 @@
       <div class="menu-item" onclick="switchTab('backup')">
         <span class="menu-icon">💾</span> Sauvegarde
       </div>
+    </div>
+
+    <div class="menu-section" style="margin-top: auto; border-top: 1px solid #e0e0e0; padding-top: 20px;">
+      <div class="menu-label">Navigation</div>
+      <a href="hbo-site.html" class="menu-item" style="cursor: pointer;">
+        <span class="menu-icon">🌐</span> Voir le site
+      </a>
+      <a href="index.html" class="menu-item" style="cursor: pointer;">
+        <span class="menu-icon">🏠</span> Accueil
+      </a>
     </div>
   </div>
 
