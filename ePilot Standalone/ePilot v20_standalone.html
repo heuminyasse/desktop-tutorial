@@ -7877,7 +7877,8 @@ html body[class] #vac-gantt td.emp .nm{font-weight:500 !important;}</style>
         var phN=ph.phase||'_';
         if(!phaseMap[phN]){phaseMap[phN]=[];phaseOrder.push(phN);}
         (ph.tasks||[]).forEach(function(t){
-          var tk={title:t.title,nom:t.title,progress:t.pct||0,pct:t.pct||0,poids:t.poids||0,phase:phN};
+          var tk={title:t.title,nom:t.title,progress:t.pct||0,pct:t.pct||0,poids:t.poids||0,phase:phN,
+            debut:t.debut,fin:t.fin,dateDebut:t.debut,dateFin:t.fin,valeur:t.valeur,conso:t.conso,done:t.done};
           tasks.push(tk); phaseMap[phN].push(tk);
         });
       });
