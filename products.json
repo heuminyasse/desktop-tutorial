@@ -1,0 +1,6472 @@
+[
+  {
+    "id": 7,
+    "sku": "Reference",
+    "name": "Reference - Sous-cat",
+    "category": "Categorie",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": "Qte",
+    "icon": "📦"
+  },
+  {
+    "id": 8,
+    "sku": "47024",
+    "name": "47024 - Alimentation redressee",
+    "category": "Alimentation",
+    "brand": "Autre",
+    "price": 45500,
+    "qty": 1,
+    "icon": "📦"
+  },
+  {
+    "id": 9,
+    "sku": "Z1-RX",
+    "name": "Z1-RX - Adaptateur HD sans fil",
+    "category": "Alimentation",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 2,
+    "icon": "📦"
+  },
+  {
+    "id": 10,
+    "sku": "ASY-3D",
+    "name": "ASY-3D - Relais Temporise",
+    "category": "Commande",
+    "brand": "Autre",
+    "price": 1000,
+    "qty": 2,
+    "icon": "📦"
+  },
+  {
+    "id": 11,
+    "sku": "CSK6-NKW",
+    "name": "CSK6-NKW - Compteur Impulsion",
+    "category": "Compteur",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 1,
+    "icon": "📦"
+  },
+  {
+    "id": 12,
+    "sku": "019 CELL-PAST",
+    "name": "019 CELL-PAST - Kit de jonction resine etanche",
+    "category": "Raccordement",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 1,
+    "icon": "📦"
+  },
+  {
+    "id": 13,
+    "sku": "0200105 JEU DE TOURNEVIS",
+    "name": "0200105 JEU DE TOURNEVIS - Jeu de tournevis",
+    "category": "Outils",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 15,
+    "icon": "📦"
+  },
+  {
+    "id": 14,
+    "sku": "0220924 COUPE-CABLE",
+    "name": "0220924 COUPE-CABLE - Coupe-cable a cliquet isoles",
+    "category": "Outils",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 1,
+    "icon": "📦"
+  },
+  {
+    "id": 15,
+    "sku": "0802W5",
+    "name": "0802W5 - Relais de prise",
+    "category": "Protection",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 3,
+    "icon": "📦"
+  },
+  {
+    "id": 16,
+    "sku": "13229 SCHNEIDER",
+    "name": "13229 SCHNEIDER - Coffret electrique apparent",
+    "category": "Raccordement",
+    "brand": "Schneider",
+    "price": 50000,
+    "qty": 1,
+    "icon": "📦"
+  },
+  {
+    "id": 17,
+    "sku": "13953F",
+    "name": "13953F - Prise d'alimentation a  3 broches",
+    "category": "Alimentation",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 3,
+    "icon": "📦"
+  },
+  {
+    "id": 18,
+    "sku": "1503/1508ING",
+    "name": "1503/1508ING - Testeur d'isolant numerique",
+    "category": "Mesure",
+    "brand": "Autre",
+    "price": 350000,
+    "qty": 1,
+    "icon": "📦"
+  },
+  {
+    "id": 19,
+    "sku": "15608 SCHNEIDER",
+    "name": "15608 SCHNEIDER - Compteur horaire",
+    "category": "Compteur",
+    "brand": "Schneider",
+    "price": 50000,
+    "qty": 1,
+    "icon": "📦"
+  },
+  {
+    "id": 20,
+    "sku": "15DDP-C",
+    "name": "15DDP-C - Systeme de plaque de porte electronique",
+    "category": "Interrupteur",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 1,
+    "icon": "📦"
+  },
+  {
+    "id": 21,
+    "sku": "19W362T1",
+    "name": "19W362T1 - Disjoncteur triphase C32",
+    "category": "Protection",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 3,
+    "icon": "📦"
+  },
+  {
+    "id": 22,
+    "sku": "1SPE007717F1121",
+    "name": "1SPE007717F1121 - Coffret electrique apparent",
+    "category": "Raccordement",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 1,
+    "icon": "📦"
+  },
+  {
+    "id": 23,
+    "sku": "2*GU10LEDMAX8W",
+    "name": "2*GU10LEDMAX8W - Applique Murale",
+    "category": "Eclairage",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 1,
+    "icon": "📦"
+  },
+  {
+    "id": 24,
+    "sku": "20 LEGRAND",
+    "name": "20 LEGRAND - Bornier",
+    "category": "Raccordement",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 23,
+    "icon": "📦"
+  },
+  {
+    "id": 25,
+    "sku": "2070 BOITE DE DERIVATION",
+    "name": "2070 BOITE DE DERIVATION - Boite de derivation",
+    "category": "Raccordement",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 5,
+    "icon": "📦"
+  },
+  {
+    "id": 26,
+    "sku": "KQW0507941230-12V3A",
+    "name": "KQW0507941230-12V3A - Adaptateur secteur",
+    "category": "Alimentation",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 6,
+    "icon": "📦"
+  },
+  {
+    "id": 27,
+    "sku": "MSA-C10001C12",
+    "name": "MSA-C10001C12 - Alimentation electrique a decoupage",
+    "category": "Alimentation",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 1,
+    "icon": "📦"
+  },
+  {
+    "id": 28,
+    "sku": "ABL7 RE2405",
+    "name": "ABL7 RE2405 - Alimentation stabilisee",
+    "category": "Alimentation",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 1,
+    "icon": "📦"
+  },
+  {
+    "id": 29,
+    "sku": "2300103",
+    "name": "2300103 - Cle a cliquet magnetique",
+    "category": "Outils",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 32,
+    "icon": "📦"
+  },
+  {
+    "id": 30,
+    "sku": "23230 FAMATEL",
+    "name": "23230 FAMATEL - Prise d'alimentation a  3 broches",
+    "category": "Alimentation",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 10,
+    "icon": "📦"
+  },
+  {
+    "id": 31,
+    "sku": "23330 FAMATEL",
+    "name": "23330 FAMATEL - Prise d'alimentation a  4 broches",
+    "category": "Alimentation",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 1,
+    "icon": "📦"
+  },
+  {
+    "id": 32,
+    "sku": "2464 VW-1/108F",
+    "name": "2464 VW-1/108F - Cable VGA femelle vers femelle",
+    "category": "Cable",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 1,
+    "icon": "📦"
+  },
+  {
+    "id": 33,
+    "sku": "2726/A",
+    "name": "2726/A - Coffret modulaire apparent",
+    "category": "Tableau electrique",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 4,
+    "icon": "📦"
+  },
+  {
+    "id": 34,
+    "sku": "27AXUY60FIAH",
+    "name": "27AXUY60FIAH - Ventilateur thermostatique incubateur",
+    "category": "Chauffage",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 1,
+    "icon": "📦"
+  },
+  {
+    "id": 35,
+    "sku": "28351P1D-WW-24",
+    "name": "28351P1D-WW-24 - Ruban led",
+    "category": "Eclairage",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 43,
+    "icon": "📦"
+  },
+  {
+    "id": 36,
+    "sku": "2AC-C2",
+    "name": "2AC-C2 - Testeur de tension",
+    "category": "Protection",
+    "brand": "Autre",
+    "price": 25000,
+    "qty": 1,
+    "icon": "📦"
+  },
+  {
+    "id": 37,
+    "sku": "3241312018A",
+    "name": "3241312018A - Hub pour systeme d'eclairage intelligent",
+    "category": "Controle",
+    "brand": "Autre",
+    "price": 13739,
+    "qty": 0,
+    "icon": "📦"
+  },
+  {
+    "id": 38,
+    "sku": "33T DREMEL",
+    "name": "33T DREMEL - Adaptation defonceuse plongeante",
+    "category": "Adaptation",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 1,
+    "icon": "📦"
+  },
+  {
+    "id": 39,
+    "sku": "38016 TOLSEN",
+    "name": "38016 TOLSEN - Kit de 6 vices",
+    "category": "Accessoire",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 6,
+    "icon": "📦"
+  },
+  {
+    "id": 40,
+    "sku": "3D 12 -LINE WALL STICKER",
+    "name": "3D 12 -LINE WALL STICKER - Niveau laser 3D 12 lignes",
+    "category": "Mesure",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 1,
+    "icon": "📦"
+  },
+  {
+    "id": 41,
+    "sku": "3RU1126-4ABO",
+    "name": "3RU1126-4ABO - Relais thermique",
+    "category": "Relais",
+    "brand": "Autre",
+    "price": 85000,
+    "qty": 1,
+    "icon": "📦"
+  },
+  {
+    "id": 42,
+    "sku": "3SK1111-1AW20",
+    "name": "3SK1111-1AW20 - Relais de securite",
+    "category": "Protection",
+    "brand": "Autre",
+    "price": 155000,
+    "qty": 32,
+    "icon": "📦"
+  },
+  {
+    "id": 43,
+    "sku": "3SU1150-1HA20-1FGO",
+    "name": "3SU1150-1HA20-1FGO - Bouton d'arret d'urgence",
+    "category": "Protection",
+    "brand": "Autre",
+    "price": 41500,
+    "qty": 10,
+    "icon": "📦"
+  },
+  {
+    "id": 44,
+    "sku": "3SU1152-OAB30-1BAO",
+    "name": "3SU1152-OAB30-1BAO - bouton-poussoir",
+    "category": "Protection",
+    "brand": "Autre",
+    "price": 10500,
+    "qty": 7,
+    "icon": "📦"
+  },
+  {
+    "id": 45,
+    "sku": "400A AC/DC pince amperemetrique",
+    "name": "400A AC/DC pince amperemetrique - Pince amperemetrique",
+    "category": "Mesure",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 1,
+    "icon": "📦"
+  },
+  {
+    "id": 46,
+    "sku": "404E/406E",
+    "name": "404E/406E - Telemetre laser",
+    "category": "Mesure",
+    "brand": "Autre",
+    "price": 55000,
+    "qty": 2,
+    "icon": "📦"
+  },
+  {
+    "id": 47,
+    "sku": "4058075386662 ECO GLASS",
+    "name": "4058075386662 ECO GLASS - Panneau plafonnier",
+    "category": "Eclairage",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 1,
+    "icon": "📦"
+  },
+  {
+    "id": 48,
+    "sku": "HDR-30-24",
+    "name": "HDR-30-24 - Alimentation stabilisee",
+    "category": "Alimentation",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 3,
+    "icon": "📦"
+  },
+  {
+    "id": 49,
+    "sku": "49019 COFFRET",
+    "name": "49019 COFFRET - Coffret electrique metallique",
+    "category": "Raccordement",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 1,
+    "icon": "📦"
+  },
+  {
+    "id": 50,
+    "sku": "4NC5122-0CE21",
+    "name": "4NC5122-0CE21 - Transformateur de courant",
+    "category": "Protection",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 6,
+    "icon": "📦"
+  },
+  {
+    "id": 51,
+    "sku": "55RMFWDZSFOMR1LO",
+    "name": "55RMFWDZSFOMR1LO - Pince crocodile  et fiche male",
+    "category": "Connecteur",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 100,
+    "icon": "📦"
+  },
+  {
+    "id": 52,
+    "sku": "6AV2124-0GC01-0AX0",
+    "name": "6AV2124-0GC01-0AX0 - Simatic HMI TP700 Comfort",
+    "category": "Ecran",
+    "brand": "Autre",
+    "price": 460000,
+    "qty": 2,
+    "icon": "📦"
+  },
+  {
+    "id": 53,
+    "sku": "6ED1 052-1MD08-OBA1",
+    "name": "6ED1 052-1MD08-OBA1 - Alimentation/ module de controle",
+    "category": "Automate",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 1,
+    "icon": "📦"
+  },
+  {
+    "id": 54,
+    "sku": "6ES7 288-3AM06-OAAO",
+    "name": "6ES7 288-3AM06-OAAO - Automate intelligent",
+    "category": "Automate",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 1,
+    "icon": "📦"
+  },
+  {
+    "id": 55,
+    "sku": "6ES7 315-2AF03-OABO",
+    "name": "6ES7 315-2AF03-OABO - Processeur",
+    "category": "Automate",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 1,
+    "icon": "📦"
+  },
+  {
+    "id": 56,
+    "sku": "6ES7 321-1BH02-OAAO",
+    "name": "6ES7 321-1BH02-OAAO - Module d'extension d'entrée numerique",
+    "category": "Automate",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 2,
+    "icon": "📦"
+  },
+  {
+    "id": 57,
+    "sku": "6ES7 321-1BL00-OAAO",
+    "name": "6ES7 321-1BL00-OAAO - Carte d'entrée/sortie",
+    "category": "Automate",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 1,
+    "icon": "📦"
+  },
+  {
+    "id": 58,
+    "sku": "6ES7 323-1BL00-OAAO",
+    "name": "6ES7 323-1BL00-OAAO - Module d'alimentation",
+    "category": "Automate",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 4,
+    "icon": "📦"
+  },
+  {
+    "id": 59,
+    "sku": "6ES7 332-5HB01-OABO",
+    "name": "6ES7 332-5HB01-OABO - Carte de sortie analogique",
+    "category": "Automate",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 1,
+    "icon": "📦"
+  },
+  {
+    "id": 60,
+    "sku": "6ES7 532-5HD00-OABO",
+    "name": "6ES7 532-5HD00-OABO - Carte de sortie analogique",
+    "category": "Automate",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 1,
+    "icon": "📦"
+  },
+  {
+    "id": 61,
+    "sku": "6ES7 S90-8AA00-0AA0",
+    "name": "6ES7 S90-8AA00-0AA0 - Connecteur FNOB",
+    "category": "Connecteur",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 1,
+    "icon": "📦"
+  },
+  {
+    "id": 62,
+    "sku": "6ES7972-OBB41-OXAO",
+    "name": "6ES7972-OBB41-OXAO - Connecteur profibus",
+    "category": "Connecteur",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 1,
+    "icon": "📦"
+  },
+  {
+    "id": 63,
+    "sku": "6GK7342-2AH00-OXAO",
+    "name": "6GK7342-2AH00-OXAO - Processeur de communication simatic",
+    "category": "Automate",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 1,
+    "icon": "📦"
+  },
+  {
+    "id": 64,
+    "sku": "6SL3210-5FB10-2UF2",
+    "name": "6SL3210-5FB10-2UF2 - Servomoteur profinet",
+    "category": "Automate",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 1,
+    "icon": "📦"
+  },
+  {
+    "id": 65,
+    "sku": "707 loop calibrator",
+    "name": "707 loop calibrator - Calibrateur de boucle",
+    "category": "Mesure",
+    "brand": "Autre",
+    "price": 900000,
+    "qty": 1,
+    "icon": "📦"
+  },
+  {
+    "id": 66,
+    "sku": "715 FLUKE",
+    "name": "715 FLUKE - Calibrateur de boucle",
+    "category": "Mesure",
+    "brand": "Autre",
+    "price": 1500000,
+    "qty": 1,
+    "icon": "📦"
+  },
+  {
+    "id": 67,
+    "sku": "720-2001-01",
+    "name": "720-2001-01 - Adaptateur",
+    "category": "Automate",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 8,
+    "icon": "📦"
+  },
+  {
+    "id": 68,
+    "sku": "7KM2112-OBAOO-2AAO",
+    "name": "7KM2112-OBAOO-2AAO - Centrale de mesure",
+    "category": "Mesure",
+    "brand": "Autre",
+    "price": 350000,
+    "qty": 8,
+    "icon": "📦"
+  },
+  {
+    "id": 69,
+    "sku": "8986237305178",
+    "name": "8986237305178 - Module douille",
+    "category": "Eclairage",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 9,
+    "icon": "📦"
+  },
+  {
+    "id": 70,
+    "sku": "A002 ABAKUS",
+    "name": "A002 ABAKUS - Capteur de faisceau infrarouge",
+    "category": "Securite",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 1,
+    "icon": "📦"
+  },
+  {
+    "id": 71,
+    "sku": "LRS-100-24",
+    "name": "LRS-100-24 - Alimentation stabilisee",
+    "category": "Alimentation",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 2,
+    "icon": "📦"
+  },
+  {
+    "id": 72,
+    "sku": "YL-200W-24V",
+    "name": "YL-200W-24V - Alimentation stabilisee",
+    "category": "Alimentation",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 1,
+    "icon": "📦"
+  },
+  {
+    "id": 73,
+    "sku": "AEM96",
+    "name": "AEM96 - Compteur bidirectionnel",
+    "category": "Compteur",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 1,
+    "icon": "📦"
+  },
+  {
+    "id": 74,
+    "sku": "AGC70-5",
+    "name": "AGC70-5 - Barre de cosse en anneau",
+    "category": "Protection",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 1,
+    "icon": "📦"
+  },
+  {
+    "id": 75,
+    "sku": "AHC613",
+    "name": "AHC613 - Interrupteur horaire",
+    "category": "Controle",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 4,
+    "icon": "📦"
+  },
+  {
+    "id": 76,
+    "sku": "AHC808",
+    "name": "AHC808 - Interrupteur horaire",
+    "category": "Controle",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 6,
+    "icon": "📦"
+  },
+  {
+    "id": 77,
+    "sku": "AHC8-1A/1C",
+    "name": "AHC8-1A/1C - Interrupteur horaire",
+    "category": "Protection",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 1,
+    "icon": "📦"
+  },
+  {
+    "id": 78,
+    "sku": "AK86163",
+    "name": "AK86163 - Ampoule",
+    "category": "eclairage",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 175,
+    "icon": "📦"
+  },
+  {
+    "id": 79,
+    "sku": "AKH-0.66/K",
+    "name": "AKH-0.66/K - Transformateur de courant a noyau divise",
+    "category": "Transformateur",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 6,
+    "icon": "📦"
+  },
+  {
+    "id": 80,
+    "sku": "ALL117-11-18W",
+    "name": "ALL117-11-18W - Hublot",
+    "category": "Eclairage",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 42,
+    "icon": "📦"
+  },
+  {
+    "id": 81,
+    "sku": "AMC72L-E4/KC(II)",
+    "name": "AMC72L-E4/KC(II) - Compteur d'energie numerique",
+    "category": "Compteur",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 1,
+    "icon": "📦"
+  },
+  {
+    "id": 82,
+    "sku": "AP3101 WIFI 6AX3000",
+    "name": "AP3101 WIFI 6AX3000 - Antenne de commutateur",
+    "category": "Raccordement",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 2,
+    "icon": "📦"
+  },
+  {
+    "id": 83,
+    "sku": "AS0-22010",
+    "name": "AS0-22010 - Crepusculaire",
+    "category": "Detecteur",
+    "brand": "Autre",
+    "price": 12000,
+    "qty": 2,
+    "icon": "📦"
+  },
+  {
+    "id": 84,
+    "sku": "AS-22010",
+    "name": "AS-22010 - Crepusculaire",
+    "category": "Detecteur",
+    "brand": "Autre",
+    "price": 12000,
+    "qty": 3,
+    "icon": "📦"
+  },
+  {
+    "id": 85,
+    "sku": "AT-9601",
+    "name": "AT-9601 - protecteur alimentation secteur",
+    "category": "Alimentation",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 4,
+    "icon": "📦"
+  },
+  {
+    "id": 86,
+    "sku": "ATSO1N244Q",
+    "name": "ATSO1N244Q - Demarreur/ralentisseur",
+    "category": "Moteur",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 1,
+    "icon": "📦"
+  },
+  {
+    "id": 87,
+    "sku": "ATV58HU72N4",
+    "name": "ATV58HU72N4 - Variateur vitesse",
+    "category": "Controle",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 9,
+    "icon": "📦"
+  },
+  {
+    "id": 88,
+    "sku": "AW-CBL2166-6",
+    "name": "AW-CBL2166-6 - Cloche d'alarme",
+    "category": "Sonorisation",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 2,
+    "icon": "📦"
+  },
+  {
+    "id": 89,
+    "sku": "AW-CSD311",
+    "name": "AW-CSD311 - Detecteur de fumee",
+    "category": "Securite",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 0,
+    "icon": "📦"
+  },
+  {
+    "id": 90,
+    "sku": "AW-CSS2166-2",
+    "name": "AW-CSS2166-2 - Corne d'alarme incendie",
+    "category": "Sonorisation",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 2,
+    "icon": "📦"
+  },
+  {
+    "id": 91,
+    "sku": "AW-SP04EX",
+    "name": "AW-SP04EX - Sirene stroboscopique",
+    "category": "Sonorisation",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 2,
+    "icon": "📦"
+  },
+  {
+    "id": 92,
+    "sku": "AWT100-POW",
+    "name": "AWT100-POW - Module de conversion de donnees",
+    "category": "Convertisseur",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 1,
+    "icon": "📦"
+  },
+  {
+    "id": 93,
+    "sku": "ZB8/ZB5",
+    "name": "ZB8/ZB5 - Bande de marquage",
+    "category": "Raccordement",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 140,
+    "icon": "📦"
+  },
+  {
+    "id": 94,
+    "sku": "ZB6",
+    "name": "ZB6 - Bande de marquage",
+    "category": "Raccordement",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 10,
+    "icon": "📦"
+  },
+  {
+    "id": 95,
+    "sku": "B09463QLTK",
+    "name": "B09463QLTK - Scie cloche",
+    "category": "outils",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 2,
+    "icon": "📦"
+  },
+  {
+    "id": 96,
+    "sku": "B09MY239ZR",
+    "name": "B09MY239ZR - Connecteur de fiche banane",
+    "category": "Connecteur",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 95,
+    "icon": "📦"
+  },
+  {
+    "id": 97,
+    "sku": "B0CPKYC4QN",
+    "name": "B0CPKYC4QN - Scie cloche",
+    "category": "outils",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 2,
+    "icon": "📦"
+  },
+  {
+    "id": 98,
+    "sku": "B0CQC2XNH9 ERNZI",
+    "name": "B0CQC2XNH9 ERNZI - Lampe submersible",
+    "category": "Eclairage",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 6,
+    "icon": "📦"
+  },
+  {
+    "id": 99,
+    "sku": "B3",
+    "name": "B3 - Malette a outils",
+    "category": "outils",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 5,
+    "icon": "📦"
+  },
+  {
+    "id": 100,
+    "sku": "B3 PINCE AMPEREMETRIQUE",
+    "name": "B3 PINCE AMPEREMETRIQUE - Pince amperemetrique",
+    "category": "Mesure",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 3,
+    "icon": "📦"
+  },
+  {
+    "id": 101,
+    "sku": "BAGUETTE A RELIER",
+    "name": "BAGUETTE A RELIER - Baguette a relier",
+    "category": "Raccordement",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 69,
+    "icon": "📦"
+  },
+  {
+    "id": 102,
+    "sku": "Barrette de terre",
+    "name": "Barrette de terre - Barrette de terre",
+    "category": "Protection",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 1,
+    "icon": "📦"
+  },
+  {
+    "id": 103,
+    "sku": "BC1040CL-302000-E",
+    "name": "BC1040CL-302000-E - Controleur de temperature numerique",
+    "category": "Controle",
+    "brand": "Autre",
+    "price": 24640,
+    "qty": 1,
+    "icon": "📦"
+  },
+  {
+    "id": 104,
+    "sku": "BCM100D",
+    "name": "BCM100D - Moteur de rideaux",
+    "category": "Communication",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 1,
+    "icon": "📦"
+  },
+  {
+    "id": 105,
+    "sku": "BE 302",
+    "name": "BE 302 - Telecommande a 2 canaux",
+    "category": "Communication",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 2,
+    "icon": "📦"
+  },
+  {
+    "id": 106,
+    "sku": "BK-24VA",
+    "name": "BK-24VA - Transformateur de control",
+    "category": "Protection",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 2,
+    "icon": "📦"
+  },
+  {
+    "id": 107,
+    "sku": "BK96VA",
+    "name": "BK96VA - Transformateur de control",
+    "category": "Protection",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 2,
+    "icon": "📦"
+  },
+  {
+    "id": 108,
+    "sku": "BL36",
+    "name": "BL36 - Ballast tube T8 feromagnetique",
+    "category": "Eclairage",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 1,
+    "icon": "📦"
+  },
+  {
+    "id": 109,
+    "sku": "BO7VWMZDQ9",
+    "name": "BO7VWMZDQ9 - Outil de decharge pour tension electrique",
+    "category": "Securite",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 20,
+    "icon": "📦"
+  },
+  {
+    "id": 110,
+    "sku": "BOCCP16VL3",
+    "name": "BOCCP16VL3 - Pied a coulisse numerique",
+    "category": "Mesure",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 1,
+    "icon": "📦"
+  },
+  {
+    "id": 111,
+    "sku": "BOCK85D2LL",
+    "name": "BOCK85D2LL - Module de transistor IGBT statique",
+    "category": "Transistor",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 1,
+    "icon": "📦"
+  },
+  {
+    "id": 112,
+    "sku": "BOD1DH7287",
+    "name": "BOD1DH7287 - Kit de perceuse electrique",
+    "category": "Outils",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 2,
+    "icon": "📦"
+  },
+  {
+    "id": 113,
+    "sku": "BP30076-87002",
+    "name": "BP30076-87002 - Compteur horaire",
+    "category": "Compteur",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 1,
+    "icon": "📦"
+  },
+  {
+    "id": 114,
+    "sku": "BPX 125/1600",
+    "name": "BPX 125/1600 - Disjoncteur DPX",
+    "category": "Protection",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 1,
+    "icon": "📦"
+  },
+  {
+    "id": 115,
+    "sku": "BLINDAGE",
+    "name": "BLINDAGE - Blindage",
+    "category": "Raccordement",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 10,
+    "icon": "📦"
+  },
+  {
+    "id": 116,
+    "sku": "HDR-60-12",
+    "name": "HDR-60-12 - Bloc d'alimentation",
+    "category": "Alimentation",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 2,
+    "icon": "📦"
+  },
+  {
+    "id": 117,
+    "sku": "JPTFI*6/6*2.5 RED",
+    "name": "JPTFI*6/6*2.5 RED - Bloc de distribution",
+    "category": "Raccordement",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 20,
+    "icon": "📦"
+  },
+  {
+    "id": 118,
+    "sku": "BS-128",
+    "name": "BS-128 - Endoscope vido",
+    "category": "Mesure",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 1,
+    "icon": "📦"
+  },
+  {
+    "id": 119,
+    "sku": "BS1363 SASO 2203",
+    "name": "BS1363 SASO 2203 - Prise etanche dissimulee",
+    "category": "Adaptateur",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 10,
+    "icon": "📦"
+  },
+  {
+    "id": 120,
+    "sku": "BT200 SIEMENS",
+    "name": "BT200 SIEMENS - Testeur cable profibus dp",
+    "category": "Protection",
+    "brand": "Siemens",
+    "price": 50000,
+    "qty": 1,
+    "icon": "📦"
+  },
+  {
+    "id": 121,
+    "sku": "BTA 36 L25",
+    "name": "BTA 36 L25 - Ballast transformateur de lampe T5",
+    "category": "Eclairage",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 1,
+    "icon": "📦"
+  },
+  {
+    "id": 122,
+    "sku": "BTA 36L37",
+    "name": "BTA 36L37 - Ballast transformateur de lampe T5",
+    "category": "Eclairage",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 1,
+    "icon": "📦"
+  },
+  {
+    "id": 123,
+    "sku": "BVC080 LED 15/765",
+    "name": "BVC080 LED 15/765 - Projecteur",
+    "category": "Eclairage",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 2,
+    "icon": "📦"
+  },
+  {
+    "id": 124,
+    "sku": "JPTFI*6/12*2.5",
+    "name": "JPTFI*6/12*2.5 - Bloc de distribution",
+    "category": "Raccordement",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 10,
+    "icon": "📦"
+  },
+  {
+    "id": 125,
+    "sku": "C14G20",
+    "name": "C14G20 - Cartouche fusile",
+    "category": "Accessoire",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 20,
+    "icon": "📦"
+  },
+  {
+    "id": 126,
+    "sku": "JPTFI*6*2.5 BLUE",
+    "name": "JPTFI*6*2.5 BLUE - Bloc de distribution",
+    "category": "Raccordement",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 10,
+    "icon": "📦"
+  },
+  {
+    "id": 127,
+    "sku": "CABLE APR-ETL",
+    "name": "CABLE APR-ETL - Cable de raccordement ethernet",
+    "category": "Communication",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 1,
+    "icon": "📦"
+  },
+  {
+    "id": 128,
+    "sku": "Cable de multimetre",
+    "name": "Cable de multimetre - Cable de multimetre",
+    "category": "Accessoire",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 4,
+    "icon": "📦"
+  },
+  {
+    "id": 129,
+    "sku": "CAD32E7",
+    "name": "CAD32E7 - Contacts auxilliaires",
+    "category": "Protection",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 1,
+    "icon": "📦"
+  },
+  {
+    "id": 130,
+    "sku": "CANON",
+    "name": "CANON - Canon",
+    "category": "Securite",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 1,
+    "icon": "📦"
+  },
+  {
+    "id": 131,
+    "sku": "CBL32-S",
+    "name": "CBL32-S - Verrouillage de disjoncteur",
+    "category": "Securite",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 4,
+    "icon": "📦"
+  },
+  {
+    "id": 132,
+    "sku": "CCT15482",
+    "name": "CCT15482 - Interrupteur screpusculaire",
+    "category": "Commande",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 1,
+    "icon": "📦"
+  },
+  {
+    "id": 133,
+    "sku": "CD300-3-1-RG",
+    "name": "CD300-3-1-RG - Feux de  signalisation",
+    "category": "Eclairage",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 4,
+    "icon": "📦"
+  },
+  {
+    "id": 134,
+    "sku": "CEINTURE AUTOMOBILE",
+    "name": "CEINTURE AUTOMOBILE - Ceinture automobile",
+    "category": "outils",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 1,
+    "icon": "📦"
+  },
+  {
+    "id": 135,
+    "sku": "CFY20-2",
+    "name": "CFY20-2 - Lampe exterieur",
+    "category": "Eclairage",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 1,
+    "icon": "📦"
+  },
+  {
+    "id": 136,
+    "sku": "JPTFI*12*2.5",
+    "name": "JPTFI*12*2.5 - Bloc de distribution",
+    "category": "Raccordement",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 10,
+    "icon": "📦"
+  },
+  {
+    "id": 137,
+    "sku": "JPTFI*6*2.5",
+    "name": "JPTFI*6*2.5 - Bloc de distribution",
+    "category": "Raccordement",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 10,
+    "icon": "📦"
+  },
+  {
+    "id": 138,
+    "sku": "CH6-DB1V1",
+    "name": "CH6-DB1V1 - Indicateur numerique a chaud",
+    "category": "Affichage",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 1,
+    "icon": "📦"
+  },
+  {
+    "id": 139,
+    "sku": "JPTFI*6/6*2.5",
+    "name": "JPTFI*6/6*2.5 - Bloc de distribution",
+    "category": "Raccordement",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 10,
+    "icon": "📦"
+  },
+  {
+    "id": 140,
+    "sku": "CHINT XJ3-D",
+    "name": "CHINT XJ3-D - Relais de controle",
+    "category": "Protection",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 4,
+    "icon": "📦"
+  },
+  {
+    "id": 141,
+    "sku": "JPTFI*18*2.5",
+    "name": "JPTFI*18*2.5 - Bloc de distribution",
+    "category": "Raccordement",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 10,
+    "icon": "📦"
+  },
+  {
+    "id": 142,
+    "sku": "WKH-207",
+    "name": "WKH-207 - Bloc de distribution modulaire a vis",
+    "category": "Raccordement",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 8,
+    "icon": "📦"
+  },
+  {
+    "id": 143,
+    "sku": "CO-180/181",
+    "name": "CO-180/181 - Detecteur de monoxyde de carbone",
+    "category": "Instrument",
+    "brand": "Autre",
+    "price": 45000,
+    "qty": 1,
+    "icon": "📦"
+  },
+  {
+    "id": 144,
+    "sku": "COFFRET",
+    "name": "COFFRET - Coffret a cle",
+    "category": "Accessoire",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 4,
+    "icon": "📦"
+  },
+  {
+    "id": 145,
+    "sku": "CONNECTEUR BANANE",
+    "name": "CONNECTEUR BANANE - Connecteur fiche male et femelles",
+    "category": "Accessoire",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 200,
+    "icon": "📦"
+  },
+  {
+    "id": 146,
+    "sku": "CONNECTEUR CYLINDRIQUE 14SP-2P",
+    "name": "CONNECTEUR CYLINDRIQUE 14SP-2P - Connecteur male",
+    "category": "Connecteur",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 95,
+    "icon": "📦"
+  },
+  {
+    "id": 147,
+    "sku": "CONNECTEUR HAUT PARLEUR",
+    "name": "CONNECTEUR HAUT PARLEUR - Adaptateur pour haut parleur",
+    "category": "Connecteur",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 30,
+    "icon": "📦"
+  },
+  {
+    "id": 148,
+    "sku": "M686-2HOLDERS",
+    "name": "M686-2HOLDERS - Boite a jonction etanche",
+    "category": "Raccordement",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 3,
+    "icon": "📦"
+  },
+  {
+    "id": 149,
+    "sku": "CHENEREKWRBCA6589I",
+    "name": "CHENEREKWRBCA6589I - Boite en aluminium electronique",
+    "category": "Boitier",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 3,
+    "icon": "📦"
+  },
+  {
+    "id": 150,
+    "sku": "JUK2.5B",
+    "name": "JUK2.5B - Bornier",
+    "category": "Raccordement",
+    "brand": "Autre",
+    "price": 150,
+    "qty": 13,
+    "icon": "📦"
+  },
+  {
+    "id": 151,
+    "sku": "RJUS",
+    "name": "RJUS - Bornier",
+    "category": "Raccordement",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 4,
+    "icon": "📦"
+  },
+  {
+    "id": 152,
+    "sku": "JUKJ-HESI",
+    "name": "JUKJ-HESI - Bornier",
+    "category": "Raccordement",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 10,
+    "icon": "📦"
+  },
+  {
+    "id": 153,
+    "sku": "D-JUK 2.5 B",
+    "name": "D-JUK 2.5 B - bornier",
+    "category": "Raccordement",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 20,
+    "icon": "📦"
+  },
+  {
+    "id": 154,
+    "sku": "CP343-1 LEAN",
+    "name": "CP343-1 LEAN - Processeur de communication",
+    "category": "Automate",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 1,
+    "icon": "📦"
+  },
+  {
+    "id": 155,
+    "sku": "CPU 1511C-IPN/S7-1500",
+    "name": "CPU 1511C-IPN/S7-1500 - CPU S7-1500",
+    "category": "Automate",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 1,
+    "icon": "📦"
+  },
+  {
+    "id": 156,
+    "sku": "CPU 313",
+    "name": "CPU 313 - Unite centrale",
+    "category": "Automate",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 1,
+    "icon": "📦"
+  },
+  {
+    "id": 157,
+    "sku": "CR123A",
+    "name": "CR123A - Pile",
+    "category": "Alimentation",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 28,
+    "icon": "📦"
+  },
+  {
+    "id": 158,
+    "sku": "CSK6-NKW",
+    "name": "CSK6-NKW - Compteur d'impulsion",
+    "category": "Compteur",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 1,
+    "icon": "📦"
+  },
+  {
+    "id": 159,
+    "sku": "CSL-810WT",
+    "name": "CSL-810WT - Haut-parleur",
+    "category": "Sonorisation",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 2,
+    "icon": "📦"
+  },
+  {
+    "id": 160,
+    "sku": "CV-7524-WF03-A",
+    "name": "CV-7524-WF03-A - Adaptateur transformateur+wifi",
+    "category": "Adaptateur",
+    "brand": "Autre",
+    "price": 12389,
+    "qty": 1,
+    "icon": "📦"
+  },
+  {
+    "id": 161,
+    "sku": "CY7-6A2-2R",
+    "name": "CY7-6A2-2R - Compteur d'impulsion",
+    "category": "Compteur",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 1,
+    "icon": "📦"
+  },
+  {
+    "id": 162,
+    "sku": "CZ1520/1-21",
+    "name": "CZ1520/1-21 - Boite de jonction metallique",
+    "category": "Raccordement",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 2,
+    "icon": "📦"
+  },
+  {
+    "id": 163,
+    "sku": "D3000",
+    "name": "D3000 - Video projecteur",
+    "category": "outils",
+    "brand": "Autre",
+    "price": 150000,
+    "qty": 1,
+    "icon": "📦"
+  },
+  {
+    "id": 164,
+    "sku": "D67-F",
+    "name": "D67-F - Compteur mecanique",
+    "category": "Compteur",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 1,
+    "icon": "📦"
+  },
+  {
+    "id": 165,
+    "sku": "DB25SUBD25",
+    "name": "DB25SUBD25 - Connecteur a souder",
+    "category": "Connecteur",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 2,
+    "icon": "📦"
+  },
+  {
+    "id": 166,
+    "sku": "DB9SUBBD9",
+    "name": "DB9SUBBD9 - Connecteur a souder",
+    "category": "Connecteur",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 3,
+    "icon": "📦"
+  },
+  {
+    "id": 167,
+    "sku": "DC820-1P",
+    "name": "DC820-1P - Pendant fragile",
+    "category": "Eclairage",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 1,
+    "icon": "📦"
+  },
+  {
+    "id": 168,
+    "sku": "DH-IPC-HDW3449EP-AS-NI",
+    "name": "DH-IPC-HDW3449EP-AS-NI - Camera",
+    "category": "Securite",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 2,
+    "icon": "📦"
+  },
+  {
+    "id": 169,
+    "sku": "DH-IPC-HDW5241TMP-AS-LED",
+    "name": "DH-IPC-HDW5241TMP-AS-LED - Camera",
+    "category": "Securite",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 1,
+    "icon": "📦"
+  },
+  {
+    "id": 170,
+    "sku": "DH-IPC-HFW2431SP-S-S2",
+    "name": "DH-IPC-HFW2431SP-S-S2 - Camera",
+    "category": "Securite",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 1,
+    "icon": "📦"
+  },
+  {
+    "id": 173,
+    "sku": "DHX-XVR4 104-Y1",
+    "name": "DHX-XVR4 104-Y1 - Enregistreur video",
+    "category": "Securite",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 1,
+    "icon": "📦"
+  },
+  {
+    "id": 174,
+    "sku": "SAA-160432-E1",
+    "name": "SAA-160432-E1 - Adaptateur d'alimentation",
+    "category": "Adaptateur",
+    "brand": "Autre",
+    "price": 7700,
+    "qty": 2,
+    "icon": "📦"
+  },
+  {
+    "id": 175,
+    "sku": "DISJONCTEUR",
+    "name": "DISJONCTEUR - Disjoncteur de puissance",
+    "category": "Protection",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 1,
+    "icon": "📦"
+  },
+  {
+    "id": 176,
+    "sku": "DL46-10-NF-02",
+    "name": "DL46-10-NF-02 - Spot",
+    "category": "Eclairage",
+    "brand": "Autre",
+    "price": 12000,
+    "qty": 3,
+    "icon": "📦"
+  },
+  {
+    "id": 177,
+    "sku": "DMX512 MASTER & REMOTE",
+    "name": "DMX512 MASTER & REMOTE - Interrupteur tactile",
+    "category": "Interrupteur",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 7,
+    "icon": "📦"
+  },
+  {
+    "id": 178,
+    "sku": "DNY C2/DNX C2",
+    "name": "DNY C2/DNX C2 - Disjoncteur modulaire",
+    "category": "Protection",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 2,
+    "icon": "📦"
+  },
+  {
+    "id": 179,
+    "sku": "DSS24-2401000-B",
+    "name": "DSS24-2401000-B - Adaptateur AC/DC",
+    "category": "Alimentation",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 3,
+    "icon": "📦"
+  },
+  {
+    "id": 180,
+    "sku": "DT-176CV2",
+    "name": "DT-176CV2 - Enregistreur de donnees de tension de courant AC",
+    "category": "Mesure",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 1,
+    "icon": "📦"
+  },
+  {
+    "id": 181,
+    "sku": "DT-211",
+    "name": "DT-211 - Multimetre numerque",
+    "category": "Mesure",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 1,
+    "icon": "📦"
+  },
+  {
+    "id": 182,
+    "sku": "DT-61",
+    "name": "DT-61 - Multimetre",
+    "category": "Mesure",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 1,
+    "icon": "📦"
+  },
+  {
+    "id": 183,
+    "sku": "DT625",
+    "name": "DT625 - Testeur temps et humidite",
+    "category": "Mesure",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 1,
+    "icon": "📦"
+  },
+  {
+    "id": 184,
+    "sku": "DT-6650",
+    "name": "DT-6650 - Testeur d'installation electrique",
+    "category": "Compteur",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 1,
+    "icon": "📦"
+  },
+  {
+    "id": 185,
+    "sku": "DT-867B",
+    "name": "DT-867B - Imageur thermique",
+    "category": "Affichage",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 1,
+    "icon": "📦"
+  },
+  {
+    "id": 186,
+    "sku": "DT-8809A",
+    "name": "DT-8809A - Luxmetre numerique",
+    "category": "Mesure",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 2,
+    "icon": "📦"
+  },
+  {
+    "id": 187,
+    "sku": "DT-8861",
+    "name": "DT-8861 - Mini thermometre infrarouge compact",
+    "category": "Mesure",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 1,
+    "icon": "📦"
+  },
+  {
+    "id": 188,
+    "sku": "DT925",
+    "name": "DT925 - Multimetre",
+    "category": "Mesure",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 1,
+    "icon": "📦"
+  },
+  {
+    "id": 189,
+    "sku": "DZ158LE-125",
+    "name": "DZ158LE-125 - Disjoncteur differentiel",
+    "category": "Protection",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 1,
+    "icon": "📦"
+  },
+  {
+    "id": 190,
+    "sku": "DZ267-32",
+    "name": "DZ267-32 - Disjoncteur",
+    "category": "Protection",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 14,
+    "icon": "📦"
+  },
+  {
+    "id": 191,
+    "sku": "E/JUK",
+    "name": "E/JUK - Bornier",
+    "category": "Raccordement",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 52,
+    "icon": "📦"
+  },
+  {
+    "id": 192,
+    "sku": "UKJ-G(DUK)",
+    "name": "UKJ-G(DUK) - Bornier",
+    "category": "Raccordement",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 14,
+    "icon": "📦"
+  },
+  {
+    "id": 193,
+    "sku": "JUK5-HESI",
+    "name": "JUK5-HESI - Bornier",
+    "category": "Raccordement",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 10,
+    "icon": "📦"
+  },
+  {
+    "id": 194,
+    "sku": "JUK2.5B",
+    "name": "JUK2.5B - Bornier",
+    "category": "Raccordement",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 2,
+    "icon": "📦"
+  },
+  {
+    "id": 195,
+    "sku": "WKH-207(1)",
+    "name": "WKH-207(1) - Bornier de terre",
+    "category": "Raccordement",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 17,
+    "icon": "📦"
+  },
+  {
+    "id": 196,
+    "sku": "E3S-DS30E4",
+    "name": "E3S-DS30E4 - Capteur photoelectrique",
+    "category": "Interrupteur",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 1,
+    "icon": "📦"
+  },
+  {
+    "id": 197,
+    "sku": "EB-C 228 TL5 II",
+    "name": "EB-C 228 TL5 II - Ballast tube tl5",
+    "category": "Eclairage",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 1,
+    "icon": "📦"
+  },
+  {
+    "id": 198,
+    "sku": "EMBASES",
+    "name": "EMBASES - Embases",
+    "category": "Raccordement",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 8,
+    "icon": "📦"
+  },
+  {
+    "id": 199,
+    "sku": "EMBOUTS AIMANTE",
+    "name": "EMBOUTS AIMANTE - Douille hexagonale",
+    "category": "outils",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 1,
+    "icon": "📦"
+  },
+  {
+    "id": 200,
+    "sku": "LA 130",
+    "name": "LA 130 - Bouton d'arret d'urgence",
+    "category": "Securite",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 1,
+    "icon": "📦"
+  },
+  {
+    "id": 201,
+    "sku": "BOUTTON",
+    "name": "BOUTTON - Bouton poussoir",
+    "category": "Securite",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 10,
+    "icon": "📦"
+  },
+  {
+    "id": 202,
+    "sku": "ET991",
+    "name": "ET991 - Controleur de moteur DC",
+    "category": "Commutateur",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 1,
+    "icon": "📦"
+  },
+  {
+    "id": 203,
+    "sku": "ETC-974",
+    "name": "ETC-974 - Controleur de temperature d'ordinateur",
+    "category": "Controle",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 2,
+    "icon": "📦"
+  },
+  {
+    "id": 204,
+    "sku": "BZA8050-P5-3/M20",
+    "name": "BZA8050-P5-3/M20 - Boutton d'arret d'urgence",
+    "category": "Securite",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 5,
+    "icon": "📦"
+  },
+  {
+    "id": 205,
+    "sku": "EVO5 DIMTONE",
+    "name": "EVO5 DIMTONE - Spot",
+    "category": "Eclairage",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 66,
+    "icon": "📦"
+  },
+  {
+    "id": 206,
+    "sku": "F06US05000060A",
+    "name": "F06US05000060A - Adaptateur secteur",
+    "category": "Alimentation",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 1,
+    "icon": "📦"
+  },
+  {
+    "id": 207,
+    "sku": "F3",
+    "name": "F3 - Telecommande",
+    "category": "Eclairage",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 1,
+    "icon": "📦"
+  },
+  {
+    "id": 208,
+    "sku": "FG07402",
+    "name": "FG07402 - Applique  murale encastrable",
+    "category": "Eclairage",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 12,
+    "icon": "📦"
+  },
+  {
+    "id": 209,
+    "sku": "FGD200H5B",
+    "name": "FGD200H5B - Projecteur",
+    "category": "Eclairage",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 5,
+    "icon": "📦"
+  },
+  {
+    "id": 210,
+    "sku": "FM120-012DCA3HQ KATU",
+    "name": "FM120-012DCA3HQ KATU - Capteur de debit a turbine electrique",
+    "category": "Capteur",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 1,
+    "icon": "📦"
+  },
+  {
+    "id": 211,
+    "sku": "FR2000C+",
+    "name": "FR2000C+ - Testeur resistance de terre a pince numerique",
+    "category": "Mesure",
+    "brand": "Autre",
+    "price": 100000,
+    "qty": 1,
+    "icon": "📦"
+  },
+  {
+    "id": 212,
+    "sku": "FSL QRSF-LED 4",
+    "name": "FSL QRSF-LED 4 - Spot",
+    "category": "Eclairage",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 3,
+    "icon": "📦"
+  },
+  {
+    "id": 213,
+    "sku": "FUSE BOX",
+    "name": "FUSE BOX - Boite a fusible",
+    "category": "Raccordement",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 6,
+    "icon": "📦"
+  },
+  {
+    "id": 214,
+    "sku": "CH0850-N1",
+    "name": "CH0850-N1 - Boutton d'arret d'urgence",
+    "category": "Securite",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 1,
+    "icon": "📦"
+  },
+  {
+    "id": 215,
+    "sku": "GACETTE",
+    "name": "GACETTE - Gachette complte",
+    "category": "Securite",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 1,
+    "icon": "📦"
+  },
+  {
+    "id": 216,
+    "sku": "GENERICZOITAWD1Y2-13",
+    "name": "GENERICZOITAWD1Y2-13 - support pour bac de rangement",
+    "category": "Accessoire",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 8,
+    "icon": "📦"
+  },
+  {
+    "id": 217,
+    "sku": "GKS35-110W",
+    "name": "GKS35-110W - Ampoule en forme de mais",
+    "category": "Eclairage",
+    "brand": "Autre",
+    "price": 38350,
+    "qty": 2,
+    "icon": "📦"
+  },
+  {
+    "id": 218,
+    "sku": "GPOE404V6",
+    "name": "GPOE404V6 - Commutateur reseau",
+    "category": "Communication",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 2,
+    "icon": "📦"
+  },
+  {
+    "id": 219,
+    "sku": "GPS8-01-D",
+    "name": "GPS8-01-D - Protecteur de surintensite",
+    "category": "Protection",
+    "brand": "Autre",
+    "price": 12000,
+    "qty": 2,
+    "icon": "📦"
+  },
+  {
+    "id": 220,
+    "sku": "GPS8-02-D",
+    "name": "GPS8-02-D - Interhoraire a 2 fonctions",
+    "category": "Commande",
+    "brand": "Autre",
+    "price": 12000,
+    "qty": 3,
+    "icon": "📦"
+  },
+  {
+    "id": 221,
+    "sku": "GPV8-2P-D",
+    "name": "GPV8-2P-D - Relais de tension",
+    "category": "Controle",
+    "brand": "Autre",
+    "price": 12000,
+    "qty": 4,
+    "icon": "📦"
+  },
+  {
+    "id": 222,
+    "sku": "GRB8-01",
+    "name": "GRB8-01 - Crepusculaire",
+    "category": "Protection",
+    "brand": "Autre",
+    "price": 12000,
+    "qty": 3,
+    "icon": "📦"
+  },
+  {
+    "id": 223,
+    "sku": "VCFXGEI",
+    "name": "VCFXGEI - Boutton d'arret d'urgence",
+    "category": "Securite",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 3,
+    "icon": "📦"
+  },
+  {
+    "id": 224,
+    "sku": "GRL8-02",
+    "name": "GRL8-02 - Relais de controle niveau liquide",
+    "category": "Controle",
+    "brand": "Autre",
+    "price": 12000,
+    "qty": 3,
+    "icon": "📦"
+  },
+  {
+    "id": 225,
+    "sku": "GRM8-01",
+    "name": "GRM8-01 - Relais a impulsion",
+    "category": "Protection",
+    "brand": "Autre",
+    "price": 12000,
+    "qty": 2,
+    "icon": "📦"
+  },
+  {
+    "id": 226,
+    "sku": "GRT8-2T",
+    "name": "GRT8-2T - Relais tempose a 2 retard",
+    "category": "Protection",
+    "brand": "Autre",
+    "price": 12000,
+    "qty": 2,
+    "icon": "📦"
+  },
+  {
+    "id": 227,
+    "sku": "GRT8-K1",
+    "name": "GRT8-K1 - Relais temporise",
+    "category": "Protection",
+    "brand": "Autre",
+    "price": 12000,
+    "qty": 3,
+    "icon": "📦"
+  },
+  {
+    "id": 228,
+    "sku": "GRT8-M2",
+    "name": "GRT8-M2 - Relais temporise multifonct",
+    "category": "Protection",
+    "brand": "Autre",
+    "price": 12000,
+    "qty": 2,
+    "icon": "📦"
+  },
+  {
+    "id": 229,
+    "sku": "GRV8-03/M265",
+    "name": "GRV8-03/M265 - Relais de tension tripasee",
+    "category": "Protection",
+    "brand": "Autre",
+    "price": 12000,
+    "qty": 2,
+    "icon": "📦"
+  },
+  {
+    "id": 230,
+    "sku": "GRV8-05/M460",
+    "name": "GRV8-05/M460 - Controleur de phase",
+    "category": "Protection",
+    "brand": "Autre",
+    "price": 12000,
+    "qty": 2,
+    "icon": "📦"
+  },
+  {
+    "id": 231,
+    "sku": "GRV8-63",
+    "name": "GRV8-63 - Protecteur de tension",
+    "category": "Protection",
+    "brand": "Autre",
+    "price": 12000,
+    "qty": 3,
+    "icon": "📦"
+  },
+  {
+    "id": 232,
+    "sku": "GRV8-SP",
+    "name": "GRV8-SP - Relais Tension",
+    "category": "Commande",
+    "brand": "Autre",
+    "price": 12000,
+    "qty": 2,
+    "icon": "📦"
+  },
+  {
+    "id": 233,
+    "sku": "GRW8-01",
+    "name": "GRW8-01 - Controleur temperature",
+    "category": "Protection",
+    "brand": "Autre",
+    "price": 12000,
+    "qty": 1,
+    "icon": "📦"
+  },
+  {
+    "id": 234,
+    "sku": "GU10",
+    "name": "GU10 - Spot en saillie",
+    "category": "Eclairage",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 0,
+    "icon": "📦"
+  },
+  {
+    "id": 235,
+    "sku": "GU10-1414-C0B",
+    "name": "GU10-1414-C0B - Spot",
+    "category": "Eclairage",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 0,
+    "icon": "📦"
+  },
+  {
+    "id": 236,
+    "sku": "GV2ME10C",
+    "name": "GV2ME10C - Disjoncteur moteur",
+    "category": "Protection",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 1,
+    "icon": "📦"
+  },
+  {
+    "id": 237,
+    "sku": "GV2ME16C",
+    "name": "GV2ME16C - Disjoncteur moteur",
+    "category": "Protection",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 2,
+    "icon": "📦"
+  },
+  {
+    "id": 238,
+    "sku": "GV2ME20C",
+    "name": "GV2ME20C - Disjoncteur moteur",
+    "category": "Protection",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 1,
+    "icon": "📦"
+  },
+  {
+    "id": 239,
+    "sku": "GVAN 11",
+    "name": "GVAN 11 - Additif lateral",
+    "category": "Protection",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 11,
+    "icon": "📦"
+  },
+  {
+    "id": 240,
+    "sku": "GWI 10.8 V-LI",
+    "name": "GWI 10.8 V-LI - Visseuse d'angle sans fil",
+    "category": "Outils",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 1,
+    "icon": "📦"
+  },
+  {
+    "id": 241,
+    "sku": "GXP1610/1615",
+    "name": "GXP1610/1615 - Telephone IP",
+    "category": "Communication",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 3,
+    "icon": "📦"
+  },
+  {
+    "id": 242,
+    "sku": "H05VV-F",
+    "name": "H05VV-F - Cable d'alimentation",
+    "category": "Raccordement",
+    "brand": "Autre",
+    "price": 295,
+    "qty": 20,
+    "icon": "📦"
+  },
+  {
+    "id": 243,
+    "sku": "H1000/U/BT37",
+    "name": "H1000/U/BT37 - Ampoule HID aux hallogenures",
+    "category": "Eclairage",
+    "brand": "Autre",
+    "price": 57900,
+    "qty": 3,
+    "icon": "📦"
+  },
+  {
+    "id": 244,
+    "sku": "YXBX51-N2",
+    "name": "YXBX51-N2 - Boutton d'arret d'urgence",
+    "category": "Securite",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 3,
+    "icon": "📦"
+  },
+  {
+    "id": 245,
+    "sku": "HCE200BE4",
+    "name": "HCE200BE4 - Four",
+    "category": "Chauffage",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 1,
+    "icon": "📦"
+  },
+  {
+    "id": 246,
+    "sku": "YXFB",
+    "name": "YXFB - Boutton d'arret d'urgence",
+    "category": "Securite",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 20,
+    "icon": "📦"
+  },
+  {
+    "id": 247,
+    "sku": "HD3VVH2-F LED DRIVER",
+    "name": "HD3VVH2-F LED DRIVER - Controleur de lampe",
+    "category": "Alimentation",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 10,
+    "icon": "📦"
+  },
+  {
+    "id": 248,
+    "sku": "HD-HAC-HDW1000RP",
+    "name": "HD-HAC-HDW1000RP - Camera",
+    "category": "Securite",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 9,
+    "icon": "📦"
+  },
+  {
+    "id": 249,
+    "sku": "HDL7512",
+    "name": "HDL7512 - Spot encastrable",
+    "category": "Eclairage",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 12,
+    "icon": "📦"
+  },
+  {
+    "id": 250,
+    "sku": "HDMI2.0",
+    "name": "HDMI2.0 - Rallonge HDMI",
+    "category": "Communication",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 4,
+    "icon": "📦"
+  },
+  {
+    "id": 251,
+    "sku": "JPTFIX-F",
+    "name": "JPTFIX-F - Bride de montage",
+    "category": "Raccordement",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 20,
+    "icon": "📦"
+  },
+  {
+    "id": 252,
+    "sku": "LMF11-3005PA",
+    "name": "LMF11-3005PA - Capteur de presence",
+    "category": "Detecteur",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 2,
+    "icon": "📦"
+  },
+  {
+    "id": 253,
+    "sku": "HI11-P1/P3Z",
+    "name": "HI11-P1/P3Z - Contact auxilliaire",
+    "category": "Communication",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 10,
+    "icon": "📦"
+  },
+  {
+    "id": 254,
+    "sku": "HIFI MUSIC",
+    "name": "HIFI MUSIC - Amplificateur mural",
+    "category": "Amplificateur",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 1,
+    "icon": "📦"
+  },
+  {
+    "id": 255,
+    "sku": "HIM 17",
+    "name": "HIM 17 - Capteur de mouvement",
+    "category": "Detecteur",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 1,
+    "icon": "📦"
+  },
+  {
+    "id": 256,
+    "sku": "HIM16",
+    "name": "HIM16 - Capteur de mouvement",
+    "category": "Detecteur",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 2,
+    "icon": "📦"
+  },
+  {
+    "id": 257,
+    "sku": "HT-106D",
+    "name": "HT-106D - Testeur de prise electrique",
+    "category": "Mesure",
+    "brand": "Autre",
+    "price": 18500,
+    "qty": 1,
+    "icon": "📦"
+  },
+  {
+    "id": 258,
+    "sku": "HYC1215 IN WALL AMPLIFIER",
+    "name": "HYC1215 IN WALL AMPLIFIER - Mur bluethoot player",
+    "category": "Amplificateur",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 4,
+    "icon": "📦"
+  },
+  {
+    "id": 259,
+    "sku": "IC60L",
+    "name": "IC60L - Disjoncteur differentiel",
+    "category": "Protection",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 1,
+    "icon": "📦"
+  },
+  {
+    "id": 260,
+    "sku": "IC60N",
+    "name": "IC60N - Disjoncteur differentiel",
+    "category": "Protection",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 1,
+    "icon": "📦"
+  },
+  {
+    "id": 261,
+    "sku": "IC60M",
+    "name": "IC60M - Disjoncteur",
+    "category": "Protection",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 1,
+    "icon": "📦"
+  },
+  {
+    "id": 262,
+    "sku": "IDPNA",
+    "name": "IDPNA - Disjoncteur",
+    "category": "Protection",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 5,
+    "icon": "📦"
+  },
+  {
+    "id": 263,
+    "sku": "IEC10101",
+    "name": "IEC10101 - Testeur d'isolation",
+    "category": "Mesure",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 1,
+    "icon": "📦"
+  },
+  {
+    "id": 264,
+    "sku": "IEC60947-3",
+    "name": "IEC60947-3 - Interrupteur sectionneur",
+    "category": "Protection",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 4,
+    "icon": "📦"
+  },
+  {
+    "id": 265,
+    "sku": "IEC61008-1",
+    "name": "IEC61008-1 - Interrupteur de fuite",
+    "category": "Protection",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 1,
+    "icon": "📦"
+  },
+  {
+    "id": 266,
+    "sku": "IEC61009-1",
+    "name": "IEC61009-1 - Disjoncteur differentiel",
+    "category": "Protection",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 1,
+    "icon": "📦"
+  },
+  {
+    "id": 267,
+    "sku": "IEC61643-1",
+    "name": "IEC61643-1 - Parafoudre",
+    "category": "Protection",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 1,
+    "icon": "📦"
+  },
+  {
+    "id": 268,
+    "sku": "IEEE802,11 SMART SWITCH",
+    "name": "IEEE802,11 SMART SWITCH - Interrupteur intelligent",
+    "category": "Commande",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 8,
+    "icon": "📦"
+  },
+  {
+    "id": 269,
+    "sku": "IID32A",
+    "name": "IID32A - Disjoncteur differentiel",
+    "category": "Protection",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 4,
+    "icon": "📦"
+  },
+  {
+    "id": 270,
+    "sku": "INS40/63/80",
+    "name": "INS40/63/80 - Interrupteur Sectionneur compacte",
+    "category": "Protection",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 1,
+    "icon": "📦"
+  },
+  {
+    "id": 271,
+    "sku": "INTERRUPTEUR",
+    "name": "INTERRUPTEUR - Interrupteur",
+    "category": "Commande",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 5,
+    "icon": "📦"
+  },
+  {
+    "id": 272,
+    "sku": "IT7000 INOVANCE",
+    "name": "IT7000 INOVANCE - Ecran tactile inovance",
+    "category": "Automate",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 1,
+    "icon": "📦"
+  },
+  {
+    "id": 273,
+    "sku": "G44-3C5PC",
+    "name": "G44-3C5PC - Capteur photoelectrique",
+    "category": "Detecteur",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 2,
+    "icon": "📦"
+  },
+  {
+    "id": 274,
+    "sku": "KD-CP38S-YLW",
+    "name": "KD-CP38S-YLW - Cardenat de consignation",
+    "category": "Securite",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 119,
+    "icon": "📦"
+  },
+  {
+    "id": 275,
+    "sku": "JDIKD 1.5",
+    "name": "JDIKD 1.5 - Bornier",
+    "category": "Raccordement",
+    "brand": "Autre",
+    "price": 150,
+    "qty": 50,
+    "icon": "📦"
+  },
+  {
+    "id": 276,
+    "sku": "JDIKD1.5 GREY",
+    "name": "JDIKD1.5 GREY - Bornier",
+    "category": "Raccordement",
+    "brand": "Autre",
+    "price": 150,
+    "qty": 50,
+    "icon": "📦"
+  },
+  {
+    "id": 277,
+    "sku": "JEU DE TOURNEVIS",
+    "name": "JEU DE TOURNEVIS - Jeu de  tournevis",
+    "category": "outils",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 6,
+    "icon": "📦"
+  },
+  {
+    "id": 278,
+    "sku": "M695/M6",
+    "name": "M695/M6 - Coffret de candelabre",
+    "category": "Raccordement",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 12,
+    "icon": "📦"
+  },
+  {
+    "id": 279,
+    "sku": "XB7-E COMMUTATEUR",
+    "name": "XB7-E COMMUTATEUR - Commutateur",
+    "category": "Commande",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 4,
+    "icon": "📦"
+  },
+  {
+    "id": 280,
+    "sku": "JMBKKB2.5 BLUE",
+    "name": "JMBKKB2.5 BLUE - Bornier",
+    "category": "Raccordement",
+    "brand": "Autre",
+    "price": 150,
+    "qty": 300,
+    "icon": "📦"
+  },
+  {
+    "id": 281,
+    "sku": "JP-060",
+    "name": "JP-060 - Adaptateur secteur AC/DC",
+    "category": "Alimentation",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 1,
+    "icon": "📦"
+  },
+  {
+    "id": 282,
+    "sku": "JST 2.5 GREY/BLUE",
+    "name": "JST 2.5 GREY/BLUE - Bornier",
+    "category": "Raccordement",
+    "brand": "Autre",
+    "price": 150,
+    "qty": 0,
+    "icon": "📦"
+  },
+  {
+    "id": 283,
+    "sku": "M684",
+    "name": "M684 - Connecteur de cable",
+    "category": "Raccordement",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 10,
+    "icon": "📦"
+  },
+  {
+    "id": 284,
+    "sku": "JUK2.5B BLUE/GREY",
+    "name": "JUK2.5B BLUE/GREY - Bornier",
+    "category": "Raccordement",
+    "brand": "Autre",
+    "price": 150,
+    "qty": 0,
+    "icon": "📦"
+  },
+  {
+    "id": 285,
+    "sku": "JUK6N  BLUE\\GREY",
+    "name": "JUK6N  BLUE\\GREY - Bornier",
+    "category": "Raccordement",
+    "brand": "Autre",
+    "price": 150,
+    "qty": 300,
+    "icon": "📦"
+  },
+  {
+    "id": 286,
+    "sku": "JUKH50",
+    "name": "JUKH50 - Bornier",
+    "category": "Raccordement",
+    "brand": "Autre",
+    "price": 950,
+    "qty": 30,
+    "icon": "📦"
+  },
+  {
+    "id": 287,
+    "sku": "JUSLKG6N(6mm2/2,5mm2)",
+    "name": "JUSLKG6N(6mm2/2,5mm2) - Bornier de terre",
+    "category": "Raccordement",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 25,
+    "icon": "📦"
+  },
+  {
+    "id": 288,
+    "sku": "JXCA2 DN22",
+    "name": "JXCA2 DN22 - Contacteur 4P",
+    "category": "Commande",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 1,
+    "icon": "📦"
+  },
+  {
+    "id": 289,
+    "sku": "KA-LS04",
+    "name": "KA-LS04 - Crepusculaire",
+    "category": "Detecteur",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 1,
+    "icon": "📦"
+  },
+  {
+    "id": 290,
+    "sku": "KA-LS05",
+    "name": "KA-LS05 - Capteur lumiere+ minuterie",
+    "category": "Capteur",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 1,
+    "icon": "📦"
+  },
+  {
+    "id": 291,
+    "sku": "M685",
+    "name": "M685 - Connecteur de cable en T",
+    "category": "Raccordement",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 16,
+    "icon": "📦"
+  },
+  {
+    "id": 292,
+    "sku": "KERRY",
+    "name": "KERRY - Applique  murale encastrable",
+    "category": "Eclairage",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 3,
+    "icon": "📦"
+  },
+  {
+    "id": 293,
+    "sku": "C1",
+    "name": "C1 - Connecteur en T pour fil electrique",
+    "category": "Raccordement",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 47,
+    "icon": "📦"
+  },
+  {
+    "id": 294,
+    "sku": "K-TYPE/RS2990",
+    "name": "K-TYPE/RS2990 - Adaptateur de thermocouple",
+    "category": "Adaptateur",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 1,
+    "icon": "📦"
+  },
+  {
+    "id": 295,
+    "sku": "KX25561",
+    "name": "KX25561 - Spot",
+    "category": "Eclairage",
+    "brand": "Autre",
+    "price": 3900,
+    "qty": 63,
+    "icon": "📦"
+  },
+  {
+    "id": 296,
+    "sku": "VIPA 972-0DP10",
+    "name": "VIPA 972-0DP10 - Connecteur profibus",
+    "category": "Connecteur",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 1,
+    "icon": "📦"
+  },
+  {
+    "id": 297,
+    "sku": "LA1011",
+    "name": "LA1011 - Testeur multimetre LAN",
+    "category": "Testeur/mesure",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 1,
+    "icon": "📦"
+  },
+  {
+    "id": 298,
+    "sku": "LA1017",
+    "name": "LA1017 - Compteur d'energie solaire",
+    "category": "Compteur",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 1,
+    "icon": "📦"
+  },
+  {
+    "id": 299,
+    "sku": "LADN22C",
+    "name": "LADN22C - Bloc de contact auxiliaires",
+    "category": "Raccordement",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 11,
+    "icon": "📦"
+  },
+  {
+    "id": 300,
+    "sku": "LADN40",
+    "name": "LADN40 - Bloc de contact auxiliaires",
+    "category": "Raccordement",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 2,
+    "icon": "📦"
+  },
+  {
+    "id": 301,
+    "sku": "LADT2",
+    "name": "LADT2 - Bloc de contact auxiliaires",
+    "category": "Raccordement",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 3,
+    "icon": "📦"
+  },
+  {
+    "id": 302,
+    "sku": "LC1-D BOBINE",
+    "name": "LC1-D BOBINE - Bobine cuivre  contacteur",
+    "category": "Raccordement",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 7,
+    "icon": "📦"
+  },
+  {
+    "id": 303,
+    "sku": "LC1D09B7",
+    "name": "LC1D09B7 - Contacteurs",
+    "category": "Protection",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 1,
+    "icon": "📦"
+  },
+  {
+    "id": 304,
+    "sku": "LC1D12E7C",
+    "name": "LC1D12E7C - contacteur",
+    "category": "Protection",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 1,
+    "icon": "📦"
+  },
+  {
+    "id": 305,
+    "sku": "LC1D18B7C",
+    "name": "LC1D18B7C - contacteur",
+    "category": "Protection",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 2,
+    "icon": "📦"
+  },
+  {
+    "id": 306,
+    "sku": "LC1D18E7C",
+    "name": "LC1D18E7C - contacteur",
+    "category": "Protection",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 3,
+    "icon": "📦"
+  },
+  {
+    "id": 307,
+    "sku": "LC1D25",
+    "name": "LC1D25 - Contacteur",
+    "category": "Controle",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 2,
+    "icon": "📦"
+  },
+  {
+    "id": 308,
+    "sku": "LC1D25E7C",
+    "name": "LC1D25E7C - contacteur",
+    "category": "Protection",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 5,
+    "icon": "📦"
+  },
+  {
+    "id": 309,
+    "sku": "LC2-F65",
+    "name": "LC2-F65 - Contacteur/Inverseur",
+    "category": "Protection",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 1,
+    "icon": "📦"
+  },
+  {
+    "id": 310,
+    "sku": "LGY410028",
+    "name": "LGY410028 - Repartiteur etage",
+    "category": "Raccordement",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 1,
+    "icon": "📦"
+  },
+  {
+    "id": 311,
+    "sku": "LK209A",
+    "name": "LK209A - Traceur GPS",
+    "category": "Securite",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 2,
+    "icon": "📦"
+  },
+  {
+    "id": 312,
+    "sku": "LME21-130C2",
+    "name": "LME21-130C2 - Automate d'allumage",
+    "category": "Commande",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 1,
+    "icon": "📦"
+  },
+  {
+    "id": 313,
+    "sku": "2273-208",
+    "name": "2273-208 - Connecteur wago",
+    "category": "Raccordement",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 262,
+    "icon": "📦"
+  },
+  {
+    "id": 314,
+    "sku": "LN 36.115",
+    "name": "LN 36.115 - Ballast transformateur de lampe 12V",
+    "category": "Eclairage",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 2,
+    "icon": "📦"
+  },
+  {
+    "id": 315,
+    "sku": "LR6/MN1500",
+    "name": "LR6/MN1500 - Pile",
+    "category": "Alimentation",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 14,
+    "icon": "📦"
+  },
+  {
+    "id": 316,
+    "sku": "LRD16",
+    "name": "LRD16 - Relais  thermique de surcharge",
+    "category": "Protection",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 1,
+    "icon": "📦"
+  },
+  {
+    "id": 317,
+    "sku": "2773-406",
+    "name": "2773-406 - Connecteur wago",
+    "category": "Raccordement",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 150,
+    "icon": "📦"
+  },
+  {
+    "id": 318,
+    "sku": "LS056",
+    "name": "LS056 - Commutateur intelligent",
+    "category": "Interrupteur",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 24,
+    "icon": "📦"
+  },
+  {
+    "id": 319,
+    "sku": "LS062WH",
+    "name": "LS062WH - Deteteur de mouvement",
+    "category": "Capteur",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 13,
+    "icon": "📦"
+  },
+  {
+    "id": 320,
+    "sku": "LS063WH",
+    "name": "LS063WH - Capteur environemental",
+    "category": "Capteur",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 3,
+    "icon": "📦"
+  },
+  {
+    "id": 321,
+    "sku": "LS065",
+    "name": "LS065 - Bande lumineuse a control intelligent",
+    "category": "Eclairage",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 1,
+    "icon": "📦"
+  },
+  {
+    "id": 322,
+    "sku": "LS069WH",
+    "name": "LS069WH - Buton intelligent",
+    "category": "Controle",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 15,
+    "icon": "📦"
+  },
+  {
+    "id": 323,
+    "sku": "LS086WH",
+    "name": "LS086WH - Capteur de gaz",
+    "category": "Communication",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 4,
+    "icon": "📦"
+  },
+  {
+    "id": 324,
+    "sku": "LS099GD",
+    "name": "LS099GD - Serrure intelligente",
+    "category": "Securite",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 4,
+    "icon": "📦"
+  },
+  {
+    "id": 325,
+    "sku": "LS136",
+    "name": "LS136 - Commande a distance intelligente",
+    "category": "Communication",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 12,
+    "icon": "📦"
+  },
+  {
+    "id": 326,
+    "sku": "LS143",
+    "name": "LS143 - Commande intelligente",
+    "category": "Eclairage",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 2,
+    "icon": "📦"
+  },
+  {
+    "id": 327,
+    "sku": "LS159",
+    "name": "LS159 - Prise intelligente",
+    "category": "Eclairage",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 6,
+    "icon": "📦"
+  },
+  {
+    "id": 328,
+    "sku": "LS168E",
+    "name": "LS168E - Applique Murale",
+    "category": "Eclairage",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 3,
+    "icon": "📦"
+  },
+  {
+    "id": 329,
+    "sku": "LS174",
+    "name": "LS174 - Detecteur de mouvement",
+    "category": "Interrupteur",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 19,
+    "icon": "📦"
+  },
+  {
+    "id": 330,
+    "sku": "LS176",
+    "name": "LS176 - Commutateur intelligent",
+    "category": "Interrupteur",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 4,
+    "icon": "📦"
+  },
+  {
+    "id": 331,
+    "sku": "LS177",
+    "name": "LS177 - Commutateur intelligent",
+    "category": "Interrupteur",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 18,
+    "icon": "📦"
+  },
+  {
+    "id": 332,
+    "sku": "LS193",
+    "name": "LS193 - Commutateur intelligent",
+    "category": "Interrupteur",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 18,
+    "icon": "📦"
+  },
+  {
+    "id": 333,
+    "sku": "LS201WH",
+    "name": "LS201WH - Telecommande d'alarme",
+    "category": "Communication",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 2,
+    "icon": "📦"
+  },
+  {
+    "id": 334,
+    "sku": "LS202WH",
+    "name": "LS202WH - Capteur de porte/fenetre",
+    "category": "Securite",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 10,
+    "icon": "📦"
+  },
+  {
+    "id": 335,
+    "sku": "LS203WH",
+    "name": "LS203WH - Capteur sensoriel",
+    "category": "Communication",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 3,
+    "icon": "📦"
+  },
+  {
+    "id": 336,
+    "sku": "LS204WH",
+    "name": "LS204WH - Alarme",
+    "category": "Communication",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 3,
+    "icon": "📦"
+  },
+  {
+    "id": 337,
+    "sku": "LS205WH",
+    "name": "LS205WH - Systeme d'alarme",
+    "category": "Securite",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 3,
+    "icon": "📦"
+  },
+  {
+    "id": 338,
+    "sku": "LS208WH",
+    "name": "LS208WH - Station intelligente",
+    "category": "Communication",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 3,
+    "icon": "📦"
+  },
+  {
+    "id": 339,
+    "sku": "LS218-WH3",
+    "name": "LS218-WH3 - Telecommande intelligente",
+    "category": "Telecommande",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 6,
+    "icon": "📦"
+  },
+  {
+    "id": 340,
+    "sku": "LS220-WW3",
+    "name": "LS220-WW3 - Interrupteur intelligent",
+    "category": "Interrupteur",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 10,
+    "icon": "📦"
+  },
+  {
+    "id": 341,
+    "sku": "LS255",
+    "name": "LS255 - Controleur de gradation",
+    "category": "Eclairage",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 2,
+    "icon": "📦"
+  },
+  {
+    "id": 342,
+    "sku": "LS256",
+    "name": "LS256 - Telecommande intelligente",
+    "category": "Eclairage",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 3,
+    "icon": "📦"
+  },
+  {
+    "id": 343,
+    "sku": "LS259 LIFE SMART",
+    "name": "LS259 LIFE SMART - Camera",
+    "category": "Securite",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 4,
+    "icon": "📦"
+  },
+  {
+    "id": 344,
+    "sku": "LS508WH",
+    "name": "LS508WH - Capteur porte magnetique",
+    "category": "Communication",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 5,
+    "icon": "📦"
+  },
+  {
+    "id": 345,
+    "sku": "LS912-01",
+    "name": "LS912-01 - Condensateur ceramique",
+    "category": "Interrupteur",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 9,
+    "icon": "📦"
+  },
+  {
+    "id": 346,
+    "sku": "LS912-02",
+    "name": "LS912-02 - Condensateur ceramique",
+    "category": "Interrupteur",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 8,
+    "icon": "📦"
+  },
+  {
+    "id": 347,
+    "sku": "LS912-03",
+    "name": "LS912-03 - Condensateur ceramique",
+    "category": "Interrupteur",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 4,
+    "icon": "📦"
+  },
+  {
+    "id": 348,
+    "sku": "LTD-1201",
+    "name": "LTD-1201 - Girophare",
+    "category": "Eclairage",
+    "brand": "Autre",
+    "price": 9750,
+    "qty": 8,
+    "icon": "📦"
+  },
+  {
+    "id": 349,
+    "sku": "LV429313",
+    "name": "LV429313 - Prolongateur de maneton",
+    "category": "Raccordement",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 1,
+    "icon": "📦"
+  },
+  {
+    "id": 350,
+    "sku": "LV429387",
+    "name": "LV429387 - Declencheur voltmetrique",
+    "category": "Controle",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 1,
+    "icon": "📦"
+  },
+  {
+    "id": 351,
+    "sku": "LW26-20",
+    "name": "LW26-20 - Commutateur universel selecteur a came rotatif",
+    "category": "Interrupteur",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 6,
+    "icon": "📦"
+  },
+  {
+    "id": 352,
+    "sku": "LW32-20/D222/3",
+    "name": "LW32-20/D222/3 - Commutateur de conversion",
+    "category": "Controle",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 48,
+    "icon": "📦"
+  },
+  {
+    "id": 353,
+    "sku": "221-413",
+    "name": "221-413 - Connecteur wago",
+    "category": "Raccordement",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 150,
+    "icon": "📦"
+  },
+  {
+    "id": 354,
+    "sku": "M05X10",
+    "name": "M05X10 - Levier de serrage",
+    "category": "Raccordement",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 4,
+    "icon": "📦"
+  },
+  {
+    "id": 355,
+    "sku": "M1011",
+    "name": "M1011 - Outils marquage de ruban",
+    "category": "Accessoire",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 1,
+    "icon": "📦"
+  },
+  {
+    "id": 356,
+    "sku": "M22520/2 / AFM8",
+    "name": "M22520/2 / AFM8 - Pince a sertir",
+    "category": "Outils",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 1,
+    "icon": "📦"
+  },
+  {
+    "id": 357,
+    "sku": "221-415",
+    "name": "221-415 - Connecteur wago",
+    "category": "Raccordement",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 125,
+    "icon": "📦"
+  },
+  {
+    "id": 358,
+    "sku": "2273-203",
+    "name": "2273-203 - Connecteur wago",
+    "category": "Raccordement",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 300,
+    "icon": "📦"
+  },
+  {
+    "id": 359,
+    "sku": "2273-202",
+    "name": "2273-202 - Connecteur wago",
+    "category": "Raccordement",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 300,
+    "icon": "📦"
+  },
+  {
+    "id": 360,
+    "sku": "221-412",
+    "name": "221-412 - Connecteur wago",
+    "category": "Raccordement",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 500,
+    "icon": "📦"
+  },
+  {
+    "id": 361,
+    "sku": "MANDRIN",
+    "name": "MANDRIN - Mandrin",
+    "category": "outils",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 1,
+    "icon": "📦"
+  },
+  {
+    "id": 362,
+    "sku": "MC030S",
+    "name": "MC030S - Detecteur de mouvement",
+    "category": "Detecteur",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 2,
+    "icon": "📦"
+  },
+  {
+    "id": 363,
+    "sku": "MC040S",
+    "name": "MC040S - Detecteur de mouvement",
+    "category": "Detecteur",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 2,
+    "icon": "📦"
+  },
+  {
+    "id": 364,
+    "sku": "2273-205",
+    "name": "2273-205 - Connecteur wago",
+    "category": "Raccordement",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 220,
+    "icon": "📦"
+  },
+  {
+    "id": 365,
+    "sku": "MHE3-MS1H-3",
+    "name": "MHE3-MS1H-3 - Electrovanne",
+    "category": "Commande",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 2,
+    "icon": "📦"
+  },
+  {
+    "id": 366,
+    "sku": "MIR-SIM 100",
+    "name": "MIR-SIM 100 - Detecteur de fumee",
+    "category": "Securite",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 5,
+    "icon": "📦"
+  },
+  {
+    "id": 367,
+    "sku": "MJ-XJ803 300W/ CJY-SOLAR PANEL",
+    "name": "MJ-XJ803 300W/ CJY-SOLAR PANEL - Lampadaire solairre",
+    "category": "Eclairage",
+    "brand": "Autre",
+    "price": 81400,
+    "qty": 1,
+    "icon": "📦"
+  },
+  {
+    "id": 368,
+    "sku": "Mobile phone",
+    "name": "Mobile phone - support de tablette",
+    "category": "Accessoire",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 1,
+    "icon": "📦"
+  },
+  {
+    "id": 369,
+    "sku": "MS01 MERRYTEK",
+    "name": "MS01 MERRYTEK - Crepusculaire",
+    "category": "Detecteur",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 1,
+    "icon": "📦"
+  },
+  {
+    "id": 370,
+    "sku": "MS6612",
+    "name": "MS6612 - Luxmetre numerique",
+    "category": "Mesure",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 1,
+    "icon": "📦"
+  },
+  {
+    "id": 371,
+    "sku": "MS8268",
+    "name": "MS8268 - Multimetre",
+    "category": "Mesure",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 1,
+    "icon": "📦"
+  },
+  {
+    "id": 372,
+    "sku": "MSA001S1",
+    "name": "MSA001S1 - Detecteur de mouvement",
+    "category": "Capteur",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 0,
+    "icon": "📦"
+  },
+  {
+    "id": 373,
+    "sku": "2273-204",
+    "name": "2273-204 - Connecteur wago",
+    "category": "Raccordement",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 220,
+    "icon": "📦"
+  },
+  {
+    "id": 374,
+    "sku": "MY2N-J",
+    "name": "MY2N-J - Relais de  puissance",
+    "category": "Protection",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 12,
+    "icon": "📦"
+  },
+  {
+    "id": 375,
+    "sku": "NB1L-40",
+    "name": "NB1L-40 - Disjoncteur differentiel",
+    "category": "Protection",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 1,
+    "icon": "📦"
+  },
+  {
+    "id": 376,
+    "sku": "NB7",
+    "name": "NB7 - Disjoncteur bipolaire 2p",
+    "category": "Protection",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 5,
+    "icon": "📦"
+  },
+  {
+    "id": 377,
+    "sku": "NB7LE-32",
+    "name": "NB7LE-32 - Disjoncteur",
+    "category": "Protection",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 1,
+    "icon": "📦"
+  },
+  {
+    "id": 378,
+    "sku": "NB7LE-63",
+    "name": "NB7LE-63 - Disjoncteur differentiel 2p",
+    "category": "Protection",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 1,
+    "icon": "📦"
+  },
+  {
+    "id": 379,
+    "sku": "NBB10-30GM50-E2-V1",
+    "name": "NBB10-30GM50-E2-V1 - Detecteur inductifs",
+    "category": "Detecteur",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 1,
+    "icon": "📦"
+  },
+  {
+    "id": 380,
+    "sku": "NBE7LE-63",
+    "name": "NBE7LE-63 - Disjoncteur miniature",
+    "category": "Protection",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 1,
+    "icon": "📦"
+  },
+  {
+    "id": 381,
+    "sku": "NC6-0908",
+    "name": "NC6-0908 - Contacteur",
+    "category": "Commande",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 8,
+    "icon": "📦"
+  },
+  {
+    "id": 382,
+    "sku": "NC8-100",
+    "name": "NC8-100 - Contacteur",
+    "category": "Commande",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 1,
+    "icon": "📦"
+  },
+  {
+    "id": 383,
+    "sku": "NCH8-20/22",
+    "name": "NCH8-20/22 - Contacteur modulaire",
+    "category": "Protection",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 2,
+    "icon": "📦"
+  },
+  {
+    "id": 384,
+    "sku": "NCH8-40/40",
+    "name": "NCH8-40/40 - Contacteur modulaire",
+    "category": "Protection",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 1,
+    "icon": "📦"
+  },
+  {
+    "id": 385,
+    "sku": "NF-2240/2260L",
+    "name": "NF-2240/2260L - Metre a ruban laser 2 pouces",
+    "category": "Mesure",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 1,
+    "icon": "📦"
+  },
+  {
+    "id": 386,
+    "sku": "NF-521",
+    "name": "NF-521 - Imageur thermique",
+    "category": "Securite",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 1,
+    "icon": "📦"
+  },
+  {
+    "id": 387,
+    "sku": "NF-820",
+    "name": "NF-820 - Detecteur cable souterrain",
+    "category": "Detecteur",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 1,
+    "icon": "📦"
+  },
+  {
+    "id": 388,
+    "sku": "NF-826",
+    "name": "NF-826 - Localisateur fils souterrain",
+    "category": "Securite",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 3,
+    "icon": "📦"
+  },
+  {
+    "id": 389,
+    "sku": "NH4-125 4P",
+    "name": "NH4-125 4P - Interrupteur sectionneur",
+    "category": "Protection",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 3,
+    "icon": "📦"
+  },
+  {
+    "id": 390,
+    "sku": "NJB1-X1",
+    "name": "NJB1-X1 - Relais de tension",
+    "category": "Protection",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 5,
+    "icon": "📦"
+  },
+  {
+    "id": 391,
+    "sku": "NJMC1-16/P",
+    "name": "NJMC1-16/P - Relais de protection",
+    "category": "Protection",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 1,
+    "icon": "📦"
+  },
+  {
+    "id": 392,
+    "sku": "NM1-125H/3300",
+    "name": "NM1-125H/3300 - Disjoncteur compacte",
+    "category": "Protection",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 1,
+    "icon": "📦"
+  },
+  {
+    "id": 393,
+    "sku": "NTE8-B",
+    "name": "NTE8-B - Relais temporise",
+    "category": "Protection",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 1,
+    "icon": "📦"
+  },
+  {
+    "id": 394,
+    "sku": "NUE-III/F",
+    "name": "NUE-III/F - Parafoudre",
+    "category": "Protection",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 3,
+    "icon": "📦"
+  },
+  {
+    "id": 395,
+    "sku": "NXB-40",
+    "name": "NXB-40 - Disjoncteur",
+    "category": "Protection",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 2,
+    "icon": "📦"
+  },
+  {
+    "id": 396,
+    "sku": "NXB-63",
+    "name": "NXB-63 - Disjoncteur",
+    "category": "Protection",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 1,
+    "icon": "📦"
+  },
+  {
+    "id": 397,
+    "sku": "NXBLE-40",
+    "name": "NXBLE-40 - Disjoncteur differentiel",
+    "category": "Protection",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 1,
+    "icon": "📦"
+  },
+  {
+    "id": 398,
+    "sku": "NXBLE-63",
+    "name": "NXBLE-63 - Disjoncteur de fuite",
+    "category": "Protection",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 2,
+    "icon": "📦"
+  },
+  {
+    "id": 399,
+    "sku": "NXBLE-63 2P",
+    "name": "NXBLE-63 2P - Disjoncteur differentiel",
+    "category": "Protection",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 1,
+    "icon": "📦"
+  },
+  {
+    "id": 400,
+    "sku": "OEXH605C",
+    "name": "OEXH605C - Prise encastrable bureau",
+    "category": "Alimentation",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 9,
+    "icon": "📦"
+  },
+  {
+    "id": 401,
+    "sku": "OT-ES9119-ST",
+    "name": "OT-ES9119-ST - BAES",
+    "category": "Securite",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 2,
+    "icon": "📦"
+  },
+  {
+    "id": 402,
+    "sku": "P12798",
+    "name": "P12798 - Capteur de pression electronique",
+    "category": "Mesure",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 1,
+    "icon": "📦"
+  },
+  {
+    "id": 403,
+    "sku": "P2582-E27",
+    "name": "P2582-E27 - Hublot",
+    "category": "Eclairage",
+    "brand": "Autre",
+    "price": 3300,
+    "qty": 16,
+    "icon": "📦"
+  },
+  {
+    "id": 404,
+    "sku": "P2582-E27",
+    "name": "P2582-E27 - Hublot",
+    "category": "Eclairage",
+    "brand": "Autre",
+    "price": 3300,
+    "qty": 21,
+    "icon": "📦"
+  },
+  {
+    "id": 405,
+    "sku": "P3301-E27",
+    "name": "P3301-E27 - Hublot",
+    "category": "Eclairage",
+    "brand": "Autre",
+    "price": 6400,
+    "qty": 16,
+    "icon": "📦"
+  },
+  {
+    "id": 406,
+    "sku": "P3301-E27",
+    "name": "P3301-E27 - Hublot",
+    "category": "Eclairage",
+    "brand": "Autre",
+    "price": 6400,
+    "qty": 10,
+    "icon": "📦"
+  },
+  {
+    "id": 407,
+    "sku": "P-3858-130",
+    "name": "P-3858-130 - Support a pile AA",
+    "category": "Accessoire",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 1,
+    "icon": "📦"
+  },
+  {
+    "id": 408,
+    "sku": "223-415",
+    "name": "223-415 - Connecteur wago",
+    "category": "Raccordement",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 248,
+    "icon": "📦"
+  },
+  {
+    "id": 409,
+    "sku": "224-101",
+    "name": "224-101 - Connecteurs a sertir le fil electrique",
+    "category": "Raccordement",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 96,
+    "icon": "📦"
+  },
+  {
+    "id": 410,
+    "sku": "224-102",
+    "name": "224-102 - Connecteurs a setir le fil electrique",
+    "category": "Raccordement",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 52,
+    "icon": "📦"
+  },
+  {
+    "id": 411,
+    "sku": "Piece voiture",
+    "name": "Piece voiture - Piece voiture polyurethane",
+    "category": "Accessoire",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 10,
+    "icon": "📦"
+  },
+  {
+    "id": 412,
+    "sku": "PINCE A SERTIR",
+    "name": "PINCE A SERTIR - Pince a sertir",
+    "category": "Accessoire",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 1,
+    "icon": "📦"
+  },
+  {
+    "id": 413,
+    "sku": "PINCE DE COUVERCLE",
+    "name": "PINCE DE COUVERCLE - Pince couvercle protection",
+    "category": "Protection",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 16,
+    "icon": "📦"
+  },
+  {
+    "id": 414,
+    "sku": "PINCE DE PERCAGE",
+    "name": "PINCE DE PERCAGE - pine ou sonde de percage de fil",
+    "category": "Mesure",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 10,
+    "icon": "📦"
+  },
+  {
+    "id": 415,
+    "sku": "PINCE WINDING",
+    "name": "PINCE WINDING - Pince a denuder",
+    "category": "Outils",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 5,
+    "icon": "📦"
+  },
+  {
+    "id": 416,
+    "sku": "B06-2P",
+    "name": "B06-2P - Connecteurs de fil poussoir",
+    "category": "Raccordement",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 80,
+    "icon": "📦"
+  },
+  {
+    "id": 417,
+    "sku": "PLASTRON",
+    "name": "PLASTRON - Plastron",
+    "category": "Raccordement",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 16,
+    "icon": "📦"
+  },
+  {
+    "id": 418,
+    "sku": "P-F",
+    "name": "P-F - Porte fusible",
+    "category": "Protection",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 4,
+    "icon": "📦"
+  },
+  {
+    "id": 419,
+    "sku": "PRISE BANANE",
+    "name": "PRISE BANANE - Prise banane securise femelle",
+    "category": "Accessoire",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 95,
+    "icon": "📦"
+  },
+  {
+    "id": 420,
+    "sku": "PRISES",
+    "name": "PRISES - Prise encastrable bureau",
+    "category": "Alimentation",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 8,
+    "icon": "📦"
+  },
+  {
+    "id": 421,
+    "sku": "PRK18B",
+    "name": "PRK18B - Capteur photoelectrique",
+    "category": "Eclairage",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 5,
+    "icon": "📦"
+  },
+  {
+    "id": 422,
+    "sku": "PSM24-12TB/WIRE",
+    "name": "PSM24-12TB/WIRE - Commutateur/adapteur d'alimentation",
+    "category": "Alimentation",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 2,
+    "icon": "📦"
+  },
+  {
+    "id": 423,
+    "sku": "PT100",
+    "name": "PT100 - Sonde de temperateur",
+    "category": "Capteur",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 15,
+    "icon": "📦"
+  },
+  {
+    "id": 424,
+    "sku": "PT603450-2S/FJ-SW0901500E",
+    "name": "PT603450-2S/FJ-SW0901500E - Baterie et adaptateur",
+    "category": "Mesure",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 1,
+    "icon": "📦"
+  },
+  {
+    "id": 425,
+    "sku": "B08A-3P",
+    "name": "B08A-3P - Connecteurs de fil poussoir",
+    "category": "Raccordement",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 95,
+    "icon": "📦"
+  },
+  {
+    "id": 426,
+    "sku": "R12L(E)",
+    "name": "R12L(E) - Traceur GPS",
+    "category": "Securite",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 4,
+    "icon": "📦"
+  },
+  {
+    "id": 427,
+    "sku": "772-206",
+    "name": "772-206 - Connecteurs wago",
+    "category": "Raccordement",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 90,
+    "icon": "📦"
+  },
+  {
+    "id": 428,
+    "sku": "772-208",
+    "name": "772-208 - Connecteurs wago",
+    "category": "Raccordement",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 240,
+    "icon": "📦"
+  },
+  {
+    "id": 429,
+    "sku": "RAV10SDR31CCT",
+    "name": "RAV10SDR31CCT - Spot",
+    "category": "Eclairage",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 1,
+    "icon": "📦"
+  },
+  {
+    "id": 430,
+    "sku": "RAV1201-CL120",
+    "name": "RAV1201-CL120 - Spot avec pilote d'alimentation",
+    "category": "eclairage",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 3,
+    "icon": "📦"
+  },
+  {
+    "id": 431,
+    "sku": "RC1-001",
+    "name": "RC1-001 - Testeur mur profibus",
+    "category": "Testeur",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 1,
+    "icon": "📦"
+  },
+  {
+    "id": 432,
+    "sku": "RCBO 1P+N",
+    "name": "RCBO 1P+N - Disjoncteur differentiel",
+    "category": "Protection",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 1,
+    "icon": "📦"
+  },
+  {
+    "id": 433,
+    "sku": "RCCB 2P",
+    "name": "RCCB 2P - Interrupteur differentiel",
+    "category": "Protection",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 1,
+    "icon": "📦"
+  },
+  {
+    "id": 434,
+    "sku": "RCMSA016S",
+    "name": "RCMSA016S - Capteur sensoriel",
+    "category": "Communication",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 1,
+    "icon": "📦"
+  },
+  {
+    "id": 435,
+    "sku": "RE17RMMW",
+    "name": "RE17RMMW - Relais temporise",
+    "category": "Commande",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 2,
+    "icon": "📦"
+  },
+  {
+    "id": 436,
+    "sku": "RF4CH (V4-L)/ D4-L",
+    "name": "RF4CH (V4-L)/ D4-L - Controleur led",
+    "category": "Controle",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 6,
+    "icon": "📦"
+  },
+  {
+    "id": 437,
+    "sku": "RFID.3D14G.GPS",
+    "name": "RFID.3D14G.GPS - GPS pour horloge gardien",
+    "category": "Securite",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 2,
+    "icon": "📦"
+  },
+  {
+    "id": 438,
+    "sku": "RGM63/4",
+    "name": "RGM63/4 - Presse etoupe",
+    "category": "Raccordement",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 2,
+    "icon": "📦"
+  },
+  {
+    "id": 439,
+    "sku": "RJ45+RJ11",
+    "name": "RJ45+RJ11 - Testeur de cable reseau LAN",
+    "category": "Instrument",
+    "brand": "Autre",
+    "price": 10000,
+    "qty": 1,
+    "icon": "📦"
+  },
+  {
+    "id": 440,
+    "sku": "WT1 TUYA",
+    "name": "WT1 TUYA - controlleur de gradation",
+    "category": "Interrupteur",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 4,
+    "icon": "📦"
+  },
+  {
+    "id": 441,
+    "sku": "RK1",
+    "name": "RK1 - Telecommande sans fil",
+    "category": "Eclairage",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 2,
+    "icon": "📦"
+  },
+  {
+    "id": 442,
+    "sku": "RM22LA32MR",
+    "name": "RM22LA32MR - Relais temporise",
+    "category": "Protection",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 2,
+    "icon": "📦"
+  },
+  {
+    "id": 443,
+    "sku": "RO54-8A",
+    "name": "RO54-8A - Fusile cylindrique en ceramique",
+    "category": "Accessoire",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 0,
+    "icon": "📦"
+  },
+  {
+    "id": 444,
+    "sku": "COUVERCLE/PROTECTION",
+    "name": "COUVERCLE/PROTECTION - Couvercle de protection",
+    "category": "Protection",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 17,
+    "icon": "📦"
+  },
+  {
+    "id": 445,
+    "sku": "RS422/RS485",
+    "name": "RS422/RS485 - Cable adaptateur USB",
+    "category": "Cable",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 1,
+    "icon": "📦"
+  },
+  {
+    "id": 446,
+    "sku": "RS485 TO ETH",
+    "name": "RS485 TO ETH - Convertiseur RS485 vers ethernet",
+    "category": "Convertisseur",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 1,
+    "icon": "📦"
+  },
+  {
+    "id": 447,
+    "sku": "RT28N-32",
+    "name": "RT28N-32 - Porte fusible",
+    "category": "Protection",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 2,
+    "icon": "📦"
+  },
+  {
+    "id": 448,
+    "sku": "RTC70.26",
+    "name": "RTC70.26 - Regulateur de temperature",
+    "category": "Controle",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 1,
+    "icon": "📦"
+  },
+  {
+    "id": 449,
+    "sku": "TS-KK3",
+    "name": "TS-KK3 - Couvercle de separation",
+    "category": "Raccordement",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 68,
+    "icon": "📦"
+  },
+  {
+    "id": 450,
+    "sku": "RXM2LB2BD",
+    "name": "RXM2LB2BD - Relais miniature optimum",
+    "category": "Protection",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 30,
+    "icon": "📦"
+  },
+  {
+    "id": 451,
+    "sku": "RXM4AB2P7",
+    "name": "RXM4AB2P7 - Relais miniature",
+    "category": "Protection",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 40,
+    "icon": "📦"
+  },
+  {
+    "id": 452,
+    "sku": "RXZE1M2C",
+    "name": "RXZE1M2C - Embase simple",
+    "category": "Raccordement",
+    "brand": "Autre",
+    "price": 5000,
+    "qty": 30,
+    "icon": "📦"
+  },
+  {
+    "id": 453,
+    "sku": "RXZE1M4C",
+    "name": "RXZE1M4C - Embase simple",
+    "category": "Raccordement",
+    "brand": "Autre",
+    "price": 5000,
+    "qty": 3,
+    "icon": "📦"
+  },
+  {
+    "id": 454,
+    "sku": "RXZE2M114M",
+    "name": "RXZE2M114M - Relais de harmony",
+    "category": "Relais+Embase",
+    "brand": "Autre",
+    "price": 13000,
+    "qty": 3,
+    "icon": "📦"
+  },
+  {
+    "id": 455,
+    "sku": "RXZE2S111M",
+    "name": "RXZE2S111M - Embase simple",
+    "category": "Protection",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 32,
+    "icon": "📦"
+  },
+  {
+    "id": 456,
+    "sku": "RXZE2S114M",
+    "name": "RXZE2S114M - Embase contacts separes",
+    "category": "Raccordement",
+    "brand": "Autre",
+    "price": 8500,
+    "qty": 2,
+    "icon": "📦"
+  },
+  {
+    "id": 457,
+    "sku": "S005BMM0500100",
+    "name": "S005BMM0500100 - Alimentation de decoupage",
+    "category": "Alimentation",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 1,
+    "icon": "📦"
+  },
+  {
+    "id": 458,
+    "sku": "D-JUK4/10",
+    "name": "D-JUK4/10 - Couvercle d'extremite",
+    "category": "Raccordement",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 20,
+    "icon": "📦"
+  },
+  {
+    "id": 459,
+    "sku": "D-JMBKKB2.5",
+    "name": "D-JMBKKB2.5 - Couvercle d'extremite",
+    "category": "Raccordement",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 60,
+    "icon": "📦"
+  },
+  {
+    "id": 460,
+    "sku": "D-JUK2.5",
+    "name": "D-JUK2.5 - Couvercle d'extremite",
+    "category": "Raccordement",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 83,
+    "icon": "📦"
+  },
+  {
+    "id": 461,
+    "sku": "S1-K",
+    "name": "S1-K - Telecommande",
+    "category": "Eclairage",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 1,
+    "icon": "📦"
+  },
+  {
+    "id": 462,
+    "sku": "S1-T DIMMABLE",
+    "name": "S1-T DIMMABLE - Variateur de phase CA",
+    "category": "Variateur",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 1,
+    "icon": "📦"
+  },
+  {
+    "id": 463,
+    "sku": "S240-12",
+    "name": "S240-12 - Alimentation stabilisee",
+    "category": "Alimentation",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 1,
+    "icon": "📦"
+  },
+  {
+    "id": 464,
+    "sku": "S465970",
+    "name": "S465970 - Electrovanne universel",
+    "category": "outils",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 1,
+    "icon": "📦"
+  },
+  {
+    "id": 465,
+    "sku": "S7-1200 SIMATIC/SB122",
+    "name": "S7-1200 SIMATIC/SB122 - Module de carte de signalisation",
+    "category": "Automate",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 7,
+    "icon": "📦"
+  },
+  {
+    "id": 466,
+    "sku": "S7-1200/CPU 1214C",
+    "name": "S7-1200/CPU 1214C - Unite centrale anal/num",
+    "category": "Automate",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 3,
+    "icon": "📦"
+  },
+  {
+    "id": 467,
+    "sku": "SBW2-2280",
+    "name": "SBW2-2280 - Module transmetteur de TI",
+    "category": "Communication",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 1,
+    "icon": "📦"
+  },
+  {
+    "id": 468,
+    "sku": "D-JST1.5-2.5",
+    "name": "D-JST1.5-2.5 - Couvercle d'extremite",
+    "category": "Raccordement",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 60,
+    "icon": "📦"
+  },
+  {
+    "id": 469,
+    "sku": "JB-S02",
+    "name": "JB-S02 - Detecteur de fumee",
+    "category": "Securite",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 1,
+    "icon": "📦"
+  },
+  {
+    "id": 470,
+    "sku": "SCIE CLOCHE",
+    "name": "SCIE CLOCHE - Scie cloche",
+    "category": "outils",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 1,
+    "icon": "📦"
+  },
+  {
+    "id": 471,
+    "sku": "SCIE CLOCHE (1)",
+    "name": "SCIE CLOCHE (1) - Scie cloche",
+    "category": "outils",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 1,
+    "icon": "📦"
+  },
+  {
+    "id": 472,
+    "sku": "SD216",
+    "name": "SD216 - Commutateur",
+    "category": "Commande",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 1,
+    "icon": "📦"
+  },
+  {
+    "id": 473,
+    "sku": "ER3 MICROWARE SENSOR",
+    "name": "ER3 MICROWARE SENSOR - Detecteur de mouvement",
+    "category": "Detecteur",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 9,
+    "icon": "📦"
+  },
+  {
+    "id": 474,
+    "sku": "SELLY DOOR/WINDOW2",
+    "name": "SELLY DOOR/WINDOW2 - Detecteur de mouvement",
+    "category": "Capteur",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 1,
+    "icon": "📦"
+  },
+  {
+    "id": 475,
+    "sku": "SG906 PRO",
+    "name": "SG906 PRO - Drone XIL",
+    "category": "Instrument",
+    "brand": "Autre",
+    "price": 135000,
+    "qty": 1,
+    "icon": "📦"
+  },
+  {
+    "id": 476,
+    "sku": "SHELLY 1 PLUS",
+    "name": "SHELLY 1 PLUS - Interrupteur intelligent",
+    "category": "Interrupteur",
+    "brand": "Autre",
+    "price": 10000,
+    "qty": 30,
+    "icon": "📦"
+  },
+  {
+    "id": 477,
+    "sku": "BRT-K310A",
+    "name": "BRT-K310A - Detecteur presence pr clim",
+    "category": "Commande",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 5,
+    "icon": "📦"
+  },
+  {
+    "id": 478,
+    "sku": "SHELLY MOTION",
+    "name": "SHELLY MOTION - Detecteur de mouvement",
+    "category": "Detecteur",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 1,
+    "icon": "📦"
+  },
+  {
+    "id": 479,
+    "sku": "SHELLY MOTION2",
+    "name": "SHELLY MOTION2 - Detecteur de mouvement",
+    "category": "Capteur",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 1,
+    "icon": "📦"
+  },
+  {
+    "id": 480,
+    "sku": "SHELLY PRO 4PM",
+    "name": "SHELLY PRO 4PM - Relais intelligent pro a 3 canaux",
+    "category": "Interrupteur",
+    "brand": "Autre",
+    "price": 85000,
+    "qty": 1,
+    "icon": "📦"
+  },
+  {
+    "id": 481,
+    "sku": "SITOP PSU200M",
+    "name": "SITOP PSU200M - Alimentation pour din rail",
+    "category": "Automate",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 2,
+    "icon": "📦"
+  },
+  {
+    "id": 482,
+    "sku": "SITRANS TH100",
+    "name": "SITRANS TH100 - Transmetteur de temperature",
+    "category": "MESURE",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 5,
+    "icon": "📦"
+  },
+  {
+    "id": 483,
+    "sku": "SJP8029",
+    "name": "SJP8029 - Pince multiprise 5 en 1",
+    "category": "Outils",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 1,
+    "icon": "📦"
+  },
+  {
+    "id": 484,
+    "sku": "SK3110000",
+    "name": "SK3110000 - Regulateur de temperature",
+    "category": "Controle",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 1,
+    "icon": "📦"
+  },
+  {
+    "id": 485,
+    "sku": "SMART LED CONTROLLER",
+    "name": "SMART LED CONTROLLER - Convertisseur WIFI vers RF",
+    "category": "Controle",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 2,
+    "icon": "📦"
+  },
+  {
+    "id": 486,
+    "sku": "BRT-K325B",
+    "name": "BRT-K325B - Detecteur presence pr clim",
+    "category": "Commande",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 1,
+    "icon": "📦"
+  },
+  {
+    "id": 487,
+    "sku": "SN201L",
+    "name": "SN201L - Disjoncteur modulaire",
+    "category": "Protection",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 2,
+    "icon": "📦"
+  },
+  {
+    "id": 488,
+    "sku": "SNT-ES120-13",
+    "name": "SNT-ES120-13 - Sirene lumineuse industrielle",
+    "category": "Sonorisation",
+    "brand": "Autre",
+    "price": 100000,
+    "qty": 3,
+    "icon": "📦"
+  },
+  {
+    "id": 489,
+    "sku": "SNT-ESP24-1",
+    "name": "SNT-ESP24-1 - Feu d'avertissement robuste serie ESP",
+    "category": "Eclairage",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 1,
+    "icon": "📦"
+  },
+  {
+    "id": 490,
+    "sku": "SNT-K711-F",
+    "name": "SNT-K711-F - Sirene electronique sans feu",
+    "category": "Sonorisation",
+    "brand": "Autre",
+    "price": 100000,
+    "qty": 5,
+    "icon": "📦"
+  },
+  {
+    "id": 491,
+    "sku": "SOLR0020XXA2001",
+    "name": "SOLR0020XXA2001 - Lampadaire solairre",
+    "category": "Eclairage",
+    "brand": "Autre",
+    "price": 24088,
+    "qty": 6,
+    "icon": "📦"
+  },
+  {
+    "id": 492,
+    "sku": "BRT-K390A",
+    "name": "BRT-K390A - Detecteur presence pr clim",
+    "category": "Commande",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 8,
+    "icon": "📦"
+  },
+  {
+    "id": 493,
+    "sku": "SPIRAL",
+    "name": "SPIRAL - Spirale",
+    "category": "Raccordement",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 35,
+    "icon": "📦"
+  },
+  {
+    "id": 494,
+    "sku": "41734-91",
+    "name": "41734-91 - Embouts",
+    "category": "Raccordement",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 63,
+    "icon": "📦"
+  },
+  {
+    "id": 495,
+    "sku": "SRD-24V DC-SL-C",
+    "name": "SRD-24V DC-SL-C - Controleur de volume",
+    "category": "Amplificateur",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 1,
+    "icon": "📦"
+  },
+  {
+    "id": 496,
+    "sku": "SSR-40AA",
+    "name": "SSR-40AA - Relais a semi conducteur",
+    "category": "Transmission",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 3,
+    "icon": "📦"
+  },
+  {
+    "id": 497,
+    "sku": "ST17-150M",
+    "name": "ST17-150M - Lampadaire solairre",
+    "category": "Eclairage",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 2,
+    "icon": "📦"
+  },
+  {
+    "id": 498,
+    "sku": "CH0801P4",
+    "name": "CH0801P4 - Embouts",
+    "category": "Raccordement",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 35,
+    "icon": "📦"
+  },
+  {
+    "id": 500,
+    "sku": "STI 10.3 X38",
+    "name": "STI 10.3 X38 - Porte fusible",
+    "category": "Protection",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 1,
+    "icon": "📦"
+  },
+  {
+    "id": 501,
+    "sku": "ST-XT-009",
+    "name": "ST-XT-009 - Accessoire multimetre et pince de test de multimetre",
+    "category": "Mesure",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 20,
+    "icon": "📦"
+  },
+  {
+    "id": 502,
+    "sku": "SUPPORT EN ACIER",
+    "name": "SUPPORT EN ACIER - Support en acier inoxydable pour meubles",
+    "category": "outils",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 4,
+    "icon": "📦"
+  },
+  {
+    "id": 503,
+    "sku": "SUPPORT LAPTOT",
+    "name": "SUPPORT LAPTOT - Support pour laptop",
+    "category": "Accessoire",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 8,
+    "icon": "📦"
+  },
+  {
+    "id": 504,
+    "sku": "1614/02N",
+    "name": "1614/02N - Embouts",
+    "category": "Raccordement",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 91,
+    "icon": "📦"
+  },
+  {
+    "id": 505,
+    "sku": "E10-12",
+    "name": "E10-12 - Embouts",
+    "category": "Raccordement",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 88,
+    "icon": "📦"
+  },
+  {
+    "id": 506,
+    "sku": "TAYLOR 9878",
+    "name": "TAYLOR 9878 - Thermometre de poche",
+    "category": "Mesure",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 1,
+    "icon": "📦"
+  },
+  {
+    "id": 507,
+    "sku": "E16-12",
+    "name": "E16-12 - Embouts",
+    "category": "Raccordement",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 263,
+    "icon": "📦"
+  },
+  {
+    "id": 508,
+    "sku": "THC-109",
+    "name": "THC-109 - Minuterie",
+    "category": "Relais",
+    "brand": "Autre",
+    "price": 45900,
+    "qty": 4,
+    "icon": "📦"
+  },
+  {
+    "id": 509,
+    "sku": "TLS-60011",
+    "name": "TLS-60011 - Lampe torche frontale",
+    "category": "Eclairage",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 1,
+    "icon": "📦"
+  },
+  {
+    "id": 510,
+    "sku": "TM-0060130TDM",
+    "name": "TM-0060130TDM - Spot encastrable apparent",
+    "category": "Eclairage",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 1,
+    "icon": "📦"
+  },
+  {
+    "id": 511,
+    "sku": "TM221CE24T",
+    "name": "TM221CE24T - Controleur logique",
+    "category": "Controle",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 1,
+    "icon": "📦"
+  },
+  {
+    "id": 512,
+    "sku": "TP920 FLUKE",
+    "name": "TP920 FLUKE - Kit adaptateur de sonde",
+    "category": "Protection",
+    "brand": "Autre",
+    "price": 24500,
+    "qty": 1,
+    "icon": "📦"
+  },
+  {
+    "id": 513,
+    "sku": "TS-A005-050100EA",
+    "name": "TS-A005-050100EA - Commutateur d'adaptateur secteur",
+    "category": "Alimentation",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 1,
+    "icon": "📦"
+  },
+  {
+    "id": 514,
+    "sku": "TSX 17",
+    "name": "TSX 17 - Automate telemecanique",
+    "category": "Automate",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 1,
+    "icon": "📦"
+  },
+  {
+    "id": 515,
+    "sku": "TSX MICRO",
+    "name": "TSX MICRO - Automate moidulaire",
+    "category": "Automate",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 3,
+    "icon": "📦"
+  },
+  {
+    "id": 516,
+    "sku": "TSXDSZ32T2",
+    "name": "TSXDSZ32T2 - Module d'automate programmable",
+    "category": "Automate",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 1,
+    "icon": "📦"
+  },
+  {
+    "id": 517,
+    "sku": "E20-14",
+    "name": "E20-14 - Embouts",
+    "category": "Raccordement",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 200,
+    "icon": "📦"
+  },
+  {
+    "id": 518,
+    "sku": "UB2000-30GM-ES-V15",
+    "name": "UB2000-30GM-ES-V15 - Capteur sensoriel",
+    "category": "Sonorisation",
+    "brand": "Autre",
+    "price": 200000,
+    "qty": 2,
+    "icon": "📦"
+  },
+  {
+    "id": 519,
+    "sku": "UKJ-1.5MT/2*2",
+    "name": "UKJ-1.5MT/2*2 - Bornier",
+    "category": "Raccordement",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 97,
+    "icon": "📦"
+  },
+  {
+    "id": 520,
+    "sku": "UKJ-1.5MT/2-2( 1)",
+    "name": "UKJ-1.5MT/2-2( 1) - Bornier",
+    "category": "Raccordement",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 60,
+    "icon": "📦"
+  },
+  {
+    "id": 521,
+    "sku": "UKJ2,5",
+    "name": "UKJ2,5 - Bornier de repartition",
+    "category": "Raccordement",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 24,
+    "icon": "📦"
+  },
+  {
+    "id": 522,
+    "sku": "UKJ-4/2-2",
+    "name": "UKJ-4/2-2 - Bornier",
+    "category": "Raccordement",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 40,
+    "icon": "📦"
+  },
+  {
+    "id": 523,
+    "sku": "UP-DB18-1300-48W",
+    "name": "UP-DB18-1300-48W - Reglette",
+    "category": "Eclairage",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 4,
+    "icon": "📦"
+  },
+  {
+    "id": 524,
+    "sku": "UP-DL-130-90-10W",
+    "name": "UP-DL-130-90-10W - Pendant cylindrique",
+    "category": "Eclairage",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 2,
+    "icon": "📦"
+  },
+  {
+    "id": 525,
+    "sku": "UP-DL-130-90-10W (2)",
+    "name": "UP-DL-130-90-10W (2) - Pendant cylindrique",
+    "category": "Eclairage",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 11,
+    "icon": "📦"
+  },
+  {
+    "id": 526,
+    "sku": "UP-DL143-3-10W1 B3",
+    "name": "UP-DL143-3-10W1 B3 - Spot",
+    "category": "eclairage",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 2,
+    "icon": "📦"
+  },
+  {
+    "id": 527,
+    "sku": "UP-DL41-2.5-7W-D",
+    "name": "UP-DL41-2.5-7W-D - Spot",
+    "category": "Eclairage",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 1,
+    "icon": "📦"
+  },
+  {
+    "id": 528,
+    "sku": "UP-DL96-3-10W",
+    "name": "UP-DL96-3-10W - spot",
+    "category": "Eclairage",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 1,
+    "icon": "📦"
+  },
+  {
+    "id": 529,
+    "sku": "UPDL98B-6-18W",
+    "name": "UPDL98B-6-18W - Spot",
+    "category": "Eclairage",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 4,
+    "icon": "📦"
+  },
+  {
+    "id": 530,
+    "sku": "UP-DL98B-6-18W-P3",
+    "name": "UP-DL98B-6-18W-P3 - Spot",
+    "category": "Eclairage",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 1,
+    "icon": "📦"
+  },
+  {
+    "id": 531,
+    "sku": "UP-DL98B-8-18W-P3",
+    "name": "UP-DL98B-8-18W-P3 - Spot",
+    "category": "Eclairage",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 5,
+    "icon": "📦"
+  },
+  {
+    "id": 532,
+    "sku": "UP-PD024-10W",
+    "name": "UP-PD024-10W - Applique Murale",
+    "category": "Eclairage",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 10,
+    "icon": "📦"
+  },
+  {
+    "id": 533,
+    "sku": "UP-PD02A-18W-D",
+    "name": "UP-PD02A-18W-D - Applique Murale",
+    "category": "Eclairage",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 2,
+    "icon": "📦"
+  },
+  {
+    "id": 534,
+    "sku": "UP-WL06A-12W",
+    "name": "UP-WL06A-12W - Applique Murale",
+    "category": "Eclairage",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 0,
+    "icon": "📦"
+  },
+  {
+    "id": 535,
+    "sku": "UP-WL07-8W",
+    "name": "UP-WL07-8W - Applique Murale",
+    "category": "Eclairage",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 3,
+    "icon": "📦"
+  },
+  {
+    "id": 536,
+    "sku": "UP-WL08-8W",
+    "name": "UP-WL08-8W - Applique Murale",
+    "category": "Eclairage",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 3,
+    "icon": "📦"
+  },
+  {
+    "id": 537,
+    "sku": "USR-DR132",
+    "name": "USR-DR132 - Convertisseur RS232 vers USR ethernet DR 132",
+    "category": "Convertisseur",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 1,
+    "icon": "📦"
+  },
+  {
+    "id": 538,
+    "sku": "USR-TCP232-306",
+    "name": "USR-TCP232-306 - Controleur automatisation",
+    "category": "Convertisseur",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 2,
+    "icon": "📦"
+  },
+  {
+    "id": 539,
+    "sku": "UTD-24/3",
+    "name": "UTD-24/3 - Bornier accessoire",
+    "category": "Raccordement",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 24,
+    "icon": "📦"
+  },
+  {
+    "id": 540,
+    "sku": "V01C",
+    "name": "V01C - Interrupteur Sectionneur",
+    "category": "Protection",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 3,
+    "icon": "📦"
+  },
+  {
+    "id": 541,
+    "sku": "VACHETTE",
+    "name": "VACHETTE - Vachette complete",
+    "category": "Securite",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 1,
+    "icon": "📦"
+  },
+  {
+    "id": 542,
+    "sku": "TE2510",
+    "name": "TE2510 - embouts",
+    "category": "Raccordement",
+    "brand": "Autre",
+    "price": 50,
+    "qty": 2000,
+    "icon": "📦"
+  },
+  {
+    "id": 543,
+    "sku": "VE1508-B",
+    "name": "VE1508-B - Embouts",
+    "category": "Raccordement",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 1869,
+    "icon": "📦"
+  },
+  {
+    "id": 544,
+    "sku": "C50-H-10ZCU410",
+    "name": "C50-H-10ZCU410 - Encodeur rotatif",
+    "category": "Convertisseur",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 2,
+    "icon": "📦"
+  },
+  {
+    "id": 545,
+    "sku": "SC3,5-G-NO-6M",
+    "name": "SC3,5-G-NO-6M - Encodeur rotatif",
+    "category": "Encodeur",
+    "brand": "Autre",
+    "price": 45000,
+    "qty": 5,
+    "icon": "📦"
+  },
+  {
+    "id": 546,
+    "sku": "SC3.5-G-N0-6M",
+    "name": "SC3.5-G-N0-6M - Encodeur rotatif",
+    "category": "Encodeur",
+    "brand": "Autre",
+    "price": 45000,
+    "qty": 5,
+    "icon": "📦"
+  },
+  {
+    "id": 547,
+    "sku": "TZ2-631",
+    "name": "TZ2-631 - Etiquette imprime 12mm",
+    "category": "Accessoire",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 0,
+    "icon": "📦"
+  },
+  {
+    "id": 548,
+    "sku": "VS-160MT 160KPBF",
+    "name": "VS-160MT 160KPBF - Port redresseur",
+    "category": "Connexion",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 3,
+    "icon": "📦"
+  },
+  {
+    "id": 549,
+    "sku": "VX5-C",
+    "name": "VX5-C - Haut-parleur plafond",
+    "category": "Sonorisation",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 1,
+    "icon": "📦"
+  },
+  {
+    "id": 550,
+    "sku": "VX6084",
+    "name": "VX6084 - Spot",
+    "category": "Eclairage",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 15,
+    "icon": "📦"
+  },
+  {
+    "id": 551,
+    "sku": "VX6084",
+    "name": "VX6084 - Spot",
+    "category": "Eclairage",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 84,
+    "icon": "📦"
+  },
+  {
+    "id": 552,
+    "sku": "W2RATS-GENERATOR-W",
+    "name": "W2RATS-GENERATOR-W - Commutateur de transfert automatique",
+    "category": "Controle",
+    "brand": "Autre",
+    "price": 45000,
+    "qty": 1,
+    "icon": "📦"
+  },
+  {
+    "id": 553,
+    "sku": "WAM-230",
+    "name": "WAM-230 - Amplificateur mural",
+    "category": "Sonorisation",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 1,
+    "icon": "📦"
+  },
+  {
+    "id": 554,
+    "sku": "SHELLY BOUTON",
+    "name": "SHELLY BOUTON - Interrupteur intelligent",
+    "category": "Interrupteur",
+    "brand": "Autre",
+    "price": 28000,
+    "qty": 2,
+    "icon": "📦"
+  },
+  {
+    "id": 555,
+    "sku": "WGR614",
+    "name": "WGR614 - Serveur d'imperssion USB",
+    "category": "outils",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 1,
+    "icon": "📦"
+  },
+  {
+    "id": 556,
+    "sku": "CLE ALENE",
+    "name": "CLE ALENE - Jeu de cle alene",
+    "category": "Raccordement",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 9,
+    "icon": "📦"
+  },
+  {
+    "id": 557,
+    "sku": "Hazet 630 vanadium",
+    "name": "Hazet 630 vanadium - Jeu de cle mecanique",
+    "category": "Raccordement",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 8,
+    "icon": "📦"
+  },
+  {
+    "id": 558,
+    "sku": "WL280-2R4331",
+    "name": "WL280-2R4331 - Capteur potoelectrique",
+    "category": "Detecteur",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 13,
+    "icon": "📦"
+  },
+  {
+    "id": 559,
+    "sku": "WRIGHT TOOL 2464",
+    "name": "WRIGHT TOOL 2464 - Tournevis dynamometrique",
+    "category": "Outils",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 1,
+    "icon": "📦"
+  },
+  {
+    "id": 560,
+    "sku": "WS2 811",
+    "name": "WS2 811 - Bande de limiere IR a distance",
+    "category": "Eclairage",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 4,
+    "icon": "📦"
+  },
+  {
+    "id": 561,
+    "sku": "Cle plat",
+    "name": "Cle plat - Jeu de cle plat",
+    "category": "Raccordement",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 12,
+    "icon": "📦"
+  },
+  {
+    "id": 562,
+    "sku": "X2-C50P-NZ",
+    "name": "X2-C50P-NZ - Interface D-sub",
+    "category": "Raccordement",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 2,
+    "icon": "📦"
+  },
+  {
+    "id": 563,
+    "sku": "X321",
+    "name": "X321 - Aspirateur",
+    "category": "outils",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 1,
+    "icon": "📦"
+  },
+  {
+    "id": 564,
+    "sku": "XAL B01",
+    "name": "XAL B01 - Bouton poussoir",
+    "category": "Securite",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 1,
+    "icon": "📦"
+  },
+  {
+    "id": 565,
+    "sku": "XB4 BW3465",
+    "name": "XB4 BW3465 - Bouton poussoir lumineux",
+    "category": "Securite",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 1,
+    "icon": "📦"
+  },
+  {
+    "id": 566,
+    "sku": "ST17-150M",
+    "name": "ST17-150M - Lampadaire solairre",
+    "category": "Eclairage",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 1,
+    "icon": "📦"
+  },
+  {
+    "id": 567,
+    "sku": "ZGSM-LD50H",
+    "name": "ZGSM-LD50H - Lampadaire solairre",
+    "category": "Eclairage",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 1,
+    "icon": "📦"
+  },
+  {
+    "id": 568,
+    "sku": "XL6009E1",
+    "name": "XL6009E1 - Module de conversion",
+    "category": "Convertisseur",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 3,
+    "icon": "📦"
+  },
+  {
+    "id": 569,
+    "sku": "XLG-240-H-A",
+    "name": "XLG-240-H-A - Convertisseur led",
+    "category": "Convertisseur",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 10,
+    "icon": "📦"
+  },
+  {
+    "id": 570,
+    "sku": "XMLB020A2S11",
+    "name": "XMLB020A2S11 - Capteur de pression telemecanique",
+    "category": "Detecteur",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 1,
+    "icon": "📦"
+  },
+  {
+    "id": 571,
+    "sku": "XS630B1MBL2",
+    "name": "XS630B1MBL2 - Detecteur de  proximite inductif",
+    "category": "Detecteur",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 6,
+    "icon": "📦"
+  },
+  {
+    "id": 572,
+    "sku": "XT10-2",
+    "name": "XT10-2 - Transformateur d'allumage",
+    "category": "Transformateur/redresseur",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 1,
+    "icon": "📦"
+  },
+  {
+    "id": 573,
+    "sku": "XT480 RONDIERS",
+    "name": "XT480 RONDIERS - Controleur de ronde",
+    "category": "Protection",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 0,
+    "icon": "📦"
+  },
+  {
+    "id": 574,
+    "sku": "XUX1ARCNT16",
+    "name": "XUX1ARCNT16 - Capteur potoelectrique",
+    "category": "Detecteur",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 2,
+    "icon": "📦"
+  },
+  {
+    "id": 575,
+    "sku": "XZTD2502",
+    "name": "XZTD2502 - Spot",
+    "category": "Eclairage",
+    "brand": "Autre",
+    "price": 7200,
+    "qty": 48,
+    "icon": "📦"
+  },
+  {
+    "id": 576,
+    "sku": "XZTD2502",
+    "name": "XZTD2502 - Spot",
+    "category": "Eclairage",
+    "brand": "Autre",
+    "price": 7200,
+    "qty": 52,
+    "icon": "📦"
+  },
+  {
+    "id": 577,
+    "sku": "XZTD2502",
+    "name": "XZTD2502 - Spot",
+    "category": "Eclairage",
+    "brand": "Autre",
+    "price": 7200,
+    "qty": 48,
+    "icon": "📦"
+  },
+  {
+    "id": 578,
+    "sku": "XZTD2502",
+    "name": "XZTD2502 - Spot",
+    "category": "Eclairage",
+    "brand": "Autre",
+    "price": 7200,
+    "qty": 41,
+    "icon": "📦"
+  },
+  {
+    "id": 579,
+    "sku": "9606000001",
+    "name": "9606000001 - Magnetiseur/ Demagnetiseur",
+    "category": "Outils",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 3,
+    "icon": "📦"
+  },
+  {
+    "id": 580,
+    "sku": "PC-GF 20",
+    "name": "PC-GF 20 - Module adaptateur",
+    "category": "Automate",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 1,
+    "icon": "📦"
+  },
+  {
+    "id": 581,
+    "sku": "SMART SWITCH",
+    "name": "SMART SWITCH - Module de commutation",
+    "category": "Commutateur",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 1,
+    "icon": "📦"
+  },
+  {
+    "id": 582,
+    "sku": "JTRP1.5",
+    "name": "JTRP1.5 - Module relais",
+    "category": "Raccordement",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 30,
+    "icon": "📦"
+  },
+  {
+    "id": 583,
+    "sku": "Peigne de bornier",
+    "name": "Peigne de bornier - Peigne de bornier",
+    "category": "Raccordement",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 9,
+    "icon": "📦"
+  },
+  {
+    "id": 584,
+    "sku": "ZBVBG1",
+    "name": "ZBVBG1 - Harmony bloc lumineux",
+    "category": "Raccordement",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 24,
+    "icon": "📦"
+  },
+  {
+    "id": 585,
+    "sku": "Peigne electrique",
+    "name": "Peigne electrique - Peigne electrique",
+    "category": "Raccordement",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 1,
+    "icon": "📦"
+  },
+  {
+    "id": 586,
+    "sku": "ZLAN RS6842",
+    "name": "ZLAN RS6842 - Convertisseur RS232",
+    "category": "Convertisseur",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 1,
+    "icon": "📦"
+  },
+  {
+    "id": 587,
+    "sku": "ZLAN RS232",
+    "name": "ZLAN RS232 - Convertisseur wifi/ethernet",
+    "category": "Convertisseur",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 3,
+    "icon": "📦"
+  },
+  {
+    "id": 588,
+    "sku": "ZLAN 9223E",
+    "name": "ZLAN 9223E - Convertisseur RS-232/RS-485",
+    "category": "Convertisseur",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 4,
+    "icon": "📦"
+  },
+  {
+    "id": 589,
+    "sku": "ZNG 014",
+    "name": "ZNG 014 - Prise d'alimentation a  4 broches",
+    "category": "Alimentation",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 25,
+    "icon": "📦"
+  },
+  {
+    "id": 590,
+    "sku": "Angle droit et accesssoires pour goulottes",
+    "name": "Angle droit et accesssoires pour goulottes - Angle droit et accesssoires pour goulottes",
+    "category": "Raccordement",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 1,
+    "icon": "📦"
+  },
+  {
+    "id": 591,
+    "sku": "E/JUK (1)",
+    "name": "E/JUK (1) - Pince d'extremite",
+    "category": "Raccordement",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 25,
+    "icon": "📦"
+  },
+  {
+    "id": 592,
+    "sku": "JB1 GREY",
+    "name": "JB1 GREY - Pince d'extremite",
+    "category": "Raccordement",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 53,
+    "icon": "📦"
+  },
+  {
+    "id": 593,
+    "sku": "PLAQUE MURALE",
+    "name": "PLAQUE MURALE - Plaque murale RJ45/HDMI",
+    "category": "Securite",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 1,
+    "icon": "📦"
+  },
+  {
+    "id": 594,
+    "sku": "SR-2812",
+    "name": "SR-2812 - Platine rotatif",
+    "category": "Interrupteur",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 1,
+    "icon": "📦"
+  },
+  {
+    "id": 595,
+    "sku": "JEB80-DIK BLUE",
+    "name": "JEB80-DIK BLUE - Pont d'insertion",
+    "category": "Raccordement",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 10,
+    "icon": "📦"
+  },
+  {
+    "id": 596,
+    "sku": "P-F (2)",
+    "name": "P-F (2) - Porte fusible",
+    "category": "Protection",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 1,
+    "icon": "📦"
+  },
+  {
+    "id": 597,
+    "sku": "JEB10-5/6",
+    "name": "JEB10-5/6 - Pont d'insertion",
+    "category": "Raccordement",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 30,
+    "icon": "📦"
+  },
+  {
+    "id": 598,
+    "sku": "JEB10-8",
+    "name": "JEB10-8 - Pont d'insertion",
+    "category": "Raccordement",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 5,
+    "icon": "📦"
+  },
+  {
+    "id": 599,
+    "sku": "JFBI10-8",
+    "name": "JFBI10-8 - Pont fixe",
+    "category": "Raccordement",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 3,
+    "icon": "📦"
+  },
+  {
+    "id": 600,
+    "sku": "PG29",
+    "name": "PG29 - Presse etoupe",
+    "category": "Raccordement",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 36,
+    "icon": "📦"
+  },
+  {
+    "id": 601,
+    "sku": "T8 GLASS LAMP",
+    "name": "T8 GLASS LAMP - Reglette",
+    "category": "Eclairage",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 24,
+    "icon": "📦"
+  },
+  {
+    "id": 602,
+    "sku": "T8 LED TUBE",
+    "name": "T8 LED TUBE - Reglette",
+    "category": "Eclairage",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 11,
+    "icon": "📦"
+  },
+  {
+    "id": 603,
+    "sku": "ENJOLIVEUR",
+    "name": "ENJOLIVEUR - Enjoliveur",
+    "category": "Accessoire",
+    "brand": "Autre",
+    "price": 800,
+    "qty": 100,
+    "icon": "📦"
+  },
+  {
+    "id": 604,
+    "sku": "VA ET VIENT",
+    "name": "VA ET VIENT - Interrupteur va et vient",
+    "category": "Interrupteur",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 12,
+    "icon": "📦"
+  },
+  {
+    "id": 605,
+    "sku": "DOUBLE VA ET VIENT",
+    "name": "DOUBLE VA ET VIENT - double va et vient",
+    "category": "Interrupteur",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 24,
+    "icon": "📦"
+  },
+  {
+    "id": 606,
+    "sku": "PRISE TV",
+    "name": "PRISE TV - Prise TV",
+    "category": "Alimentation",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 2,
+    "icon": "📦"
+  },
+  {
+    "id": 607,
+    "sku": "BOUTON POUSSOIR",
+    "name": "BOUTON POUSSOIR - Bouton poussoir",
+    "category": "Interrupteur",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 10,
+    "icon": "📦"
+  },
+  {
+    "id": 608,
+    "sku": "PRISE UPS",
+    "name": "PRISE UPS - Prise UPS",
+    "category": "Commutateur",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 12,
+    "icon": "📦"
+  },
+  {
+    "id": 609,
+    "sku": "ENM-10",
+    "name": "ENM-10 - Regulateur de niveau",
+    "category": "Controle",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 2,
+    "icon": "📦"
+  },
+  {
+    "id": 610,
+    "sku": "EV4 POWER REPEATER",
+    "name": "EV4 POWER REPEATER - repeteur de puissance",
+    "category": "Controle",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 2,
+    "icon": "📦"
+  },
+  {
+    "id": 611,
+    "sku": "X0650",
+    "name": "X0650 - Rainureuse a marconnerie",
+    "category": "Outils",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 1,
+    "icon": "📦"
+  },
+  {
+    "id": 612,
+    "sku": "RUBAN",
+    "name": "RUBAN - Ruban de balisage",
+    "category": "Securite",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 4,
+    "icon": "📦"
+  },
+  {
+    "id": 613,
+    "sku": "SDJGGGTB6128",
+    "name": "SDJGGGTB6128 - Ruban de balisage",
+    "category": "Securite",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 12,
+    "icon": "📦"
+  },
+  {
+    "id": 614,
+    "sku": "GREY 999",
+    "name": "GREY 999 - Silicone",
+    "category": "Accessoire",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 10,
+    "icon": "📦"
+  },
+  {
+    "id": 615,
+    "sku": "LWDAVRC 200VH",
+    "name": "LWDAVRC 200VH - Stabilisateur de tension",
+    "category": "Stabilisateur",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 1,
+    "icon": "📦"
+  },
+  {
+    "id": 616,
+    "sku": "JKLM-A",
+    "name": "JKLM-A - Support de marquage",
+    "category": "Raccordement",
+    "brand": "Autre",
+    "price": 150,
+    "qty": 23,
+    "icon": "📦"
+  },
+  {
+    "id": 617,
+    "sku": "JKML3",
+    "name": "JKML3 - Support de marquage",
+    "category": "Raccordement",
+    "brand": "Autre",
+    "price": 150,
+    "qty": 15,
+    "icon": "📦"
+  },
+  {
+    "id": 618,
+    "sku": "JKLM3",
+    "name": "JKLM3 - Support de marquage",
+    "category": "Raccordement",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 15,
+    "icon": "📦"
+  },
+  {
+    "id": 619,
+    "sku": "JPTFI*2.5-NS15A",
+    "name": "JPTFI*2.5-NS15A - Support de montage",
+    "category": "Raccordement",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 20,
+    "icon": "📦"
+  },
+  {
+    "id": 620,
+    "sku": "JPTFI*2.5NS32",
+    "name": "JPTFI*2.5NS32 - Support de montage",
+    "category": "Raccordement",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 10,
+    "icon": "📦"
+  },
+  {
+    "id": 621,
+    "sku": "PYF08A",
+    "name": "PYF08A - Support de relais",
+    "category": "Protection",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 18,
+    "icon": "📦"
+  },
+  {
+    "id": 622,
+    "sku": "MH10 TELECOMMANDE",
+    "name": "MH10 TELECOMMANDE - telecommande",
+    "category": "Telecommande",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 3,
+    "icon": "📦"
+  },
+  {
+    "id": 623,
+    "sku": "R6 DIMMING REMOTE",
+    "name": "R6 DIMMING REMOTE - telecommande de gradation a zone unique",
+    "category": "Telecommande",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 10,
+    "icon": "📦"
+  },
+  {
+    "id": 624,
+    "sku": "RS1 (4ZONES DIMMING REMOTE)",
+    "name": "RS1 (4ZONES DIMMING REMOTE) - telecommande led",
+    "category": "Telecommande",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 1,
+    "icon": "📦"
+  },
+  {
+    "id": 625,
+    "sku": "R8 RGB\\RGBW\\REMOTE",
+    "name": "R8 RGB\\RGBW\\REMOTE - telecommande led RFR8",
+    "category": "Telecommande",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 2,
+    "icon": "📦"
+  },
+  {
+    "id": 626,
+    "sku": "ZB2-BE1001C/XB7-E",
+    "name": "ZB2-BE1001C/XB7-E - Temoin vert lumiere et Commutateur a bouton poussoir",
+    "category": "Securite",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 9,
+    "icon": "📦"
+  },
+  {
+    "id": 627,
+    "sku": "PANAVISE 201/350",
+    "name": "PANAVISE 201/350 - Tete et base d'etau combinees PV JR",
+    "category": "Accessoire",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 2,
+    "icon": "📦"
+  },
+  {
+    "id": 628,
+    "sku": "HD2200 HYTRONIK",
+    "name": "HD2200 HYTRONIK - Variateur  lumiere",
+    "category": "Interrupteur",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 1,
+    "icon": "📦"
+  },
+  {
+    "id": 629,
+    "sku": "S1-B(WT)",
+    "name": "S1-B(WT) - Variateur de lumiere",
+    "category": "Variateur",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 6,
+    "icon": "📦"
+  },
+  {
+    "id": 630,
+    "sku": "D-76646",
+    "name": "D-76646 - Variateur de vitesse",
+    "category": "Moteur",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 6,
+    "icon": "📦"
+  },
+  {
+    "id": 631,
+    "sku": "S1 AC TRIAC RF DIMMER",
+    "name": "S1 AC TRIAC RF DIMMER - Variateur d'insite led tactile",
+    "category": "Variateur",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 1,
+    "icon": "📦"
+  },
+  {
+    "id": 632,
+    "sku": "S1-DR",
+    "name": "S1-DR - Variateur Lumiere",
+    "category": "Interrupteur",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 2,
+    "icon": "📦"
+  },
+  {
+    "id": 633,
+    "sku": "VE5-1",
+    "name": "VE5-1 - Verrouillage mecanique",
+    "category": "Securite",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 1,
+    "icon": "📦"
+  },
+  {
+    "id": 634,
+    "sku": "VE5-2",
+    "name": "VE5-2 - Verrouillage mecanique",
+    "category": "Securite",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 3,
+    "icon": "📦"
+  },
+  {
+    "id": 635,
+    "sku": "AD16-22DS/P/W/240V",
+    "name": "AD16-22DS/P/W/240V - Voyant",
+    "category": "Securite",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 10,
+    "icon": "📦"
+  },
+  {
+    "id": 636,
+    "sku": "VOYANT",
+    "name": "VOYANT - Voyant",
+    "category": "Securite",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 5,
+    "icon": "📦"
+  },
+  {
+    "id": 637,
+    "sku": "XB7-E",
+    "name": "XB7-E - Voyant",
+    "category": "Securite",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 7,
+    "icon": "📦"
+  },
+  {
+    "id": 638,
+    "sku": "RAV12DC300BT",
+    "name": "RAV12DC300BT - Spot",
+    "category": "Eclairage",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 2,
+    "icon": "📦"
+  },
+  {
+    "id": 639,
+    "sku": "RECESSED DOWNLIGHT",
+    "name": "RECESSED DOWNLIGHT - Spot",
+    "category": "Eclairage",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 2,
+    "icon": "📦"
+  },
+  {
+    "id": 640,
+    "sku": "RECESSED DOWNLIGHT-SMD",
+    "name": "RECESSED DOWNLIGHT-SMD - Spot",
+    "category": "Eclairage",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 2,
+    "icon": "📦"
+  },
+  {
+    "id": 641,
+    "sku": "RECESSED DOWNLIGHT-COB",
+    "name": "RECESSED DOWNLIGHT-COB - Spot",
+    "category": "Eclairage",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 2,
+    "icon": "📦"
+  },
+  {
+    "id": 642,
+    "sku": "LTK-LE6280",
+    "name": "LTK-LE6280 - Applique decorative",
+    "category": "Eclairage",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 1,
+    "icon": "📦"
+  },
+  {
+    "id": 643,
+    "sku": "FL50W",
+    "name": "FL50W - Lampadaire solairre",
+    "category": "Eclairage",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 1,
+    "icon": "📦"
+  },
+  {
+    "id": 644,
+    "sku": "B0CQ87MM",
+    "name": "B0CQ87MM - Minuterie mecanique",
+    "category": "Compteur",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 10,
+    "icon": "📦"
+  },
+  {
+    "id": 645,
+    "sku": "PANNEAU DE PORTE ASSISTANT",
+    "name": "PANNEAU DE PORTE ASSISTANT - Panneau de porte assistant",
+    "category": "Securite",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 1,
+    "icon": "📦"
+  },
+  {
+    "id": 646,
+    "sku": "JB-5000(1)",
+    "name": "JB-5000(1) - Interphone video",
+    "category": "Securite",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 1,
+    "icon": "📦"
+  },
+  {
+    "id": 647,
+    "sku": "L8-5004VC(8)-70LN60",
+    "name": "L8-5004VC(8)-70LN60 - Video-phone",
+    "category": "Securite",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 6,
+    "icon": "📦"
+  },
+  {
+    "id": 648,
+    "sku": "L8-5005-5109R(8)I-D",
+    "name": "L8-5005-5109R(8)I-D - Module de fonction de base",
+    "category": "Securite",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 2,
+    "icon": "📦"
+  },
+  {
+    "id": 649,
+    "sku": "JB-5000",
+    "name": "JB-5000 - Interphone video",
+    "category": "Securite",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 6,
+    "icon": "📦"
+  },
+  {
+    "id": 650,
+    "sku": "L8-5001K-3240-6",
+    "name": "L8-5001K-3240-6 - Alimentation a decoupage bidirectionnelle pour interphone",
+    "category": "Securite",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 3,
+    "icon": "📦"
+  },
+  {
+    "id": 651,
+    "sku": "BO8BHWZBGN",
+    "name": "BO8BHWZBGN - Applique plafonnier",
+    "category": "Eclairage",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 1,
+    "icon": "📦"
+  },
+  {
+    "id": 652,
+    "sku": "A60 1080LM",
+    "name": "A60 1080LM - Ampoule",
+    "category": "Eclairage",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 2,
+    "icon": "📦"
+  },
+  {
+    "id": 653,
+    "sku": "WB5 TUYA",
+    "name": "WB5 TUYA - wifi/ BT 5 en 1 controleur led",
+    "category": "Controle",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 5,
+    "icon": "📦"
+  },
+  {
+    "id": 654,
+    "sku": "FSL GU10",
+    "name": "FSL GU10 - Spot",
+    "category": "Eclairage",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 16,
+    "icon": "📦"
+  },
+  {
+    "id": 655,
+    "sku": "PT100/PT1000",
+    "name": "PT100/PT1000 - Sonde de temperature",
+    "category": "Capteur",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 2,
+    "icon": "📦"
+  },
+  {
+    "id": 656,
+    "sku": "PM4365",
+    "name": "PM4365 - Support de projecteur",
+    "category": "Accessoire",
+    "brand": "Autre",
+    "price": 50000,
+    "qty": 1,
+    "icon": "📦"
+  }
+]
