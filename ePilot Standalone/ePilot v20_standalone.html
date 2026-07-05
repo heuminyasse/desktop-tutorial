@@ -7860,15 +7860,16 @@ html body[class] #vac-gantt td.emp .nm{font-weight:500 !important;}</style>
     var clientName=cl.name||cl.nom||cl.Nom||'—';
     var clientTel=cl.tel||'';
     var clientEmail=cl.email||'';
-    var clientContact=cl.contact||cl.representant||cl.demandeur||'';
+    var clientContact=jip.acheteurNom||jip.demandeur||jip.acheteur||cl.contact||cl.representant||cl.demandeur||'';
     var projNom=jip?(jip.objet||jip.description||jip.id||''):(pv.jipId||'');
     var jipId=(jip&&jip.id)||pv.jipId||'';
     var oaNum=(jip&&(jip.oa||jip.numeroOA||jip.numOA||jip.orderNumber||jip.ordre_achat))||pv.oaNum||'';
     var rapNum=pv.numero||pv.id||'__';
     var dateStr=fD(pv.date);
-    var chef=((window.PERSONNEL_DATA||[])).find(function(p){return p.id===(jip&&jip.chefChantierId);})||{};
-    var superviseur=chef.nom||chef.name||chef.prenom||pv.signataire||(pv.jsa&&pv.jsa.signataire)||nomSoc;
-    var chefTel=chef.tel||chef.phone||'';
+    var _nn=function(s){return String(s||'').toLowerCase().replace(/[^a-z0-9]/g,'');};
+    var chef=((window.PERSONNEL_DATA||[])).find(function(p){var f1=_nn((p.prenoms||'')+(p.nom||''));var f2=_nn((p.nom||'')+(p.prenoms||''));var t=_nn(jip.chefChantier||'');return t&&(f1===t||f2===t);})||{};
+    var superviseur=jip.chefChantier||chef.nom||chef.prenoms||pv.signataire||(pv.jsa&&pv.jsa.signataire)||nomSoc;
+    var chefTel=(chef.telephones&&chef.telephones[0]&&chef.telephones[0].tel)||chef.telephone||chef.tel||'';
     var chefEmail=chef.email||'';
     var contact=(chefTel?'Tél: '+chefTel:'')+(chefEmail?(chefTel?' – ':'')+' Email: '+chefEmail:'');
 
