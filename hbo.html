@@ -40,8 +40,9 @@ img { max-width: 100%; display: block; }
 a { text-decoration: none; color: inherit; }
 
 /* PAGE SYSTEM */
-.page { display: none; }
-.page.active { display: block; }
+.page { display: none !important; }
+.page.active { display: block !important; }
+#page-admin.active { display: grid !important; }
 
 /* NAVBAR */
 nav {
@@ -697,12 +698,6 @@ function showPage(pageId) {
   document.querySelector(`.nav-link[data-page="${pageId}"]`)?.classList.add('active');
 }
 
-document.querySelectorAll('.nav-link[data-page]').forEach(btn => {
-  btn.addEventListener('click', (e) => {
-    showPage(e.target.dataset.page);
-  });
-});
-
 // ═══════════════════════════════════════════
 // ADMIN TAB SWITCHING
 // ═══════════════════════════════════════════
@@ -727,12 +722,6 @@ function switchTab(tabName) {
   };
   document.querySelector('.content-title').textContent = titles[tabName] || 'Admin';
 }
-
-document.querySelectorAll('.menu-item[data-tab]').forEach(btn => {
-  btn.addEventListener('click', (e) => {
-    switchTab(e.currentTarget.dataset.tab);
-  });
-});
 
 // ═══════════════════════════════════════════
 // ADMIN DATA MANAGEMENT
@@ -999,6 +988,21 @@ function handleContactSubmit(e) {
 // INITIALIZATION
 // ═══════════════════════════════════════════
 document.addEventListener('DOMContentLoaded', () => {
+  // Attach navigation listeners
+  document.querySelectorAll('.nav-link[data-page]').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      showPage(e.target.dataset.page);
+    });
+  });
+
+  // Attach admin menu listeners
+  document.querySelectorAll('.menu-item[data-tab]').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      switchTab(e.currentTarget.dataset.tab);
+    });
+  });
+
+  // Initialize data
   loadData();
   renderProducts();
   updateCart();
