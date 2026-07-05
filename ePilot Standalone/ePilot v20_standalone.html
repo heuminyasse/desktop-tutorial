@@ -7805,115 +7805,164 @@ html body[class] #vac-gantt td.emp .nm{font-weight:500 !important;}</style>
     var _bs=(typeof window!=='undefined'&&window.EPILOT_SETTINGS)||{};
     var _be=_bs.entreprise||{};
     var _bd=_bs.design||{};
-    var acc=_bd.accent||'#0ea5e9';
-    var nom=_be.nom||'Home Business Office';
-    var adr=_be.adresse||'';
-    var tel=_be.tel||'';
-    var email=_be.email||'project@hbocameroon.com';
+    var acc=_bd.accent||'#1a3a6b';
+    var nomSoc=_be.nom||'Home Business Office';
+    var adrSoc=_be.adresse||'';
+    var telSoc=_be.tel||'';
+    var emailSoc=_be.email||'project@hbocameroon.com';
     var logo=_be.logo||'';
 
+    /* --- données branchées --- */
     var cl=((window.CLIENTS_DATA||{}).clients||[]).find(function(c){return c.id===(jip&&jip.clientId);})||{};
-    var clientName=(cl.name||cl.nom||cl.Nom||'').toUpperCase();
-    var projNom=(jip?(jip.description||jip.id||''):(pv.jipId||'')).toUpperCase();
+    var clientName=(cl.name||cl.nom||cl.Nom||'—');
+    var projNom=(jip?(jip.description||jip.id||''):(pv.jipId||''));
     var jipId=(jip&&jip.id)||pv.jipId||'';
-    var rapRef='RAP'+(pv.numero||pv.id||'__')+'  –  Chantier '+jipId;
+    var rapNum=pv.numero||pv.id||'__';
     var dateStr=fD(pv.date);
-    var superviseur=pv.signataire||(pv.jsa&&pv.jsa.signataire)||nom;
+    var superviseur=pv.signataire||(pv.jsa&&pv.jsa.signataire)||nomSoc;
+    var contact='tel: '+telSoc+(emailSoc?' – '+emailSoc:'');
 
     var tasks=(jip&&jip.tasks)||[];
     var totalPct=tasks.length?Math.round(tasks.reduce(function(s,t){return s+(Number(t.progress)||0);},0)/tasks.length):0;
-    var taskRows=tasks.map(function(t,i){
+    var avPctW=Math.min(totalPct,100);
+    var avCol=avPctW>=80?'#166534':avPctW>=50?'#854d0e':'#991b1b';
+
+    /* tâches → tableau */
+    var taskRowsHtml=tasks.length?tasks.map(function(t,i){
       var pct=Number(t.progress||0);
-      var barCol=pct>=100?'#166534':pct>=75?'#15803d':pct>=50?'#854d0e':'#991b1b';
-      var bar='<div style="display:inline-block;vertical-align:middle;width:60px;height:6px;background:#e5e7eb;border-radius:3px;margin-right:5px">'
-        +'<div style="width:'+Math.min(pct,100)+'%;height:100%;background:'+barCol+';border-radius:3px"></div></div>';
-      return '<tr><td style="width:22px;color:#888;text-align:center">'+(i+1)+'</td>'
-        +'<td>'+esc(t.title||t.nom||'')+'</td>'
-        +'<td style="white-space:nowrap;text-align:right">'+bar+'<b style="color:'+barCol+'">'+pct+'%</b></td></tr>';
-    }).join('');
+      var col=pct>=100?'#166534':pct>=75?'#15803d':pct>=50?'#854d0e':'#991b1b';
+      var bar='<div style="display:flex;align-items:center;gap:4px">'
+        +'<div style="flex:1;height:6px;background:#e5e7eb;border-radius:3px">'
+        +'<div style="width:'+Math.min(pct,100)+'%;height:100%;background:'+col+';border-radius:3px"></div></div>'
+        +'<b style="min-width:30px;text-align:right;color:'+col+';font-size:9px">'+pct+'%</b></div>';
+      return '<tr style="background:'+(i%2?'#f8faff':'#fff')+'">'
+        +'<td style="padding:4px 6px;border-bottom:1px solid #e5e7eb;font-size:10px">'+esc(t.title||t.nom||'')+'</td>'
+        +'<td style="padding:4px 6px;border-bottom:1px solid #e5e7eb;text-align:center;font-size:10px;color:#555">'+(t.jours||t.days||'—')+'</td>'
+        +'<td style="padding:4px 6px;border-bottom:1px solid #e5e7eb;text-align:center;font-size:10px;color:#555">'+(t.debut||t.dateDebut?fD(t.debut||t.dateDebut):'—')+'</td>'
+        +'<td style="padding:4px 6px;border-bottom:1px solid #e5e7eb;text-align:center;font-size:10px;color:#555">'+(t.fin||t.dateFin?fD(t.fin||t.dateFin):'—')+'</td>'
+        +'<td style="padding:4px 8px;border-bottom:1px solid #e5e7eb;width:120px">'+bar+'</td>'
+        +'</tr>';
+    }).join(''):'<tr><td colspan="5" style="padding:8px;text-align:center;color:#888;font-size:10px;font-style:italic">Aucune tâche</td></tr>';
 
+    /* contraintes → tableau coloré comme Excel */
     var cntrArr=Array.isArray(pv.contraintes)?pv.contraintes:(pv.contraintes?[{description:pv.contraintes,etat:'Ouvert'}]:[]);
-    var cntrRows=cntrArr.filter(function(c){return c.description;}).map(function(c){
-      var stCol=c.etat==='Clotôuré'?'#166534':c.etat==='En cours'?'#854d0e':'#991b1b';
-      return '<tr><td>'+esc(c.description||'')+'</td>'
-        +'<td style="white-space:nowrap"><span style="display:inline-block;padding:1px 6px;border-radius:10px;font-size:9px;font-weight:700;background:'+stCol+'22;color:'+stCol+'">'+esc(c.etat||'Ouvert')+'</span></td>'
-        +'<td>'+esc(c.responsable||'—')+'</td>'
-        +'<td>'+esc(c.echeance||'—')+'</td></tr>';
-    }).join('');
+    var cntrFiltered=cntrArr.filter(function(c){return c.description;});
+    var cntrRowsHtml=cntrFiltered.length?cntrFiltered.map(function(c,i){
+      var et=c.etat||'Ouvert';
+      var bg=et==='Clôturé'?'#dcfce7':et==='En cours'?'#fef9c3':'#fee2e2';
+      var dot=et==='Clôturé'?'#166534':et==='En cours'?'#854d0e':'#991b1b';
+      return '<tr style="background:'+bg+'">'
+        +'<td style="padding:4px 6px;border-bottom:1px solid #e5e7eb;font-size:10px">'+esc(c.description)+'</td>'
+        +'<td style="padding:4px 6px;border-bottom:1px solid #e5e7eb;font-size:10px;white-space:nowrap"><span style="color:'+dot+';font-weight:700">'+esc(et)+'</span></td>'
+        +'<td style="padding:4px 6px;border-bottom:1px solid #e5e7eb;font-size:10px">'+esc(c.responsable||'—')+'</td>'
+        +'<td style="padding:4px 6px;border-bottom:1px solid #e5e7eb;font-size:10px;white-space:nowrap">'+esc(c.echeance||'—')+'</td>'
+        +'</tr>';
+    }).join(''):'<tr><td colspan="4" style="padding:8px;text-align:center;color:#888;font-size:10px;font-style:italic">Aucune contrainte</td></tr>';
 
-    var eqRows=(pv.equipePresente||[]).map(function(e){
-      return '<tr><td>'+esc(e.nom||'')+'</td><td style="color:#555">'+esc(e.role||'')+'</td></tr>';
-    }).join('');
+    /* équipe */
+    var eqHtml=(pv.equipePresente||[]).map(function(e){return esc(e.nom||'')+(e.role?' ('+esc(e.role)+')':'');}).join(' &nbsp;·&nbsp; ')||'—';
 
+    /* CSS */
     var css='*{box-sizing:border-box;margin:0;padding:0}'
-      +'body{font-family:Arial,Helvetica,sans-serif;font-size:11px;color:#111}'
-      +'.page{width:210mm;min-height:297mm;margin:0 auto;padding:12mm 14mm 10mm}'
-      +'.hdr{display:flex;align-items:flex-start;justify-content:space-between;border-bottom:3px solid '+acc+';padding-bottom:8px;margin-bottom:10px}'
-      +'.hdr-l{display:flex;align-items:center;gap:10px}'
-      +'.logo{height:36px;object-fit:contain}'
-      +'.title{font-size:16px;font-weight:900;color:'+acc+';line-height:1.1;text-transform:uppercase}'
-      +'.rap-ref{font-size:9.5px;color:#555;margin-top:4px}'
-      +'.hdr-r{text-align:right;font-size:9px;color:#888;line-height:1.6}'
-      +'.meta{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:10px}'
-      +'.meta-card{background:#f8faff;border:1px solid #dce3ec;border-radius:4px;padding:6px 10px}'
-      +'.meta-card .lbl{font-size:8.5px;text-transform:uppercase;letter-spacing:.5px;color:#888;margin-bottom:2px}'
-      +'.meta-card .val{font-size:11px;font-weight:700;color:#111}'
-      +'.meta-card .val2{font-size:10px;color:#444}'
-      +'.av-bar{height:10px;background:#e5e7eb;border-radius:5px;}'
-      +'.av-fill{height:100%;border-radius:5px;background:'+acc+'}'
-      +'h3{font-size:10px;font-weight:900;text-transform:uppercase;letter-spacing:.5px;color:'+acc+';border-left:3px solid '+acc+';padding-left:7px;margin:10px 0 5px}'
-      +'.tbl{width:100%;border-collapse:collapse;margin-bottom:6px}'
-      +'.tbl th{background:'+acc+';color:#fff;padding:4px 8px;text-align:left;font-size:9px;font-weight:700}'
-      +'.tbl td{padding:4px 8px;border-bottom:1px solid #eef0f5;font-size:10px}'
-      +'.tbl tr:nth-child(even) td{background:#f8faff}'
-      +'.blk{background:#f8faff;border:1px solid #dce3ec;border-radius:4px;padding:7px 10px;font-size:10.5px;white-space:pre-wrap;min-height:18px;margin-bottom:4px}'
-      +'.sigs{display:grid;grid-template-columns:1fr 1fr;gap:32px;margin-top:24px;padding-top:12px;border-top:1px solid #dce3ec}'
-      +'.sig-box .sig-lbl{font-size:8.5px;color:#888;margin-bottom:20px}'
-      +'.sig-box .sig-line{border-top:1.5px solid #333;padding-top:4px;font-size:9px;color:#555}'
-      +'@media print{@page{size:A4;margin:0}.page{padding:10mm 12mm}}';
+      +'body{font-family:Arial,Helvetica,sans-serif;font-size:11px;color:#111;background:#fff}'
+      +'.page{width:210mm;min-height:297mm;margin:0 auto;padding:10mm 12mm}'
+      +'@media print{@page{size:A4 portrait;margin:0}.page{padding:8mm 10mm}}'
+      +'.hdr-top{display:flex;align-items:flex-start;justify-content:space-between;border-bottom:4px solid '+acc+';padding-bottom:8px;margin-bottom:8px}'
+      +'.logo-box{display:flex;align-items:center;gap:8px}'
+      +'.logo-img{height:38px;object-fit:contain}'
+      +'.co-name{font-size:18px;font-weight:900;color:'+acc+';letter-spacing:1px}'
+      +'.co-sub{font-size:8.5px;color:#888;margin-top:1px}'
+      +'.rap-title{font-size:15px;font-weight:900;color:'+acc+';text-transform:uppercase;text-align:right}'
+      +'.rap-ref{font-size:9px;color:#555;text-align:right;margin-top:2px}'
+      +'.info-grid{display:grid;grid-template-columns:1fr 1fr;gap:0;border:1px solid #d1d5db;border-radius:4px;margin-bottom:8px;overflow:hidden}'
+      +'.info-l{padding:8px 12px;background:#f8faff;border-right:1px solid #d1d5db}'
+      +'.info-r{padding:8px 12px;background:#fff}'
+      +'.info-row{display:flex;gap:6px;margin-bottom:3px;font-size:10px}'
+      +'.info-lbl{font-weight:700;color:'+acc+';white-space:nowrap;min-width:70px}'
+      +'.av-row{display:flex;align-items:center;gap:10px;background:#fffbeb;border:1px solid #fcd34d;border-radius:4px;padding:7px 12px;margin-bottom:8px}'
+      +'.av-lbl{font-size:9.5px;font-weight:700;color:#92400e;white-space:nowrap}'
+      +'.av-bar{flex:1;height:12px;background:#e5e7eb;border-radius:6px}'
+      +'.av-fill{height:100%;border-radius:6px;background:'+avCol+'}'
+      +'.av-pct{font-size:15px;font-weight:900;color:'+avCol+';white-space:nowrap}'
+      +'.sec-hdr{font-size:9.5px;font-weight:900;text-transform:uppercase;letter-spacing:.6px;color:#fff;background:'+acc+';padding:4px 8px;margin-top:8px}'
+      +'.tbl{width:100%;border-collapse:collapse}'
+      +'.tbl th{background:#e8edf7;color:'+acc+';padding:4px 6px;font-size:9px;font-weight:700;text-align:left;border-bottom:2px solid '+acc+'}'
+      +'.obs-box{background:#f8faff;border:1px solid #d1d5db;border-radius:0 0 4px 4px;padding:8px 10px;font-size:10.5px;white-space:pre-wrap;min-height:22px}'
+      +'.sigs{display:grid;grid-template-columns:1fr 1fr;gap:40px;margin-top:18px;padding-top:10px;border-top:1px solid #d1d5db}'
+      +'.sig-lbl{font-size:8.5px;color:#888;margin-bottom:18px}'
+      +'.sig-line{border-top:1.5px solid #111;padding-top:4px;font-size:9px;color:#444}';
 
-    var htmlDoc='<!DOCTYPE html><html lang="fr"><head><meta charset="utf-8">'
+    /* HTML doc */
+    var doc='<!DOCTYPE html><html lang="fr"><head><meta charset="utf-8">'
       +'<title>Rapport d\'Avancement – '+esc(clientName)+'</title>'
       +'<style>'+css+'</style></head><body><div class="page">'
-      +'<div class="hdr">'
-      +'<div class="hdr-l">'+(logo?'<img class="logo" src="'+esc(logo)+'" alt=""/>':'')
-      +'<div><div class="title">Rapport d\'Avancement</div>'
-      +'<div class="rap-ref">'+esc(rapRef)+'</div>'
+
+      /* ─── en-tête ─── */
+      +'<div class="hdr-top">'
+      +'<div class="logo-box">'+(logo?'<img class="logo-img" src="'+esc(logo)+'" alt=""/>':'')
+      +'<div><div class="co-name">'+esc(nomSoc)+'</div>'
+      +(adrSoc?'<div class="co-sub">'+esc(adrSoc)+'</div>':'')
       +'</div></div>'
-      +'<div class="hdr-r">'+esc(nom)+(adr?'<br>'+esc(adr):'')+(tel?'<br>'+esc(tel):'')+(email?'<br>'+esc(email):'')+'<br><b>'+esc(dateStr)+'</b></div>'
+      +'<div><div class="rap-title">Rapport d\'Avancement</div>'
+      +'<div class="rap-ref">RAP'+esc(rapNum)+'  –  Chantier '+esc(jipId)+' du '+esc(dateStr)+'</div>'
+      +'</div></div>'
+
+      /* ─── info projet (2 colonnes) ─── */
+      +'<div class="info-grid">'
+      +'<div class="info-l">'
+      +'<div class="info-row"><span class="info-lbl">Client :</span><span>'+esc(clientName)+'</span></div>'
+      +'<div class="info-row"><span class="info-lbl">Projet :</span><span>'+esc(projNom)+'</span></div>'
+      +'<div class="info-row"><span class="info-lbl">Date :</span><span>'+esc(dateStr)+'</span></div>'
+      +'<div class="info-row"><span class="info-lbl">Horaires :</span><span>'+esc(pv.heureDebut||'—')+' → '+esc(pv.heureFin||'—')+'</span></div>'
       +'</div>'
-      +'<div class="meta">'
-      +'<div class="meta-card"><div class="lbl">Client</div><div class="val">'+esc(clientName||'—')+'</div></div>'
-      +'<div class="meta-card"><div class="lbl">Projet</div><div class="val2">'+esc(projNom||'—')+'</div></div>'
-      +'<div class="meta-card"><div class="lbl">Date</div><div class="val">'+esc(dateStr)+'</div>'
-      +'<div class="val2">'+esc(pv.heureDebut||'__h__')+' → '+esc(pv.heureFin||'__h__')+'</div></div>'
+      +'<div class="info-r">'
+      +'<div class="info-row"><span class="info-lbl">Superviseur :</span><span>'+esc(superviseur)+'</span></div>'
+      +'<div class="info-row"><span class="info-lbl">Contact :</span><span>'+esc(contact)+'</span></div>'
+      +(eqHtml!=='—'?'<div class="info-row"><span class="info-lbl">Équipe :</span><span>'+eqHtml+'</span></div>':'')
       +'</div>'
-      +(tasks.length?'<div style="background:#f8faff;border:1px solid #dce3ec;border-radius:4px;padding:7px 12px;margin-bottom:10px;display:flex;align-items:center;gap:12px">'
-        +'<span style="font-size:9.5px;color:#888;white-space:nowrap">Avancement global</span>'
-        +'<div class="av-bar" style="flex:1"><div class="av-fill" style="width:'+Math.min(totalPct,100)+'%"></div></div>'
-        +'<b style="font-size:13px;color:'+acc+';white-space:nowrap">'+totalPct+'%</b>'
+      +'</div>'
+
+      /* ─── avancement global ─── */
+      +(tasks.length?'<div class="av-row">'
+        +'<span class="av-lbl">AVANCEMENT GLOBAL</span>'
+        +'<div class="av-bar"><div class="av-fill" style="width:'+avPctW+'%"></div></div>'
+        +'<span class="av-pct">'+totalPct+'%</span>'
         +'</div>':'')
-      +(taskRows?'<h3>A– Tâches</h3><table class="tbl"><thead><tr><th>N°</th><th>Description</th><th style="width:110px;text-align:right">Avancement</th></tr></thead><tbody>'+taskRows+'</tbody></table>':'')
-      +'<h3>B– Observations</h3><div class="blk">'+esc(pv.notes||'—')+'</div>'
-      +(cntrRows?'<h3>C– Contraintes</h3><table class="tbl"><thead><tr><th>Description</th><th style="width:80px">État</th><th style="width:90px">Responsable</th><th style="width:80px">Échéance</th></tr></thead><tbody>'+cntrRows+'</tbody></table>'
-        :'<h3>C– Contraintes</h3><div class="blk">—</div>')
-      +(eqRows?'<h3>D– Équipe présente</h3><table class="tbl"><thead><tr><th>Nom</th><th>Fonction</th></tr></thead><tbody>'+eqRows+'</tbody></table>'
-        :'<h3>D– Équipe présente</h3><div class="blk">—</div>')
+
+      /* ─── tableau tâches ─── */
+      +'<div class="sec-hdr">A – Tâches</div>'
+      +'<table class="tbl"><thead><tr>'
+      +'<th>Description</th><th style="width:40px;text-align:center">Jours</th>'
+      +'<th style="width:80px;text-align:center">Début</th><th style="width:80px;text-align:center">Fin</th>'
+      +'<th style="width:130px">Avancement</th>'
+      +'</tr></thead><tbody>'+taskRowsHtml+'</tbody></table>'
+
+      /* ─── observations ─── */
+      +'<div class="sec-hdr">B – Observations</div>'
+      +'<div class="obs-box">'+esc(pv.notes||'—')+'</div>'
+
+      /* ─── contraintes ─── */
+      +'<div class="sec-hdr">C – Tâches supplémentaires, urgentes, difficultés</div>'
+      +'<table class="tbl"><thead><tr>'
+      +'<th>Description</th><th style="width:75px">État</th>'
+      +'<th style="width:100px">Responsable</th><th style="width:80px">Échéance</th>'
+      +'</tr></thead><tbody>'+cntrRowsHtml+'</tbody></table>'
+
+      /* ─── signatures ─── */
       +'<div class="sigs">'
-      +'<div class="sig-box"><div class="sig-lbl">Superviseur chantier</div><div class="sig-line">'+esc(superviseur)+'</div></div>'
-      +'<div class="sig-box"><div class="sig-lbl">Client / Représentant</div><div class="sig-line">&nbsp;</div></div>'
+      +'<div><div class="sig-lbl">Superviseur chantier</div><div class="sig-line">'+esc(superviseur)+'</div></div>'
+      +'<div><div class="sig-lbl">Client / Représentant</div><div class="sig-line">&nbsp;</div></div>'
       +'</div>'
+
       +'</div></body></html>';
 
     var w=window.open('','_blank','width=900,height=800,scrollbars=yes');
-    if(!w){alert('Veuillez autoriser les popups pour imprimer.');return;}
-    w.document.write(htmlDoc);
+    if(!w){alert('Autorisez les popups pour imprimer.');return;}
+    w.document.write(doc);
     w.document.close();
     w.focus();
-    setTimeout(function(){w.print();},400);
+    setTimeout(function(){w.print();},500);
   };
-})();
-</script>
 
 
 
