@@ -7798,7 +7798,14 @@ html body[class] #vac-gantt td.emp .nm{font-weight:500 !important;}</style>
 <!-- PV Print: rapport d'activite -->
 <script id="__PV_PRINT_v1__">
 (function(){
-  function fD(d){if(!d)return '';try{return new Date(d+'T00:00:00').toLocaleDateString('fr-FR',{day:'2-digit',month:'long',year:'numeric'});}catch(e){return d;}}
+  /* dd/Mon/yy  ex: 15/Oct/24 */
+  var _MON=['Jan','Fév','Mar','Avr','Mai','Jun','Jul','Aoû','Sep','Oct','Nov','Déc'];
+  function fD(d){
+    if(!d)return '';
+    try{var dt=new Date(d+'T00:00:00');
+      return String(dt.getDate()).padStart(2,'0')+'/'+_MON[dt.getMonth()]+'/'+String(dt.getFullYear()).slice(-2);
+    }catch(e){return d;}
+  }
   function esc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
 
   window.__pvPrint=function(pv,jip){
@@ -7808,10 +7815,12 @@ html body[class] #vac-gantt td.emp .nm{font-weight:500 !important;}</style>
     var _be=_bs.entreprise||{};
     var _bd=_bs.design||{};
     var acc=_bd.accent||'#1a3a6b';
+    var orn='#f59e0b';
+    var orn2='#d97706';
     var nomSoc=_be.nom||'Home Business Office';
     var adrSoc=_be.adresse||'';
     var telSoc=_be.tel||'';
-    var emailSoc=_be.email||'project@hbocameroon.com';
+    var emailSoc=_be.email||'';
     var logo=_be.logo||'';
 
     var cl=((window.CLIENTS_DATA||{}).clients||[]).find(function(c){return c.id===(jip&&jip.clientId);})||{};
@@ -7826,163 +7835,162 @@ html body[class] #vac-gantt td.emp .nm{font-weight:500 !important;}</style>
     var tasks=(jip&&jip.tasks)||[];
     var totalPct=tasks.length?Math.round(tasks.reduce(function(s,t){return s+(Number(t.progress)||0);},0)/tasks.length):0;
     var avPctW=Math.min(totalPct,100);
-    var avCol=avPctW>=80?'#166534':avPctW>=50?'#854d0e':'#991b1b';
 
+    /* --- tableau tâches --- */
     var taskRowsHtml=tasks.length?tasks.map(function(t,i){
       var pct=Number(t.progress||0);
-      var col=pct>=100?'#166534':pct>=75?'#15803d':pct>=50?'#854d0e':'#991b1b';
+      var pctW=Math.min(pct,100);
+      var bc=pct>=100?'#16a34a':pct>=60?orn:'#ef4444';
       var bar='<div style="display:flex;align-items:center;gap:4px">'
-        +'<div style="flex:1;height:7px;background:#e5e7eb;border-radius:4px">'
-        +'<div style="width:'+Math.min(pct,100)+'%;height:100%;background:'+col+';border-radius:4px"></div></div>'
-        +'<b style="min-width:32px;text-align:right;color:'+col+';font-size:9px">'+pct+'%</b></div>';
-      return '<tr style="background:'+(i%2?'#f0f4ff':'#fff')+'">'
-        +'<td class="td">'+esc(t.title||t.nom||'')+'</td>'
-        +'<td class="td tdc">'+(t.jours||t.days||'—')+'</td>'
-        +'<td class="td tdc">'+(t.debut||t.dateDebut?fD(t.debut||t.dateDebut):'—')+'</td>'
-        +'<td class="td tdc">'+(t.fin||t.dateFin?fD(t.fin||t.dateFin):'—')+'</td>'
-        +'<td class="td" style="width:130px">'+bar+'</td>'
+        +'<div style="flex:1;height:8px;background:#e5e7eb;border-radius:2px;overflow:hidden">'
+        +'<div style="width:'+pctW+'%;height:100%;background:'+bc+'"></div></div>'
+        +'<span style="min-width:38px;text-align:right;font-size:8.5px;font-weight:700;color:'+bc+'">'+pct.toFixed(1)+'%</span></div>';
+      return '<tr style="background:'+(i%2?'#fafafa':'#fff')+'">'
+        +'<td style="padding:3px 8px;border-bottom:1px solid #e5e7eb;font-size:9.5px">'+esc(t.title||t.nom||'')+'</td>'
+        +'<td style="padding:3px 5px;border-bottom:1px solid #e5e7eb;text-align:center;font-size:9px;color:#666">'+(t.jours||t.days||'')+'</td>'
+        +'<td style="padding:3px 5px;border-bottom:1px solid #e5e7eb;text-align:center;font-size:9px;color:#666">'+(t.debut||t.dateDebut?fD(t.debut||t.dateDebut):'')+'</td>'
+        +'<td style="padding:3px 5px;border-bottom:1px solid #e5e7eb;text-align:center;font-size:9px;color:#666">'+(t.fin||t.dateFin?fD(t.fin||t.dateFin):'')+'</td>'
+        +'<td style="padding:3px 8px;border-bottom:1px solid #e5e7eb;width:128px">'+bar+'</td>'
         +'</tr>';
-    }).join(''):'<tr><td colspan="5" class="td-mt">Aucune tâche enregistrée</td></tr>';
+    }).join(''):'<tr><td colspan="5" style="padding:10px;text-align:center;color:#aaa;font-size:9.5px;font-style:italic">Aucune tâche enregistrée</td></tr>';
 
+    /* --- tableau contraintes --- */
     var cntrArr=Array.isArray(pv.contraintes)?pv.contraintes:(pv.contraintes?[{description:pv.contraintes,etat:'Ouvert'}]:[]);
-    var cntrFiltered=cntrArr.filter(function(c){return c.description;});
-    var cntrRowsHtml=cntrFiltered.length?cntrFiltered.map(function(c){
+    var cntrRows=cntrArr.filter(function(c){return c.description;}).map(function(c,i){
       var et=c.etat||'Ouvert';
-      var isClosed=et==='Clôturé'||(et.toLowerCase().indexOf('cl')===0&&et.toLowerCase().indexOf('r')>0);
-      var bg=isClosed?'#dcfce7':et==='En cours'?'#fef9c3':'#fee2e2';
-      var fg=isClosed?'#166534':et==='En cours'?'#854d0e':'#991b1b';
-      return '<tr style="background:'+bg+'">'
-        +'<td class="td">'+esc(c.description)+'</td>'
-        +'<td class="td" style="white-space:nowrap"><span style="color:'+fg+';font-weight:700">'+esc(et)+'</span></td>'
-        +'<td class="td">'+esc(c.responsable||'—')+'</td>'
-        +'<td class="td" style="white-space:nowrap">'+esc(c.echeance||'—')+'</td>'
+      var isClosed=et==='Clôturé'||(et.toLowerCase().indexOf('cl')===0&&et.toLowerCase().indexOf('t')>0);
+      var isInProg=et==='En cours';
+      var dotC=isClosed?'#16a34a':isInProg?orn:'#ef4444';
+      var dot='<span style="display:inline-block;width:14px;height:14px;background:'+dotC+';border-radius:2px"></span>';
+      return '<tr style="background:'+(i%2?'#fafafa':'#fff')+'">'
+        +'<td style="padding:3px 8px;border-bottom:1px solid #e5e7eb;font-size:9.5px">'+esc(c.description)+'</td>'
+        +'<td style="padding:3px 5px;border-bottom:1px solid #e5e7eb;text-align:center">'+dot+'</td>'
+        +'<td style="padding:3px 8px;border-bottom:1px solid #e5e7eb;font-size:9.5px">'+esc(c.responsable||'')+'</td>'
+        +'<td style="padding:3px 8px;border-bottom:1px solid #e5e7eb;font-size:9px;white-space:nowrap">'+esc(c.echeance||'')+'</td>'
         +'</tr>';
-    }).join(''):'<tr><td colspan="4" class="td-mt">Aucune contrainte</td></tr>';
+    }).join('')||'<tr><td colspan="4" style="padding:10px;text-align:center;color:#aaa;font-size:9.5px;font-style:italic">Aucune contrainte</td></tr>';
 
-    var eqHtml=(pv.equipePresente||[]).map(function(e){
-      return esc(e.nom||'')+(e.role?' <em style="color:#555;font-size:9px">('+esc(e.role)+')</em>':'');
-    }).join(' &nbsp;·&nbsp; ')||'—';
+    var eqText=(pv.equipePresente||[]).map(function(e){
+      return esc(e.nom||'')+(e.role?' ('+esc(e.role)+')':'');
+    }).join(' · ')||'—';
 
+    /* ====== CSS ====== */
     var css=''
       +'*{box-sizing:border-box;margin:0;padding:0}'
-      +'body{font-family:Arial,Helvetica,sans-serif;font-size:11px;color:#1a1a2e;background:#dde3ed}'
-      +'.toolbar{background:'+acc+';color:#fff;padding:9px 18px;display:flex;gap:10px;align-items:center;position:sticky;top:0;z-index:9}'
-      +'.tb-title{flex:1;font-size:13px;font-weight:700;letter-spacing:.3px}'
-      +'.tbtn{border:0;border-radius:5px;padding:6px 18px;font-size:12px;font-weight:700;cursor:pointer;transition:opacity .15s}'
-      +'.tbtn:hover{opacity:.85}'
+      +'body{font-family:Arial,Helvetica,sans-serif;color:#111;background:#d1d5db}'
+      +'.toolbar{background:'+acc+';color:#fff;padding:8px 16px;display:flex;gap:10px;align-items:center;position:sticky;top:0;z-index:10;font-family:Arial,sans-serif}'
+      +'.tb-t{flex:1;font-size:13px;font-weight:700}'
+      +'.tbtn{border:0;border-radius:4px;padding:7px 18px;font-size:12px;font-weight:700;cursor:pointer}'
       +'.tbtn-p{background:#fff;color:'+acc+'}'
-      +'.tbtn-c{background:rgba(255,255,255,.15);color:#fff;border:1px solid rgba(255,255,255,.4)}'
-      +'.wrap{display:flex;justify-content:center;padding:16px 12px 24px}'
-      +'.page{width:210mm;background:#fff;padding:11mm 13mm;box-shadow:0 4px 24px rgba(0,0,0,.18)}'
-      +'@media print{'
-      +'.toolbar{display:none!important}'
-      +'.wrap{padding:0;background:none}'
-      +'@page{size:A4 portrait;margin:0}'
-      +'.page{width:auto;box-shadow:none;padding:8mm 10mm}'
-      +'}'
-      +'.hdr{display:flex;align-items:flex-start;justify-content:space-between;border-bottom:4px solid '+acc+';padding-bottom:9px;margin-bottom:10px}'
-      +'.hdr-l{display:flex;align-items:center;gap:10px}'
-      +'.co-name{font-size:17px;font-weight:900;color:'+acc+';letter-spacing:.8px}'
-      +'.co-sub{font-size:8px;color:#888;margin-top:2px}'
-      +'.rap-h{font-size:16px;font-weight:900;color:'+acc+';text-transform:uppercase;text-align:right;letter-spacing:1px}'
-      +'.rap-sub{font-size:9px;color:#666;text-align:right;margin-top:3px;line-height:1.5}'
-      +'.info-grid{display:grid;grid-template-columns:1fr 1fr;border:1px solid #d1d5db;border-radius:5px;margin-bottom:10px;overflow:hidden}'
-      +'.info-l{padding:9px 13px;background:#f0f4ff;border-right:1px solid #d1d5db}'
-      +'.info-r{padding:9px 13px;background:#fff}'
-      +'.ir{display:flex;gap:5px;margin-bottom:4px;font-size:10px;align-items:baseline}'
-      +'.ir:last-child{margin-bottom:0}'
-      +'.il{font-weight:700;color:'+acc+';min-width:78px;flex-shrink:0}'
-      +'.av-row{display:flex;align-items:center;gap:12px;background:#fffbeb;border:1px solid #fcd34d;border-radius:5px;padding:9px 13px;margin-bottom:10px}'
-      +'.av-lbl{font-size:9px;font-weight:900;color:#92400e;text-transform:uppercase;letter-spacing:.5px;white-space:nowrap}'
-      +'.av-bar{flex:1;height:14px;background:#e5e7eb;border-radius:7px;overflow:hidden}'
-      +'.av-fill{height:100%;background:'+avCol+';border-radius:7px}'
-      +'.av-pct{font-size:17px;font-weight:900;color:'+avCol+';min-width:46px;text-align:right}'
-      +'.sh{font-size:9px;font-weight:900;text-transform:uppercase;letter-spacing:.7px;color:#fff;background:'+acc+';padding:5px 9px;margin-top:11px}'
-      +'.tbl{width:100%;border-collapse:collapse}'
-      +'.tbl th{background:#e8edf7;color:'+acc+';padding:5px 7px;font-size:9px;font-weight:700;text-align:left;border-bottom:2px solid '+acc+'}'
-      +'.td{padding:5px 7px;border-bottom:1px solid #e5e7eb;font-size:10px;vertical-align:middle}'
-      +'.tdc{text-align:center;color:#555}'
-      +'.td-mt{padding:10px;text-align:center;color:#999;font-size:10px;font-style:italic}'
-      +'.obs{background:#f8faff;border:1px solid #d1d5db;padding:9px 12px;font-size:10.5px;white-space:pre-wrap;min-height:32px;line-height:1.6}'
-      +'.eq-box{background:#f8faff;border:1px solid #d1d5db;padding:8px 12px;font-size:10px;min-height:22px}'
-      +'.sigs{display:grid;grid-template-columns:1fr 1fr;gap:50px;margin-top:22px;padding-top:12px;border-top:2px solid #e5e7eb}'
-      +'.sig-lbl{font-size:8px;color:#aaa;margin-bottom:22px;text-transform:uppercase;letter-spacing:.6px}'
-      +'.sig-line{border-top:1.5px solid #333;padding-top:5px;font-size:9.5px;color:#333}';
+      +'.tbtn-c{background:rgba(255,255,255,.15);color:#fff;border:1px solid rgba(255,255,255,.35)}'
+      +'.wrap{display:flex;justify-content:center;padding:16px}'
+      +'.page{width:210mm;background:#fff;padding:9mm 11mm;box-shadow:0 3px 20px rgba(0,0,0,.25)}'
+      +'@media print{.toolbar{display:none!important}.wrap{padding:0;background:none}'
+      +'@page{size:A4 portrait;margin:0}.page{width:auto;box-shadow:none;padding:7mm 9mm}}'
 
+      /* header */
+      +'.hdr{display:flex;align-items:flex-start;gap:12px;margin-bottom:6px}'
+      +'.hdr-l{flex:1}'
+      +'.rap-big{font-size:29px;font-weight:900;color:#111;line-height:1.1;margin-bottom:6px}'
+      +'.rap-ref{font-size:11px;font-weight:700;color:'+orn2+';border-bottom:2.5px solid '+orn+';display:inline-block;padding-bottom:1px}'
+      +'.rap-phase{font-size:9px;color:#888;font-style:italic;margin-top:3px}'
+      +'.hdr-r{min-width:195px;text-align:right}'
+      +'.hdr-r .hl{font-size:9px;color:#555;margin-bottom:2px;line-height:1.4}'
+      +'.hdr-r b{color:#111}'
+
+      /* proj row */
+      +'.proj-row{display:flex;align-items:stretch;border-top:2px solid '+orn+';border-bottom:2px solid '+orn+';margin:5px 0}'
+      +'.proj-name{flex:1;font-size:11px;font-weight:900;color:#111;padding:4px 0;text-transform:uppercase;letter-spacing:.4px;align-self:center}'
+      +'.proj-av{display:flex;align-items:center;border-left:1px solid '+orn+'}'
+      +'.av-lbl{padding:4px 8px;font-size:8.5px;font-weight:700;color:#92400e;background:#fffbeb;white-space:nowrap}'
+      +'.av-val{padding:4px 12px;font-size:13px;font-weight:900;background:'+orn+';color:#fff;white-space:nowrap}'
+
+      /* task table */
+      +'.tbl{width:100%;border-collapse:collapse}'
+      +'.tbl-hdr th{background:#f3f4f6;color:#444;padding:5px 7px;font-size:8.5px;font-weight:700;text-align:left;border:1px solid #ddd;white-space:nowrap}'
+
+      /* contraintes table */
+      +'.sec-dark{background:#374151;color:#fff;font-size:9.5px;font-weight:700;padding:5px 9px;margin-top:10px;text-transform:uppercase;letter-spacing:.5px}'
+      +'.cntr-th{background:#4b5563;color:#fff;font-size:8.5px;font-weight:700;padding:4px 7px;text-align:left;border:1px solid #374151}'
+
+      /* equipe */
+      +'.eq-box{border:1px solid #e5e7eb;background:#fafafa;padding:7px 10px;font-size:10px}'
+
+      /* observations */
+      +'.obs-box{border:1px solid #e5e7eb;background:#f9fafb;padding:8px 10px;font-size:10px;white-space:pre-wrap;min-height:28px;line-height:1.6}'
+
+      /* signatures */
+      +'.sigs{display:grid;grid-template-columns:1fr 1fr;gap:50px;margin-top:20px;padding-top:10px;border-top:1px solid #e5e7eb}'
+      +'.sig-lbl{font-size:8px;color:#aaa;text-transform:uppercase;letter-spacing:.5px;margin-bottom:20px}'
+      +'.sig-line{border-top:1.5px solid #333;padding-top:4px;font-size:9px;color:#444}';
+
+    /* ====== DOC HTML ====== */
     var doc='<!DOCTYPE html><html lang="fr"><head>'
       +'<meta charset="utf-8"><meta name="viewport" content="width=device-width">'
       +'<title>Rapport d\'Avancement – RAP'+esc(rapNum)+'</title>'
       +'<style>'+css+'</style></head><body>'
+
+      /* toolbar */
       +'<div class="toolbar">'
-      +'<span class="tb-title">Rapport d\'Avancement – RAP'+esc(rapNum)+'</span>'
-      +'<button class="tbtn tbtn-p" onclick="window.print()">&#128438; Imprimer / PDF</button>'
+      +'<span class="tb-t">Rapport d\'Avancement – RAP'+esc(rapNum)+'</span>'
+      +'<button class="tbtn tbtn-p" onclick="window.print()">Imprimer / PDF</button>'
       +'<button class="tbtn tbtn-c" onclick="window.close()">Fermer</button>'
       +'</div>'
+
       +'<div class="wrap"><div class="page">'
 
-      /* header */
+      /* ── en-tête ── */
       +'<div class="hdr">'
-      +'<div class="hdr-l">'+(logo?'<img style="height:42px;object-fit:contain" src="'+esc(logo)+'" alt=""/>':'')
-      +'<div>'
-      +'<div class="co-name">'+esc(nomSoc)+'</div>'
-      +(adrSoc?'<div class="co-sub">'+esc(adrSoc)+'</div>':'')
-      +(contact?'<div class="co-sub">'+esc(contact)+'</div>':'')
-      +'</div></div>'
-      +'<div>'
-      +'<div class="rap-h">Rapport d\'Avancement</div>'
-      +'<div class="rap-sub">N° RAP'+esc(rapNum)+'</div>'
-      +'<div class="rap-sub">Chantier '+esc(jipId)+' – '+esc(dateStr)+'</div>'
-      +'</div></div>'
-
-      /* info grid */
-      +'<div class="info-grid">'
-      +'<div class="info-l">'
-      +'<div class="ir"><span class="il">Client :</span><span>'+esc(clientName)+'</span></div>'
-      +'<div class="ir"><span class="il">Projet :</span><span>'+esc(projNom)+'</span></div>'
-      +'<div class="ir"><span class="il">Date :</span><span>'+esc(dateStr)+'</span></div>'
-      +'<div class="ir"><span class="il">Horaires :</span><span>'+esc(pv.heureDebut||'—')+' → '+esc(pv.heureFin||'—')+'</span></div>'
+      +'<div class="hdr-l">'
+      +(logo?'<img src="'+esc(logo)+'" style="height:40px;object-fit:contain;display:block;margin-bottom:5px" alt=""/>':'')
+      +'<div class="rap-big">Rapport d\'Avancement</div>'
+      +'<div class="rap-ref">RAP'+esc(rapNum)+' – Chantier '+esc(jipId)+' du '+esc(dateStr)+'</div>'
+      +(pv.heureDebut||pv.heureFin?'<div class="rap-phase">Horaires : '+esc(pv.heureDebut||'—')+' → '+esc(pv.heureFin||'—')+'</div>':'')
       +'</div>'
-      +'<div class="info-r">'
-      +'<div class="ir"><span class="il">Superviseur :</span><span>'+esc(superviseur)+'</span></div>'
-      +(contact?'<div class="ir"><span class="il">Contact :</span><span>'+esc(contact)+'</span></div>':'')
-      +'<div class="ir"><span class="il">Équipe :</span><span>'+eqHtml+'</span></div>'
+      +'<div class="hdr-r">'
+      +'<div class="hl"><b>Client :</b> '+esc(clientName)+'</div>'
+      +'<div class="hl"><b>Superviseur :</b> '+esc(superviseur)+'</div>'
+      +(contact?'<div class="hl"><b>Contact :</b> '+esc(contact)+'</div>':'')
+      +(nomSoc?'<div class="hl"><b>Société :</b> '+esc(nomSoc)+'</div>':'')
       +'</div></div>'
 
-      /* avancement global */
-      +(tasks.length?'<div class="av-row">'
-        +'<span class="av-lbl">Avancement global</span>'
-        +'<div class="av-bar"><div class="av-fill" style="width:'+avPctW+'%"></div></div>'
-        +'<span class="av-pct">'+totalPct+'%</span>'
-        +'</div>':'')
+      /* ── projet + avancement global ── */
+      +'<div class="proj-row">'
+      +'<div class="proj-name">'+esc(projNom)+'</div>'
+      +'<div class="proj-av">'
+      +'<span class="av-lbl">Avancement Global</span>'
+      +'<span class="av-val">'+totalPct+'%</span>'
+      +'</div></div>'
 
-      /* A - taches */
-      +'<div class="sh">A – Tâches</div>'
-      +'<table class="tbl"><thead><tr>'
+      /* ── tableau tâches ── */
+      +'<table class="tbl"><thead class="tbl-hdr"><tr>'
       +'<th>Description</th>'
-      +'<th style="width:44px;text-align:center">Jours</th>'
-      +'<th style="width:84px;text-align:center">Début</th>'
-      +'<th style="width:84px;text-align:center">Fin</th>'
-      +'<th style="width:130px">Avancement</th>'
+      +'<th style="width:40px;text-align:center">Jours</th>'
+      +'<th style="width:76px;text-align:center">Début</th>'
+      +'<th style="width:76px;text-align:center">Fin</th>'
+      +'<th style="width:128px">Avancement</th>'
       +'</tr></thead><tbody>'+taskRowsHtml+'</tbody></table>'
 
-      /* B - observations */
-      +'<div class="sh">B – Observations</div>'
-      +'<div class="obs">'+esc(pv.notes||'—')+'</div>'
+      /* ── observations ── */
+      +(pv.notes?'<div class="sec-dark">Observations</div>'
+        +'<div class="obs-box">'+esc(pv.notes)+'</div>':'')
 
-      /* C - contraintes */
-      +'<div class="sh">C – Tâches supplémentaires &amp; difficultés</div>'
+      /* ── tâches supp. / contraintes ── */
+      +'<div class="sec-dark">Tâches supplémentaires, urgentes, difficultés</div>'
       +'<table class="tbl"><thead><tr>'
-      +'<th>Description</th>'
-      +'<th style="width:78px">État</th>'
-      +'<th style="width:104px">Responsable</th>'
-      +'<th style="width:82px">Échéance</th>'
-      +'</tr></thead><tbody>'+cntrRowsHtml+'</tbody></table>'
+      +'<th class="cntr-th">Description</th>'
+      +'<th class="cntr-th" style="width:46px;text-align:center">État</th>'
+      +'<th class="cntr-th" style="width:100px">Resp.</th>'
+      +'<th class="cntr-th" style="width:84px">Date Échéance</th>'
+      +'</tr></thead><tbody>'+cntrRows+'</tbody></table>'
 
-      /* D - equipe */
-      +'<div class="sh">D – Équipe présente</div>'
-      +'<div class="eq-box">'+eqHtml+'</div>'
+      /* ── équipe ── */
+      +(pv.equipePresente&&pv.equipePresente.length
+        ?'<div class="sec-dark">Équipe présente</div>'
+          +'<div class="eq-box">'+eqText+'</div>'
+        :'')
 
-      /* signatures */
+      /* ── signatures ── */
       +'<div class="sigs">'
       +'<div><div class="sig-lbl">Superviseur chantier</div><div class="sig-line">'+esc(superviseur)+'</div></div>'
       +'<div><div class="sig-lbl">Client / Représentant</div><div class="sig-line">&nbsp;</div></div>'
@@ -7990,7 +7998,7 @@ html body[class] #vac-gantt td.emp .nm{font-weight:500 !important;}</style>
 
       +'</div></div></body></html>';
 
-    var w=window.open('','_blank','width=940,height=820,scrollbars=yes,resizable=yes');
+    var w=window.open('','_blank','width=950,height=840,scrollbars=yes,resizable=yes');
     if(!w){alert('Veuillez autoriser les popups pour ce fichier (file://).');return;}
     w.document.open();
     w.document.write(doc);
