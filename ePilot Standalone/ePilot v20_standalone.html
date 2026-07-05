@@ -1105,6 +1105,269 @@ document.addEventListener('DOMContentLoaded', async function() {
     })();
 
     // ─────────────────────────────────────────────────────────────
+    // [Phase3D-NormalizeExpenses] Créer DEPENSES avec FKs
+    // Objectif: Normaliser frais/charges avec FK robustes
+    // ─────────────────────────────────────────────────────────────
+    (function normalizeExpenses() {
+      setTimeout(function() {
+        try {
+          // ─ Fonction helper pour normaliser ─
+          function normalize(s) {
+            return String(s || '').normalize('NFD')
+              .replace(/[̀-ͯ]/g, '')
+              .toLowerCase()
+              .replace(/[^a-z0-9]/g, ' ')
+              .replace(/\s+/g, ' ')
+              .trim();
+          }
+
+          // ─ Fonction helper pour trouver personne par nom ─
+          function findPersonneByNom(nomText) {
+            if (!nomText) return null;
+            var normName = normalize(nomText);
+
+            // Chercher dans HR
+            var hrMatch = (window.PERSONNES_HR || []).find(function(p) {
+              return normalize(p.nomComplet).indexOf(normName) >= 0;
+            });
+            if (hrMatch) return hrMatch;
+
+            // Chercher dans CLIENTS
+            var cliMatch = (window.PERSONNES_CLIENTS || []).find(function(p) {
+              return normalize(p.nomComplet).indexOf(normName) >= 0;
+            });
+            if (cliMatch) return cliMatch;
+
+            return null;
+          }
+
+          // ─ Créer DEPENSES table ─
+          var depenses = [];
+          var dId = 0;
+
+          (window.EXPENSES_DATA || []).forEach(function(exp) {
+            // Récupérer les FKs
+            var projetId = exp.Dossier || exp.ProjectId || null;
+            var personneId = null;
+
+            // Chercher la personne responsable
+            if (exp.ResponsableName) {
+              var p = findPersonneByNom(exp.ResponsableName);
+              personneId = p ? p.id : null;
+            }
+
+            // Chercher l'article si lié
+            var articleId = null;
+            if (exp.ArticleId) {
+              var art = (window.ARTICLES_INDEX || {})[exp.ArticleId];
+              articleId = art ? art.id : null;
+            }
+
+            depenses.push({
+              id: 'DEP_' + (++dId),
+              projetId: projetId,
+              personneId: personneId,
+              articleId: articleId,
+              categorie: exp.Categorie || exp.Type || 'AUTRE',
+              description: exp.Description || exp.Label || '',
+              montant: parseFloat(exp.Montant) || 0,
+              dateDepense: exp.DateDepense || exp.Date || null,
+              devise: exp.Devise || 'EUR',
+              statut: exp.Statut || 'ENREGISTRE',
+              remarques: exp.Remarques || null,
+              createdAt: new Date().toISOString()
+            });
+          });
+
+          window.DEPENSES = depenses;
+
+          // ─ Créer INDEX pour lookups rapides ─
+          window.DEPENSES_INDEX = {};
+          depenses.forEach(function(d) {
+            window.DEPENSES_INDEX[d.id] = d;
+          });
+
+          // Index par projet
+          window.DEPENSES_BY_PROJET = {};
+          depenses.forEach(function(d) {
+            if (d.projetId) {
+              if (!window.DEPENSES_BY_PROJET[d.projetId]) {
+                window.DEPENSES_BY_PROJET[d.projetId] = [];
+              }
+              window.DEPENSES_BY_PROJET[d.projetId].push(d);
+            }
+          });
+
+          // Index par personne
+          window.DEPENSES_BY_PERSONNE = {};
+          depenses.forEach(function(d) {
+            if (d.personneId) {
+              if (!window.DEPENSES_BY_PERSONNE[d.personneId]) {
+                window.DEPENSES_BY_PERSONNE[d.personneId] = [];
+              }
+              window.DEPENSES_BY_PERSONNE[d.personneId].push(d);
+            }
+          });
+
+          // Index par catégorie
+          window.DEPENSES_BY_CATEGORIE = {};
+          depenses.forEach(function(d) {
+            if (d.categorie) {
+              if (!window.DEPENSES_BY_CATEGORIE[d.categorie]) {
+                window.DEPENSES_BY_CATEGORIE[d.categorie] = [];
+              }
+              window.DEPENSES_BY_CATEGORIE[d.categorie].push(d);
+            }
+          });
+
+          // ─ Statistiques ─
+          var stats = {
+            total: depenses.length,
+            withProjet: depenses.filter(function(d) { return d.projetId; }).length,
+            withPersonne: depenses.filter(function(d) { return d.personneId; }).length,
+            montantTotal: depenses.reduce(function(sum, d) { return sum + (d.montant || 0); }, 0)
+          };
+
+          // ─ Sauvegarder en localStorage ─
+          try {
+            localStorage.setItem('ePilot_DEPENSES', JSON.stringify(depenses));
+          } catch(e) {
+            console.warn('[Phase3D] Impossible de sauvegarder:', e.message);
+          }
+
+          console.log('[Phase3D-NormalizeExpenses] Résumé:',
+            'DEPENSES=' + stats.total,
+            '| WithProjet=' + stats.withProjet + '/' + stats.total,
+            '| WithPersonne=' + stats.withPersonne + '/' + stats.total,
+            '| Montant total=' + stats.montantTotal.toFixed(2) + '€');
+
+        } catch(e) {
+          console.error('[Phase3D-NormalizeExpenses] Erreur:', e.message, e.stack);
+        }
+      }, 600); // Après Phase 3C (500ms)
+    })();
+
+    // ─────────────────────────────────────────────────────────────
+    // [Phase3E-NormalizeOADocs] Créer OA_DOCUMENTS avec FKs
+    // Objectif: Normaliser documents de commande (OA, PO, etc.)
+    // ─────────────────────────────────────────────────────────────
+    (function normalizeOADocs() {
+      setTimeout(function() {
+        try {
+          // ─ Créer OA_DOCUMENTS table ─
+          var oaDocs = [];
+          var oaId = 0;
+
+          // Parser les _oaDocs
+          (window._oaDocs || []).forEach(function(oa) {
+            if (!oa.reference) return;
+
+            // Identifier le projet: chercher par Dossier/ProjectId
+            var projetId = oa.Dossier || oa.ProjectId || oa.reference || null;
+
+            // Vérifier si le projet existe
+            var projetExists = (window.PROJETS || []).some(function(p) {
+              return p.id === projetId;
+            });
+
+            // Déterminer le type d'OA
+            var type = 'OA';
+            if (oa.reference && oa.reference.match(/^PO/i)) type = 'PURCHASE_ORDER';
+            if (oa.reference && oa.reference.match(/^CR/i)) type = 'COMMANDE';
+            if (oa.reference && oa.reference.match(/^DEV/i)) type = 'DEVIS';
+
+            oaDocs.push({
+              id: 'OA_' + (++oaId),
+              reference: oa.reference,
+              projetId: projetExists ? projetId : null,
+              type: type,
+              dateCreation: oa.DateCreation || oa.CreatedAt || null,
+              dateValidation: oa.DateValidation || oa.ValidatedAt || null,
+              montant: parseFloat(oa.Montant) || 0,
+              devise: oa.Devise || 'EUR',
+              statut: oa.Statut || 'DRAFT',
+              fournisseurId: oa.FournisseurId || null,
+              description: oa.Description || null,
+              contenu: oa.Content || oa.Body || null,
+              createdAt: new Date().toISOString()
+            });
+          });
+
+          window.OA_DOCUMENTS = oaDocs;
+
+          // ─ Créer INDEX pour lookups rapides ─
+          window.OA_DOCUMENTS_INDEX = {};
+          oaDocs.forEach(function(oa) {
+            window.OA_DOCUMENTS_INDEX[oa.id] = oa;
+            window.OA_DOCUMENTS_INDEX[oa.reference] = oa; // Lookup par référence aussi
+          });
+
+          // Index par projet
+          window.OA_DOCUMENTS_BY_PROJET = {};
+          oaDocs.forEach(function(oa) {
+            if (oa.projetId) {
+              if (!window.OA_DOCUMENTS_BY_PROJET[oa.projetId]) {
+                window.OA_DOCUMENTS_BY_PROJET[oa.projetId] = [];
+              }
+              window.OA_DOCUMENTS_BY_PROJET[oa.projetId].push(oa);
+            }
+          });
+
+          // Index par type
+          window.OA_DOCUMENTS_BY_TYPE = {};
+          oaDocs.forEach(function(oa) {
+            if (!window.OA_DOCUMENTS_BY_TYPE[oa.type]) {
+              window.OA_DOCUMENTS_BY_TYPE[oa.type] = [];
+            }
+            window.OA_DOCUMENTS_BY_TYPE[oa.type].push(oa);
+          });
+
+          // Index par statut
+          window.OA_DOCUMENTS_BY_STATUT = {};
+          oaDocs.forEach(function(oa) {
+            if (!window.OA_DOCUMENTS_BY_STATUT[oa.statut]) {
+              window.OA_DOCUMENTS_BY_STATUT[oa.statut] = [];
+            }
+            window.OA_DOCUMENTS_BY_STATUT[oa.statut].push(oa);
+          });
+
+          // ─ Statistiques ─
+          var stats = {
+            total: oaDocs.length,
+            withProjet: oaDocs.filter(function(oa) { return oa.projetId; }).length,
+            montantTotal: oaDocs.reduce(function(sum, oa) { return sum + (oa.montant || 0); }, 0),
+            byType: {}
+          };
+
+          // Compter par type
+          Object.keys(window.OA_DOCUMENTS_BY_TYPE || {}).forEach(function(type) {
+            stats.byType[type] = window.OA_DOCUMENTS_BY_TYPE[type].length;
+          });
+
+          // ─ Sauvegarder en localStorage ─
+          try {
+            localStorage.setItem('ePilot_OA_DOCUMENTS', JSON.stringify(oaDocs));
+          } catch(e) {
+            console.warn('[Phase3E] Impossible de sauvegarder:', e.message);
+          }
+
+          var typeStr = Object.keys(stats.byType).map(function(t) {
+            return t + '=' + stats.byType[t];
+          }).join(', ');
+
+          console.log('[Phase3E-NormalizeOADocs] Résumé:',
+            'OA_DOCUMENTS=' + stats.total,
+            '| WithProjet=' + stats.withProjet + '/' + stats.total,
+            '| Montant=' + stats.montantTotal.toFixed(2) + '€',
+            '| Types=[' + typeStr + ']');
+
+        } catch(e) {
+          console.error('[Phase3E-NormalizeOADocs] Erreur:', e.message, e.stack);
+        }
+      }, 700); // Après Phase 3D (600ms)
+    })();
+
+    // ─────────────────────────────────────────────────────────────
     // [FixClosedChantier v1] Ouverture des chantiers CLÔTURÉS / TERMINÉS
     // depuis Quote, OA, Comptabilité, etc.
     //
