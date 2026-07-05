@@ -1626,6 +1626,319 @@ document.addEventListener('DOMContentLoaded', async function() {
     })();
 
     // ─────────────────────────────────────────────────────────────
+    // [Dashboard] Vue d'ensemble des projets et statistiques
+    // ─────────────────────────────────────────────────────────────
+    (function initDashboard() {
+      window.DASHBOARD = {
+        getProjectStats: function() {
+          var projets = window.PROJETS || [];
+          var articles = window.ARTICLES || [];
+          var depenses = window.DEPENSES || [];
+          var oaDocs = window.OA_DOCUMENTS || [];
+
+          return {
+            totalProjets: projets.length,
+            totalArticles: articles.length,
+            totalDepenses: depenses.length,
+            totalOA: oaDocs.length,
+            totalArticleValue: articles.reduce(function(s, a) { return s + (a.montantTotal || 0); }, 0),
+            totalDepenseValue: depenses.reduce(function(s, d) { return s + (d.montant || 0); }, 0),
+            totalOAValue: oaDocs.reduce(function(s, oa) { return s + (oa.montant || 0); }, 0),
+            averageProjectValue: projets.length > 0 ? (articles.reduce(function(s, a) { return s + (a.montantTotal || 0); }, 0) / projets.length) : 0
+          };
+        },
+
+        getOrganisationStats: function() {
+          var orgs = window.ORGANISATIONS || [];
+          var projets = window.PROJETS || [];
+          var result = {};
+
+          orgs.forEach(function(org) {
+            var orgProjets = projets.filter(function(p) { return p.organisationId === org.id; });
+            var articles = (window.ARTICLES || []).filter(function(a) {
+              return orgProjets.some(function(p) { return p.id === a.projetId; });
+            });
+            var totalValue = articles.reduce(function(s, a) { return s + (a.montantTotal || 0); }, 0);
+
+            result[org.id] = {
+              nom: org.nom,
+              projetCount: orgProjets.length,
+              totalValue: totalValue,
+              avgProjectValue: orgProjets.length > 0 ? totalValue / orgProjets.length : 0
+            };
+          });
+
+          return result;
+        },
+
+        getSiteStats: function() {
+          var sites = window.SITES || [];
+          var projets = window.PROJETS || [];
+          var result = {};
+
+          sites.forEach(function(site) {
+            var siteProjets = projets.filter(function(p) { return p.siteId === site.id; });
+            result[site.id] = {
+              nom: site.nom,
+              projetCount: siteProjets.length
+            };
+          });
+
+          return result;
+        }
+      };
+
+      console.log('[Dashboard] Module chargé. Usage: window.DASHBOARD.getProjectStats()');
+    })();
+
+    // ─────────────────────────────────────────────────────────────
+    // [Search] Recherche full-text et filtrage
+    // ─────────────────────────────────────────────────────────────
+    (function initSearch() {
+      function normalize(s) {
+        return String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
+      }
+
+      window.SEARCH = {
+        searchProjects: function(query) {
+          var q = normalize(query);
+          var projets = window.PROJETS || [];
+          return projets.filter(function(p) {
+            var org = (window.ORGANISATIONS_INDEX || {})[p.organisationId] || {};
+            var site = (window.SITES_INDEX || {})[p.siteId] || {};
+            return normalize(p.id).indexOf(q) >= 0 ||
+                   normalize(org.nom || '').indexOf(q) >= 0 ||
+                   normalize(site.nom || '').indexOf(q) >= 0;
+          });
+        },
+
+        searchPeople: function(query) {
+          var q = normalize(query);
+          var hr = window.PERSONNES_HR || [];
+          var cli = window.PERSONNES_CLIENTS || [];
+          var all = hr.concat(cli);
+          return all.filter(function(p) {
+            return normalize(p.nomComplet).indexOf(q) >= 0 ||
+                   normalize(p.email || '').indexOf(q) >= 0 ||
+                   normalize(p.tel || '').indexOf(q) >= 0;
+          });
+        },
+
+        searchVendors: function(query) {
+          var q = normalize(query);
+          var four = window.FOURNISSEURS || [];
+          return four.filter(function(f) {
+            return normalize(f.nom).indexOf(q) >= 0 ||
+                   normalize(f.contact || '').indexOf(q) >= 0 ||
+                   normalize(f.email || '').indexOf(q) >= 0;
+          });
+        },
+
+        searchArticles: function(query) {
+          var q = normalize(query);
+          var art = window.ARTICLES || [];
+          return art.filter(function(a) {
+            return normalize(a.designation).indexOf(q) >= 0 ||
+                   normalize(a.description || '').indexOf(q) >= 0;
+          });
+        },
+
+        filterProjectsByOrganisation: function(orgId) {
+          return (window.PROJETS || []).filter(function(p) { return p.organisationId === orgId; });
+        },
+
+        filterProjectsBySite: function(siteId) {
+          return (window.PROJETS || []).filter(function(p) { return p.siteId === siteId; });
+        },
+
+        filterArticlesByFournisseur: function(fourId) {
+          return (window.ARTICLES || []).filter(function(a) { return a.fournisseurId === fourId; });
+        }
+      };
+
+      console.log('[Search] Module chargé. Usage: window.SEARCH.searchProjects("query")');
+    })();
+
+    // ─────────────────────────────────────────────────────────────
+    // [ReportTypes] Différents types de rapports
+    // ─────────────────────────────────────────────────────────────
+    (function initReportTypes() {
+      window.REPORT_TYPES = {
+        generateDevis: function(projetId) {
+          var projet = (window.PROJETS_INDEX || {})[projetId];
+          if (!projet) return null;
+
+          var org = (window.ORGANISATIONS_INDEX || {})[projet.organisationId] || {};
+          var articles = (window.ARTICLES_BY_PROJET || {})[projetId] || [];
+          var montant = articles.reduce(function(s, a) { return s + (a.montantTotal || 0); }, 0);
+
+          var html = '<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Devis - ' + projet.id + '</title>';
+          html += '<style>body { font-family: Arial, sans-serif; margin: 40px; } .header { border-bottom: 3px solid #B5000A; padding-bottom: 20px; margin-bottom: 30px; }';
+          html += '.title { font-size: 28px; color: #B5000A; font-weight: bold; } .logo { font-size: 32px; font-weight: bold; color: #B5000A; margin-bottom: 20px; }';
+          html += 'table { width: 100%; border-collapse: collapse; margin: 20px 0; } th { background: #f0f0f0; padding: 10px; text-align: left; }';
+          html += 'td { padding: 10px; border-bottom: 1px solid #ddd; } .total { font-size: 18px; font-weight: bold; color: #B5000A; text-align: right; }';
+          html += '</style></head><body>';
+          html += '<div class="logo">HBO</div>';
+          html += '<div class="header"><div class="title">DEVIS</div><div style="color: #999;">N° ' + projet.id + '</div></div>';
+          html += '<p><strong>Client:</strong> ' + (org.nom || 'N/A') + '</p>';
+          html += '<table><thead><tr><th>Désignation</th><th>Quantité</th><th>Prix Unit.</th><th>Montant</th></tr></thead><tbody>';
+          articles.forEach(function(a) {
+            html += '<tr><td>' + (a.designation || '') + '</td><td>' + a.quantite + '</td><td>' + a.prixUnitaire.toFixed(2) + '€</td><td>' + a.montantTotal.toFixed(2) + '€</td></tr>';
+          });
+          html += '</tbody></table>';
+          html += '<div class="total">TOTAL: ' + montant.toFixed(2) + '€ HT</div>';
+          html += '</body></html>';
+          return html;
+        },
+
+        generateInvoice: function(projetId) {
+          var projet = (window.PROJETS_INDEX || {})[projetId];
+          if (!projet) return null;
+
+          var org = (window.ORGANISATIONS_INDEX || {})[projet.organisationId] || {};
+          var articles = (window.ARTICLES_BY_PROJET || {})[projetId] || [];
+          var montant = articles.reduce(function(s, a) { return s + (a.montantTotal || 0); }, 0);
+
+          var html = '<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Facture - ' + projet.id + '</title>';
+          html += '<style>body { font-family: Arial, sans-serif; margin: 40px; } .header { border-bottom: 3px solid #B5000A; padding-bottom: 20px; margin-bottom: 30px; }';
+          html += '.title { font-size: 28px; color: #B5000A; font-weight: bold; } .logo { font-size: 32px; font-weight: bold; color: #B5000A; margin-bottom: 20px; }';
+          html += 'table { width: 100%; border-collapse: collapse; margin: 20px 0; } th { background: #f0f0f0; padding: 10px; text-align: left; }';
+          html += 'td { padding: 10px; border-bottom: 1px solid #ddd; } .total { font-size: 20px; font-weight: bold; color: #B5000A; text-align: right; padding: 20px; }';
+          html += '</style></head><body>';
+          html += '<div class="logo">HBO</div>';
+          html += '<div class="header"><div class="title">FACTURE</div><div style="color: #999;">N° ' + projet.id + '</div></div>';
+          html += '<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 40px; margin: 30px 0;">';
+          html += '<div><strong>Facturé à:</strong><br>' + (org.nom || '') + '</div>';
+          html += '<div><strong>Date:</strong><br>' + new Date().toLocaleDateString('fr-FR') + '</div>';
+          html += '</div>';
+          html += '<table><thead><tr><th>Désignation</th><th>Quantité</th><th>Prix Unit.</th><th>Montant</th></tr></thead><tbody>';
+          articles.forEach(function(a) {
+            html += '<tr><td>' + (a.designation || '') + '</td><td>' + a.quantite + '</td><td>' + a.prixUnitaire.toFixed(2) + '€</td><td>' + a.montantTotal.toFixed(2) + '€</td></tr>';
+          });
+          html += '</tbody></table>';
+          html += '<div class="total">TOTAL TTC: ' + (montant * 1.2).toFixed(2) + '€</div>';
+          html += '</body></html>';
+          return html;
+        }
+      };
+
+      console.log('[ReportTypes] Module chargé. Usage: window.REPORT_TYPES.generateDevis(projetId)');
+    })();
+
+    // ─────────────────────────────────────────────────────────────
+    // [Export] Export de données en CSV/JSON
+    // ─────────────────────────────────────────────────────────────
+    (function initExport() {
+      window.EXPORT = {
+        projectsToCSV: function() {
+          var projets = window.PROJETS || [];
+          var lines = ['ID,Organisation,Site,Chef,Demandeur,Statut'];
+          projets.forEach(function(p) {
+            var org = (window.ORGANISATIONS_INDEX || {})[p.organisationId] || {};
+            var site = (window.SITES_INDEX || {})[p.siteId] || {};
+            var chef = (window.PERSONNES_HR || []).find(function(ph) { return ph.id === p.chefChantierPersonneId; }) || {};
+            var dem = (window.PERSONNES_CLIENTS || []).find(function(pc) { return pc.id === p.demandeurPersonneId; }) || {};
+            lines.push([p.id, org.nom || '', site.nom || '', chef.nomComplet || '', dem.nomComplet || '', p.statut || ''].map(escapeCSV).join(','));
+          });
+          return lines.join('\n');
+        },
+
+        articleToCSV: function() {
+          var articles = window.ARTICLES || [];
+          var lines = ['ID,Projet,Fournisseur,Designation,Quantite,Unite,Prix Unitaire,Montant Total'];
+          articles.forEach(function(a) {
+            var four = (window.FOURNISSEURS_INDEX || {})[a.fournisseurId] || {};
+            lines.push([a.id, a.projetId || '', four.nom || '', a.designation || '', a.quantite || 0, a.unite || '', a.prixUnitaire || 0, a.montantTotal || 0].map(escapeCSV).join(','));
+          });
+          return lines.join('\n');
+        },
+
+        downloadCSV: function(data, filename) {
+          var blob = new Blob([data], { type: 'text/csv;charset=utf-8;' });
+          var url = URL.createObjectURL(blob);
+          var link = document.createElement('a');
+          link.href = url;
+          link.download = filename || 'export.csv';
+          link.click();
+        },
+
+        exportToJSON: function(dataType) {
+          var data = {};
+          if (dataType === 'all' || dataType === 'projects') data.projets = window.PROJETS || [];
+          if (dataType === 'all' || dataType === 'articles') data.articles = window.ARTICLES || [];
+          if (dataType === 'all' || dataType === 'vendors') data.fournisseurs = window.FOURNISSEURS || [];
+          if (dataType === 'all' || dataType === 'expenses') data.depenses = window.DEPENSES || [];
+          return JSON.stringify(data, null, 2);
+        }
+      };
+
+      function escapeCSV(field) {
+        var s = String(field || '');
+        if (s.indexOf(',') >= 0 || s.indexOf('"') >= 0) {
+          return '"' + s.replace(/"/g, '""') + '"';
+        }
+        return s;
+      }
+
+      console.log('[Export] Module chargé. Usage: window.EXPORT.projectsToCSV()');
+    })();
+
+    // ─────────────────────────────────────────────────────────────
+    // [API] Endpoints pour accès programmatique
+    // ─────────────────────────────────────────────────────────────
+    (function initAPI() {
+      window.EPILOT_API = {
+        get: function(resource, id) {
+          if (resource === 'projects') {
+            return id ? (window.PROJETS_INDEX || {})[id] : window.PROJETS || [];
+          } else if (resource === 'articles') {
+            return id ? (window.ARTICLES_INDEX || {})[id] : window.ARTICLES || [];
+          } else if (resource === 'vendors') {
+            return id ? (window.FOURNISSEURS_INDEX || {})[id] : window.FOURNISSEURS || [];
+          } else if (resource === 'people') {
+            if (id) {
+              return (window.PERSONNES_HR || []).find(function(p) { return p.id === id; }) ||
+                     (window.PERSONNES_CLIENTS || []).find(function(p) { return p.id === id; });
+            }
+            return (window.PERSONNES_HR || []).concat(window.PERSONNES_CLIENTS || []);
+          } else if (resource === 'organisations') {
+            return id ? (window.ORGANISATIONS_INDEX || {})[id] : window.ORGANISATIONS || [];
+          } else if (resource === 'sites') {
+            return id ? (window.SITES_INDEX || {})[id] : window.SITES || [];
+          } else if (resource === 'expenses') {
+            return id ? (window.DEPENSES_INDEX || {})[id] : window.DEPENSES || [];
+          } else if (resource === 'oa-documents') {
+            return id ? (window.OA_DOCUMENTS_INDEX || {})[id] : window.OA_DOCUMENTS || [];
+          }
+          return null;
+        },
+
+        filter: function(resource, predicate) {
+          var items = this.get(resource);
+          if (!Array.isArray(items)) return [];
+          return items.filter(predicate);
+        },
+
+        relations: function(resource, id) {
+          if (resource === 'project') {
+            return {
+              articles: (window.ARTICLES_BY_PROJET || {})[id] || [],
+              expenses: (window.DEPENSES_BY_PROJET || {})[id] || [],
+              documents: (window.OA_DOCUMENTS_BY_PROJET || {})[id] || []
+            };
+          } else if (resource === 'vendor') {
+            return {
+              articles: (window.ARTICLES_BY_FOURNISSEUR || {})[id] || []
+            };
+          }
+          return null;
+        }
+      };
+
+      console.log('[API] Module chargé. Usage: window.EPILOT_API.get("projects")');
+    })();
+
+    // ─────────────────────────────────────────────────────────────
     // [FixClosedChantier v1] Ouverture des chantiers CLÔTURÉS / TERMINÉS
     // depuis Quote, OA, Comptabilité, etc.
     //
