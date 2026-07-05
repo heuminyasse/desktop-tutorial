@@ -7821,95 +7821,181 @@ html body[class] #vac-gantt td.emp .nm{font-weight:500 !important;}</style>
     var rapNum=pv.numero||pv.id||'__';
     var dateStr=fD(pv.date);
     var superviseur=pv.signataire||(pv.jsa&&pv.jsa.signataire)||nomSoc;
-    var contact=(telSoc?'tel: '+telSoc:'')+(emailSoc?(telSoc?' - ':'')+emailSoc:'');
+    var contact=(telSoc?'tél: '+telSoc:'')+(emailSoc?(telSoc?' – ':'')+emailSoc:'');
 
     var tasks=(jip&&jip.tasks)||[];
     var totalPct=tasks.length?Math.round(tasks.reduce(function(s,t){return s+(Number(t.progress)||0);},0)/tasks.length):0;
-    var avCol=totalPct>=80?'#166534':totalPct>=50?'#854d0e':'#991b1b';
+    var avPctW=Math.min(totalPct,100);
+    var avCol=avPctW>=80?'#166534':avPctW>=50?'#854d0e':'#991b1b';
 
     var taskRowsHtml=tasks.length?tasks.map(function(t,i){
       var pct=Number(t.progress||0);
       var col=pct>=100?'#166534':pct>=75?'#15803d':pct>=50?'#854d0e':'#991b1b';
-      var bar='<div style="display:flex;align-items:center;gap:4px"><div style="flex:1;height:6px;background:#e5e7eb;border-radius:3px"><div style="width:'+Math.min(pct,100)+'%;height:100%;background:'+col+';border-radius:3px"></div></div><b style="min-width:30px;text-align:right;color:'+col+';font-size:9px">'+pct+'%</b></div>';
-      return '<tr style="background:'+(i%2?'#f8faff':'#fff')+'"><td style="padding:4px 6px;border-bottom:1px solid #e5e7eb;font-size:10px">'+esc(t.title||t.nom||'')+'</td><td style="padding:4px 6px;border-bottom:1px solid #e5e7eb;text-align:center;font-size:10px;color:#555">'+(t.jours||t.days||'')+'</td><td style="padding:4px 6px;border-bottom:1px solid #e5e7eb;text-align:center;font-size:10px;color:#555">'+(t.debut?fD(t.debut):'')+'</td><td style="padding:4px 6px;border-bottom:1px solid #e5e7eb;text-align:center;font-size:10px;color:#555">'+(t.fin?fD(t.fin):'')+'</td><td style="padding:4px 8px;border-bottom:1px solid #e5e7eb;width:120px">'+bar+'</td></tr>';
-    }).join(''):'<tr><td colspan="5" style="padding:8px;text-align:center;color:#888;font-size:10px;font-style:italic">Aucune tache enregistree</td></tr>';
+      var bar='<div style="display:flex;align-items:center;gap:4px">'
+        +'<div style="flex:1;height:7px;background:#e5e7eb;border-radius:4px">'
+        +'<div style="width:'+Math.min(pct,100)+'%;height:100%;background:'+col+';border-radius:4px"></div></div>'
+        +'<b style="min-width:32px;text-align:right;color:'+col+';font-size:9px">'+pct+'%</b></div>';
+      return '<tr style="background:'+(i%2?'#f0f4ff':'#fff')+'">'
+        +'<td class="td">'+esc(t.title||t.nom||'')+'</td>'
+        +'<td class="td tdc">'+(t.jours||t.days||'—')+'</td>'
+        +'<td class="td tdc">'+(t.debut||t.dateDebut?fD(t.debut||t.dateDebut):'—')+'</td>'
+        +'<td class="td tdc">'+(t.fin||t.dateFin?fD(t.fin||t.dateFin):'—')+'</td>'
+        +'<td class="td" style="width:130px">'+bar+'</td>'
+        +'</tr>';
+    }).join(''):'<tr><td colspan="5" class="td-mt">Aucune tâche enregistrée</td></tr>';
 
     var cntrArr=Array.isArray(pv.contraintes)?pv.contraintes:(pv.contraintes?[{description:pv.contraintes,etat:'Ouvert'}]:[]);
-    var cntrRowsHtml=cntrArr.filter(function(c){return c.description;}).map(function(c){
+    var cntrFiltered=cntrArr.filter(function(c){return c.description;});
+    var cntrRowsHtml=cntrFiltered.length?cntrFiltered.map(function(c){
       var et=c.etat||'Ouvert';
-      var isClose=(et.indexOf('t')>=0&&et.indexOf('r')>=0);
-      var bg=isClose?'#dcfce7':et==='En cours'?'#fef9c3':'#fee2e2';
-      var dot=isClose?'#166534':et==='En cours'?'#854d0e':'#991b1b';
-      return '<tr style="background:'+bg+'"><td style="padding:4px 6px;border-bottom:1px solid #e5e7eb;font-size:10px">'+esc(c.description)+'</td><td style="padding:4px 6px;border-bottom:1px solid #e5e7eb;font-size:10px"><span style="color:'+dot+';font-weight:700">'+esc(et)+'</span></td><td style="padding:4px 6px;border-bottom:1px solid #e5e7eb;font-size:10px">'+esc(c.responsable||'')+'</td><td style="padding:4px 6px;border-bottom:1px solid #e5e7eb;font-size:10px">'+esc(c.echeance||'')+'</td></tr>';
-    }).join('')||'<tr><td colspan="4" style="padding:8px;text-align:center;color:#888;font-size:10px;font-style:italic">Aucune contrainte</td></tr>';
+      var isClosed=et==='Clôturé'||(et.toLowerCase().indexOf('cl')===0&&et.toLowerCase().indexOf('r')>0);
+      var bg=isClosed?'#dcfce7':et==='En cours'?'#fef9c3':'#fee2e2';
+      var fg=isClosed?'#166534':et==='En cours'?'#854d0e':'#991b1b';
+      return '<tr style="background:'+bg+'">'
+        +'<td class="td">'+esc(c.description)+'</td>'
+        +'<td class="td" style="white-space:nowrap"><span style="color:'+fg+';font-weight:700">'+esc(et)+'</span></td>'
+        +'<td class="td">'+esc(c.responsable||'—')+'</td>'
+        +'<td class="td" style="white-space:nowrap">'+esc(c.echeance||'—')+'</td>'
+        +'</tr>';
+    }).join(''):'<tr><td colspan="4" class="td-mt">Aucune contrainte</td></tr>';
 
-    var eqHtml=(pv.equipePresente||[]).map(function(e){return esc(e.nom||'')+(e.role?' ('+esc(e.role)+')':'');}).join('  &middot;  ')||'&mdash;';
+    var eqHtml=(pv.equipePresente||[]).map(function(e){
+      return esc(e.nom||'')+(e.role?' <em style="color:#555;font-size:9px">('+esc(e.role)+')</em>':'');
+    }).join(' &nbsp;·&nbsp; ')||'—';
 
-    var rH='<div style="font-size:9.5px;font-weight:900;text-transform:uppercase;letter-spacing:.6px;color:#fff;background:'+acc+';padding:4px 8px;margin-top:8px">';
-    var th='<th style="background:#e8edf7;color:'+acc+';padding:4px 6px;font-size:9px;font-weight:700;text-align:left;border-bottom:2px solid '+acc+'">';
+    var css=''
+      +'*{box-sizing:border-box;margin:0;padding:0}'
+      +'body{font-family:Arial,Helvetica,sans-serif;font-size:11px;color:#1a1a2e;background:#dde3ed}'
+      +'.toolbar{background:'+acc+';color:#fff;padding:9px 18px;display:flex;gap:10px;align-items:center;position:sticky;top:0;z-index:9}'
+      +'.tb-title{flex:1;font-size:13px;font-weight:700;letter-spacing:.3px}'
+      +'.tbtn{border:0;border-radius:5px;padding:6px 18px;font-size:12px;font-weight:700;cursor:pointer;transition:opacity .15s}'
+      +'.tbtn:hover{opacity:.85}'
+      +'.tbtn-p{background:#fff;color:'+acc+'}'
+      +'.tbtn-c{background:rgba(255,255,255,.15);color:#fff;border:1px solid rgba(255,255,255,.4)}'
+      +'.wrap{display:flex;justify-content:center;padding:16px 12px 24px}'
+      +'.page{width:210mm;background:#fff;padding:11mm 13mm;box-shadow:0 4px 24px rgba(0,0,0,.18)}'
+      +'@media print{'
+      +'.toolbar{display:none!important}'
+      +'.wrap{padding:0;background:none}'
+      +'@page{size:A4 portrait;margin:0}'
+      +'.page{width:auto;box-shadow:none;padding:8mm 10mm}'
+      +'}'
+      +'.hdr{display:flex;align-items:flex-start;justify-content:space-between;border-bottom:4px solid '+acc+';padding-bottom:9px;margin-bottom:10px}'
+      +'.hdr-l{display:flex;align-items:center;gap:10px}'
+      +'.co-name{font-size:17px;font-weight:900;color:'+acc+';letter-spacing:.8px}'
+      +'.co-sub{font-size:8px;color:#888;margin-top:2px}'
+      +'.rap-h{font-size:16px;font-weight:900;color:'+acc+';text-transform:uppercase;text-align:right;letter-spacing:1px}'
+      +'.rap-sub{font-size:9px;color:#666;text-align:right;margin-top:3px;line-height:1.5}'
+      +'.info-grid{display:grid;grid-template-columns:1fr 1fr;border:1px solid #d1d5db;border-radius:5px;margin-bottom:10px;overflow:hidden}'
+      +'.info-l{padding:9px 13px;background:#f0f4ff;border-right:1px solid #d1d5db}'
+      +'.info-r{padding:9px 13px;background:#fff}'
+      +'.ir{display:flex;gap:5px;margin-bottom:4px;font-size:10px;align-items:baseline}'
+      +'.ir:last-child{margin-bottom:0}'
+      +'.il{font-weight:700;color:'+acc+';min-width:78px;flex-shrink:0}'
+      +'.av-row{display:flex;align-items:center;gap:12px;background:#fffbeb;border:1px solid #fcd34d;border-radius:5px;padding:9px 13px;margin-bottom:10px}'
+      +'.av-lbl{font-size:9px;font-weight:900;color:#92400e;text-transform:uppercase;letter-spacing:.5px;white-space:nowrap}'
+      +'.av-bar{flex:1;height:14px;background:#e5e7eb;border-radius:7px;overflow:hidden}'
+      +'.av-fill{height:100%;background:'+avCol+';border-radius:7px}'
+      +'.av-pct{font-size:17px;font-weight:900;color:'+avCol+';min-width:46px;text-align:right}'
+      +'.sh{font-size:9px;font-weight:900;text-transform:uppercase;letter-spacing:.7px;color:#fff;background:'+acc+';padding:5px 9px;margin-top:11px}'
+      +'.tbl{width:100%;border-collapse:collapse}'
+      +'.tbl th{background:#e8edf7;color:'+acc+';padding:5px 7px;font-size:9px;font-weight:700;text-align:left;border-bottom:2px solid '+acc+'}'
+      +'.td{padding:5px 7px;border-bottom:1px solid #e5e7eb;font-size:10px;vertical-align:middle}'
+      +'.tdc{text-align:center;color:#555}'
+      +'.td-mt{padding:10px;text-align:center;color:#999;font-size:10px;font-style:italic}'
+      +'.obs{background:#f8faff;border:1px solid #d1d5db;padding:9px 12px;font-size:10.5px;white-space:pre-wrap;min-height:32px;line-height:1.6}'
+      +'.eq-box{background:#f8faff;border:1px solid #d1d5db;padding:8px 12px;font-size:10px;min-height:22px}'
+      +'.sigs{display:grid;grid-template-columns:1fr 1fr;gap:50px;margin-top:22px;padding-top:12px;border-top:2px solid #e5e7eb}'
+      +'.sig-lbl{font-size:8px;color:#aaa;margin-bottom:22px;text-transform:uppercase;letter-spacing:.6px}'
+      +'.sig-line{border-top:1.5px solid #333;padding-top:5px;font-size:9.5px;color:#333}';
 
-    var body=''
-      +'<div style="font-family:Arial,Helvetica,sans-serif;font-size:11px;color:#111;background:#fff;padding:10mm 12mm;box-sizing:border-box">'
-      +'<div style="display:flex;align-items:flex-start;justify-content:space-between;border-bottom:4px solid '+acc+';padding-bottom:8px;margin-bottom:8px">'
-      +'<div style="display:flex;align-items:center;gap:8px">'+(logo?'<img src="'+esc(logo)+'" style="height:38px;object-fit:contain" alt=""/>':'')
-      +'<div><div style="font-size:18px;font-weight:900;color:'+acc+';letter-spacing:1px">'+esc(nomSoc)+'</div>'
-      +(adrSoc?'<div style="font-size:8px;color:#888">'+esc(adrSoc)+'</div>':'')
-      +'</div></div>'
-      +'<div style="text-align:right"><div style="font-size:15px;font-weight:900;color:'+acc+';text-transform:uppercase">Rapport d\'Avancement</div>'
-      +'<div style="font-size:9px;color:#555;margin-top:2px">RAP'+esc(rapNum)+'  -  Chantier '+esc(jipId)+' du '+esc(dateStr)+'</div>'
-      +'</div></div>'
-      +'<div style="display:grid;grid-template-columns:1fr 1fr;border:1px solid #d1d5db;border-radius:4px;margin-bottom:8px;overflow:hidden">'
-      +'<div style="padding:8px 12px;background:#f8faff;border-right:1px solid #d1d5db">'
-      +'<div style="display:flex;gap:6px;margin-bottom:3px;font-size:10px"><b style="color:'+acc+';min-width:72px">Client :</b><span>'+esc(clientName)+'</span></div>'
-      +'<div style="display:flex;gap:6px;margin-bottom:3px;font-size:10px"><b style="color:'+acc+';min-width:72px">Projet :</b><span>'+esc(projNom)+'</span></div>'
-      +'<div style="display:flex;gap:6px;margin-bottom:3px;font-size:10px"><b style="color:'+acc+';min-width:72px">Date :</b><span>'+esc(dateStr)+'</span></div>'
-      +'<div style="display:flex;gap:6px;font-size:10px"><b style="color:'+acc+';min-width:72px">Horaires :</b><span>'+esc(pv.heureDebut||'')+' - '+esc(pv.heureFin||'')+'</span></div>'
+    var doc='<!DOCTYPE html><html lang="fr"><head>'
+      +'<meta charset="utf-8"><meta name="viewport" content="width=device-width">'
+      +'<title>Rapport d\'Avancement – RAP'+esc(rapNum)+'</title>'
+      +'<style>'+css+'</style></head><body>'
+      +'<div class="toolbar">'
+      +'<span class="tb-title">Rapport d\'Avancement – RAP'+esc(rapNum)+'</span>'
+      +'<button class="tbtn tbtn-p" onclick="window.print()">&#128438; Imprimer / PDF</button>'
+      +'<button class="tbtn tbtn-c" onclick="window.close()">Fermer</button>'
       +'</div>'
-      +'<div style="padding:8px 12px;background:#fff">'
-      +'<div style="display:flex;gap:6px;margin-bottom:3px;font-size:10px"><b style="color:'+acc+';min-width:82px">Superviseur :</b><span>'+esc(superviseur)+'</span></div>'
-      +(contact?'<div style="display:flex;gap:6px;margin-bottom:3px;font-size:10px"><b style="color:'+acc+';min-width:82px">Contact :</b><span>'+esc(contact)+'</span></div>':'')
-      +'<div style="display:flex;gap:6px;font-size:10px"><b style="color:'+acc+';min-width:82px">Equipe :</b><span>'+eqHtml+'</span></div>'
-      +'</div></div>'
-      +(tasks.length?'<div style="display:flex;align-items:center;gap:10px;background:#fffbeb;border:1px solid #fcd34d;border-radius:4px;padding:7px 12px;margin-bottom:8px">'
-        +'<span style="font-size:9.5px;font-weight:700;color:#92400e;white-space:nowrap">AVANCEMENT GLOBAL</span>'
-        +'<div style="flex:1;height:12px;background:#e5e7eb;border-radius:6px"><div style="width:'+Math.min(totalPct,100)+'%;height:100%;border-radius:6px;background:'+avCol+'"></div></div>'
-        +'<span style="font-size:15px;font-weight:900;color:'+avCol+';white-space:nowrap">'+totalPct+'%</span>'
-        +'</div>':'')
-      +rH+'A - Taches</div>'
-      +'<table style="width:100%;border-collapse:collapse"><thead><tr>'
-      +th+'Description</th>'+th+'Jours</th>'+th+'Debut</th>'+th+'Fin</th>'+th+'Avancement</th>'
-      +'</tr></thead><tbody>'+taskRowsHtml+'</tbody></table>'
-      +rH+'B - Observations</div>'
-      +'<div style="background:#f8faff;border:1px solid #d1d5db;padding:8px 10px;font-size:10.5px;white-space:pre-wrap;min-height:22px">'+esc(pv.notes||'')+'</div>'
-      +rH+'C - Contraintes</div>'
-      +'<table style="width:100%;border-collapse:collapse"><thead><tr>'
-      +th+'Description</th>'+th+'Etat</th>'+th+'Responsable</th>'+th+'Echeance</th>'
-      +'</tr></thead><tbody>'+cntrRowsHtml+'</tbody></table>'
-      +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:40px;margin-top:18px;padding-top:10px;border-top:1px solid #d1d5db">'
-      +'<div><div style="font-size:8.5px;color:#888;margin-bottom:18px">Superviseur chantier</div>'
-      +'<div style="border-top:1.5px solid #111;padding-top:4px;font-size:9px;color:#444">'+esc(superviseur)+'</div></div>'
-      +'<div><div style="font-size:8.5px;color:#888;margin-bottom:18px">Client / Representant</div>'
-      +'<div style="border-top:1.5px solid #111;padding-top:4px;font-size:9px;color:#444">&nbsp;</div></div>'
-      +'</div></div>';
+      +'<div class="wrap"><div class="page">'
 
-    var w=window.open('','_blank','width=920,height=780,scrollbars=yes,resizable=yes');
+      /* header */
+      +'<div class="hdr">'
+      +'<div class="hdr-l">'+(logo?'<img style="height:42px;object-fit:contain" src="'+esc(logo)+'" alt=""/>':'')
+      +'<div>'
+      +'<div class="co-name">'+esc(nomSoc)+'</div>'
+      +(adrSoc?'<div class="co-sub">'+esc(adrSoc)+'</div>':'')
+      +(contact?'<div class="co-sub">'+esc(contact)+'</div>':'')
+      +'</div></div>'
+      +'<div>'
+      +'<div class="rap-h">Rapport d\'Avancement</div>'
+      +'<div class="rap-sub">N° RAP'+esc(rapNum)+'</div>'
+      +'<div class="rap-sub">Chantier '+esc(jipId)+' – '+esc(dateStr)+'</div>'
+      +'</div></div>'
+
+      /* info grid */
+      +'<div class="info-grid">'
+      +'<div class="info-l">'
+      +'<div class="ir"><span class="il">Client :</span><span>'+esc(clientName)+'</span></div>'
+      +'<div class="ir"><span class="il">Projet :</span><span>'+esc(projNom)+'</span></div>'
+      +'<div class="ir"><span class="il">Date :</span><span>'+esc(dateStr)+'</span></div>'
+      +'<div class="ir"><span class="il">Horaires :</span><span>'+esc(pv.heureDebut||'—')+' → '+esc(pv.heureFin||'—')+'</span></div>'
+      +'</div>'
+      +'<div class="info-r">'
+      +'<div class="ir"><span class="il">Superviseur :</span><span>'+esc(superviseur)+'</span></div>'
+      +(contact?'<div class="ir"><span class="il">Contact :</span><span>'+esc(contact)+'</span></div>':'')
+      +'<div class="ir"><span class="il">Équipe :</span><span>'+eqHtml+'</span></div>'
+      +'</div></div>'
+
+      /* avancement global */
+      +(tasks.length?'<div class="av-row">'
+        +'<span class="av-lbl">Avancement global</span>'
+        +'<div class="av-bar"><div class="av-fill" style="width:'+avPctW+'%"></div></div>'
+        +'<span class="av-pct">'+totalPct+'%</span>'
+        +'</div>':'')
+
+      /* A - taches */
+      +'<div class="sh">A – Tâches</div>'
+      +'<table class="tbl"><thead><tr>'
+      +'<th>Description</th>'
+      +'<th style="width:44px;text-align:center">Jours</th>'
+      +'<th style="width:84px;text-align:center">Début</th>'
+      +'<th style="width:84px;text-align:center">Fin</th>'
+      +'<th style="width:130px">Avancement</th>'
+      +'</tr></thead><tbody>'+taskRowsHtml+'</tbody></table>'
+
+      /* B - observations */
+      +'<div class="sh">B – Observations</div>'
+      +'<div class="obs">'+esc(pv.notes||'—')+'</div>'
+
+      /* C - contraintes */
+      +'<div class="sh">C – Tâches supplémentaires &amp; difficultés</div>'
+      +'<table class="tbl"><thead><tr>'
+      +'<th>Description</th>'
+      +'<th style="width:78px">État</th>'
+      +'<th style="width:104px">Responsable</th>'
+      +'<th style="width:82px">Échéance</th>'
+      +'</tr></thead><tbody>'+cntrRowsHtml+'</tbody></table>'
+
+      /* D - equipe */
+      +'<div class="sh">D – Équipe présente</div>'
+      +'<div class="eq-box">'+eqHtml+'</div>'
+
+      /* signatures */
+      +'<div class="sigs">'
+      +'<div><div class="sig-lbl">Superviseur chantier</div><div class="sig-line">'+esc(superviseur)+'</div></div>'
+      +'<div><div class="sig-lbl">Client / Représentant</div><div class="sig-line">&nbsp;</div></div>'
+      +'</div>'
+
+      +'</div></div></body></html>';
+
+    var w=window.open('','_blank','width=940,height=820,scrollbars=yes,resizable=yes');
     if(!w){alert('Veuillez autoriser les popups pour ce fichier (file://).');return;}
-    var doc='<!DOCTYPE html>'
-      +'<html><head><meta charset="UTF-8">'
-      +'<title>Rapport d\'Avancement - RAP'+esc(rapNum)+'</title>'
-      +'<style>'
-      +'body{margin:0;padding:0;font-family:Arial,sans-serif}'
-      +'@media print{.no-print{display:none!important}@page{size:A4;margin:8mm}body{background:#fff}}'
-      +'</style>'
-      +'</head><body>'
-      +'<div class="no-print" style="background:'+acc+';color:#fff;padding:8px 16px;display:flex;gap:10px;align-items:center">'
-      +'<span style="flex:1;font-size:13px;font-weight:700">Rapport d\'Avancement - RAP'+esc(rapNum)+'</span>'
-      +'<button onclick="window.print()" style="background:#fff;color:'+acc+';border:0;border-radius:4px;padding:6px 18px;font-size:12px;font-weight:700;cursor:pointer">Imprimer / PDF</button>'
-      +'<button onclick="window.close()" style="background:rgba(255,255,255,.2);color:#fff;border:1px solid rgba(255,255,255,.5);border-radius:4px;padding:6px 14px;font-size:12px;cursor:pointer">Fermer</button>'
-      +'</div>'+body+'</body></html>';
     w.document.open();
     w.document.write(doc);
     w.document.close();
+    w.focus();
     }catch(err){alert('Erreur PDF: '+(err&&err.message||String(err)));}
   };
 })();
