@@ -668,6 +668,227 @@ document.addEventListener('DOMContentLoaded', async function() {
     })();
 
     // ─────────────────────────────────────────────────────────────
+    // [Phase3B-MigrateProjects] Fusionner JIP+QUOTE → PROJETS avec FKs
+    // Objectif: Remplacer texte brut par FK robustes (organisationId, siteId, personneIds)
+    // ─────────────────────────────────────────────────────────────
+    (function migrateProjects() {
+      setTimeout(function() {
+        try {
+          // ─ Fonction helper pour normaliser ─
+          function normalize(s) {
+            return String(s || '').normalize('NFD')
+              .replace(/[̀-ͯ]/g, '')
+              .toLowerCase()
+              .replace(/[^a-z0-9]/g, ' ')
+              .replace(/\s+/g, ' ')
+              .trim();
+          }
+
+          // ─ Fonction helper pour trouver personne par nom ─
+          function findPersonneByNom(nomText, domaine) {
+            if (!nomText) return null;
+
+            var nomN = normalize(nomText).split(' ')[0]; // Première partie du nom
+            var candidates = [];
+
+            if (domaine === 'HR' || !domaine) {
+              candidates = candidates.concat(window.PERSONNES_HR || []);
+            }
+            if (domaine === 'CLIENT' || !domaine) {
+              candidates = candidates.concat(window.PERSONNES_CLIENTS || []);
+            }
+
+            // Chercher par match exact normalisé
+            var exactMatch = candidates.find(function(p) {
+              return normalize(p.nomComplet).indexOf(normalize(nomText)) >= 0;
+            });
+            if (exactMatch) return exactMatch;
+
+            // Chercher par première partie du nom
+            var partialMatch = candidates.find(function(p) {
+              return normalize(p.nomComplet).split(' ')[0] === nomN;
+            });
+            if (partialMatch) return partialMatch;
+
+            return null;
+          }
+
+          // ─ Fonction helper pour trouver organisation par nom ─
+          function findOrgByNom(nomText) {
+            if (!nomText) return null;
+            var nomN = normalize(nomText);
+
+            var exact = (window.ORGANISATIONS || []).find(function(o) {
+              return normalize(o.nom) === nomN;
+            });
+            if (exact) return exact;
+
+            // Recherche partielle
+            var partial = (window.ORGANISATIONS || []).find(function(o) {
+              return normalize(o.nom).indexOf(nomN) >= 0 ||
+                     nomN.indexOf(normalize(o.nom)) >= 0;
+            });
+            return partial;
+          }
+
+          // ─ Fonction helper pour trouver site par nom ─
+          function findSiteByNom(nomText) {
+            if (!nomText) return null;
+            var nomN = normalize(nomText);
+
+            var exact = (window.SITES || []).find(function(s) {
+              return normalize(s.nom) === nomN;
+            });
+            if (exact) return exact;
+
+            // Recherche partielle
+            var partial = (window.SITES || []).find(function(s) {
+              return normalize(s.nom).indexOf(nomN) >= 0 ||
+                     nomN.indexOf(normalize(s.nom)) >= 0;
+            });
+            return partial;
+          }
+
+          // ─ Fusionner JIP_DATA + QUOTE_DATA → PROJETS ─
+          var projets = [];
+          var jipMap = {}; // Cache JIP par Imputation
+
+          (window.JIP_DATA || []).forEach(function(jip) {
+            if (!jip.Imputation) return;
+            jipMap[jip.Imputation] = jip;
+          });
+
+          (window.QUOTE_DATA || []).forEach(function(quote) {
+            if (!quote.Dossier) return;
+
+            var jip = jipMap[quote.Dossier] || jipMap[quote.Imputation] || {};
+            var imputation = quote.Dossier || quote.Imputation;
+
+            // ─ Lookup: Organisation ─
+            var clientNom = jip.Client || jip.societe || quote.Client || '';
+            var org = findOrgByNom(clientNom);
+            var organisationId = org ? org.id : null;
+
+            // ─ Lookup: Site ─
+            var siteNom = jip.Unite || quote.Unite || '';
+            var site = findSiteByNom(siteNom);
+            var siteId = site ? site.id : null;
+
+            // ─ Lookup: Chef de chantier (PERSONNEL_HR) ─
+            var chefNom = jip.chefChantier || '';
+            var chef = findPersonneByNom(chefNom, 'HR');
+            var chefChantierPersonneId = chef ? chef.id : null;
+
+            // ─ Lookup: Demandeur/Acheteur (PERSONNES_CLIENTS) ─
+            var acheteurNom = quote.Acheteur || '';
+            var demandeur = findPersonneByNom(acheteurNom, 'CLIENT');
+            var demandeurPersonneId = demandeur ? demandeur.id : null;
+
+            // ─ Lookup: Ingénieur (PERSONNES_HR ou PERSONNES_CLIENTS) ─
+            var ingNom = quote.IngenieurAff || '';
+            var ing = findPersonneByNom(ingNom); // Cherche dans les deux domaines
+            var ingenieurPersonneId = ing ? ing.id : null;
+
+            // ─ Lookup: Vendeur (texte brut si fourni)
+            var vendeurNom = quote.Vendeur || '';
+
+            // Créer le projet
+            projets.push({
+              id: imputation,
+              numero: imputation,
+
+              // Identifiants
+              oaNum: quote.OA || jip.NumeroOA || '',
+              dossier: quote.Dossier || imputation,
+              referenceClient: quote.ReferenceClient || '',
+
+              // FKs vers ORGANISATIONS & SITES
+              organisationId: organisationId,
+              siteId: siteId,
+
+              // FKs vers PERSONNES
+              chefChantierPersonneId: chefChantierPersonneId,
+              demandeurPersonneId: demandeurPersonneId,
+              ingenieurPersonneId: ingenieurPersonneId,
+
+              // Description
+              description: jip.Description || quote.Description || jip.Objet || '',
+              objet: quote.Objet || '',
+
+              // Planning
+              dateDebut: jip.dateDebut || '',
+              dateFin: jip.dateFin || '',
+              dateRFQ: quote.DateRFQ || '',
+
+              // Budget
+              budgetOA: Number(quote.MontantHT) || Number(jip.budgetOA) || 0,
+              budgetContractuel: Number(quote.MontantHT) || 0,
+              montantEngageTotal: 0,
+
+              // Status
+              status: jip.Status || jip.EtatPI || 'En cours',
+              avancement: Number(jip.Avancement) || 0,
+
+              // Meta
+              devise: 'XAF',
+              codeClient: quote.CodeClient || '',
+
+              // Fallback textes (pour debug / rapport)
+              _clientNomTexte: clientNom,
+              _siteNomTexte: siteNom,
+              _chefChantierTexte: chefNom,
+              _demandeurTexte: acheteurNom,
+              _ingenieurTexte: ingNom,
+              _vendeurTexte: vendeurNom,
+
+              // Metadata
+              createdAt: new Date().toISOString(),
+              sourceJIP: !!jip.Imputation,
+              sourceQUOTE: !!quote.Dossier
+            });
+          });
+
+          window.PROJETS = projets;
+
+          // ─ Créer INDEX pour lookup rapide ─
+          window.PROJETS_INDEX = {};
+          projets.forEach(function(p) {
+            window.PROJETS_INDEX[p.id] = p;
+            if (p.oaNum) window.PROJETS_INDEX[p.oaNum] = p;
+          });
+
+          // ─ Statistiques sur les FKs ─
+          var stats = {
+            total: projets.length,
+            withOrg: projets.filter(function(p) { return p.organisationId; }).length,
+            withSite: projets.filter(function(p) { return p.siteId; }).length,
+            withChef: projets.filter(function(p) { return p.chefChantierPersonneId; }).length,
+            withDemandeur: projets.filter(function(p) { return p.demandeurPersonneId; }).length,
+            withIngenieur: projets.filter(function(p) { return p.ingenieurPersonneId; }).length
+          };
+
+          // ─ Sauvegarder en localStorage ─
+          try {
+            localStorage.setItem('ePilot_PROJETS', JSON.stringify(projets));
+          } catch(e) {
+            console.warn('[Phase3B] Impossible de sauvegarder:', e.message);
+          }
+
+          console.log('[Phase3B-MigrateProjects] Résumé:',
+            'PROJETS=' + stats.total,
+            '| Org=' + stats.withOrg + '/' + stats.total,
+            '| Site=' + stats.withSite + '/' + stats.total,
+            '| Chef=' + stats.withChef + '/' + stats.total,
+            '| Demandeur=' + stats.withDemandeur + '/' + stats.total,
+            '| Ingenieur=' + stats.withIngenieur + '/' + stats.total);
+
+        } catch(e) {
+          console.error('[Phase3B-MigrateProjects] Erreur:', e.message, e.stack);
+        }
+      }, 400); // Après Phase 3A (300ms)
+    })();
+
+    // ─────────────────────────────────────────────────────────────
     // [FixClosedChantier v1] Ouverture des chantiers CLÔTURÉS / TERMINÉS
     // depuis Quote, OA, Comptabilité, etc.
     //
