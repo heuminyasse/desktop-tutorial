@@ -7812,7 +7812,6 @@ html body[class] #vac-gantt td.emp .nm{font-weight:500 !important;}</style>
     var emailSoc=_be.email||'project@hbocameroon.com';
     var logo=_be.logo||'';
 
-    /* --- données branchées --- */
     var cl=((window.CLIENTS_DATA||{}).clients||[]).find(function(c){return c.id===(jip&&jip.clientId);})||{};
     var clientName=(cl.name||cl.nom||cl.Nom||'—');
     var projNom=(jip?(jip.description||jip.id||''):(pv.jipId||''));
@@ -7820,14 +7819,13 @@ html body[class] #vac-gantt td.emp .nm{font-weight:500 !important;}</style>
     var rapNum=pv.numero||pv.id||'__';
     var dateStr=fD(pv.date);
     var superviseur=pv.signataire||(pv.jsa&&pv.jsa.signataire)||nomSoc;
-    var contact='tel: '+telSoc+(emailSoc?' – '+emailSoc:'');
+    var contact=(telSoc?'tel: '+telSoc:'')+(emailSoc?(telSoc?' – ':'')+emailSoc:'');
 
     var tasks=(jip&&jip.tasks)||[];
     var totalPct=tasks.length?Math.round(tasks.reduce(function(s,t){return s+(Number(t.progress)||0);},0)/tasks.length):0;
     var avPctW=Math.min(totalPct,100);
     var avCol=avPctW>=80?'#166534':avPctW>=50?'#854d0e':'#991b1b';
 
-    /* tâches → tableau */
     var taskRowsHtml=tasks.length?tasks.map(function(t,i){
       var pct=Number(t.progress||0);
       var col=pct>=100?'#166534':pct>=75?'#15803d':pct>=50?'#854d0e':'#991b1b';
@@ -7838,183 +7836,111 @@ html body[class] #vac-gantt td.emp .nm{font-weight:500 !important;}</style>
       return '<tr style="background:'+(i%2?'#f8faff':'#fff')+'">'
         +'<td style="padding:4px 6px;border-bottom:1px solid #e5e7eb;font-size:10px">'+esc(t.title||t.nom||'')+'</td>'
         +'<td style="padding:4px 6px;border-bottom:1px solid #e5e7eb;text-align:center;font-size:10px;color:#555">'+(t.jours||t.days||'—')+'</td>'
-        +'<td style="padding:4px 6px;border-bottom:1px solid #e5e7eb;text-align:center;font-size:10px;color:#555">'+(t.debut||t.dateDebut?fD(t.debut||t.dateDebut):'—')+'</td>'
-        +'<td style="padding:4px 6px;border-bottom:1px solid #e5e7eb;text-align:center;font-size:10px;color:#555">'+(t.fin||t.dateFin?fD(t.fin||t.dateFin):'—')+'</td>'
+        +'<td style="padding:4px 6px;border-bottom:1px solid #e5e7eb;text-align:center;font-size:10px;color:#555">'+(t.debut?fD(t.debut):t.dateDebut?fD(t.dateDebut):'—')+'</td>'
+        +'<td style="padding:4px 6px;border-bottom:1px solid #e5e7eb;text-align:center;font-size:10px;color:#555">'+(t.fin?fD(t.fin):t.dateFin?fD(t.dateFin):'—')+'</td>'
         +'<td style="padding:4px 8px;border-bottom:1px solid #e5e7eb;width:120px">'+bar+'</td>'
         +'</tr>';
-    }).join(''):'<tr><td colspan="5" style="padding:8px;text-align:center;color:#888;font-size:10px;font-style:italic">Aucune tâche</td></tr>';
+    }).join(''):'<tr><td colspan="5" style="padding:8px;text-align:center;color:#888;font-size:10px;font-style:italic">Aucune tache</td></tr>';
 
-    /* contraintes → tableau coloré comme Excel */
     var cntrArr=Array.isArray(pv.contraintes)?pv.contraintes:(pv.contraintes?[{description:pv.contraintes,etat:'Ouvert'}]:[]);
     var cntrFiltered=cntrArr.filter(function(c){return c.description;});
-    var cntrRowsHtml=cntrFiltered.length?cntrFiltered.map(function(c,i){
+    var cntrRowsHtml=cntrFiltered.length?cntrFiltered.map(function(c){
       var et=c.etat||'Ouvert';
       var bg=et==='Clôturé'?'#dcfce7':et==='En cours'?'#fef9c3':'#fee2e2';
       var dot=et==='Clôturé'?'#166534':et==='En cours'?'#854d0e':'#991b1b';
       return '<tr style="background:'+bg+'">'
         +'<td style="padding:4px 6px;border-bottom:1px solid #e5e7eb;font-size:10px">'+esc(c.description)+'</td>'
-        +'<td style="padding:4px 6px;border-bottom:1px solid #e5e7eb;font-size:10px;white-space:nowrap"><span style="color:'+dot+';font-weight:700">'+esc(et)+'</span></td>'
+        +'<td style="padding:4px 6px;border-bottom:1px solid #e5e7eb;font-size:10px"><span style="color:'+dot+';font-weight:700">'+esc(et)+'</span></td>'
         +'<td style="padding:4px 6px;border-bottom:1px solid #e5e7eb;font-size:10px">'+esc(c.responsable||'—')+'</td>'
-        +'<td style="padding:4px 6px;border-bottom:1px solid #e5e7eb;font-size:10px;white-space:nowrap">'+esc(c.echeance||'—')+'</td>'
+        +'<td style="padding:4px 6px;border-bottom:1px solid #e5e7eb;font-size:10px">'+esc(c.echeance||'—')+'</td>'
         +'</tr>';
     }).join(''):'<tr><td colspan="4" style="padding:8px;text-align:center;color:#888;font-size:10px;font-style:italic">Aucune contrainte</td></tr>';
 
-    /* équipe */
-    var eqHtml=(pv.equipePresente||[]).map(function(e){return esc(e.nom||'')+(e.role?' ('+esc(e.role)+')':'');}).join(' &nbsp;·&nbsp; ')||'—';
+    var eqHtml=(pv.equipePresente||[]).map(function(e){return esc(e.nom||'')+(e.role?' ('+esc(e.role)+')':'');}).join(' &nbsp;&middot;&nbsp; ')||'&mdash;';
 
-    /* CSS */
-    var css='*{box-sizing:border-box;margin:0;padding:0}'
-      +'body{font-family:Arial,Helvetica,sans-serif;font-size:11px;color:#111;background:#fff}'
-      +'.page{width:210mm;min-height:297mm;margin:0 auto;padding:10mm 12mm}'
-      +'@media print{@page{size:A4 portrait;margin:0}.page{padding:8mm 10mm}}'
-      +'.hdr-top{display:flex;align-items:flex-start;justify-content:space-between;border-bottom:4px solid '+acc+';padding-bottom:8px;margin-bottom:8px}'
-      +'.logo-box{display:flex;align-items:center;gap:8px}'
-      +'.logo-img{height:38px;object-fit:contain}'
-      +'.co-name{font-size:18px;font-weight:900;color:'+acc+';letter-spacing:1px}'
-      +'.co-sub{font-size:8.5px;color:#888;margin-top:1px}'
-      +'.rap-title{font-size:15px;font-weight:900;color:'+acc+';text-transform:uppercase;text-align:right}'
-      +'.rap-ref{font-size:9px;color:#555;text-align:right;margin-top:2px}'
-      +'.info-grid{display:grid;grid-template-columns:1fr 1fr;gap:0;border:1px solid #d1d5db;border-radius:4px;margin-bottom:8px;overflow:hidden}'
-      +'.info-l{padding:8px 12px;background:#f8faff;border-right:1px solid #d1d5db}'
-      +'.info-r{padding:8px 12px;background:#fff}'
-      +'.info-row{display:flex;gap:6px;margin-bottom:3px;font-size:10px}'
-      +'.info-lbl{font-weight:700;color:'+acc+';white-space:nowrap;min-width:70px}'
-      +'.av-row{display:flex;align-items:center;gap:10px;background:#fffbeb;border:1px solid #fcd34d;border-radius:4px;padding:7px 12px;margin-bottom:8px}'
-      +'.av-lbl{font-size:9.5px;font-weight:700;color:#92400e;white-space:nowrap}'
-      +'.av-bar{flex:1;height:12px;background:#e5e7eb;border-radius:6px}'
-      +'.av-fill{height:100%;border-radius:6px;background:'+avCol+'}'
-      +'.av-pct{font-size:15px;font-weight:900;color:'+avCol+';white-space:nowrap}'
-      +'.sec-hdr{font-size:9.5px;font-weight:900;text-transform:uppercase;letter-spacing:.6px;color:#fff;background:'+acc+';padding:4px 8px;margin-top:8px}'
-      +'.tbl{width:100%;border-collapse:collapse}'
-      +'.tbl th{background:#e8edf7;color:'+acc+';padding:4px 6px;font-size:9px;font-weight:700;text-align:left;border-bottom:2px solid '+acc+'}'
-      +'.obs-box{background:#f8faff;border:1px solid #d1d5db;border-radius:0 0 4px 4px;padding:8px 10px;font-size:10.5px;white-space:pre-wrap;min-height:22px}'
-      +'.sigs{display:grid;grid-template-columns:1fr 1fr;gap:40px;margin-top:18px;padding-top:10px;border-top:1px solid #d1d5db}'
-      +'.sig-lbl{font-size:8.5px;color:#888;margin-bottom:18px}'
-      +'.sig-line{border-top:1.5px solid #111;padding-top:4px;font-size:9px;color:#444}';
-
-    /* HTML doc */
-    var doc='<!DOCTYPE html><html lang="fr"><head><meta charset="utf-8">'
-      +'<title>Rapport d\'Avancement – '+esc(clientName)+'</title>'
-      +'<style>'+css+'</style></head><body><div class="page">'
-
-      /* ─── en-tête ─── */
-      +'<div class="hdr-top">'
-      +'<div class="logo-box">'+(logo?'<img class="logo-img" src="'+esc(logo)+'" alt=""/>':'')
-      +'<div><div class="co-name">'+esc(nomSoc)+'</div>'
-      +(adrSoc?'<div class="co-sub">'+esc(adrSoc)+'</div>':'')
-      +'</div></div>'
-      +'<div><div class="rap-title">Rapport d\'Avancement</div>'
-      +'<div class="rap-ref">RAP'+esc(rapNum)+'  –  Chantier '+esc(jipId)+' du '+esc(dateStr)+'</div>'
+    var inner=''
+      +'<div style="display:flex;align-items:flex-start;justify-content:space-between;border-bottom:4px solid '+acc+';padding-bottom:8px;margin-bottom:8px">'
+      +'<div style="display:flex;align-items:center;gap:8px">'
+      +(logo?'<img src="'+esc(logo)+'" style="height:38px;object-fit:contain" alt=""/>':'')
+      +'<div><div style="font-size:18px;font-weight:900;color:'+acc+';letter-spacing:1px">'+esc(nomSoc)+'</div>'
+      +(adrSoc?'<div style="font-size:8px;color:#888">'+esc(adrSoc)+'</div>':'')+'</div></div>'
+      +'<div style="text-align:right"><div style="font-size:15px;font-weight:900;color:'+acc+';text-transform:uppercase">Rapport d\'Avancement</div>'
+      +'<div style="font-size:9px;color:#555;margin-top:2px">RAP'+esc(rapNum)+'  –  Chantier '+esc(jipId)+' du '+esc(dateStr)+'</div>'
       +'</div></div>'
 
-      /* ─── info projet (2 colonnes) ─── */
-      +'<div class="info-grid">'
-      +'<div class="info-l">'
-      +'<div class="info-row"><span class="info-lbl">Client :</span><span>'+esc(clientName)+'</span></div>'
-      +'<div class="info-row"><span class="info-lbl">Projet :</span><span>'+esc(projNom)+'</span></div>'
-      +'<div class="info-row"><span class="info-lbl">Date :</span><span>'+esc(dateStr)+'</span></div>'
-      +'<div class="info-row"><span class="info-lbl">Horaires :</span><span>'+esc(pv.heureDebut||'—')+' → '+esc(pv.heureFin||'—')+'</span></div>'
+      +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:0;border:1px solid #d1d5db;border-radius:4px;margin-bottom:8px;overflow:hidden">'
+      +'<div style="padding:8px 12px;background:#f8faff;border-right:1px solid #d1d5db">'
+      +'<div style="display:flex;gap:6px;margin-bottom:3px;font-size:10px"><b style="color:'+acc+';min-width:72px">Client :</b><span>'+esc(clientName)+'</span></div>'
+      +'<div style="display:flex;gap:6px;margin-bottom:3px;font-size:10px"><b style="color:'+acc+';min-width:72px">Projet :</b><span>'+esc(projNom)+'</span></div>'
+      +'<div style="display:flex;gap:6px;margin-bottom:3px;font-size:10px"><b style="color:'+acc+';min-width:72px">Date :</b><span>'+esc(dateStr)+'</span></div>'
+      +'<div style="display:flex;gap:6px;font-size:10px"><b style="color:'+acc+';min-width:72px">Horaires :</b><span>'+esc(pv.heureDebut||'—')+' → '+esc(pv.heureFin||'—')+'</span></div>'
       +'</div>'
-      +'<div class="info-r">'
-      +'<div class="info-row"><span class="info-lbl">Superviseur :</span><span>'+esc(superviseur)+'</span></div>'
-      +'<div class="info-row"><span class="info-lbl">Contact :</span><span>'+esc(contact)+'</span></div>'
-      +(eqHtml!=='—'?'<div class="info-row"><span class="info-lbl">Équipe :</span><span>'+eqHtml+'</span></div>':'')
-      +'</div>'
-      +'</div>'
+      +'<div style="padding:8px 12px;background:#fff">'
+      +'<div style="display:flex;gap:6px;margin-bottom:3px;font-size:10px"><b style="color:'+acc+';min-width:82px">Superviseur :</b><span>'+esc(superviseur)+'</span></div>'
+      +(contact?'<div style="display:flex;gap:6px;margin-bottom:3px;font-size:10px"><b style="color:'+acc+';min-width:82px">Contact :</b><span>'+esc(contact)+'</span></div>':'')
+      +'<div style="display:flex;gap:6px;font-size:10px"><b style="color:'+acc+';min-width:82px">Équipe :</b><span>'+eqHtml+'</span></div>'
+      +'</div></div>'
 
-      /* ─── avancement global ─── */
-      +(tasks.length?'<div class="av-row">'
-        +'<span class="av-lbl">AVANCEMENT GLOBAL</span>'
-        +'<div class="av-bar"><div class="av-fill" style="width:'+avPctW+'%"></div></div>'
-        +'<span class="av-pct">'+totalPct+'%</span>'
+      +(tasks.length?'<div style="display:flex;align-items:center;gap:10px;background:#fffbeb;border:1px solid #fcd34d;border-radius:4px;padding:7px 12px;margin-bottom:8px">'
+        +'<span style="font-size:9.5px;font-weight:700;color:#92400e;white-space:nowrap">AVANCEMENT GLOBAL</span>'
+        +'<div style="flex:1;height:12px;background:#e5e7eb;border-radius:6px"><div style="width:'+avPctW+'%;height:100%;border-radius:6px;background:'+avCol+'"></div></div>'
+        +'<span style="font-size:15px;font-weight:900;color:'+avCol+';white-space:nowrap">'+totalPct+'%</span>'
         +'</div>':'')
 
-      /* ─── tableau tâches ─── */
-      +'<div class="sec-hdr">A – Tâches</div>'
-      +'<table class="tbl"><thead><tr>'
-      +'<th>Description</th><th style="width:40px;text-align:center">Jours</th>'
-      +'<th style="width:80px;text-align:center">Début</th><th style="width:80px;text-align:center">Fin</th>'
-      +'<th style="width:130px">Avancement</th>'
+      +'<div style="font-size:9.5px;font-weight:900;text-transform:uppercase;letter-spacing:.6px;color:#fff;background:'+acc+';padding:4px 8px;margin-top:8px">A – Tâches</div>'
+      +'<table style="width:100%;border-collapse:collapse"><thead><tr>'
+      +'<th style="background:#e8edf7;color:'+acc+';padding:4px 6px;font-size:9px;font-weight:700;text-align:left;border-bottom:2px solid '+acc+'">Description</th>'
+      +'<th style="background:#e8edf7;color:'+acc+';padding:4px 6px;font-size:9px;font-weight:700;text-align:center;border-bottom:2px solid '+acc+';width:40px">Jours</th>'
+      +'<th style="background:#e8edf7;color:'+acc+';padding:4px 6px;font-size:9px;font-weight:700;text-align:center;border-bottom:2px solid '+acc+';width:80px">Début</th>'
+      +'<th style="background:#e8edf7;color:'+acc+';padding:4px 6px;font-size:9px;font-weight:700;text-align:center;border-bottom:2px solid '+acc+';width:80px">Fin</th>'
+      +'<th style="background:#e8edf7;color:'+acc+';padding:4px 6px;font-size:9px;font-weight:700;text-align:left;border-bottom:2px solid '+acc+';width:130px">Avancement</th>'
       +'</tr></thead><tbody>'+taskRowsHtml+'</tbody></table>'
 
-      /* ─── observations ─── */
-      +'<div class="sec-hdr">B – Observations</div>'
-      +'<div class="obs-box">'+esc(pv.notes||'—')+'</div>'
+      +'<div style="font-size:9.5px;font-weight:900;text-transform:uppercase;letter-spacing:.6px;color:#fff;background:'+acc+';padding:4px 8px;margin-top:8px">B – Observations</div>'
+      +'<div style="background:#f8faff;border:1px solid #d1d5db;padding:8px 10px;font-size:10.5px;white-space:pre-wrap;min-height:22px">'+esc(pv.notes||'—')+'</div>'
 
-      /* ─── contraintes ─── */
-      +'<div class="sec-hdr">C – Tâches supplémentaires, urgentes, difficultés</div>'
-      +'<table class="tbl"><thead><tr>'
-      +'<th>Description</th><th style="width:75px">État</th>'
-      +'<th style="width:100px">Responsable</th><th style="width:80px">Échéance</th>'
+      +'<div style="font-size:9.5px;font-weight:900;text-transform:uppercase;letter-spacing:.6px;color:#fff;background:'+acc+';padding:4px 8px;margin-top:8px">C – Tâches supplémentaires, urgentes, difficultés</div>'
+      +'<table style="width:100%;border-collapse:collapse"><thead><tr>'
+      +'<th style="background:#e8edf7;color:'+acc+';padding:4px 6px;font-size:9px;font-weight:700;text-align:left;border-bottom:2px solid '+acc+'">Description</th>'
+      +'<th style="background:#e8edf7;color:'+acc+';padding:4px 6px;font-size:9px;font-weight:700;text-align:left;border-bottom:2px solid '+acc+';width:75px">État</th>'
+      +'<th style="background:#e8edf7;color:'+acc+';padding:4px 6px;font-size:9px;font-weight:700;text-align:left;border-bottom:2px solid '+acc+';width:100px">Responsable</th>'
+      +'<th style="background:#e8edf7;color:'+acc+';padding:4px 6px;font-size:9px;font-weight:700;text-align:left;border-bottom:2px solid '+acc+';width:80px">Échéance</th>'
       +'</tr></thead><tbody>'+cntrRowsHtml+'</tbody></table>'
 
-      /* ─── signatures ─── */
-      +'<div class="sigs">'
-      +'<div><div class="sig-lbl">Superviseur chantier</div><div class="sig-line">'+esc(superviseur)+'</div></div>'
-      +'<div><div class="sig-lbl">Client / Représentant</div><div class="sig-line">&nbsp;</div></div>'
-      +'</div>'
+      +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:40px;margin-top:18px;padding-top:10px;border-top:1px solid #d1d5db">'
+      +'<div><div style="font-size:8.5px;color:#888;margin-bottom:18px">Superviseur chantier</div>'
+      +'<div style="border-top:1.5px solid #111;padding-top:4px;font-size:9px;color:#444">'+esc(superviseur)+'</div></div>'
+      +'<div><div style="font-size:8.5px;color:#888;margin-bottom:18px">Client / Représentant</div>'
+      +'<div style="border-top:1.5px solid #111;padding-top:4px;font-size:9px;color:#444">&nbsp;</div></div>'
+      +'</div>';
 
-      +'</div></body></html>';
+    /* --- impression sans popup --- */
+    var OID='__pv_print_overlay__';
+    var old=document.getElementById(OID);
+    if(old) old.parentNode.removeChild(old);
 
-    var w=window.open('','_blank','width=900,height=800,scrollbars=yes');
-    if(!w){alert('Autorisez les popups pour imprimer.');return;}
-    w.document.write(doc);
-    w.document.close();
-    w.focus();
-    setTimeout(function(){w.print();},500);
+    var styleId='__pv_print_style__';
+    var oldSt=document.getElementById(styleId);
+    if(oldSt) oldSt.parentNode.removeChild(oldSt);
+
+    var st=document.createElement('style');
+    st.id=styleId;
+    st.textContent='@media print{ body > *:not(#'+OID+') { display:none !important; } #'+OID+' { display:block !important; position:static !important; } } @page{size:A4 portrait;margin:10mm 12mm}';
+    document.head.appendChild(st);
+
+    var ov=document.createElement('div');
+    ov.id=OID;
+    ov.style.cssText='display:none;font-family:Arial,Helvetica,sans-serif;font-size:11px;color:#111;background:#fff;width:210mm;margin:0 auto;padding:10mm 12mm;box-sizing:border-box';
+    ov.innerHTML=inner;
+    document.body.appendChild(ov);
+
+    window.print();
+
+    setTimeout(function(){
+      var e=document.getElementById(OID); if(e) e.parentNode.removeChild(e);
+      var s=document.getElementById(styleId); if(s) s.parentNode.removeChild(s);
+    },2000);
   };
-
-
-
-<!-- WA React Patch: fix KPI Avancement + slider label to show weighted % -->
-<script id="__WA_REACT_PATCH_v1__">
-(function(){
-  var _tries=0;
-  function patch(){
-    var el=document.getElementById('ch-src');
-    if(!el){ if(++_tries<300) setTimeout(patch,50); return; }
-    if(window.__chReady) return;
-    var src=el.textContent;
-    if(src.indexOf('function CompactKPIs(')<0){ if(++_tries<300) setTimeout(patch,50); return; }
-    if(src.indexOf('__WA_REACT_V1__')>=0) return;
-
-    function cwp(name,s,find,repl){
-      if(s.indexOf(find)<0){ try{console.warn('[WA React] patch "'+name+'" introuvable.');}catch(_){} return s; }
-      return s.replace(find,repl);
-    }
-
-    // Read from _epilotWA (Planning columns) → localStorage cache → computeWA fallback
-    var helper='/* __WA_REACT_V1__ */'
-      +' function getWA(jip){'
-      +'var pi=(jip.imputation||jip.id||"").toUpperCase();if(!pi)return null;'
-      +'var w=window._epilotWA;'
-      +'if(w&&w.pi&&w.pi.toUpperCase()===pi&&w.wa!==null&&w.wa!==undefined)return w.wa;'
-      +'try{var lc=JSON.parse(localStorage.getItem("epilot_wa_cache")||"null");'
-      +'if(lc&&lc.pi&&lc.pi.toUpperCase()===pi&&lc.wa!==null&&lc.wa!==undefined){window._epilotWA=lc;return lc.wa;}'
-      +'}catch(_){}'
-      +'if(typeof window._epilotComputeWA==="function"){var r=window._epilotComputeWA(pi);if(r!==null&&r!==undefined)return r;}'
-      +'return null;}'
-      +' function getConsoAmt(jip){'
-      +'var pi=(jip.imputation||jip.id||"").toUpperCase();if(!pi)return null;'
-      +'var w=window._epilotWA;'
-      +'if(w&&w.pi&&w.pi.toUpperCase()===pi&&w.conso!==null&&w.conso!==undefined)return w.conso;'
-      +'try{var lc=JSON.parse(localStorage.getItem("epilot_wa_cache")||"null");'
-      +'if(lc&&lc.pi&&lc.pi.toUpperCase()===pi&&lc.conso!==null&&lc.conso!==undefined){return lc.conso;}'
-      +'}catch(_){}'
-      +'return null;}';
-
-    src=cwp('wa-helper',src,'function CompactKPIs(',helper+'\nfunction CompactKPIs(');
-    src=cwp('wa-kpi',src,"{ l:'Avancement', v:jip.progress+'%'","{ l:'Avancement', v:(getWA(jip)!==null?getWA(jip):jip.progress)+'%'");
-    src=cwp('wa-slider',src,"minWidth:38, textAlign:'right', color:'var(--acc)' }}>{jip.progress}%</span>","minWidth:38, textAlign:'right', color:'var(--acc)' }}>{getWA(jip)!==null?getWA(jip):jip.progress}%</span>");
-    src=cwp('wa-consommation',src,
-      "sub:`vs ${expectedPct(jip)}%`, cls:cAvancement },",
-      "sub:`vs ${expectedPct(jip)}%`, cls:cAvancement },{ l:'Consommation', v:(getWA(jip)!==null?getWA(jip):0)+'%', sub:(getConsoAmt(jip)?'≈ '+fmtM(getConsoAmt(jip)):'—'), cls:(function(w){return w===null?'kpi-warn':w>=70?'kpi-ok':w>=40?'kpi-warn':'kpi-crit';})(getWA(jip)) },"
-    );
-    el.textContent=src;
-  }
-  setTimeout(patch,0);
-})();
-</script>
 
 <!-- Weighted Avancement: Planning title-bar badge + Ring + Slider -->
 <script id="__WA_INJECT_v1__">
