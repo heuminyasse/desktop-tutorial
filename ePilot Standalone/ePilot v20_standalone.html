@@ -219,7 +219,7 @@ document.addEventListener('DOMContentLoaded', async function() {
           var _gor=function(k,def){ try{ var s=localStorage.getItem(k); return s!=null?JSON.parse(s):def; }catch(_e){ return def; } };
           var _set=function(k,g){ var s=localStorage.getItem(k); if(s!=null){ try{ window[g]=JSON.parse(s); }catch(_e){} } };
           window.QUOTE_DATA=_gor("ePilot_QUOTE_DATA",[]); window.JIP_DATA=_gor("ePilot_JIP_DATA",[]); window.SOURCING_DATA=_gor("ePilot_SOURCING_DATA",[]);
-          _set("ePilot_CLIENTS_DATA","CLIENTS_DATA"); _set("ePilot_PERSONNEL_DATA","PERSONNEL_DATA");
+          _set("ePilot_CLIENTS_DATA","CLIENTS_DATA"); _set("ePilot_PERSONNEL_DATA","PERSONNEL_DATA"); _set("ePilot_ACHETEURS_DATA","ACHETEURS_DATA");
           window._sourcingIdx={}; (window.SOURCING_DATA||[]).forEach(function(r){ var imp=r.Imputation; if(!imp)return; (window._sourcingIdx[imp]=window._sourcingIdx[imp]||[]).push(r); });
           try{ if(window.EpilotConnector&&window.EpilotConnector._clearCache) window.EpilotConnector._clearCache(); }catch(_e){}
         }catch(_e){}
@@ -7869,6 +7869,9 @@ html body[class] #vac-gantt td.emp .nm{font-weight:500 !important;}</style>
     var rapNum=pv.numero||pv.id||'__';
     var dateStr=fD(pv.date);
     var _nn=function(s){return String(s||'').toLowerCase().replace(/[^a-z0-9]/g,'');};
+    var acheteur=((window.ACHETEURS_DATA||[])).find(function(a){return a.nomN===_nn(clientContact);}))||{};
+    var demandeurTel=acheteur.tel||clientTel||'';
+    var demandeurEmail=acheteur.email||clientEmail||'';
     var chef=((window.PERSONNEL_DATA||[])).find(function(p){var f1=_nn((p.prenoms||'')+(p.nom||''));var f2=_nn((p.nom||'')+(p.prenoms||''));var t=_nn(jip.chefChantier||'');return t&&(f1===t||f2===t);})||{};
     var superviseur=jip.chefChantier||chef.nom||chef.prenoms||pv.signataire||(pv.jsa&&pv.jsa.signataire)||nomSoc;
     var chefTel=(chef.telephones&&chef.telephones[0]&&chef.telephones[0].tel)||chef.telephone||chef.tel||'';
@@ -8137,10 +8140,10 @@ html body[class] #vac-gantt td.emp .nm{font-weight:500 !important;}</style>
       +'<div class="hdr-cname">'+esc(clientName)+'</div>'
       +'<div class="hdr-cinfo">'
       +(clientContact?'<div><b>Demandeur :</b> '+esc(clientContact)+'</div>':'')
-      +((clientTel||clientEmail)
+      +((demandeurTel||demandeurEmail)
         ?'<div class="hdr-inline">'
-          +(clientTel?'<span>Tel : '+esc(clientTel)+'</span>':'')
-          +(clientEmail?'<span>Email : '+esc(clientEmail)+'</span>':'')
+          +(demandeurTel?'<span>Tel : '+esc(demandeurTel)+'</span>':'')
+          +(demandeurEmail?'<span>Email : '+esc(demandeurEmail)+'</span>':'')
           +'</div>':'')
       +'</div></td></tr>'
       +'<tr>'
@@ -8575,7 +8578,95 @@ html body[class] #vac-gantt td.emp .nm{font-weight:500 !important;}</style>
 
     return '<!DOCTYPE html><html><head><meta charset="UTF-8">' +
       '<title>PV de chantier — '+pi+'</title>'+css+
-      '</head><body>' +
+      '<!-- Données Acheteurs -->
+<script id="__ACHETEURS_DATA__">
+window.ACHETEURS_DATA = [
+  {nom:'Alain Serge NOUNY NGASSAM', nomN:'alain serge nouny ngassam', tel:'00237 698961877', email:'ngassam.nouny@castel-afrique.com', entreprise:'SOCIETE ANONYME DES BOISSONS DU CAMEROUN', fonction:'Chef de Bureau Principal'},
+  {nom:'Anicet GHISLAIN FOKA', nomN:'anicet ghislain foka', tel:'699 71 04 89', email:'anicet.foka@castel%1eafrique.com', entreprise:'SOCIETE ANONYME DES BOISSONS DU CAMEROUN', fonction:'Contremaitre Electricite / Instrumentation'},
+  {nom:'Annette Nicole OBOM', nomN:'annette nicole obom', tel:'223 33 51 218', email:'annette.obom@castel-afrique.com', entreprise:'SOCIETE ANONYME DES BOISSONS DU CAMEROUN', fonction:'Agent Achats Locaux'},
+  {nom:'Arielle Mbondja', nomN:'arielle mbondja', tel:'690 95 84 34', email:'ambondja@scdp.cm', entreprise:'SCDP', fonction:'Chef de Bureau des Commandes Nationales'},
+  {nom:'Aurelien KWANDA', nomN:'aurelien kwanda', tel:'690 44 29 63', email:'aurelien.kouanda@castel-afrique.com', entreprise:'SOCIETE ANONYME DES BOISSONS DU CAMEROUN', fonction:'Contremaitre Maintenance Electrique/Instrumentation'},
+  {nom:'NGENDEME Hervige', nomN:'ngendeme hervige', tel:'656 350 895', email:'hervige.ngendeme@dixstone.com', entreprise:'Dixstone Operations Cameroon', fonction:'Supply Chain Coordinator'},
+  {nom:'Sarah EDOUL', nomN:'sarah edoul', tel:'691 102 637', email:'louise.edoul@dixstone.com', entreprise:'Dixstone Operations Cameroon', fonction:'Supply Chain Coordinator'},
+  {nom:'Roger Ndoping', nomN:'roger ndoping', tel:'690 33 10 84', email:'rogerndoping@yahoo.com', entreprise:'CAMWATER', fonction:'Directeur Adjoint'},
+  {nom:'Benjamin N. Eteh', nomN:'benjamin n eteh', tel:'00237 650000039', email:'benjamin.eteh@dangote.com', entreprise:'DANGOTE CEMENT SA', fonction:'Chef Section Achats'},
+  {nom:'Bernadette NGASSOM', nomN:'bernadette ngassom', tel:'699 81 88 54', email:'bernadette.ngassom@castel-afrique.com', entreprise:'SOCAVER', fonction:'Agent Reception et Pesage'},
+  {nom:'Alex Noubissi', nomN:'alex noubissi', tel:'', email:'alexnoubissi222@gmail.com', entreprise:'NEO INDUSTRY SA', fonction:'Acheteur'},
+  {nom:'Berthe Dibao', nomN:'berthe dibao', tel:'683 71 42 63', email:'bdibao@scdp.cm', entreprise:'SCDP', fonction:'Chef Service Achats'},
+  {nom:'Boris Armel NGAHA TCHAHO', nomN:'boris armel ngaha tchaho', tel:'00237 693619804', email:'boris.ngaha@castel-afrique.com', entreprise:'SOCIETE ANONYME DES BOISSONS DU CAMEROUN', fonction:'Chef de Section'},
+  {nom:'Saurelle Metiegoum', nomN:'saurelle metiegoum', tel:'675 98 03 70', email:'saurelle.metiegoum@dangote.com', entreprise:'DANGOTE CEMENT SA', fonction:'Acheteur'},
+  {nom:'Cecile TCHUIENCHE', nomN:'cecile tchuienche', tel:'699 67 75 72', email:'cecile.tchuienche@castel afrique.com', entreprise:'SOCAVER', fonction:'Chef de Bureau Principal Achats MPC'},
+  {nom:'Cedric NGAKAM', nomN:'cedric ngakam', tel:'698 95 72 40', email:'cedric.ngakam@castel afrique.com', entreprise:'SOCIETE ANONYME DES BOISSONS DU CAMEROUN', fonction:'Chef de Bureau Achat PR'},
+  {nom:'Ekassi Etogo', nomN:'ekassi etogo', tel:'690 15 99 52', email:'guy.ekassi@pak.cm', entreprise:'PORT AUTONOME DE KRIBI', fonction:'Responsible Maintenance'},
+  {nom:'Christel TCHATO', nomN:'christel tchato', tel:'690 04 67 61', email:'christel.tchato@castel-afrique.com', entreprise:'SOCIETE ANONYME DES BOISSONS DU CAMEROUN', fonction:'Contremaitre Maintenance'},
+  {nom:'Eithel Chuyeh', nomN:'eithel chuyeh', tel:'6 55 31 76 63', email:'eithel.chuyeh@coca-cola-gracedom.com', entreprise:'Gracedom Invest', fonction:'Responsible Achats'},
+  {nom:'Dieudonné Nyimi', nomN:'dieudonne nyimi', tel:'650 21 05 69', email:'dnyimi@scdp.cm', entreprise:'SCDP', fonction:'Sous Directeur Maintenance'},
+  {nom:'Francois OUNKAP', nomN:'francois ounkap', tel:'679 50 15 05', email:'founkap@scdp.cm', entreprise:'SCDP', fonction:'Sous Directeur QSE'},
+  {nom:'Giselle ETEM', nomN:'giselle etem', tel:'677 09 80 94', email:'gisele.etem@tradexsa.com', entreprise:'TRADEX SA', fonction:'Cadre a ala Direction des Affaires Generales'},
+  {nom:'Hassan FOUAPON KOUOTOU', nomN:'hassan fouapon kouotou', tel:'693 59 06 86', email:'hassan.fouapon@castel-afrique.com', entreprise:'SOCIETE ANONYME DES BOISSONS DU CAMEROUN', fonction:'Chef de Section'},
+  {nom:'Irene Audrey KUISSEU', nomN:'irene audrey kuisseu', tel:'698 23 62 33', email:'kuisseuirene@gmail.com', entreprise:'PORT AUTONOME DE KRIBI', fonction:'Cheffe Service REC'},
+  {nom:'Iris Michael DKOUAM', nomN:'iris michael dkouam', tel:'698 80 55 28', email:'iris.dkouam@castel afrique.com', entreprise:'SOCIETE ANONYME DES BOISSONS DU CAMEROUN', fonction:'Chef d'Atelier Maintenance Electrique/Instrumentation'},
+  {nom:'Irene Pokam', nomN:'irene pokam', tel:'6 79 22 15 40', email:'ipokam@groupebocom.com', entreprise:'BOCOM PETROLEUM SA', fonction:'Acheteur'},
+  {nom:'Victor William MPONDO', nomN:'victor william mpondo', tel:'697 45 90 76', email:'victor.mouyeme@castel-afrique.com', entreprise:'SOCIETE ANONYME DES BOISSONS DU CAMEROUN', fonction:'Acheteur Pieces de Rechange'},
+  {nom:'Joseph DJIEUBOU', nomN:'joseph djieubou', tel:'696 15 69 56', email:'joseph.djieubou@castel-afrique.com', entreprise:'SOCIETE ANONYME DES BOISSONS DU CAMEROUN', fonction:'Chef d'atelier'},
+  {nom:'Martine KACTHE BIDEG', nomN:'martine kacthe bideg', tel:'699 30 04 09', email:'martine.kacthe@castel-afrique.com', entreprise:'SOCIETE ANONYME DES BOISSONS DU CAMEROUN', fonction:'Acheteur'},
+  {nom:'Luc Degaul NGOUBEYOU', nomN:'luc degaul ngoubeyou', tel:'233500000   Ext : 10113', email:'luc.ngoubeyou@castel-afrique.com', entreprise:'SOCIETE ANONYME DES BOISSONS DU CAMEROUN', fonction:'Chef de Section Achats Equipements et Fournitures Hors Production'},
+  {nom:'Rommel CHEUGOUA', nomN:'rommel cheugoua', tel:'695 16 89 80', email:'rommel.cheugoua@castel-afrique.com', entreprise:'SOCIETE ANONYME DES BOISSONS DU CAMEROUN', fonction:'Chef d'Atelier Maintenance'},
+  {nom:'Voltaire TCHOTCHOU', nomN:'voltaire tchotchou', tel:'699 69 55 46', email:'voltaire.tchotchou@castel-afrique.com', entreprise:'SOCIETE ANONYME DES BOISSONS DU CAMEROUN', fonction:'Contremaitre Principal Electricité'},
+  {nom:'Michel KAMGA DZETCHU', nomN:'michel kamga dzetchu', tel:'696 97 33 33', email:'michel.kamga@castel-afrique.com', entreprise:'SOCIETE ANONYME DES BOISSONS DU CAMEROUN', fonction:'Chef de Section Achats Locaux Pieces de Rechange'},
+  {nom:'Michel KENMOE', nomN:'michel kenmoe', tel:'695 29 61 11', email:'michel.kenmoe@castel%1eafrique.com', entreprise:'SOCIETE ANONYME DES BOISSONS DU CAMEROUN', fonction:'Contremaitre Electricite / Instrumentation'},
+  {nom:'Morgan Eyambe', nomN:'morgan eyambe', tel:'6 50 89 19 88', email:'morgan.eyambe@tradexsa.com', entreprise:'TRADEX SA', fonction:'Cadre Maintenance'},
+  {nom:'Philemon SANDJONG TCHAZOU', nomN:'philemon sandjong tchazou', tel:'694 45 34 11', email:'philemon.sandjong@castel-afrique.com', entreprise:'SOCAVER', fonction:'Chef Section Achats'},
+  {nom:'Hassan Adamou', nomN:'hassan adamou', tel:'699 84 37 28', email:'hassan.adamou@castel-afrique.com', entreprise:'SOCAVER', fonction:'Chef Service Senior RH'},
+  {nom:'PIR', nomN:'pir', tel:'', email:'', entreprise:'', fonction:'Acheteur'},
+  {nom:'Raoul Djampou', nomN:'raoul djampou', tel:'693 67 55 31', email:'djampou@yahoo.com', entreprise:'Gracedom Invest', fonction:'Chef de Departement Technique'},
+  {nom:'Roland Takam', nomN:'roland takam', tel:'6 91 52 68 41', email:'rtakam@bnb-investment.com', entreprise:'BOCOM PETROLEUM SA', fonction:'Chef Service Maintenance PS'},
+  {nom:'Atangana Francois', nomN:'atangana francois', tel:'699 93 24 08', email:'francois.atangana@castel-afrique.com', entreprise:'SOCIETE ANONYME DES BOISSONS DU CAMEROUN', fonction:'Chef d'atelier Electricite'},
+  {nom:'Romel FOPA', nomN:'romel fopa', tel:'699 95 55 87', email:'rommel.fopa@castel-afrique.com', entreprise:'SOCIETE ANONYME DES BOISSONS DU CAMEROUN', fonction:'Contremaitre Electricite'},
+  {nom:'Serge Alain Nouny Ngassam', nomN:'serge alain nouny ngassam', tel:'698 96 18 77', email:'ngassam.nouny@castel-afrique.com', entreprise:'SOCIETE ANONYME DES BOISSONS DU CAMEROUN', fonction:'Chef de Bureau Principal Achats Imports Pieces de Rechanges   Services Generaux / Fabrication'},
+  {nom:'Rosine Kati', nomN:'rosine kati', tel:'677 48 23 51', email:'rosine.kati@castel-afrique.com', entreprise:'SOCIETE ANONYME DES BOISSONS DU CAMEROUN', fonction:'Chef de Bureau'},
+  {nom:'Marie-line Ntyame', nomN:'marie-line ntyame', tel:'233 40 27 79', email:'mlntyame@scdp.cm', entreprise:'SCDP', fonction:'Chef Service Achats'},
+  {nom:'Joseph Nong', nomN:'joseph nong', tel:'691 77 88 13', email:'jnong@scdp.cm', entreprise:'SCDP', fonction:'Sous-Directeurs des Projets, Etudes et Suivi des Travaux'},
+  {nom:'Stheve NGAPE LONTE', nomN:'stheve ngape lonte', tel:'696 55 73 86', email:'stheve.ngape@castel-afrique.com', entreprise:'SOCIETE ANONYME DES BOISSONS DU CAMEROUN', fonction:'Chef de Section'},
+  {nom:'Emmanuel Biyong', nomN:'emmanuel biyong', tel:'693 10 92 58', email:'ebiyong@socapalm.org', entreprise:'SOCAPALM', fonction:'Chef Plantation'},
+  {nom:'Anne Chantal Ngo Ngidjol', nomN:'anne chantal ngo ngidjol', tel:'699 11 58 31', email:'ango@socapalm.org', entreprise:'SOCAPALM', fonction:'Chef Huilerie'},
+  {nom:'Patrick RANDRIAMISATA', nomN:'patrick randriamisata', tel:'698 97 39 01', email:'prandriamisata@socapalm.org', entreprise:'SOCAPALM', fonction:'CDT'},
+  {nom:'Basile DONNANG DONGMO', nomN:'basile donnang dongmo', tel:'', email:'basile.donnang@castel afrique.com', entreprise:'SOCIETE ANONYME DES BOISSONS DU CAMEROUN', fonction:'Electricien'},
+  {nom:'Clement Tchientcheu', nomN:'clement tchientcheu', tel:'699 47 40 80', email:'clement.tientcheu@castel afrique.com', entreprise:'SOCIETE ANONYME DES BOISSONS DU CAMEROUN', fonction:'Electricien'},
+  {nom:'Adolphe Missammhe', nomN:'adolphe missammhe', tel:'698 61 45 43', email:'amissammhe@socapalm.org', entreprise:'SOCAPALM', fonction:'Chef Plantation'},
+  {nom:'Fikoue Aime Hamo', nomN:'fikoue aime hamo', tel:'698 24 43 57', email:'patrick.hamo@castel-afrique.com', entreprise:'SOCIETE ANONYME DES BOISSONS DU CAMEROUN', fonction:'Contremaitre Electricite'},
+  {nom:'Pie Owona', nomN:'pie owona', tel:'699 67 53 98', email:'powona@scdp.cm', entreprise:'SCDP', fonction:'Directeur Technique'},
+  {nom:'Thierry Ekendjoum', nomN:'thierry ekendjoum', tel:'697 24 34 31', email:'thierry.ekendjoum@castel afrique.com', entreprise:'SOCAVER', fonction:'Chef Service Instrumentation Informatique Industrielle et Maintenance Bout et Froid'},
+  {nom:'Valdyce Mbogoum', nomN:'valdyce mbogoum', tel:'691 10 78 50', email:'vmbogoum@groupebocom.com', entreprise:'BOCOM PETROLEUM SA', fonction:'Acheteur'},
+  {nom:'Adriane Flora DJUIKOM', nomN:'adriane flora djuikom', tel:'233 40 33 33', email:'adriane.djuikom@castel afrique.com', entreprise:'SOCIETE ANONYME DES BOISSONS DU CAMEROUN', fonction:'Acheteur'},
+  {nom:'Leo SIKATI', nomN:'leo sikati', tel:'640 65 66 63', email:'info@neoindustrysa.com', entreprise:'NEO INDUSTRY SA', fonction:'Acheteur'},
+  {nom:'Jules Bakak', nomN:'jules bakak', tel:'698 45 81 49', email:'jules_bakak@barry-callebaut.com', entreprise:'SIC CACAO', fonction:'Purchasing Manager - Indirect Spend'},
+  {nom:'Bernard Eding Ndenga', nomN:'bernard eding ndenga', tel:'696 60 22 84', email:'bernard_eding@barry-callebaut.com', entreprise:'SIC CACAO', fonction:'HSE Manager'},
+  {nom:'Christian E. Nitcheu', nomN:'christian e nitcheu', tel:'650 00 85 82', email:'christian.nitcheu@dangote.com', entreprise:'DANGOTE CEMENT SA', fonction:'Acheteur'},
+  {nom:'Sodecoton', nomN:'sodecoton', tel:'233 42 46 03', email:'sodecoton@sodecoton.cm', entreprise:'SODECOTON', fonction:''},
+  {nom:'Germain Olivier PONDI', nomN:'germain olivier pondi', tel:'693 58 64 32', email:'germain.pondi@castel-afrique.com', entreprise:'SOCIETE ANONYME DES BOISSONS DU CAMEROUN', fonction:'Chef d'atelier'},
+  {nom:'Fidel Kenzam', nomN:'fidel kenzam', tel:'657 41 44 20', email:'fdongmo@socapalm.org', entreprise:'SOCAPALM', fonction:'IT'},
+  {nom:'Sylvain LONCHELE', nomN:'sylvain lonchele', tel:'695 34 41 14', email:'silvain.lonchele@castel-afrique.com', entreprise:'SOCIETE ANONYME DES BOISSONS DU CAMEROUN', fonction:'Contremaitre Maintenance'},
+  {nom:'Benjamin BAYANG', nomN:'benjamin bayang', tel:'693 45 23 90', email:'benjamin.bayang@castel afrique.com', entreprise:'SOCIETE ANONYME DES BOISSONS DU CAMEROUN', fonction:'Chef de Section achats des Investissements et Prestations Industrielles'},
+  {nom:'Marie Solange ABANS', nomN:'marie solange abans', tel:'', email:'marie.abans@castel-afrique.com', entreprise:'GUINNESS CAMEROON SA', fonction:'GCSA - Maintenance Planner'},
+  {nom:'Carelle BELLA ETEME', nomN:'carelle bella eteme', tel:'', email:'carelle.bella@castel-afrique.com', entreprise:'GUINNESS CAMEROON SA', fonction:'GCSA - Shift Electrician (Temporaire)'},
+  {nom:'Antoine Desire Delvis KEUMELIEU', nomN:'antoine desire delvis keumelieu', tel:'699 03 02 27', email:'antoine.keumelieu@castel-afrique.com', entreprise:'SOCIETE ANONYME DES BOISSONS DU CAMEROUN', fonction:'Technicien Junior Instrumentation'},
+  {nom:'Romuald Mengue', nomN:'romuald mengue', tel:'690 46 96 21', email:'romuald-valdese.menguealima@vinci-energies.com', entreprise:'CEGELEC SA', fonction:'Acheteur'},
+  {nom:'Yves Merlin AJOUMESSI', nomN:'yves merlin ajoumessi', tel:'', email:'yves.ajoumessi@castel-afrique.com', entreprise:'SOCIETE ANONYME DES BOISSONS DU CAMEROUN', fonction:'Contremaitre Principal Electricite/Instrumentation'},
+  {nom:'Hassan ATWI', nomN:'hassan atwi', tel:'695 92 92 92', email:'atwi@soticam.com', entreprise:'SOTICAM', fonction:'Directeur Usine'},
+  {nom:'Joseph KEMMOE', nomN:'joseph kemmoe', tel:'653446675', email:'joseph.kemmoe@neoindustrysa.com', entreprise:'NEO INDUSTRY SA', fonction:'Responsible Utilité'},
+  {nom:'Kimmie Hassiatou SCDP', nomN:'kimmie hassiatou scdp', tel:'651 99 87 98', email:'hsaidou@scdp.cm', entreprise:'SCDP', fonction:''},
+  {nom:'Carine MANFOUO NGNINTEDEM', nomN:'carine manfouo ngnintedem', tel:'', email:'carine.manfouo@castel-afrique.com', entreprise:'GUINNESS CAMEROON SA', fonction:'GCSA-Maintenance Planner (Temporaire)'},
+  {nom:'Arnaud Valentin DZOGNE', nomN:'arnaud valentin dzogne', tel:'699 630 524', email:'adzogne@slb.com', entreprise:'Compagnie Opérations pétrolières Schlumberger', fonction:'Electronic Expert'},
+  {nom:'Thierry DIFFO', nomN:'thierry diffo', tel:'679 33 10 19', email:'thierry.diffo@cimentsafrique.com', entreprise:'CIMAF', fonction:'Automaticien'},
+  {nom:'Cyrille.Njoko', nomN:'cyrillenjoko', tel:'233 43 57 00 Ext 5000', email:'cyrille.njoko@cm.addaxpetroleum.com', entreprise:'Addax Petroleum Cameroon Company SA', fonction:'Acheteur'},
+  {nom:'John Patrick OTTOU II', nomN:'john patrick ottou ii', tel:'691 33 37 59', email:'john.ottou@castel-afrique.com', entreprise:'SOCIETE ANONYME DES BOISSONS DU CAMEROUN', fonction:'Magasinier Principal PR'},
+  {nom:'Bakoura Moussa', nomN:'bakoura moussa', tel:'699 93 74 08', email:'mbakoura17@gmail.com', entreprise:'Hydrocarbures Analyses Contrôles SA', fonction:''},
+  {nom:'Beas Chrispo Michel', nomN:'beas chrispo michel', tel:'679 90 54 17', email:'michel.b@olamagri.com', entreprise:'OLAM AGRI', fonction:''},
+  {nom:'Erica Ngouelanomeny', nomN:'erica ngouelanomeny', tel:'', email:'info@m.fairmarkit.com', entreprise:'NESTLE', fonction:'Acheteur'}
+];
+</script>
+</head><body>' +
       '<div class="hdr"><div>' +
       '<h1>PV de chantier</h1>' +
       '<p style="margin:0;font-size:12px">Client : <b>'+(c.client||'—')+'</b>'+(c.desc?' — '+c.desc:'')+'</p>' +
