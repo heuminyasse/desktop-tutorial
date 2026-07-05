@@ -7866,8 +7866,11 @@ html body[class] #vac-gantt td.emp .nm{font-weight:500 !important;}</style>
     var oaNum=(jip&&(jip.oa||jip.numeroOA||jip.numOA||jip.orderNumber||jip.ordre_achat))||pv.oaNum||'';
     var rapNum=pv.numero||pv.id||'__';
     var dateStr=fD(pv.date);
-    var superviseur=pv.signataire||(pv.jsa&&pv.jsa.signataire)||nomSoc;
-    var contact=(telSoc?'tél: '+telSoc:'')+(emailSoc?(telSoc?' – ':'')+emailSoc:'');
+    var chef=((window.PERSONNEL_DATA||[])).find(function(p){return p.id===(jip&&jip.chefChantierId);})||{};
+    var superviseur=chef.nom||chef.name||chef.prenom||pv.signataire||(pv.jsa&&pv.jsa.signataire)||nomSoc;
+    var chefTel=chef.tel||chef.phone||'';
+    var chefEmail=chef.email||'';
+    var contact=(chefTel?'Tél: '+chefTel:'')+(chefEmail?(chefTel?' – ':'')+' Email: '+chefEmail:'');
 
     /* tâches — priorité Planning Gantt */
     var _pd=window.__getPlanningData&&window.__getPlanningData();
