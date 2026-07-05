@@ -2269,6 +2269,139 @@ document.addEventListener('DOMContentLoaded', async function() {
     })();
 
     // ─────────────────────────────────────────────────────────────
+    // [RapportAvancementUI] Intégration rapport avec données ePilot
+    // Branche le générateur de rapport avec les données réelles
+    // ─────────────────────────────────────────────────────────────
+    (function initRapportUI() {
+      window.showRapportAvancement = function(jipId) {
+        if (!jipId) {
+          console.error('[RapportUI] JIP ID manquant');
+          return false;
+        }
+
+        console.log('[RapportUI] Génération rapport pour:', jipId);
+
+        // Chercher le projet normalisé
+        var projet = (window.PROJETS_INDEX || {})[jipId];
+        if (!projet) {
+          // Fallback: chercher dans les données brutes
+          var quote = (window.QUOTE_DATA || []).find(function(q) { return q.Dossier === jipId; });
+          var jip = (window.JIP_DATA || []).find(function(j) { return j.Imputation === jipId; });
+
+          if (!quote && !jip) {
+            console.warn('[RapportUI] Projet/Quote/JIP non trouvé:', jipId);
+            if (window.__cwToast) window.__cwToast('Rapport: Projet ' + jipId + ' non trouvé dans la BD normalisée');
+            return false;
+          }
+
+          // Afficher message informatif
+          console.warn('[RapportUI] Données brutes trouvées mais pas de projet normalisé');
+          console.log('Quote:', quote);
+          console.log('JIP:', jip);
+        }
+
+        try {
+          // Générer le rapport
+          if (projet) {
+            // Cas idéal: données normalisées disponibles
+            return window.RAPPORT_AVANCEMENT.displayReport(jipId);
+          } else {
+            // Cas fallback: utiliser données brutes
+            var html = generateLegacyReport(jipId, quote, jip);
+            if (html) {
+              var win = window.open('', 'RapportAvancement_' + jipId);
+              if (!win) {
+                console.error('[RapportUI] Impossible d\'ouvrir fenêtre');
+                return false;
+              }
+              win.document.write(html);
+              win.document.close();
+              return true;
+            }
+          }
+        } catch(e) {
+          console.error('[RapportUI] Erreur génération rapport:', e.message);
+          if (window.__cwToast) window.__cwToast('Erreur: Impossible de générer le rapport');
+          return false;
+        }
+      };
+
+      function generateLegacyReport(jipId, quote, jip) {
+        if (!quote && !jip) return null;
+
+        var q = quote || jip || {};
+        var data = window.CLIENTS_DATA || {};
+        var cd = (data.clients || []).find(function(c) { return c.Nom === q.Client; }) || {};
+        var ach = (data.acheteurs || []).find(function(a) { return a.NomAcheteur === q.Acheteur; }) || {};
+        var ing = (window.PERSONNEL_DATA || []).find(function(p) {
+          var fullName = ((p.prenoms || '') + ' ' + (p.nom || '')).trim();
+          return fullName === q.IngenieurAff;
+        }) || {};
+
+        var html = '<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Rapport - ' + jipId + '</title>';
+        html += '<style>body { font-family: Arial, sans-serif; margin: 40px; color: #333; }';
+        html += '.header { border-bottom: 3px solid #B5000A; padding-bottom: 20px; margin-bottom: 30px; }';
+        html += '.title { font-size: 24px; color: #B5000A; font-weight: bold; }';
+        html += '.info-box { background: #f9f9f9; padding: 15px; margin: 10px 0; border-left: 4px solid #B5000A; }';
+        html += '.label { font-size: 12px; color: #666; text-transform: uppercase; font-weight: bold; }';
+        html += '.value { font-size: 14px; margin-top: 5px; }';
+        html += 'table { width: 100%; border-collapse: collapse; margin: 20px 0; }';
+        html += 'th { background: #f0f0f0; padding: 10px; text-align: left; }';
+        html += 'td { padding: 8px; border-bottom: 1px solid #eee; }';
+        html += '</style></head><body>';
+        html += '<div class="header"><div style="font-size: 28px; color: #B5000A; font-weight: bold; margin-bottom: 10px;">HBO</div>';
+        html += '<div class="title">Rapport d\'Avancement</div><div style="font-size: 12px; color: #999;">Généré: ' + new Date().toLocaleDateString('fr-FR') + '</div></div>';
+
+        // Infos projet
+        html += '<div class="info-box"><div class="label">Projet ID</div><div class="value">' + jipId + '</div></div>';
+        html += '<div class="info-box"><div class="label">Client</div><div class="value">' + (q.Client || 'N/A') + '</div>';
+        if (cd.Nom) html += '<div style="font-size: 12px; color: #666; margin-top: 5px;">Lieu: ' + (cd.Site || cd.Adresse || '') + '</div>';
+        html += '</div>';
+
+        // Contacts
+        html += '<div class="info-box"><div class="label">Demandeur / Acheteur</div>';
+        html += '<div class="value">' + (q.Acheteur || ach.NomAcheteur || 'N/A') + '</div>';
+        if (ach.Telephone) html += '<div style="font-size: 12px; color: #666;">☎ ' + ach.Telephone + '</div>';
+        if (ach.Email) html += '<div style="font-size: 12px; color: #666;">✉ ' + ach.Email + '</div>';
+        html += '</div>';
+
+        html += '<div class="info-box"><div class="label">Chef d\'Équipe / Ingénieur</div>';
+        html += '<div class="value">' + (q.IngenieurAff || ((ing.prenoms || '') + ' ' + (ing.nom || '')) || 'N/A') + '</div>';
+        if (ing.tel) html += '<div style="font-size: 12px; color: #666;">☎ ' + ing.tel + '</div>';
+        if (ing.telephone) html += '<div style="font-size: 12px; color: #666;">☎ ' + ing.telephone + '</div>';
+        if (ing.email) html += '<div style="font-size: 12px; color: #666;">✉ ' + ing.email + '</div>';
+        html += '</div>';
+
+        html += '<div style="margin-top: 50px; padding: 15px; background: #f0f0f0; border-radius: 4px; font-size: 12px; color: #666;">';
+        html += '⚠ Rapport généré avec données partielles (mode fallback).<br>';
+        html += 'Certaines informations peuvent être incomplètes ou manquantes.';
+        html += '</div>';
+
+        html += '</body></html>';
+        return html;
+      }
+
+      // Ajouter aussi une fonction pour les devis
+      window.showDevis = function(jipId) {
+        if (!window.REPORT_TYPES) {
+          console.error('[UI] Module REPORT_TYPES non disponible');
+          return false;
+        }
+        return (function() {
+          var html = window.REPORT_TYPES.generateDevis(jipId);
+          if (!html) return false;
+          var win = window.open('', 'Devis_' + jipId);
+          if (!win) return false;
+          win.document.write(html);
+          win.document.close();
+          return true;
+        })();
+      };
+
+      console.log('[RapportUI] Module chargé. Usage: window.showRapportAvancement(jipId)');
+    })();
+
+    // ─────────────────────────────────────────────────────────────
     // [FixClosedChantier v1] Ouverture des chantiers CLÔTURÉS / TERMINÉS
     // depuis Quote, OA, Comptabilité, etc.
     //
