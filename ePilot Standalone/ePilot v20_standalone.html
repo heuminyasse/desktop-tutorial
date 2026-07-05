@@ -7795,12 +7795,14 @@ html body[class] #vac-gantt td.emp .nm{font-weight:500 !important;}</style>
 
 
 <!-- PV Print: rapport d'activité -->
+<!-- PV Print: rapport d'activite -->
 <script id="__PV_PRINT_v1__">
 (function(){
   function fD(d){if(!d)return '';try{return new Date(d+'T00:00:00').toLocaleDateString('fr-FR',{day:'2-digit',month:'long',year:'numeric'});}catch(e){return d;}}
   function esc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
 
   window.__pvPrint=function(pv,jip){
+    try{
     if(!pv) return;
     var _bs=(typeof window!=='undefined'&&window.EPILOT_SETTINGS)||{};
     var _be=_bs.entreprise||{};
@@ -7813,625 +7815,127 @@ html body[class] #vac-gantt td.emp .nm{font-weight:500 !important;}</style>
     var logo=_be.logo||'';
 
     var cl=((window.CLIENTS_DATA||{}).clients||[]).find(function(c){return c.id===(jip&&jip.clientId);})||{};
-    var clientName=(cl.name||cl.nom||cl.Nom||'—');
-    var projNom=(jip?(jip.description||jip.id||''):(pv.jipId||''));
+    var clientName=cl.name||cl.nom||cl.Nom||'—';
+    var projNom=jip?(jip.description||jip.id||''):(pv.jipId||'');
     var jipId=(jip&&jip.id)||pv.jipId||'';
     var rapNum=pv.numero||pv.id||'__';
     var dateStr=fD(pv.date);
     var superviseur=pv.signataire||(pv.jsa&&pv.jsa.signataire)||nomSoc;
-    var contact=(telSoc?'tel: '+telSoc:'')+(emailSoc?(telSoc?' – ':'')+emailSoc:'');
+    var contact=(telSoc?'tel: '+telSoc:'')+(emailSoc?(telSoc?' - ':'')+emailSoc:'');
 
     var tasks=(jip&&jip.tasks)||[];
     var totalPct=tasks.length?Math.round(tasks.reduce(function(s,t){return s+(Number(t.progress)||0);},0)/tasks.length):0;
-    var avPctW=Math.min(totalPct,100);
-    var avCol=avPctW>=80?'#166534':avPctW>=50?'#854d0e':'#991b1b';
+    var avCol=totalPct>=80?'#166534':totalPct>=50?'#854d0e':'#991b1b';
 
     var taskRowsHtml=tasks.length?tasks.map(function(t,i){
       var pct=Number(t.progress||0);
       var col=pct>=100?'#166534':pct>=75?'#15803d':pct>=50?'#854d0e':'#991b1b';
-      var bar='<div style="display:flex;align-items:center;gap:4px">'
-        +'<div style="flex:1;height:6px;background:#e5e7eb;border-radius:3px">'
-        +'<div style="width:'+Math.min(pct,100)+'%;height:100%;background:'+col+';border-radius:3px"></div></div>'
-        +'<b style="min-width:30px;text-align:right;color:'+col+';font-size:9px">'+pct+'%</b></div>';
-      return '<tr style="background:'+(i%2?'#f8faff':'#fff')+'">'
-        +'<td style="padding:4px 6px;border-bottom:1px solid #e5e7eb;font-size:10px">'+esc(t.title||t.nom||'')+'</td>'
-        +'<td style="padding:4px 6px;border-bottom:1px solid #e5e7eb;text-align:center;font-size:10px;color:#555">'+(t.jours||t.days||'—')+'</td>'
-        +'<td style="padding:4px 6px;border-bottom:1px solid #e5e7eb;text-align:center;font-size:10px;color:#555">'+(t.debut?fD(t.debut):t.dateDebut?fD(t.dateDebut):'—')+'</td>'
-        +'<td style="padding:4px 6px;border-bottom:1px solid #e5e7eb;text-align:center;font-size:10px;color:#555">'+(t.fin?fD(t.fin):t.dateFin?fD(t.dateFin):'—')+'</td>'
-        +'<td style="padding:4px 8px;border-bottom:1px solid #e5e7eb;width:120px">'+bar+'</td>'
-        +'</tr>';
-    }).join(''):'<tr><td colspan="5" style="padding:8px;text-align:center;color:#888;font-size:10px;font-style:italic">Aucune tache</td></tr>';
+      var bar='<div style="display:flex;align-items:center;gap:4px"><div style="flex:1;height:6px;background:#e5e7eb;border-radius:3px"><div style="width:'+Math.min(pct,100)+'%;height:100%;background:'+col+';border-radius:3px"></div></div><b style="min-width:30px;text-align:right;color:'+col+';font-size:9px">'+pct+'%</b></div>';
+      return '<tr style="background:'+(i%2?'#f8faff':'#fff')+'"><td style="padding:4px 6px;border-bottom:1px solid #e5e7eb;font-size:10px">'+esc(t.title||t.nom||'')+'</td><td style="padding:4px 6px;border-bottom:1px solid #e5e7eb;text-align:center;font-size:10px;color:#555">'+(t.jours||t.days||'')+'</td><td style="padding:4px 6px;border-bottom:1px solid #e5e7eb;text-align:center;font-size:10px;color:#555">'+(t.debut?fD(t.debut):'')+'</td><td style="padding:4px 6px;border-bottom:1px solid #e5e7eb;text-align:center;font-size:10px;color:#555">'+(t.fin?fD(t.fin):'')+'</td><td style="padding:4px 8px;border-bottom:1px solid #e5e7eb;width:120px">'+bar+'</td></tr>';
+    }).join(''):'<tr><td colspan="5" style="padding:8px;text-align:center;color:#888;font-size:10px;font-style:italic">Aucune tache enregistree</td></tr>';
 
     var cntrArr=Array.isArray(pv.contraintes)?pv.contraintes:(pv.contraintes?[{description:pv.contraintes,etat:'Ouvert'}]:[]);
-    var cntrFiltered=cntrArr.filter(function(c){return c.description;});
-    var cntrRowsHtml=cntrFiltered.length?cntrFiltered.map(function(c){
+    var cntrRowsHtml=cntrArr.filter(function(c){return c.description;}).map(function(c){
       var et=c.etat||'Ouvert';
-      var bg=et==='Clôturé'?'#dcfce7':et==='En cours'?'#fef9c3':'#fee2e2';
-      var dot=et==='Clôturé'?'#166534':et==='En cours'?'#854d0e':'#991b1b';
-      return '<tr style="background:'+bg+'">'
-        +'<td style="padding:4px 6px;border-bottom:1px solid #e5e7eb;font-size:10px">'+esc(c.description)+'</td>'
-        +'<td style="padding:4px 6px;border-bottom:1px solid #e5e7eb;font-size:10px"><span style="color:'+dot+';font-weight:700">'+esc(et)+'</span></td>'
-        +'<td style="padding:4px 6px;border-bottom:1px solid #e5e7eb;font-size:10px">'+esc(c.responsable||'—')+'</td>'
-        +'<td style="padding:4px 6px;border-bottom:1px solid #e5e7eb;font-size:10px">'+esc(c.echeance||'—')+'</td>'
-        +'</tr>';
-    }).join(''):'<tr><td colspan="4" style="padding:8px;text-align:center;color:#888;font-size:10px;font-style:italic">Aucune contrainte</td></tr>';
+      var isClose=(et.indexOf('t')>=0&&et.indexOf('r')>=0);
+      var bg=isClose?'#dcfce7':et==='En cours'?'#fef9c3':'#fee2e2';
+      var dot=isClose?'#166534':et==='En cours'?'#854d0e':'#991b1b';
+      return '<tr style="background:'+bg+'"><td style="padding:4px 6px;border-bottom:1px solid #e5e7eb;font-size:10px">'+esc(c.description)+'</td><td style="padding:4px 6px;border-bottom:1px solid #e5e7eb;font-size:10px"><span style="color:'+dot+';font-weight:700">'+esc(et)+'</span></td><td style="padding:4px 6px;border-bottom:1px solid #e5e7eb;font-size:10px">'+esc(c.responsable||'')+'</td><td style="padding:4px 6px;border-bottom:1px solid #e5e7eb;font-size:10px">'+esc(c.echeance||'')+'</td></tr>';
+    }).join('')||'<tr><td colspan="4" style="padding:8px;text-align:center;color:#888;font-size:10px;font-style:italic">Aucune contrainte</td></tr>';
 
-    var eqHtml=(pv.equipePresente||[]).map(function(e){return esc(e.nom||'')+(e.role?' ('+esc(e.role)+')':'');}).join(' &nbsp;&middot;&nbsp; ')||'&mdash;';
+    var eqHtml=(pv.equipePresente||[]).map(function(e){return esc(e.nom||'')+(e.role?' ('+esc(e.role)+')':'');}).join('  &middot;  ')||'&mdash;';
+
+    var rH='<div style="font-size:9.5px;font-weight:900;text-transform:uppercase;letter-spacing:.6px;color:#fff;background:'+acc+';padding:4px 8px;margin-top:8px">';
+    var th='<th style="background:#e8edf7;color:'+acc+';padding:4px 6px;font-size:9px;font-weight:700;text-align:left;border-bottom:2px solid '+acc+'">';
 
     var inner=''
+      +'<div id="__rap_print_zone__" style="font-family:Arial,Helvetica,sans-serif;font-size:11px;color:#111;background:#fff;padding:10mm 12mm;box-sizing:border-box">'
       +'<div style="display:flex;align-items:flex-start;justify-content:space-between;border-bottom:4px solid '+acc+';padding-bottom:8px;margin-bottom:8px">'
-      +'<div style="display:flex;align-items:center;gap:8px">'
-      +(logo?'<img src="'+esc(logo)+'" style="height:38px;object-fit:contain" alt=""/>':'')
+      +'<div style="display:flex;align-items:center;gap:8px">'+(logo?'<img src="'+esc(logo)+'" style="height:38px;object-fit:contain" alt=""/>':'')
       +'<div><div style="font-size:18px;font-weight:900;color:'+acc+';letter-spacing:1px">'+esc(nomSoc)+'</div>'
-      +(adrSoc?'<div style="font-size:8px;color:#888">'+esc(adrSoc)+'</div>':'')+'</div></div>'
-      +'<div style="text-align:right"><div style="font-size:15px;font-weight:900;color:'+acc+';text-transform:uppercase">Rapport d\'Avancement</div>'
-      +'<div style="font-size:9px;color:#555;margin-top:2px">RAP'+esc(rapNum)+'  –  Chantier '+esc(jipId)+' du '+esc(dateStr)+'</div>'
+      +(adrSoc?'<div style="font-size:8px;color:#888">'+esc(adrSoc)+'</div>':'')
       +'</div></div>'
-
-      +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:0;border:1px solid #d1d5db;border-radius:4px;margin-bottom:8px;overflow:hidden">'
+      +'<div style="text-align:right"><div style="font-size:15px;font-weight:900;color:'+acc+';text-transform:uppercase">Rapport Avancement</div>'
+      +'<div style="font-size:9px;color:#555;margin-top:2px">RAP'+esc(rapNum)+'  -  Chantier '+esc(jipId)+' du '+esc(dateStr)+'</div>'
+      +'</div></div>'
+      +'<div style="display:grid;grid-template-columns:1fr 1fr;border:1px solid #d1d5db;border-radius:4px;margin-bottom:8px;overflow:hidden">'
       +'<div style="padding:8px 12px;background:#f8faff;border-right:1px solid #d1d5db">'
       +'<div style="display:flex;gap:6px;margin-bottom:3px;font-size:10px"><b style="color:'+acc+';min-width:72px">Client :</b><span>'+esc(clientName)+'</span></div>'
       +'<div style="display:flex;gap:6px;margin-bottom:3px;font-size:10px"><b style="color:'+acc+';min-width:72px">Projet :</b><span>'+esc(projNom)+'</span></div>'
       +'<div style="display:flex;gap:6px;margin-bottom:3px;font-size:10px"><b style="color:'+acc+';min-width:72px">Date :</b><span>'+esc(dateStr)+'</span></div>'
-      +'<div style="display:flex;gap:6px;font-size:10px"><b style="color:'+acc+';min-width:72px">Horaires :</b><span>'+esc(pv.heureDebut||'—')+' → '+esc(pv.heureFin||'—')+'</span></div>'
+      +'<div style="display:flex;gap:6px;font-size:10px"><b style="color:'+acc+';min-width:72px">Horaires :</b><span>'+esc(pv.heureDebut||'')+' - '+esc(pv.heureFin||'')+'</span></div>'
       +'</div>'
       +'<div style="padding:8px 12px;background:#fff">'
       +'<div style="display:flex;gap:6px;margin-bottom:3px;font-size:10px"><b style="color:'+acc+';min-width:82px">Superviseur :</b><span>'+esc(superviseur)+'</span></div>'
       +(contact?'<div style="display:flex;gap:6px;margin-bottom:3px;font-size:10px"><b style="color:'+acc+';min-width:82px">Contact :</b><span>'+esc(contact)+'</span></div>':'')
-      +'<div style="display:flex;gap:6px;font-size:10px"><b style="color:'+acc+';min-width:82px">Équipe :</b><span>'+eqHtml+'</span></div>'
+      +'<div style="display:flex;gap:6px;font-size:10px"><b style="color:'+acc+';min-width:82px">Equipe :</b><span>'+eqHtml+'</span></div>'
       +'</div></div>'
-
       +(tasks.length?'<div style="display:flex;align-items:center;gap:10px;background:#fffbeb;border:1px solid #fcd34d;border-radius:4px;padding:7px 12px;margin-bottom:8px">'
         +'<span style="font-size:9.5px;font-weight:700;color:#92400e;white-space:nowrap">AVANCEMENT GLOBAL</span>'
-        +'<div style="flex:1;height:12px;background:#e5e7eb;border-radius:6px"><div style="width:'+avPctW+'%;height:100%;border-radius:6px;background:'+avCol+'"></div></div>'
+        +'<div style="flex:1;height:12px;background:#e5e7eb;border-radius:6px"><div style="width:'+Math.min(totalPct,100)+'%;height:100%;border-radius:6px;background:'+avCol+'"></div></div>'
         +'<span style="font-size:15px;font-weight:900;color:'+avCol+';white-space:nowrap">'+totalPct+'%</span>'
         +'</div>':'')
-
-      +'<div style="font-size:9.5px;font-weight:900;text-transform:uppercase;letter-spacing:.6px;color:#fff;background:'+acc+';padding:4px 8px;margin-top:8px">A – Tâches</div>'
+      +rH+'A - Taches</div>'
       +'<table style="width:100%;border-collapse:collapse"><thead><tr>'
-      +'<th style="background:#e8edf7;color:'+acc+';padding:4px 6px;font-size:9px;font-weight:700;text-align:left;border-bottom:2px solid '+acc+'">Description</th>'
-      +'<th style="background:#e8edf7;color:'+acc+';padding:4px 6px;font-size:9px;font-weight:700;text-align:center;border-bottom:2px solid '+acc+';width:40px">Jours</th>'
-      +'<th style="background:#e8edf7;color:'+acc+';padding:4px 6px;font-size:9px;font-weight:700;text-align:center;border-bottom:2px solid '+acc+';width:80px">Début</th>'
-      +'<th style="background:#e8edf7;color:'+acc+';padding:4px 6px;font-size:9px;font-weight:700;text-align:center;border-bottom:2px solid '+acc+';width:80px">Fin</th>'
-      +'<th style="background:#e8edf7;color:'+acc+';padding:4px 6px;font-size:9px;font-weight:700;text-align:left;border-bottom:2px solid '+acc+';width:130px">Avancement</th>'
+      +th+'Description</th>'+th+'Jours</th>'+th+'Debut</th>'+th+'Fin</th>'+th+'Avancement</th>'
       +'</tr></thead><tbody>'+taskRowsHtml+'</tbody></table>'
-
-      +'<div style="font-size:9.5px;font-weight:900;text-transform:uppercase;letter-spacing:.6px;color:#fff;background:'+acc+';padding:4px 8px;margin-top:8px">B – Observations</div>'
-      +'<div style="background:#f8faff;border:1px solid #d1d5db;padding:8px 10px;font-size:10.5px;white-space:pre-wrap;min-height:22px">'+esc(pv.notes||'—')+'</div>'
-
-      +'<div style="font-size:9.5px;font-weight:900;text-transform:uppercase;letter-spacing:.6px;color:#fff;background:'+acc+';padding:4px 8px;margin-top:8px">C – Tâches supplémentaires, urgentes, difficultés</div>'
+      +rH+'B - Observations</div>'
+      +'<div style="background:#f8faff;border:1px solid #d1d5db;padding:8px 10px;font-size:10.5px;white-space:pre-wrap;min-height:22px">'+esc(pv.notes||'')+'</div>'
+      +rH+'C - Contraintes et difficultes</div>'
       +'<table style="width:100%;border-collapse:collapse"><thead><tr>'
-      +'<th style="background:#e8edf7;color:'+acc+';padding:4px 6px;font-size:9px;font-weight:700;text-align:left;border-bottom:2px solid '+acc+'">Description</th>'
-      +'<th style="background:#e8edf7;color:'+acc+';padding:4px 6px;font-size:9px;font-weight:700;text-align:left;border-bottom:2px solid '+acc+';width:75px">État</th>'
-      +'<th style="background:#e8edf7;color:'+acc+';padding:4px 6px;font-size:9px;font-weight:700;text-align:left;border-bottom:2px solid '+acc+';width:100px">Responsable</th>'
-      +'<th style="background:#e8edf7;color:'+acc+';padding:4px 6px;font-size:9px;font-weight:700;text-align:left;border-bottom:2px solid '+acc+';width:80px">Échéance</th>'
+      +th+'Description</th>'+th+'Etat</th>'+th+'Responsable</th>'+th+'Echeance</th>'
       +'</tr></thead><tbody>'+cntrRowsHtml+'</tbody></table>'
-
       +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:40px;margin-top:18px;padding-top:10px;border-top:1px solid #d1d5db">'
       +'<div><div style="font-size:8.5px;color:#888;margin-bottom:18px">Superviseur chantier</div>'
       +'<div style="border-top:1.5px solid #111;padding-top:4px;font-size:9px;color:#444">'+esc(superviseur)+'</div></div>'
-      +'<div><div style="font-size:8.5px;color:#888;margin-bottom:18px">Client / Représentant</div>'
+      +'<div><div style="font-size:8.5px;color:#888;margin-bottom:18px">Client / Representant</div>'
       +'<div style="border-top:1.5px solid #111;padding-top:4px;font-size:9px;color:#444">&nbsp;</div></div>'
-      +'</div>';
+      +'</div></div>';
 
-    /* --- impression sans popup --- */
-    var OID='__pv_print_overlay__';
+    /* modal visible dans la page */
+    var OID='__pv_rap_modal__';
     var old=document.getElementById(OID);
     if(old) old.parentNode.removeChild(old);
 
-    var styleId='__pv_print_style__';
-    var oldSt=document.getElementById(styleId);
-    if(oldSt) oldSt.parentNode.removeChild(oldSt);
+    var modal=document.createElement('div');
+    modal.id=OID;
+    modal.style.cssText='position:fixed;inset:0;z-index:99999;background:rgba(0,0,0,.6);display:flex;flex-direction:column;align-items:center;padding:16px 8px;overflow-y:auto';
 
-    var st=document.createElement('style');
-    st.id=styleId;
-    st.textContent='@media print{ body > *:not(#'+OID+') { display:none !important; } #'+OID+' { display:block !important; position:static !important; } } @page{size:A4 portrait;margin:10mm 12mm}';
-    document.head.appendChild(st);
+    var btnStyle='padding:9px 22px;border:0;border-radius:6px;font-size:13px;font-weight:700;cursor:pointer';
+    var toolbar=document.createElement('div');
+    toolbar.className='__rap_toolbar__';
+    toolbar.style.cssText='width:100%;max-width:820px;display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;flex-shrink:0';
 
-    var ov=document.createElement('div');
-    ov.id=OID;
-    ov.style.cssText='display:none;font-family:Arial,Helvetica,sans-serif;font-size:11px;color:#111;background:#fff;width:210mm;margin:0 auto;padding:10mm 12mm;box-sizing:border-box';
-    ov.innerHTML=inner;
-    document.body.appendChild(ov);
-
-    window.print();
-
-    setTimeout(function(){
-      var e=document.getElementById(OID); if(e) e.parentNode.removeChild(e);
-      var s=document.getElementById(styleId); if(s) s.parentNode.removeChild(s);
-    },2000);
-  };
-
-<!-- Weighted Avancement: Planning title-bar badge + Ring + Slider -->
-<script id="__WA_INJECT_v1__">
-(function(){
-  /* helpers */
-  function getActivePI(){
-    var h=(window.location.hash||'').match(/PI\d{4,6}/i);
-    if(h) return h[0].toUpperCase();
-    var root=document.getElementById('chantiers-root')||document.body;
-    var els=root.querySelectorAll('.mono,[class*="mono"],[class*="imputation"]');
-    for(var i=0;i<els.length;i++){
-      var t=els[i].textContent.trim();
-      if(/^PI\d{4,6}$/i.test(t)&&els[i].offsetParent!==null) return t.toUpperCase();
-    }
-    var walk=document.createTreeWalker(root,NodeFilter.SHOW_TEXT,null,false);
-    var node;
-    while((node=walk.nextNode())){
-      var m=node.textContent.match(/\bPI\d{4,6}\b/i);
-      if(m&&node.parentElement&&node.parentElement.offsetParent!==null) return m[0].toUpperCase();
-    }
-    return null;
-  }
-
-  function computeWA(pi){
-    if(!pi) return null;
-    var d=window._epilotWA;
-    if(d&&d.pi&&d.pi.toUpperCase()===pi&&d.wa!==null&&d.wa!==undefined) return d.wa;
-    // Restore from localStorage cache (set each time Planning columns are computed)
-    try{
-      var lc=JSON.parse(localStorage.getItem('epilot_wa_cache')||'null');
-      if(lc&&lc.pi&&lc.pi.toUpperCase()===pi&&lc.wa!==null&&lc.wa!==undefined){
-        window._epilotWA=lc; return lc.wa;
-      }
-    }catch(_){}
-    var jd=window.JIP_DATA||[];
-    var rec=null;
-    for(var i=0;i<jd.length;i++){
-      var id=(jd[i].Imputation||jd[i].imputation||jd[i].id||'').toUpperCase();
-      if(id===pi){rec=jd[i];break;}
-    }
-    if(!rec) return null;
-    var _oaRaw=rec.budgetContractuel||rec.budgetOA||0;
-    var oa=typeof _oaRaw==='number'?_oaRaw:(+String(_oaRaw).replace(/[\s]/g,'')||0);
-    if(!oa) return null;
-    var tvRaw=localStorage.getItem('ep_ptv_'+pi);
-    if(!tvRaw) return null;
-    var tv;
-    try{tv=JSON.parse(tvRaw);}catch(_){return null;}
-    var phases=rec.phases||[];
-    var totalConso=0;
-    phases.forEach(function(ph){
-      (ph.taches||ph.tasks||[]).forEach(function(t){
-        var title=t.titre||t.title||t.nom||'';
-        var val=parseFloat(tv[title]||0);
-        var pct=t.avancement!==undefined?t.avancement:(t.pct!==undefined?t.pct:0);
-        totalConso+=Math.round(val*(pct/100));
-      });
-    });
-    return Math.min(100,Math.round(totalConso/oa*100));
-  }
-  window._epilotComputeWA=computeWA;
-
-  function applyWA(){
-    var pi=getActivePI();
-    var wa=computeWA(pi);
-    if(wa===null||wa===undefined) return;
-    var waLabel='Av. pondere : '+wa+'%';
-
-    // A -- Planning title bar badge (when Planning tab visible)
-    var all=document.querySelectorAll('#chantiers-root *');
-    var planEl=null;
-    for(var i=0;i<all.length;i++){
-      var e=all[i];
-      if(e.children.length===0&&(e.textContent.indexOf('t\u00e2ches termin\u00e9es')>=0||e.textContent.indexOf('taches terminees')>=0)){
-        planEl=e; break;
-      }
-    }
-    if(planEl){
-      var par=planEl.parentElement||planEl;
-      var badge=par.querySelector('[data-wa="1"]');
-      if(!badge){
-        badge=document.createElement('span');
-        badge.setAttribute('data-wa','1');
-        badge.style.cssText='margin-left:10px;padding:2px 9px;background:#c0392b;color:#fff;border-radius:10px;font-size:11px;font-weight:700;vertical-align:middle;';
-        par.appendChild(badge);
-      }
-      badge.textContent=waLabel;
-    }
-
-    // B -- Ring SVG
-    var svg=document.querySelector('#chantiers-root svg[style*="rotate(-90deg)"]');
-    if(svg){
-      var txt=svg.querySelector('text');
-      if(txt&&txt.textContent.trim()!==String(wa)) txt.textContent=wa;
-      var circles=svg.querySelectorAll('circle');
-      if(circles.length>=2){
-        var r=parseFloat(circles[1].getAttribute('r')||'0');
-        if(r>0){
-          var circ=2*Math.PI*r;
-          var off=parseFloat((circ-(wa/100)*circ).toFixed(2));
-          var cur=parseFloat(circles[1].getAttribute('stroke-dashoffset')||circ);
-          if(Math.abs(cur-off)>0.5){
-            circles[1].setAttribute('stroke-dashoffset',off);
-            var col=wa>=100?'#27ae60':wa>=70?'#2ecc71':wa>=40?'#e67e22':'#c0392b';
-            circles[1].setAttribute('stroke',col);
-            if(txt) txt.setAttribute('fill',col);
-          }
-        }
-      }
-    }
-
-    // B -- Avancement label next to slider
-    var slider=document.querySelector('#chantiers-root input[type="range"][step="5"]');
-    if(slider){
-      var sib=slider.nextElementSibling;
-      if(sib&&/^\d/.test(sib.textContent.trim())&&sib.textContent.trim()!==wa+'%'){
-        sib.textContent=wa+'%';
-      }
-    }
-
-    // C -- KPI header cards (Avancement + Consommation) live DOM update
-    var _conso=(window._epilotWA&&window._epilotWA.pi&&window._epilotWA.pi.toUpperCase()===pi)?window._epilotWA.conso:null;
-    function _fmtM(n){if(!n)return '—';if(n>=1000000)return (n/1000000).toFixed(2)+'M F';if(n>=1000)return Math.round(n/1000)+'k F';return n+' F';}
-    var kpiRoot=document.getElementById('chantiers-root')||document.body;
-    var kpiWalk=document.createTreeWalker(kpiRoot,NodeFilter.SHOW_TEXT,null,false);
-    var kpiNd;
-    while((kpiNd=kpiWalk.nextNode())){
-      var kpiT=kpiNd.textContent.trim();
-      if(kpiT!=='Avancement'&&kpiT!=='Consommation') continue;
-      var kpiLbl=kpiNd.parentElement;
-      if(!kpiLbl||kpiLbl.offsetParent===null) continue;
-      var kpiPar=kpiLbl.parentElement;
-      if(!kpiPar) continue;
-      var kids=kpiPar.children;
-      for(var ki=0;ki<kids.length;ki++){
-        if(kids[ki]===kpiLbl) continue;
-        var kt=kids[ki].textContent.trim();
-        if(/^\d+%$/.test(kt)){
-          if(kt!==wa+'%') kids[ki].textContent=wa+'%';
-          var kCol=wa>=70?'#27ae60':wa>=40?'#e67e22':'#c0392b';
-          kids[ki].style.color=kCol;
-        } else if(kpiT==='Consommation'&&(kt==='—'||kt.charAt(0)==='≈')){
-          var newSub=_conso?'≈ '+_fmtM(_conso):'—';
-          if(kt!==newSub) kids[ki].textContent=newSub;
-        }
-      }
-    }
-  }
-
-  var _t=null;
-  function schedule(){ clearTimeout(_t); _t=setTimeout(applyWA,120); }
-  var mo=new MutationObserver(schedule);
-  mo.observe(document.body,{childList:true,subtree:true,characterData:true,
-    attributes:true,attributeFilter:['stroke-dashoffset','style','class','value']});
-  setInterval(applyWA,2000);
-  applyWA();
-})();
-</script>
-
-<!-- ═══════════════════════════════════════════════════════════════
-     PRINT BUTTONS — Visite de Site, Cahier des Charges, Planning
-     ═══════════════════════════════════════════════════════════════ -->
-<script id="__PRINT_TABS_v1__">
-(function(){
-  /* ── Generic print helper ── */
-  function printHTML(html){
-    var w = window.open('','_blank','width=900,height=700');
-    w.document.write(html);
-    w.document.close();
-    w.focus();
-    setTimeout(function(){ w.print(); }, 600);
-  }
-
-  function pi(){
-    try{
-      var d = window.JIP_DATA || {};
-      return d.Imputation || d.PI || '—';
-    }catch(e){ return '—'; }
-  }
-
-  function clientInfo(){
-    var d = window.JIP_DATA || {};
-    return {
-      pi: d.Imputation || d.PI || '—',
-      client: d.Client || '—',
-      desc: d.Description || '—'
+    var btnPrint=document.createElement('button');
+    btnPrint.textContent='Imprimer / PDF';
+    btnPrint.style.cssText=btnStyle+';background:'+acc+';color:#fff';
+    btnPrint.onclick=function(){
+      var s=document.createElement('style');
+      s.id='__rap_ps__';
+      s.textContent='@media print{body>*{display:none!important}#__pv_rap_modal__{display:flex!important}.__rap_toolbar__{display:none!important}@page{size:A4;margin:0}}';
+      document.head.appendChild(s);
+      window.print();
+      setTimeout(function(){var e=document.getElementById('__rap_ps__');if(e)e.parentNode.removeChild(e);},3000);
     };
-  }
 
-  function printCSS(){
-    return '<style>*{margin:0;padding:0;box-sizing:border-box}body{font-family:Arial,sans-serif;font-size:12px;color:#222;padding:20px}' +
-      'h1{font-size:16px;margin-bottom:4px}h2{font-size:13px;margin:12px 0 6px;border-bottom:1px solid #ccc;padding-bottom:3px}' +
-      'p{margin:3px 0}table{width:100%;border-collapse:collapse;margin:8px 0}' +
-      'th,td{border:1px solid #ccc;padding:5px 8px;text-align:left;font-size:11px}th{background:#f0f0f0;font-weight:bold}' +
-      '.header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px;padding-bottom:8px;border-bottom:2px solid #0069d9}' +
-      '.badge{background:#0069d9;color:#fff;padding:3px 10px;border-radius:4px;font-weight:bold;font-size:13px}' +
-      '@media print{@page{margin:15mm}}</style>';
-  }
+    var btnClose=document.createElement('button');
+    btnClose.textContent='Fermer';
+    btnClose.style.cssText=btnStyle+';background:#6b7280;color:#fff';
+    btnClose.onclick=function(){var e=document.getElementById(OID);if(e)e.parentNode.removeChild(e);};
 
-  function headerBlock(title){
-    var c = clientInfo();
-    return '<div class="header"><div><h1>'+title+'</h1><p>Client : <b>'+c.client+'</b> — '+c.desc+'</p>' +
-           '<p style="color:#666;font-size:10px">Imprimé le '+new Date().toLocaleDateString('fr-FR')+'</p></div>' +
-           '<div class="badge">'+c.pi+'</div></div>';
-  }
+    toolbar.appendChild(btnPrint);
+    toolbar.appendChild(btnClose);
 
-  /* ════════════════════════════════
-     VISITE DE SITE — Print
-     ════════════════════════════════ */
-  function printVisiteSite(){
-    /* Grab visible content of the Visite de site panel */
-    var panel = null;
-    /* Try to find the active panel */
-    document.querySelectorAll('[class*="tab"],[class*="Tab"],[class*="panel"],[class*="Panel"],[class*="content"],[class*="Content"]').forEach(function(el){
-      if(el.textContent.indexOf('Compte rendu de visite')>-1 || el.textContent.indexOf('Visite de site')>-1){
-        if(!panel || el.children.length > (panel.children.length||0)) panel = el;
-      }
-    });
-    /* Fallback: capture the main content area */
-    var bodyHtml = '';
-    if(panel){
-      bodyHtml = panel.outerHTML;
-    } else {
-      /* Grab entire visible forms/tables */
-      bodyHtml = '<p>Contenu non disponible — veuillez ouvrir l\'onglet "Visite de Site".</p>';
-    }
-    printHTML('<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Visite de Site</title>'+printCSS()+
-      '</head><body>'+headerBlock('Compte Rendu de Visite de Site')+bodyHtml+'</body></html>');
-  }
+    var content=document.createElement('div');
+    content.style.cssText='width:100%;max-width:820px;background:#fff;border-radius:6px;box-shadow:0 8px 32px rgba(0,0,0,.3);overflow:hidden';
+    content.innerHTML=inner;
 
-  /* ════════════════════════════════
-     CAHIER DES CHARGES — Print
-     ════════════════════════════════ */
-  function printCahierDesCharges(){
-    /* Grab CDC card content */
-    var cdcCard = document.querySelector('[data-cdc-card]');
-    var cdcDoc  = document.getElementById('cdc-doc-panel');
-    var bodyHtml = '';
-    if(cdcCard) bodyHtml += cdcCard.outerHTML;
-    if(cdcDoc)  bodyHtml += cdcDoc.outerHTML;
-    if(!bodyHtml) bodyHtml = '<p>Contenu non disponible.</p>';
-    printHTML('<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Cahier des Charges</title>'+printCSS()+
-      '</head><body>'+headerBlock('Cahier des Charges')+bodyHtml+'</body></html>');
-  }
+    modal.appendChild(toolbar);
+    modal.appendChild(content);
+    document.body.appendChild(modal);
 
-  /* ════════════════════════════════
-     PLANNING — Print (Gantt + stats)
-     ════════════════════════════════ */
-  function printPlanning(){
-    var STORE_KEY = 'epilot_chantier_data_v1';
-    var tasks = [];
-    try{
-      var all = JSON.parse(localStorage.getItem(STORE_KEY)||'{}');
-      var keys = Object.keys(all);
-      if(keys.length){ tasks = all[keys[keys.length-1]].taches || []; }
-    }catch(e){}
-
-    function addWD(ds,n){
-      var d=new Date(ds); var a=0;
-      while(a<n-1){d.setDate(d.getDate()+1);var w=d.getDay();if(w!==0&&w!==6)a++;}
-      return d.toLocaleDateString('fr-FR');
-    }
-    function fmtD(s){ try{return new Date(s).toLocaleDateString('fr-FR');}catch(e){return s||'—';} }
-
-    var rows = tasks.map(function(t){
-      return '<tr><td>'+t.nom+'</td><td>'+t.phase+'</td>' +
-        '<td>'+fmtD(t.debut)+'</td>' +
-        '<td>'+addWD(t.debut,t.duree||1)+'</td>' +
-        '<td style="text-align:center">'+t.pct+'%</td>' +
-        '<td>'+t.statut+'</td>' +
-        '<td>'+(t.equipe||[]).join(', ')+'</td></tr>';
-    }).join('');
-
-    var html = '<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Planning</title>'+printCSS()+
-      '</head><body>'+headerBlock('Planning Chantier')+
-      '<table><thead><tr><th>Tâche</th><th>Phase</th><th>Date début</th><th>Date fin</th>' +
-      '<th>Avancement</th><th>Statut</th><th>Équipe</th></tr></thead><tbody>'+rows+'</tbody></table>'+
-      '</body></html>';
-    printHTML(html);
-  }
-
-  /* ════════════════════════════════
-     Inject print buttons into tabs
-     ════════════════════════════════ */
-  function btnHTML(label, onclick){
-    return '<button onclick="'+onclick+'" style="display:inline-flex;align-items:center;gap:5px;padding:6px 14px;' +
-      'background:#0069d9;color:#fff;border:none;border-radius:6px;font-size:12px;cursor:pointer;' +
-      'box-shadow:0 1px 3px rgba(0,0,0,.2);transition:opacity .15s" ' +
-      'onmouseover="this.style.opacity=.85" onmouseout="this.style.opacity=1">' +
-      '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">' +
-      '<polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/>' +
-      '<rect x="6" y="14" width="12" height="8"/></svg>'+label+'</button>';
-  }
-
-  window.__printVisiteSite       = printVisiteSite;
-  window.__printCahierDesCharges = printCahierDesCharges;
-  window.__printPlanning         = printPlanning;
-
-  /* Expose helpers so Rapport d'activité can reuse */
-  window.__printHTML    = printHTML;
-  window.__printCSS     = printCSS;
-  window.__clientInfo   = clientInfo;
-  window.__headerBlock  = headerBlock;
-
-  /* ── Toolbar injection (one bar per tab) ── */
-  function makeBar(printFn, extraBtns){
-    var bar = document.createElement('div');
-    bar.setAttribute('data-print-bar','1');
-    bar.style.cssText = 'display:flex;gap:8px;align-items:center;padding:8px 14px;' +
-      'background:linear-gradient(135deg,#f8f9fa 0%,#e9ecef 100%);' +
-      'border-bottom:1px solid #dee2e6;flex-wrap:wrap;';
-    var pBtn = document.createElement('button');
-    pBtn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">' +
-      '<polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/>' +
-      '<rect x="6" y="14" width="12" height="8"/></svg> Imprimer';
-    pBtn.style.cssText = 'display:inline-flex;align-items:center;gap:5px;padding:6px 14px;' +
-      'background:#0069d9;color:#fff;border:none;border-radius:6px;font-size:12px;cursor:pointer;font-weight:500;';
-    pBtn.onclick = printFn;
-    pBtn.onmouseover = function(){ this.style.opacity='.85'; };
-    pBtn.onmouseout  = function(){ this.style.opacity='1'; };
-    bar.appendChild(pBtn);
-    if(extraBtns){ extraBtns.forEach(function(b){ bar.appendChild(b); }); }
-    return bar;
-  }
-
-  /* Find tab sub-nav items by label text */
-  function findSubNav(label){
-    var subs = document.querySelectorAll('[data-sub],[class*="sub"],[class*="Sub"]');
-    for(var i=0;i<subs.length;i++){
-      if(subs[i].textContent.trim().indexOf(label)>-1) return subs[i];
-    }
-    return null;
-  }
-
-  /* Find the content panel currently active — look for the closest scrollable container */
-  function findActivePanel(sub){
-    if(!sub) return null;
-    /* Walk up from sub nav to find the parent tab section */
-    var el = sub;
-    for(var i=0;i<8;i++){
-      if(!el) break;
-      el = el.parentElement;
-      /* Look for a sibling content div */
-      if(el){
-        var kids = el.children;
-        for(var k=0;k<kids.length;k++){
-          var kid = kids[k];
-          if(kid !== sub && kid.scrollHeight > 100 && kid.children.length > 0){
-            return kid;
-          }
-        }
-      }
-    }
-    return null;
-  }
-
-  var injected = {};
-
-  function tryInjectBars(){
-    /* ── Visite de site ── */
-    if(!injected.visite){
-      var vsArea = null;
-      /* Find by heading text */
-      document.querySelectorAll('h2,h3,[class*="title"],[class*="heading"]').forEach(function(h){
-        if(h.textContent.trim().indexOf('Visite de site')>-1 || h.textContent.trim().indexOf('Compte rendu')>-1){
-          vsArea = h.closest('[style*="overflow"],[class*="panel"],[class*="content"],[class*="tab"]') || h.parentElement;
-        }
-      });
-      if(!vsArea){
-        /* Try finding the "Visite de Site" sub tab content */
-        document.querySelectorAll('[data-sub]').forEach(function(el){
-          if(el.textContent.trim().indexOf('Visite de Site')>-1){
-            /* The content is a sibling or nearby element */
-            var parent = el.parentElement;
-            if(parent){
-              /* Look for content area that's visible */
-              Array.from(parent.querySelectorAll('[class*="content"],[style*="flex"]')).forEach(function(c){
-                if(c.offsetHeight > 100) vsArea = c;
-              });
-            }
-          }
-        });
-      }
-      if(vsArea && !vsArea.querySelector('[data-print-bar]')){
-        var bar = makeBar(printVisiteSite);
-        vsArea.insertBefore(bar, vsArea.firstChild);
-        injected.visite = true;
-      }
-    }
-
-    /* ── Cahier des Charges ── */
-    if(!injected.cdc){
-      var cdcCard = document.querySelector('[data-cdc-card]');
-      if(cdcCard){
-        var cdcParent = cdcCard.parentElement;
-        if(cdcParent && !cdcParent.querySelector('[data-print-bar]')){
-          var bar = makeBar(printCahierDesCharges);
-          cdcParent.insertBefore(bar, cdcCard);
-          injected.cdc = true;
-        }
-      }
-    }
-
-    /* ── Planning toolbar ── */
-    if(!injected.planning && !document.querySelector('[data-rapact-btn]')){
-
-      /* Find toolbar by "tâches terminées" stats text → walk to flex-row ancestor */
-      var toolbarRow = null;
-      var allEls2 = document.querySelectorAll('*');
-      for(var ti=0;ti<allEls2.length;ti++){
-        var te=allEls2[ti];
-        if(te.children.length===0 && te.textContent.indexOf('tâches terminées')>-1){
-          var cur=te.parentElement;
-          for(var tk=0;tk<8;tk++){
-            if(!cur||cur===document.body) break;
-            var td=cur.style.display||(window.getComputedStyle?window.getComputedStyle(cur).display:'');
-            if(td==='flex'&&cur.children.length>=2){ toolbarRow=cur; break; }
-            cur=cur.parentElement;
-          }
-          break;
-        }
-      }
-
-      /* Fallback: find by "Nouvelle" button and its toolbar row ancestor */
-      if(!toolbarRow){
-        var btns2=document.querySelectorAll('button,*[role="button"]');
-        for(var bi=0;bi<btns2.length;bi++){
-          if(btns2[bi].textContent.indexOf('Nouvelle')>-1){
-            var cur2=btns2[bi].parentElement;
-            for(var bk=0;bk<8;bk++){
-              if(!cur2||cur2===document.body) break;
-              var bd=cur2.style.display||(window.getComputedStyle?window.getComputedStyle(cur2).display:'');
-              if(bd==='flex'&&cur2.children.length>=2){ toolbarRow=cur2; break; }
-              cur2=cur2.parentElement;
-            }
-            break;
-          }
-        }
-      }
-
-      if(toolbarRow && !toolbarRow.querySelector('[data-rapact-btn]')){
-        /* Insert button group after the first child (stats text side) */
-        var btnGroup = document.createElement('div');
-        btnGroup.style.cssText = 'display:flex;gap:6px;align-items:center;';
-
-        var rapBtn = document.createElement('button');
-        rapBtn.setAttribute('data-rapact-btn','1');
-        rapBtn.textContent = '📊 Rapport d\'activité';
-        rapBtn.style.cssText = 'padding:6px 12px;background:#28a745;color:#fff;border:none;border-radius:6px;' +
-          'font-size:12px;cursor:pointer;font-weight:500;';
-        rapBtn.onclick = function(){ window.__openRapportActivite && window.__openRapportActivite(); };
-
-        var pBtn = document.createElement('button');
-        pBtn.setAttribute('data-print-plan','1');
-        pBtn.textContent = '🖨 Imprimer';
-        pBtn.style.cssText = 'padding:6px 12px;background:#0069d9;color:#fff;border:none;border-radius:6px;' +
-          'font-size:12px;cursor:pointer;font-weight:500;';
-        pBtn.onclick = printPlanning;
-
-        btnGroup.appendChild(rapBtn);
-        btnGroup.appendChild(pBtn);
-
-        /* Insert as second child (between stats and existing buttons) */
-        var secondChild = toolbarRow.children[1];
-        if(secondChild) toolbarRow.insertBefore(btnGroup, secondChild);
-        else toolbarRow.appendChild(btnGroup);
-
-        injected.planning = true;
-      }
-    }
-  }
-
-  /* Poll — always re-check if buttons got removed by React reconciliation */
-  var _tries = 0;
-  var _iv = setInterval(function(){
-    /* Reset planning flag if buttons were removed from DOM */
-    if(injected.planning && !document.querySelector('[data-rapact-btn]')) injected.planning = false;
-    tryInjectBars();
-    _tries++;
-    if(_tries > 600) clearInterval(_iv);
-  }, 500);
-
-  /* Also re-check on DOM changes (tab navigation) */
-  var domMo = new MutationObserver(function(){
-    clearTimeout(domMo._t);
-    domMo._t = setTimeout(function(){
-      if(!document.querySelector('[data-rapact-btn]')) injected.planning = false;
-      tryInjectBars();
-    }, 250);
-  });
-  domMo.observe(document.body, { childList: true, subtree: true });
+    }catch(err){alert('Erreur PDF: '+(err&&err.message||String(err)));}
+  };
 })();
 </script>
 
