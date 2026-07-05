@@ -7869,16 +7869,17 @@ html body[class] #vac-gantt td.emp .nm{font-weight:500 !important;}</style>
     var rapNum=pv.numero||pv.id||'__';
     var dateStr=fD(pv.date);
     var _nn=function(s){return String(s||'').toLowerCase().replace(/[^a-z0-9]/g,'');};
+    var _CD=(window.CLIENTS_DATA||{});
     var _contactClean=String(clientContact||'').split('(')[0].trim();
-    var acheteur=((window.ACHETEURS_DATA||[])).find(function(a){return a.nomN===_nn(_contactClean);})||{};
-    var demandeurTel=acheteur.tel||'';
-    var demandeurEmail=acheteur.email||'';
+    var acheteur=((_CD.acheteurs||[])).find(function(a){return _nn(a.NomAcheteur)===_nn(_contactClean);})||{};
+    var demandeurTel=acheteur.Telephone||'';
+    var demandeurEmail=acheteur.Email||'';
     var chef=((window.PERSONNEL_DATA||[])).find(function(p){var f1=_nn((p.prenoms||'')+(p.nom||''));var f2=_nn((p.nom||'')+(p.prenoms||''));var t=_nn(jip.chefChantier||'');return t&&(f1===t||f2===t);})||{};
     var _chefClean=String(jip.chefChantier||'').split('(')[0].trim();
-    var chefAcheteur=((window.ACHETEURS_DATA||[])).find(function(a){return a.nomN===_nn(_chefClean);})||{};
+    var chefAcheteur=((_CD.acheteurs||[])).find(function(a){return _nn(a.NomAcheteur)===_nn(_chefClean);})||{};
     var superviseur=jip.chefChantier||chef.nom||chef.prenoms||pv.signataire||(pv.jsa&&pv.jsa.signataire)||nomSoc;
-    var chefTel=(chef.telephones&&chef.telephones[0]&&chef.telephones[0].tel)||chef.telephone||chef.tel||chefAcheteur.tel||'';
-    var chefEmail=chef.email||chefAcheteur.email||'';
+    var chefTel=(chef.telephones&&chef.telephones[0]&&chef.telephones[0].tel)||chef.telephone||chef.tel||chefAcheteur.Telephone||'';
+    var chefEmail=chef.email||chefAcheteur.Email||'';
     var contact=(chefTel?'Tél: '+chefTel:'')+(chefEmail?(chefTel?' – ':'')+' Email: '+chefEmail:'');
     if(typeof console!=='undefined'&&console.log){console.log('📊 RAPPORT DEBUG:','clientContact:',clientContact,'_contactClean:',_contactClean,'acheteur:',acheteur,'demandeurTel:',demandeurTel,'demandeurEmail:',demandeurEmail,'chef:',chef,'chefAcheteur:',chefAcheteur,'superviseur:',superviseur,'chefTel:',chefTel,'chefEmail:',chefEmail);}
 
@@ -8585,92 +8586,759 @@ html body[class] #vac-gantt td.emp .nm{font-weight:500 !important;}</style>
     return '<!DOCTYPE html><html><head><meta charset="UTF-8">' +
       '<title>PV de chantier — '+pi+'</title>'+css+
       '<!-- Données Acheteurs -->
-<script id="__ACHETEURS_DATA__">
-window.ACHETEURS_DATA = [
-  {nom:'Alain Serge NOUNY NGASSAM', nomN:'alain serge nouny ngassam', tel:'00237 698961877', email:'ngassam.nouny@castel-afrique.com', entreprise:'SOCIETE ANONYME DES BOISSONS DU CAMEROUN', fonction:'Chef de Bureau Principal'},
-  {nom:'Anicet GHISLAIN FOKA', nomN:'anicet ghislain foka', tel:'699 71 04 89', email:'anicet.foka@castel%1eafrique.com', entreprise:'SOCIETE ANONYME DES BOISSONS DU CAMEROUN', fonction:'Contremaitre Electricite / Instrumentation'},
-  {nom:'Annette Nicole OBOM', nomN:'annette nicole obom', tel:'223 33 51 218', email:'annette.obom@castel-afrique.com', entreprise:'SOCIETE ANONYME DES BOISSONS DU CAMEROUN', fonction:'Agent Achats Locaux'},
-  {nom:'Arielle Mbondja', nomN:'arielle mbondja', tel:'690 95 84 34', email:'ambondja@scdp.cm', entreprise:'SCDP', fonction:'Chef de Bureau des Commandes Nationales'},
-  {nom:'Aurelien KWANDA', nomN:'aurelien kwanda', tel:'690 44 29 63', email:'aurelien.kouanda@castel-afrique.com', entreprise:'SOCIETE ANONYME DES BOISSONS DU CAMEROUN', fonction:'Contremaitre Maintenance Electrique/Instrumentation'},
-  {nom:'NGENDEME Hervige', nomN:'ngendeme hervige', tel:'656 350 895', email:'hervige.ngendeme@dixstone.com', entreprise:'Dixstone Operations Cameroon', fonction:'Supply Chain Coordinator'},
-  {nom:'Sarah EDOUL', nomN:'sarah edoul', tel:'691 102 637', email:'louise.edoul@dixstone.com', entreprise:'Dixstone Operations Cameroon', fonction:'Supply Chain Coordinator'},
-  {nom:'Roger Ndoping', nomN:'roger ndoping', tel:'690 33 10 84', email:'rogerndoping@yahoo.com', entreprise:'CAMWATER', fonction:'Directeur Adjoint'},
-  {nom:'Benjamin N. Eteh', nomN:'benjamin n eteh', tel:'00237 650000039', email:'benjamin.eteh@dangote.com', entreprise:'DANGOTE CEMENT SA', fonction:'Chef Section Achats'},
-  {nom:'Bernadette NGASSOM', nomN:'bernadette ngassom', tel:'699 81 88 54', email:'bernadette.ngassom@castel-afrique.com', entreprise:'SOCAVER', fonction:'Agent Reception et Pesage'},
-  {nom:'Alex Noubissi', nomN:'alex noubissi', tel:'', email:'alexnoubissi222@gmail.com', entreprise:'NEO INDUSTRY SA', fonction:'Acheteur'},
-  {nom:'Berthe Dibao', nomN:'berthe dibao', tel:'683 71 42 63', email:'bdibao@scdp.cm', entreprise:'SCDP', fonction:'Chef Service Achats'},
-  {nom:'Boris Armel NGAHA TCHAHO', nomN:'boris armel ngaha tchaho', tel:'00237 693619804', email:'boris.ngaha@castel-afrique.com', entreprise:'SOCIETE ANONYME DES BOISSONS DU CAMEROUN', fonction:'Chef de Section'},
-  {nom:'Saurelle Metiegoum', nomN:'saurelle metiegoum', tel:'675 98 03 70', email:'saurelle.metiegoum@dangote.com', entreprise:'DANGOTE CEMENT SA', fonction:'Acheteur'},
-  {nom:'Cecile TCHUIENCHE', nomN:'cecile tchuienche', tel:'699 67 75 72', email:'cecile.tchuienche@castel afrique.com', entreprise:'SOCAVER', fonction:'Chef de Bureau Principal Achats MPC'},
-  {nom:'Cedric NGAKAM', nomN:'cedric ngakam', tel:'698 95 72 40', email:'cedric.ngakam@castel afrique.com', entreprise:'SOCIETE ANONYME DES BOISSONS DU CAMEROUN', fonction:'Chef de Bureau Achat PR'},
-  {nom:'Ekassi Etogo', nomN:'ekassi etogo', tel:'690 15 99 52', email:'guy.ekassi@pak.cm', entreprise:'PORT AUTONOME DE KRIBI', fonction:'Responsible Maintenance'},
-  {nom:'Christel TCHATO', nomN:'christel tchato', tel:'690 04 67 61', email:'christel.tchato@castel-afrique.com', entreprise:'SOCIETE ANONYME DES BOISSONS DU CAMEROUN', fonction:'Contremaitre Maintenance'},
-  {nom:'Eithel Chuyeh', nomN:'eithel chuyeh', tel:'6 55 31 76 63', email:'eithel.chuyeh@coca-cola-gracedom.com', entreprise:'Gracedom Invest', fonction:'Responsible Achats'},
-  {nom:'Dieudonné Nyimi', nomN:'dieudonne nyimi', tel:'650 21 05 69', email:'dnyimi@scdp.cm', entreprise:'SCDP', fonction:'Sous Directeur Maintenance'},
-  {nom:'Francois OUNKAP', nomN:'francois ounkap', tel:'679 50 15 05', email:'founkap@scdp.cm', entreprise:'SCDP', fonction:'Sous Directeur QSE'},
-  {nom:'Giselle ETEM', nomN:'giselle etem', tel:'677 09 80 94', email:'gisele.etem@tradexsa.com', entreprise:'TRADEX SA', fonction:'Cadre a ala Direction des Affaires Generales'},
-  {nom:'Hassan FOUAPON KOUOTOU', nomN:'hassan fouapon kouotou', tel:'693 59 06 86', email:'hassan.fouapon@castel-afrique.com', entreprise:'SOCIETE ANONYME DES BOISSONS DU CAMEROUN', fonction:'Chef de Section'},
-  {nom:'Irene Audrey KUISSEU', nomN:'irene audrey kuisseu', tel:'698 23 62 33', email:'kuisseuirene@gmail.com', entreprise:'PORT AUTONOME DE KRIBI', fonction:'Cheffe Service REC'},
-  {nom:'Iris Michael DKOUAM', nomN:'iris michael dkouam', tel:'698 80 55 28', email:'iris.dkouam@castel afrique.com', entreprise:'SOCIETE ANONYME DES BOISSONS DU CAMEROUN', fonction:'Chef d'Atelier Maintenance Electrique/Instrumentation'},
-  {nom:'Irene Pokam', nomN:'irene pokam', tel:'6 79 22 15 40', email:'ipokam@groupebocom.com', entreprise:'BOCOM PETROLEUM SA', fonction:'Acheteur'},
-  {nom:'Victor William MPONDO', nomN:'victor william mpondo', tel:'697 45 90 76', email:'victor.mouyeme@castel-afrique.com', entreprise:'SOCIETE ANONYME DES BOISSONS DU CAMEROUN', fonction:'Acheteur Pieces de Rechange'},
-  {nom:'Joseph DJIEUBOU', nomN:'joseph djieubou', tel:'696 15 69 56', email:'joseph.djieubou@castel-afrique.com', entreprise:'SOCIETE ANONYME DES BOISSONS DU CAMEROUN', fonction:'Chef d'atelier'},
-  {nom:'Martine KACTHE BIDEG', nomN:'martine kacthe bideg', tel:'699 30 04 09', email:'martine.kacthe@castel-afrique.com', entreprise:'SOCIETE ANONYME DES BOISSONS DU CAMEROUN', fonction:'Acheteur'},
-  {nom:'Luc Degaul NGOUBEYOU', nomN:'luc degaul ngoubeyou', tel:'233500000   Ext : 10113', email:'luc.ngoubeyou@castel-afrique.com', entreprise:'SOCIETE ANONYME DES BOISSONS DU CAMEROUN', fonction:'Chef de Section Achats Equipements et Fournitures Hors Production'},
-  {nom:'Rommel CHEUGOUA', nomN:'rommel cheugoua', tel:'695 16 89 80', email:'rommel.cheugoua@castel-afrique.com', entreprise:'SOCIETE ANONYME DES BOISSONS DU CAMEROUN', fonction:'Chef d'Atelier Maintenance'},
-  {nom:'Voltaire TCHOTCHOU', nomN:'voltaire tchotchou', tel:'699 69 55 46', email:'voltaire.tchotchou@castel-afrique.com', entreprise:'SOCIETE ANONYME DES BOISSONS DU CAMEROUN', fonction:'Contremaitre Principal Electricité'},
-  {nom:'Michel KAMGA DZETCHU', nomN:'michel kamga dzetchu', tel:'696 97 33 33', email:'michel.kamga@castel-afrique.com', entreprise:'SOCIETE ANONYME DES BOISSONS DU CAMEROUN', fonction:'Chef de Section Achats Locaux Pieces de Rechange'},
-  {nom:'Michel KENMOE', nomN:'michel kenmoe', tel:'695 29 61 11', email:'michel.kenmoe@castel%1eafrique.com', entreprise:'SOCIETE ANONYME DES BOISSONS DU CAMEROUN', fonction:'Contremaitre Electricite / Instrumentation'},
-  {nom:'Morgan Eyambe', nomN:'morgan eyambe', tel:'6 50 89 19 88', email:'morgan.eyambe@tradexsa.com', entreprise:'TRADEX SA', fonction:'Cadre Maintenance'},
-  {nom:'Philemon SANDJONG TCHAZOU', nomN:'philemon sandjong tchazou', tel:'694 45 34 11', email:'philemon.sandjong@castel-afrique.com', entreprise:'SOCAVER', fonction:'Chef Section Achats'},
-  {nom:'Hassan Adamou', nomN:'hassan adamou', tel:'699 84 37 28', email:'hassan.adamou@castel-afrique.com', entreprise:'SOCAVER', fonction:'Chef Service Senior RH'},
-  {nom:'PIR', nomN:'pir', tel:'', email:'', entreprise:'', fonction:'Acheteur'},
-  {nom:'Raoul Djampou', nomN:'raoul djampou', tel:'693 67 55 31', email:'djampou@yahoo.com', entreprise:'Gracedom Invest', fonction:'Chef de Departement Technique'},
-  {nom:'Roland Takam', nomN:'roland takam', tel:'6 91 52 68 41', email:'rtakam@bnb-investment.com', entreprise:'BOCOM PETROLEUM SA', fonction:'Chef Service Maintenance PS'},
-  {nom:'Atangana Francois', nomN:'atangana francois', tel:'699 93 24 08', email:'francois.atangana@castel-afrique.com', entreprise:'SOCIETE ANONYME DES BOISSONS DU CAMEROUN', fonction:'Chef d'atelier Electricite'},
-  {nom:'Romel FOPA', nomN:'romel fopa', tel:'699 95 55 87', email:'rommel.fopa@castel-afrique.com', entreprise:'SOCIETE ANONYME DES BOISSONS DU CAMEROUN', fonction:'Contremaitre Electricite'},
-  {nom:'Serge Alain Nouny Ngassam', nomN:'serge alain nouny ngassam', tel:'698 96 18 77', email:'ngassam.nouny@castel-afrique.com', entreprise:'SOCIETE ANONYME DES BOISSONS DU CAMEROUN', fonction:'Chef de Bureau Principal Achats Imports Pieces de Rechanges   Services Generaux / Fabrication'},
-  {nom:'Rosine Kati', nomN:'rosine kati', tel:'677 48 23 51', email:'rosine.kati@castel-afrique.com', entreprise:'SOCIETE ANONYME DES BOISSONS DU CAMEROUN', fonction:'Chef de Bureau'},
-  {nom:'Marie-line Ntyame', nomN:'marie-line ntyame', tel:'233 40 27 79', email:'mlntyame@scdp.cm', entreprise:'SCDP', fonction:'Chef Service Achats'},
-  {nom:'Joseph Nong', nomN:'joseph nong', tel:'691 77 88 13', email:'jnong@scdp.cm', entreprise:'SCDP', fonction:'Sous-Directeurs des Projets, Etudes et Suivi des Travaux'},
-  {nom:'Stheve NGAPE LONTE', nomN:'stheve ngape lonte', tel:'696 55 73 86', email:'stheve.ngape@castel-afrique.com', entreprise:'SOCIETE ANONYME DES BOISSONS DU CAMEROUN', fonction:'Chef de Section'},
-  {nom:'Emmanuel Biyong', nomN:'emmanuel biyong', tel:'693 10 92 58', email:'ebiyong@socapalm.org', entreprise:'SOCAPALM', fonction:'Chef Plantation'},
-  {nom:'Anne Chantal Ngo Ngidjol', nomN:'anne chantal ngo ngidjol', tel:'699 11 58 31', email:'ango@socapalm.org', entreprise:'SOCAPALM', fonction:'Chef Huilerie'},
-  {nom:'Patrick RANDRIAMISATA', nomN:'patrick randriamisata', tel:'698 97 39 01', email:'prandriamisata@socapalm.org', entreprise:'SOCAPALM', fonction:'CDT'},
-  {nom:'Basile DONNANG DONGMO', nomN:'basile donnang dongmo', tel:'', email:'basile.donnang@castel afrique.com', entreprise:'SOCIETE ANONYME DES BOISSONS DU CAMEROUN', fonction:'Electricien'},
-  {nom:'Clement Tchientcheu', nomN:'clement tchientcheu', tel:'699 47 40 80', email:'clement.tientcheu@castel afrique.com', entreprise:'SOCIETE ANONYME DES BOISSONS DU CAMEROUN', fonction:'Electricien'},
-  {nom:'Adolphe Missammhe', nomN:'adolphe missammhe', tel:'698 61 45 43', email:'amissammhe@socapalm.org', entreprise:'SOCAPALM', fonction:'Chef Plantation'},
-  {nom:'Fikoue Aime Hamo', nomN:'fikoue aime hamo', tel:'698 24 43 57', email:'patrick.hamo@castel-afrique.com', entreprise:'SOCIETE ANONYME DES BOISSONS DU CAMEROUN', fonction:'Contremaitre Electricite'},
-  {nom:'Pie Owona', nomN:'pie owona', tel:'699 67 53 98', email:'powona@scdp.cm', entreprise:'SCDP', fonction:'Directeur Technique'},
-  {nom:'Thierry Ekendjoum', nomN:'thierry ekendjoum', tel:'697 24 34 31', email:'thierry.ekendjoum@castel afrique.com', entreprise:'SOCAVER', fonction:'Chef Service Instrumentation Informatique Industrielle et Maintenance Bout et Froid'},
-  {nom:'Valdyce Mbogoum', nomN:'valdyce mbogoum', tel:'691 10 78 50', email:'vmbogoum@groupebocom.com', entreprise:'BOCOM PETROLEUM SA', fonction:'Acheteur'},
-  {nom:'Adriane Flora DJUIKOM', nomN:'adriane flora djuikom', tel:'233 40 33 33', email:'adriane.djuikom@castel afrique.com', entreprise:'SOCIETE ANONYME DES BOISSONS DU CAMEROUN', fonction:'Acheteur'},
-  {nom:'Leo SIKATI', nomN:'leo sikati', tel:'640 65 66 63', email:'info@neoindustrysa.com', entreprise:'NEO INDUSTRY SA', fonction:'Acheteur'},
-  {nom:'Jules Bakak', nomN:'jules bakak', tel:'698 45 81 49', email:'jules_bakak@barry-callebaut.com', entreprise:'SIC CACAO', fonction:'Purchasing Manager - Indirect Spend'},
-  {nom:'Bernard Eding Ndenga', nomN:'bernard eding ndenga', tel:'696 60 22 84', email:'bernard_eding@barry-callebaut.com', entreprise:'SIC CACAO', fonction:'HSE Manager'},
-  {nom:'Christian E. Nitcheu', nomN:'christian e nitcheu', tel:'650 00 85 82', email:'christian.nitcheu@dangote.com', entreprise:'DANGOTE CEMENT SA', fonction:'Acheteur'},
-  {nom:'Sodecoton', nomN:'sodecoton', tel:'233 42 46 03', email:'sodecoton@sodecoton.cm', entreprise:'SODECOTON', fonction:''},
-  {nom:'Germain Olivier PONDI', nomN:'germain olivier pondi', tel:'693 58 64 32', email:'germain.pondi@castel-afrique.com', entreprise:'SOCIETE ANONYME DES BOISSONS DU CAMEROUN', fonction:'Chef d'atelier'},
-  {nom:'Fidel Kenzam', nomN:'fidel kenzam', tel:'657 41 44 20', email:'fdongmo@socapalm.org', entreprise:'SOCAPALM', fonction:'IT'},
-  {nom:'Sylvain LONCHELE', nomN:'sylvain lonchele', tel:'695 34 41 14', email:'silvain.lonchele@castel-afrique.com', entreprise:'SOCIETE ANONYME DES BOISSONS DU CAMEROUN', fonction:'Contremaitre Maintenance'},
-  {nom:'Benjamin BAYANG', nomN:'benjamin bayang', tel:'693 45 23 90', email:'benjamin.bayang@castel afrique.com', entreprise:'SOCIETE ANONYME DES BOISSONS DU CAMEROUN', fonction:'Chef de Section achats des Investissements et Prestations Industrielles'},
-  {nom:'Marie Solange ABANS', nomN:'marie solange abans', tel:'', email:'marie.abans@castel-afrique.com', entreprise:'GUINNESS CAMEROON SA', fonction:'GCSA - Maintenance Planner'},
-  {nom:'Carelle BELLA ETEME', nomN:'carelle bella eteme', tel:'', email:'carelle.bella@castel-afrique.com', entreprise:'GUINNESS CAMEROON SA', fonction:'GCSA - Shift Electrician (Temporaire)'},
-  {nom:'Antoine Desire Delvis KEUMELIEU', nomN:'antoine desire delvis keumelieu', tel:'699 03 02 27', email:'antoine.keumelieu@castel-afrique.com', entreprise:'SOCIETE ANONYME DES BOISSONS DU CAMEROUN', fonction:'Technicien Junior Instrumentation'},
-  {nom:'Romuald Mengue', nomN:'romuald mengue', tel:'690 46 96 21', email:'romuald-valdese.menguealima@vinci-energies.com', entreprise:'CEGELEC SA', fonction:'Acheteur'},
-  {nom:'Yves Merlin AJOUMESSI', nomN:'yves merlin ajoumessi', tel:'', email:'yves.ajoumessi@castel-afrique.com', entreprise:'SOCIETE ANONYME DES BOISSONS DU CAMEROUN', fonction:'Contremaitre Principal Electricite/Instrumentation'},
-  {nom:'Hassan ATWI', nomN:'hassan atwi', tel:'695 92 92 92', email:'atwi@soticam.com', entreprise:'SOTICAM', fonction:'Directeur Usine'},
-  {nom:'Joseph KEMMOE', nomN:'joseph kemmoe', tel:'653446675', email:'joseph.kemmoe@neoindustrysa.com', entreprise:'NEO INDUSTRY SA', fonction:'Responsible Utilité'},
-  {nom:'Kimmie Hassiatou SCDP', nomN:'kimmie hassiatou scdp', tel:'651 99 87 98', email:'hsaidou@scdp.cm', entreprise:'SCDP', fonction:''},
-  {nom:'Carine MANFOUO NGNINTEDEM', nomN:'carine manfouo ngnintedem', tel:'', email:'carine.manfouo@castel-afrique.com', entreprise:'GUINNESS CAMEROON SA', fonction:'GCSA-Maintenance Planner (Temporaire)'},
-  {nom:'Arnaud Valentin DZOGNE', nomN:'arnaud valentin dzogne', tel:'699 630 524', email:'adzogne@slb.com', entreprise:'Compagnie Opérations pétrolières Schlumberger', fonction:'Electronic Expert'},
-  {nom:'Thierry DIFFO', nomN:'thierry diffo', tel:'679 33 10 19', email:'thierry.diffo@cimentsafrique.com', entreprise:'CIMAF', fonction:'Automaticien'},
-  {nom:'Cyrille.Njoko', nomN:'cyrillenjoko', tel:'233 43 57 00 Ext 5000', email:'cyrille.njoko@cm.addaxpetroleum.com', entreprise:'Addax Petroleum Cameroon Company SA', fonction:'Acheteur'},
-  {nom:'John Patrick OTTOU II', nomN:'john patrick ottou ii', tel:'691 33 37 59', email:'john.ottou@castel-afrique.com', entreprise:'SOCIETE ANONYME DES BOISSONS DU CAMEROUN', fonction:'Magasinier Principal PR'},
-  {nom:'Bakoura Moussa', nomN:'bakoura moussa', tel:'699 93 74 08', email:'mbakoura17@gmail.com', entreprise:'Hydrocarbures Analyses Contrôles SA', fonction:''},
-  {nom:'Beas Chrispo Michel', nomN:'beas chrispo michel', tel:'679 90 54 17', email:'michel.b@olamagri.com', entreprise:'OLAM AGRI', fonction:''},
-  {nom:'Erica Ngouelanomeny', nomN:'erica ngouelanomeny', tel:'', email:'info@m.fairmarkit.com', entreprise:'NESTLE', fonction:'Acheteur'}
-];
+<script id="__CLIENTS_DATA_ACHETEURS__">
+window.CLIENTS_DATA = {
+  "clients": [],
+  "acheteurs": [
+    {
+      "NomAcheteur": "Alain Serge NOUNY NGASSAM",
+      "Unite": "Usine Bafoussam",
+      "Entreprise": "SOCIETE ANONYME DES BOISSONS DU CAMEROUN",
+      "Telephone": "00237 698961877",
+      "Email": "ngassam.nouny@castel-afrique.com",
+      "Fonction": "Chef de Bureau Principal",
+      "Departement": "Imports Pieces de Rechanges - Services Generaux / Fabrication"
+    },
+    {
+      "NomAcheteur": "Anicet GHISLAIN FOKA",
+      "Unite": "Usine Bafoussam",
+      "Entreprise": "SOCIETE ANONYME DES BOISSONS DU CAMEROUN",
+      "Telephone": "699 71 04 89",
+      "Email": "anicet.foka@castel%1eafrique.com",
+      "Fonction": "Contremaitre Electricite / Instrumentation",
+      "Departement": "Technique"
+    },
+    {
+      "NomAcheteur": "Annette Nicole OBOM",
+      "Unite": "Usine Koumassi",
+      "Entreprise": "SOCIETE ANONYME DES BOISSONS DU CAMEROUN",
+      "Telephone": "223 33 51 218",
+      "Email": "annette.obom@castel-afrique.com",
+      "Fonction": "Agent Achats Locaux",
+      "Departement": "Achats"
+    },
+    {
+      "NomAcheteur": "Arielle Mbondja",
+      "Unite": "SCDP Depot de Bessengue",
+      "Entreprise": "SCDP",
+      "Telephone": "690 95 84 34",
+      "Email": "ambondja@scdp.cm",
+      "Fonction": "Chef de Bureau des Commandes Nationales",
+      "Departement": "Achats"
+    },
+    {
+      "NomAcheteur": "Aurelien KWANDA",
+      "Unite": "Usine Bafoussam",
+      "Entreprise": "SOCIETE ANONYME DES BOISSONS DU CAMEROUN",
+      "Telephone": "690 44 29 63",
+      "Email": "aurelien.kouanda@castel-afrique.com",
+      "Fonction": "Contremaitre Maintenance Electrique/Instrumentation",
+      "Departement": "Technique"
+    },
+    {
+      "NomAcheteur": "NGENDEME Hervige",
+      "Unite": "Base PAD",
+      "Entreprise": "Dixstone Operations Cameroon",
+      "Telephone": "656 350 895",
+      "Email": "hervige.ngendeme@dixstone.com",
+      "Fonction": "Supply Chain Coordinator",
+      "Departement": "Achats"
+    },
+    {
+      "NomAcheteur": "Sarah EDOUL",
+      "Unite": "Base PAD",
+      "Entreprise": "Dixstone Operations Cameroon",
+      "Telephone": "691 102 637",
+      "Email": "louise.edoul@dixstone.com",
+      "Fonction": "Supply Chain Coordinator",
+      "Departement": "Achats"
+    },
+    {
+      "NomAcheteur": "Roger Ndoping",
+      "Unite": "Direction Regionale Yde",
+      "Entreprise": "CAMWATER",
+      "Telephone": "690 33 10 84",
+      "Email": "rogerndoping@yahoo.com",
+      "Fonction": "Directeur Adjoint",
+      "Departement": "Administration"
+    },
+    {
+      "NomAcheteur": "Benjamin N. Eteh",
+      "Unite": "Usine de Douala Base Elf",
+      "Entreprise": "DANGOTE CEMENT SA",
+      "Telephone": "00237 650000039",
+      "Email": "benjamin.eteh@dangote.com",
+      "Fonction": "Chef Section Achats",
+      "Departement": "Achats"
+    },
+    {
+      "NomAcheteur": "Bernadette NGASSOM",
+      "Unite": "Usine de Ndogbong",
+      "Entreprise": "SOCAVER",
+      "Telephone": "699 81 88 54",
+      "Email": "bernadette.ngassom@castel-afrique.com",
+      "Fonction": "Agent Reception et Pesage",
+      "Departement": "Achats"
+    },
+    {
+      "NomAcheteur": "Alex Noubissi",
+      "Unite": "Usine Kekem",
+      "Entreprise": "NEO INDUSTRY SA",
+      "Telephone": "",
+      "Email": "alexnoubissi222@gmail.com",
+      "Fonction": "Acheteur",
+      "Departement": "Achats"
+    },
+    {
+      "NomAcheteur": "Berthe Dibao",
+      "Unite": "SCDP Depot de Bessengue",
+      "Entreprise": "SCDP",
+      "Telephone": "683 71 42 63",
+      "Email": "bdibao@scdp.cm",
+      "Fonction": "Chef Service Achats",
+      "Departement": "Achats"
+    },
+    {
+      "NomAcheteur": "Boris Armel NGAHA TCHAHO",
+      "Unite": "Siege Groupe Castel",
+      "Entreprise": "SOCIETE ANONYME DES BOISSONS DU CAMEROUN",
+      "Telephone": "00237 693619804",
+      "Email": "boris.ngaha@castel-afrique.com",
+      "Fonction": "Chef de Section",
+      "Departement": "Formation Industrielle"
+    },
+    {
+      "NomAcheteur": "Saurelle Metiegoum",
+      "Unite": "Usine de Douala Base Elf",
+      "Entreprise": "DANGOTE CEMENT SA",
+      "Telephone": "675 98 03 70",
+      "Email": "saurelle.metiegoum@dangote.com",
+      "Fonction": "Acheteur",
+      "Departement": "Electrique"
+    },
+    {
+      "NomAcheteur": "Cecile TCHUIENCHE",
+      "Unite": "Usine de Ndogbong",
+      "Entreprise": "SOCAVER",
+      "Telephone": "699 67 75 72",
+      "Email": "cecile.tchuienche@castel afrique.com",
+      "Fonction": "Chef de Bureau Principal Achats MPC",
+      "Departement": "Achats"
+    },
+    {
+      "NomAcheteur": "Cedric NGAKAM",
+      "Unite": "Usine Koumassi",
+      "Entreprise": "SOCIETE ANONYME DES BOISSONS DU CAMEROUN",
+      "Telephone": "698 95 72 40",
+      "Email": "cedric.ngakam@castel afrique.com",
+      "Fonction": "Chef de Bureau Achat PR",
+      "Departement": "Achats"
+    },
+    {
+      "NomAcheteur": "Ekassi Etogo",
+      "Unite": "PAK",
+      "Entreprise": "PORT AUTONOME DE KRIBI",
+      "Telephone": "690 15 99 52",
+      "Email": "guy.ekassi@pak.cm",
+      "Fonction": "Responsible Maintenance",
+      "Departement": "Reseau Electrique et Climatisation"
+    },
+    {
+      "NomAcheteur": "Christel TCHATO",
+      "Unite": "Siege Groupe Castel",
+      "Entreprise": "SOCIETE ANONYME DES BOISSONS DU CAMEROUN",
+      "Telephone": "690 04 67 61",
+      "Email": "christel.tchato@castel-afrique.com",
+      "Fonction": "Contremaitre Maintenance",
+      "Departement": "Maintenance"
+    },
+    {
+      "NomAcheteur": "Eithel Chuyeh",
+      "Unite": "Usine Coca-Cola de Souza",
+      "Entreprise": "Gracedom Invest",
+      "Telephone": "6 55 31 76 63",
+      "Email": "eithel.chuyeh@coca-cola-gracedom.com",
+      "Fonction": "Responsible Achats",
+      "Departement": "Achats"
+    },
+    {
+      "NomAcheteur": "Dieudonné Nyimi",
+      "Unite": "SCDP Depot de  Bafoussam",
+      "Entreprise": "SCDP",
+      "Telephone": "650 21 05 69",
+      "Email": "dnyimi@scdp.cm",
+      "Fonction": "Sous Directeur Maintenance",
+      "Departement": "Technique"
+    },
+    {
+      "NomAcheteur": "Francois OUNKAP",
+      "Unite": "SCDP Depot de Bessengue",
+      "Entreprise": "SCDP",
+      "Telephone": "679 50 15 05",
+      "Email": "founkap@scdp.cm",
+      "Fonction": "Sous Directeur QSE",
+      "Departement": "Securite"
+    },
+    {
+      "NomAcheteur": "Giselle ETEM",
+      "Unite": "Tradex-Dla",
+      "Entreprise": "TRADEX SA",
+      "Telephone": "677 09 80 94",
+      "Email": "gisele.etem@tradexsa.com",
+      "Fonction": "Cadre a ala Direction des Affaires Generales",
+      "Departement": "Achats"
+    },
+    {
+      "NomAcheteur": "Hassan FOUAPON KOUOTOU",
+      "Unite": "Usine Koumassi",
+      "Entreprise": "SOCIETE ANONYME DES BOISSONS DU CAMEROUN",
+      "Telephone": "693 59 06 86",
+      "Email": "hassan.fouapon@castel-afrique.com",
+      "Fonction": "Chef de Section",
+      "Departement": "Prestations Industrielles"
+    },
+    {
+      "NomAcheteur": "Irene Audrey KUISSEU",
+      "Unite": "PAK",
+      "Entreprise": "PORT AUTONOME DE KRIBI",
+      "Telephone": "698 23 62 33",
+      "Email": "kuisseuirene@gmail.com",
+      "Fonction": "Cheffe Service REC",
+      "Departement": "Reseau Electrique et Climatisation"
+    },
+    {
+      "NomAcheteur": "Iris Michael DKOUAM",
+      "Unite": "Usine Koumassi",
+      "Entreprise": "SOCIETE ANONYME DES BOISSONS DU CAMEROUN",
+      "Telephone": "698 80 55 28",
+      "Email": "iris.dkouam@castel afrique.com",
+      "Fonction": "Chef d'Atelier Maintenance Electrique/Instrumentation",
+      "Departement": "Technique"
+    },
+    {
+      "NomAcheteur": "Irene Pokam",
+      "Unite": "Bocom Gaz Bonaberi",
+      "Entreprise": "BOCOM PETROLEUM SA",
+      "Telephone": "6 79 22 15 40",
+      "Email": "ipokam@groupebocom.com",
+      "Fonction": "Acheteur",
+      "Departement": "Achats"
+    },
+    {
+      "NomAcheteur": "Victor William MPONDO",
+      "Unite": "Usine Koumassi",
+      "Entreprise": "SOCIETE ANONYME DES BOISSONS DU CAMEROUN",
+      "Telephone": "697 45 90 76",
+      "Email": "victor.mouyeme@castel-afrique.com",
+      "Fonction": "Acheteur Pieces de Rechange",
+      "Departement": "Achats"
+    },
+    {
+      "NomAcheteur": "Joseph DJIEUBOU",
+      "Unite": "Usine Bafoussam",
+      "Entreprise": "SOCIETE ANONYME DES BOISSONS DU CAMEROUN",
+      "Telephone": "696 15 69 56",
+      "Email": "joseph.djieubou@castel-afrique.com",
+      "Fonction": "Chef d'atelier",
+      "Departement": "Maintenance"
+    },
+    {
+      "NomAcheteur": "Martine KACTHE BIDEG",
+      "Unite": "Usine Koumassi",
+      "Entreprise": "SOCIETE ANONYME DES BOISSONS DU CAMEROUN",
+      "Telephone": "699 30 04 09",
+      "Email": "martine.kacthe@castel-afrique.com",
+      "Fonction": "Acheteur",
+      "Departement": "Achats"
+    },
+    {
+      "NomAcheteur": "Luc Degaul NGOUBEYOU",
+      "Unite": "Usine Mbanga",
+      "Entreprise": "SOCIETE ANONYME DES BOISSONS DU CAMEROUN",
+      "Telephone": "233500000   Ext : 10113",
+      "Email": "luc.ngoubeyou@castel-afrique.com",
+      "Fonction": "Chef de Section Achats Equipements et Fournitures Hors Production",
+      "Departement": "Achats"
+    },
+    {
+      "NomAcheteur": "Rommel CHEUGOUA",
+      "Unite": "Usine Mbanga",
+      "Entreprise": "SOCIETE ANONYME DES BOISSONS DU CAMEROUN",
+      "Telephone": "695 16 89 80",
+      "Email": "rommel.cheugoua@castel-afrique.com",
+      "Fonction": "Chef d'Atelier Maintenance",
+      "Departement": "Technique"
+    },
+    {
+      "NomAcheteur": "Voltaire TCHOTCHOU",
+      "Unite": "Usine Mbanga",
+      "Entreprise": "SOCIETE ANONYME DES BOISSONS DU CAMEROUN",
+      "Telephone": "699 69 55 46",
+      "Email": "voltaire.tchotchou@castel-afrique.com",
+      "Fonction": "Contremaitre Principal Electricité",
+      "Departement": "Technique"
+    },
+    {
+      "NomAcheteur": "Michel KAMGA DZETCHU",
+      "Unite": "Usine Koumassi",
+      "Entreprise": "SOCIETE ANONYME DES BOISSONS DU CAMEROUN",
+      "Telephone": "696 97 33 33",
+      "Email": "michel.kamga@castel-afrique.com",
+      "Fonction": "Chef de Section Achats Locaux Pieces de Rechange",
+      "Departement": "Achats"
+    },
+    {
+      "NomAcheteur": "Michel KENMOE",
+      "Unite": "Usine Bafoussam",
+      "Entreprise": "SOCIETE ANONYME DES BOISSONS DU CAMEROUN",
+      "Telephone": "695 29 61 11",
+      "Email": "michel.kenmoe@castel%1eafrique.com",
+      "Fonction": "Contremaitre Electricite / Instrumentation",
+      "Departement": "Technique"
+    },
+    {
+      "NomAcheteur": "Morgan Eyambe",
+      "Unite": "Tradex-Yde",
+      "Entreprise": "TRADEX SA",
+      "Telephone": "6 50 89 19 88",
+      "Email": "morgan.eyambe@tradexsa.com",
+      "Fonction": "Cadre Maintenance",
+      "Departement": "Technique"
+    },
+    {
+      "NomAcheteur": "Philemon SANDJONG TCHAZOU",
+      "Unite": "Usine de Ndogbong",
+      "Entreprise": "SOCAVER",
+      "Telephone": "694 45 34 11",
+      "Email": "philemon.sandjong@castel-afrique.com",
+      "Fonction": "Chef Section Achats",
+      "Departement": "Achats"
+    },
+    {
+      "NomAcheteur": "Hassan Adamou",
+      "Unite": "Usine de Ndogbong",
+      "Entreprise": "SOCAVER",
+      "Telephone": "699 84 37 28",
+      "Email": "hassan.adamou@castel-afrique.com",
+      "Fonction": "Chef Service Senior RH",
+      "Departement": "HR"
+    },
+    {
+      "NomAcheteur": "PIR",
+      "Unite": "",
+      "Entreprise": "",
+      "Telephone": "",
+      "Email": "",
+      "Fonction": "Acheteur",
+      "Departement": "Chiffrage"
+    },
+    {
+      "NomAcheteur": "Raoul Djampou",
+      "Unite": "Usine Coca-Cola de Souza",
+      "Entreprise": "Gracedom Invest",
+      "Telephone": "693 67 55 31",
+      "Email": "djampou@yahoo.com",
+      "Fonction": "Chef de Departement Technique",
+      "Departement": "Technique"
+    },
+    {
+      "NomAcheteur": "Roland Takam",
+      "Unite": "Bocom Gaz Bonaberi",
+      "Entreprise": "BOCOM PETROLEUM SA",
+      "Telephone": "6 91 52 68 41",
+      "Email": "rtakam@bnb-investment.com",
+      "Fonction": "Chef Service Maintenance PS",
+      "Departement": "Technique"
+    },
+    {
+      "NomAcheteur": "Atangana Francois",
+      "Unite": "Usine Ndokoti",
+      "Entreprise": "SOCIETE ANONYME DES BOISSONS DU CAMEROUN",
+      "Telephone": "699 93 24 08",
+      "Email": "francois.atangana@castel-afrique.com",
+      "Fonction": "Chef d'atelier Electricite",
+      "Departement": "Technique"
+    },
+    {
+      "NomAcheteur": "Romel FOPA",
+      "Unite": "Usine Koumassi",
+      "Entreprise": "SOCIETE ANONYME DES BOISSONS DU CAMEROUN",
+      "Telephone": "699 95 55 87",
+      "Email": "rommel.fopa@castel-afrique.com",
+      "Fonction": "Contremaitre Electricite",
+      "Departement": "Maintenance"
+    },
+    {
+      "NomAcheteur": "Serge Alain Nouny Ngassam",
+      "Unite": "Usine Garoua",
+      "Entreprise": "SOCIETE ANONYME DES BOISSONS DU CAMEROUN",
+      "Telephone": "698 96 18 77",
+      "Email": "ngassam.nouny@castel-afrique.com",
+      "Fonction": "Chef de Bureau Principal Achats Imports Pieces de Rechanges   Services Generaux / Fabrication",
+      "Departement": "Achats"
+    },
+    {
+      "NomAcheteur": "Rosine Kati",
+      "Unite": "Usine Koumassi",
+      "Entreprise": "SOCIETE ANONYME DES BOISSONS DU CAMEROUN",
+      "Telephone": "677 48 23 51",
+      "Email": "rosine.kati@castel-afrique.com",
+      "Fonction": "Chef de Bureau",
+      "Departement": "Pieces de Rechange"
+    },
+    {
+      "NomAcheteur": "Marie-line Ntyame",
+      "Unite": "SCDP Depot de Bessengue",
+      "Entreprise": "SCDP",
+      "Telephone": "233 40 27 79",
+      "Email": "mlntyame@scdp.cm",
+      "Fonction": "Chef Service Achats",
+      "Departement": "Achats"
+    },
+    {
+      "NomAcheteur": "Joseph Nong",
+      "Unite": "SCDP Depot de Bessengue",
+      "Entreprise": "SCDP",
+      "Telephone": "691 77 88 13",
+      "Email": "jnong@scdp.cm",
+      "Fonction": "Sous-Directeurs des Projets, Etudes et Suivi des Travaux",
+      "Departement": "DTEC"
+    },
+    {
+      "NomAcheteur": "Stheve NGAPE LONTE",
+      "Unite": "Usine Koumassi",
+      "Entreprise": "SOCIETE ANONYME DES BOISSONS DU CAMEROUN",
+      "Telephone": "696 55 73 86",
+      "Email": "stheve.ngape@castel-afrique.com",
+      "Fonction": "Chef de Section",
+      "Departement": "Imports Conditionnement"
+    },
+    {
+      "NomAcheteur": "Emmanuel Biyong",
+      "Unite": "SOCAPALM_ESEKA",
+      "Entreprise": "SOCAPALM",
+      "Telephone": "693 10 92 58",
+      "Email": "ebiyong@socapalm.org",
+      "Fonction": "Chef Plantation",
+      "Departement": "Technique"
+    },
+    {
+      "NomAcheteur": "Anne Chantal Ngo Ngidjol",
+      "Unite": "SOCAPALM_ESEKA",
+      "Entreprise": "SOCAPALM",
+      "Telephone": "699 11 58 31",
+      "Email": "ango@socapalm.org",
+      "Fonction": "Chef Huilerie",
+      "Departement": "Technique"
+    },
+    {
+      "NomAcheteur": "Patrick RANDRIAMISATA",
+      "Unite": "SOCAPALM_Bambou",
+      "Entreprise": "SOCAPALM",
+      "Telephone": "698 97 39 01",
+      "Email": "prandriamisata@socapalm.org",
+      "Fonction": "CDT",
+      "Departement": "Technique"
+    },
+    {
+      "NomAcheteur": "Basile DONNANG DONGMO",
+      "Unite": "Usine Koumassi",
+      "Entreprise": "SOCIETE ANONYME DES BOISSONS DU CAMEROUN",
+      "Telephone": "",
+      "Email": "basile.donnang@castel afrique.com",
+      "Fonction": "Electricien",
+      "Departement": "Technique"
+    },
+    {
+      "NomAcheteur": "Clement Tchientcheu",
+      "Unite": "Usine Koumassi",
+      "Entreprise": "SOCIETE ANONYME DES BOISSONS DU CAMEROUN",
+      "Telephone": "699 47 40 80",
+      "Email": "clement.tientcheu@castel afrique.com",
+      "Fonction": "Electricien",
+      "Departement": "Technique"
+    },
+    {
+      "NomAcheteur": "Adolphe Missammhe",
+      "Unite": "SOCAPALM_Bambou",
+      "Entreprise": "SOCAPALM",
+      "Telephone": "698 61 45 43",
+      "Email": "amissammhe@socapalm.org",
+      "Fonction": "Chef Plantation",
+      "Departement": "Technique"
+    },
+    {
+      "NomAcheteur": "Fikoue Aime Hamo",
+      "Unite": "Usine Koumassi",
+      "Entreprise": "SOCIETE ANONYME DES BOISSONS DU CAMEROUN",
+      "Telephone": "698 24 43 57",
+      "Email": "patrick.hamo@castel-afrique.com",
+      "Fonction": "Contremaitre Electricite",
+      "Departement": "Technique"
+    },
+    {
+      "NomAcheteur": "Pie Owona",
+      "Unite": "SCDP Depot de  Bafoussam",
+      "Entreprise": "SCDP",
+      "Telephone": "699 67 53 98",
+      "Email": "powona@scdp.cm",
+      "Fonction": "Directeur Technique",
+      "Departement": "Technique"
+    },
+    {
+      "NomAcheteur": "Thierry Ekendjoum",
+      "Unite": "Usine de Ndogbong",
+      "Entreprise": "SOCAVER",
+      "Telephone": "697 24 34 31",
+      "Email": "thierry.ekendjoum@castel afrique.com",
+      "Fonction": "Chef Service Instrumentation Informatique Industrielle et Maintenance Bout et Froid",
+      "Departement": "Instrumentation et Informatique Industrielle"
+    },
+    {
+      "NomAcheteur": "Valdyce Mbogoum",
+      "Unite": "Bocom Gaz Bonaberi",
+      "Entreprise": "BOCOM PETROLEUM SA",
+      "Telephone": "691 10 78 50",
+      "Email": "vmbogoum@groupebocom.com",
+      "Fonction": "Acheteur",
+      "Departement": "Achats"
+    },
+    {
+      "NomAcheteur": "Adriane Flora DJUIKOM",
+      "Unite": "Usine Bafoussam",
+      "Entreprise": "SOCIETE ANONYME DES BOISSONS DU CAMEROUN",
+      "Telephone": "233 40 33 33",
+      "Email": "adriane.djuikom@castel afrique.com",
+      "Fonction": "Acheteur",
+      "Departement": "Achats"
+    },
+    {
+      "NomAcheteur": "Leo SIKATI",
+      "Unite": "Usine Kekem",
+      "Entreprise": "NEO INDUSTRY SA",
+      "Telephone": "640 65 66 63",
+      "Email": "info@neoindustrysa.com",
+      "Fonction": "Acheteur",
+      "Departement": "Achats"
+    },
+    {
+      "NomAcheteur": "Jules Bakak",
+      "Unite": "SIC CACAO",
+      "Entreprise": "SIC CACAO",
+      "Telephone": "698 45 81 49",
+      "Email": "jules_bakak@barry-callebaut.com",
+      "Fonction": "Purchasing Manager - Indirect Spend",
+      "Departement": "Achats"
+    },
+    {
+      "NomAcheteur": "Bernard Eding Ndenga",
+      "Unite": "SIC CACAO",
+      "Entreprise": "SIC CACAO",
+      "Telephone": "696 60 22 84",
+      "Email": "bernard_eding@barry-callebaut.com",
+      "Fonction": "HSE Manager",
+      "Departement": "Securite"
+    },
+    {
+      "NomAcheteur": "Christian E. Nitcheu",
+      "Unite": "Usine de Douala Base Elf",
+      "Entreprise": "DANGOTE CEMENT SA",
+      "Telephone": "650 00 85 82",
+      "Email": "christian.nitcheu@dangote.com",
+      "Fonction": "Acheteur",
+      "Departement": "Achats"
+    },
+    {
+      "NomAcheteur": "Sodecoton",
+      "Unite": "Sodecoton",
+      "Entreprise": "SODECOTON",
+      "Telephone": "233 42 46 03",
+      "Email": "sodecoton@sodecoton.cm",
+      "Fonction": "",
+      "Departement": ""
+    },
+    {
+      "NomAcheteur": "Germain Olivier PONDI",
+      "Unite": "Usine Mbanga",
+      "Entreprise": "SOCIETE ANONYME DES BOISSONS DU CAMEROUN",
+      "Telephone": "693 58 64 32",
+      "Email": "germain.pondi@castel-afrique.com",
+      "Fonction": "Chef d'atelier",
+      "Departement": "Technique"
+    },
+    {
+      "NomAcheteur": "Fidel Kenzam",
+      "Unite": "SOCAPALM_Edea",
+      "Entreprise": "SOCAPALM",
+      "Telephone": "657 41 44 20",
+      "Email": "fdongmo@socapalm.org",
+      "Fonction": "IT",
+      "Departement": "Technique"
+    },
+    {
+      "NomAcheteur": "Sylvain LONCHELE",
+      "Unite": "SIAC",
+      "Entreprise": "SOCIETE ANONYME DES BOISSONS DU CAMEROUN",
+      "Telephone": "695 34 41 14",
+      "Email": "silvain.lonchele@castel-afrique.com",
+      "Fonction": "Contremaitre Maintenance",
+      "Departement": "Maintenance"
+    },
+    {
+      "NomAcheteur": "Benjamin BAYANG",
+      "Unite": "Siege Groupe Castel",
+      "Entreprise": "SOCIETE ANONYME DES BOISSONS DU CAMEROUN",
+      "Telephone": "693 45 23 90",
+      "Email": "benjamin.bayang@castel afrique.com",
+      "Fonction": "Chef de Section achats des Investissements et Prestations Industrielles",
+      "Departement": "Achats"
+    },
+    {
+      "NomAcheteur": "Marie Solange ABANS",
+      "Unite": "Usine Cite CICAM",
+      "Entreprise": "GUINNESS CAMEROON SA",
+      "Telephone": "",
+      "Email": "marie.abans@castel-afrique.com",
+      "Fonction": "GCSA - Maintenance Planner",
+      "Departement": "Technique"
+    },
+    {
+      "NomAcheteur": "Carelle BELLA ETEME",
+      "Unite": "Usine Cite CICAM",
+      "Entreprise": "GUINNESS CAMEROON SA",
+      "Telephone": "",
+      "Email": "carelle.bella@castel-afrique.com",
+      "Fonction": "GCSA - Shift Electrician (Temporaire)",
+      "Departement": "Technique"
+    },
+    {
+      "NomAcheteur": "Antoine Desire Delvis KEUMELIEU",
+      "Unite": "Usine Bafoussam",
+      "Entreprise": "SOCIETE ANONYME DES BOISSONS DU CAMEROUN",
+      "Telephone": "699 03 02 27",
+      "Email": "antoine.keumelieu@castel-afrique.com",
+      "Fonction": "Technicien Junior Instrumentation",
+      "Departement": "Technique"
+    },
+    {
+      "NomAcheteur": "Romuald Mengue",
+      "Unite": "Cegelec_Douala",
+      "Entreprise": "CEGELEC SA",
+      "Telephone": "690 46 96 21",
+      "Email": "romuald-valdese.menguealima@vinci-energies.com",
+      "Fonction": "Acheteur",
+      "Departement": "Achats"
+    },
+    {
+      "NomAcheteur": "Yves Merlin AJOUMESSI",
+      "Unite": "Usine Ndokoti",
+      "Entreprise": "SOCIETE ANONYME DES BOISSONS DU CAMEROUN",
+      "Telephone": "",
+      "Email": "yves.ajoumessi@castel-afrique.com",
+      "Fonction": "Contremaitre Principal Electricite/Instrumentation",
+      "Departement": "Technique"
+    },
+    {
+      "NomAcheteur": "Hassan ATWI",
+      "Unite": "Soticam_Bekoko",
+      "Entreprise": "SOTICAM",
+      "Telephone": "695 92 92 92",
+      "Email": "atwi@soticam.com",
+      "Fonction": "Directeur Usine",
+      "Departement": "Technique"
+    },
+    {
+      "NomAcheteur": "Joseph KEMMOE",
+      "Unite": "Usine Kekem",
+      "Entreprise": "NEO INDUSTRY SA",
+      "Telephone": "653446675",
+      "Email": "joseph.kemmoe@neoindustrysa.com",
+      "Fonction": "Responsible Utilité",
+      "Departement": "Technique"
+    },
+    {
+      "NomAcheteur": "Kimmie Hassiatou SCDP",
+      "Unite": "SCDP Depot de Garoua",
+      "Entreprise": "SCDP",
+      "Telephone": "651 99 87 98",
+      "Email": "hsaidou@scdp.cm",
+      "Fonction": "",
+      "Departement": "Technique"
+    },
+    {
+      "NomAcheteur": "Carine MANFOUO NGNINTEDEM",
+      "Unite": "Usine Cite CICAM",
+      "Entreprise": "GUINNESS CAMEROON SA",
+      "Telephone": "",
+      "Email": "carine.manfouo@castel-afrique.com",
+      "Fonction": "GCSA-Maintenance Planner (Temporaire)",
+      "Departement": "Maintenance"
+    },
+    {
+      "NomAcheteur": "Arnaud Valentin DZOGNE",
+      "Unite": "SLB Douala",
+      "Entreprise": "Compagnie Opérations pétrolières Schlumberger",
+      "Telephone": "699 630 524",
+      "Email": "adzogne@slb.com",
+      "Fonction": "Electronic Expert",
+      "Departement": "Technique"
+    },
+    {
+      "NomAcheteur": "Thierry DIFFO",
+      "Unite": "CIMAF",
+      "Entreprise": "CIMAF",
+      "Telephone": "679 33 10 19",
+      "Email": "thierry.diffo@cimentsafrique.com",
+      "Fonction": "Automaticien",
+      "Departement": "Technique"
+    },
+    {
+      "NomAcheteur": "Cyrille.Njoko",
+      "Unite": "Addax",
+      "Entreprise": "Addax Petroleum Cameroon Company SA",
+      "Telephone": "233 43 57 00 Ext 5000",
+      "Email": "cyrille.njoko@cm.addaxpetroleum.com",
+      "Fonction": "Acheteur",
+      "Departement": "Achats"
+    },
+    {
+      "NomAcheteur": "John Patrick OTTOU II",
+      "Unite": "Usine Garoua",
+      "Entreprise": "SOCIETE ANONYME DES BOISSONS DU CAMEROUN",
+      "Telephone": "691 33 37 59",
+      "Email": "john.ottou@castel-afrique.com",
+      "Fonction": "Magasinier Principal PR",
+      "Departement": "Achats"
+    },
+    {
+      "NomAcheteur": "Bakoura Moussa",
+      "Unite": "Hydrac Douala",
+      "Entreprise": "Hydrocarbures Analyses Contrôles SA",
+      "Telephone": "699 93 74 08",
+      "Email": "mbakoura17@gmail.com",
+      "Fonction": "",
+      "Departement": ""
+    },
+    {
+      "NomAcheteur": "Beas Chrispo Michel",
+      "Unite": "Usine Bekoko",
+      "Entreprise": "OLAM AGRI",
+      "Telephone": "679 90 54 17",
+      "Email": "michel.b@olamagri.com",
+      "Fonction": "",
+      "Departement": ""
+    },
+    {
+      "NomAcheteur": "Erica Ngouelanomeny",
+      "Unite": "Nestle",
+      "Entreprise": "NESTLE",
+      "Telephone": "",
+      "Email": "info@m.fairmarkit.com",
+      "Fonction": "Acheteur",
+      "Departement": "Achats"
+    }
+  ]
+};
 </script>
 </head><body>' +
       '<div class="hdr"><div>' +
