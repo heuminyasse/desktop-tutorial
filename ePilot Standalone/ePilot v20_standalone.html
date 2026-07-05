@@ -258,6 +258,109 @@ document.addEventListener('DOMContentLoaded', async function() {
     })();
 
     // ─────────────────────────────────────────────────────────────
+    // [Phase1-NormalizeData] Ajouter IDs uniques à PERSONNEL_DATA et CLIENTS_DATA.acheteurs
+    // Objectif: Remplacer text-based matching par FK robustes
+    // ─────────────────────────────────────────────────────────────
+    (function normalizeAllData() {
+      setTimeout(function() {
+        try {
+          function normalize(s) {
+            return String(s || '').normalize('NFD')
+              .replace(/[̀-ͯ]/g, '')
+              .toLowerCase()
+              .replace(/[^a-z0-9]/g, ' ')
+              .replace(/\s+/g, ' ')
+              .trim();
+          }
+
+          var stats = { hr_count: 0, acheteur_count: 0, modified_hr: 0, modified_acheteur: 0 };
+
+          // ─ Normaliser PERSONNEL_DATA (Employés HBO) ─
+          var hr_data = window.PERSONNEL_DATA;
+          if (Array.isArray(hr_data) && hr_data.length > 0) {
+            stats.hr_count = hr_data.length;
+            hr_data.forEach(function(p, i) {
+              if (!p.id) {
+                p.id = "PRS_HR_" + String(i).padStart(3, '0');
+                stats.modified_hr++;
+              }
+
+              // Normaliser structure: prenoms/nom
+              if (!p.prenoms && p.Prenoms) p.prenoms = p.Prenoms;
+              if (!p.nom && p.Nom) p.nom = p.Nom;
+
+              // Normaliser téléphones
+              if (!p.telephones && p.telephone) {
+                p.telephones = [{type: 'mobile', tel: p.telephone}];
+              }
+              if (!p.tel && p.telephone) {
+                p.tel = p.telephone;
+              }
+
+              // Créer nomComplet denormalisé
+              if (!p.nomComplet) {
+                p.nomComplet = ((p.prenoms || '') + ' ' + (p.nom || '')).trim();
+              }
+
+              // Créer nomNormalise pour matching robuste
+              if (!p.nomNormalise) {
+                p.nomNormalise = normalize(p.nomComplet);
+              }
+            });
+
+            // Sauvegarder si modifié
+            if (stats.modified_hr > 0) {
+              try {
+                localStorage.setItem('ePilot_PERSONNEL_DATA', JSON.stringify(hr_data));
+              } catch(e) {
+                console.warn('[Phase1] Impossible de sauvegarder PERSONNEL_DATA:', e.message);
+              }
+            }
+          }
+
+          // ─ Normaliser CLIENTS_DATA.acheteurs (Contacts clients) ─
+          var cd = window.CLIENTS_DATA;
+          if (cd && Array.isArray(cd.acheteurs) && cd.acheteurs.length > 0) {
+            stats.acheteur_count = cd.acheteurs.length;
+            cd.acheteurs.forEach(function(a, i) {
+              if (!a.id) {
+                a.id = "PRS_CLI_" + String(i).padStart(3, '0');
+                stats.modified_acheteur++;
+              }
+
+              // Créer nomNormalise pour matching robuste
+              if (!a.nomNormalise) {
+                a.nomNormalise = normalize(a.NomAcheteur);
+              }
+
+              // Normaliser Unite
+              if (!a.unitNormalise && a.Unite) {
+                a.unitNormalise = normalize(a.Unite);
+              }
+            });
+
+            // Sauvegarder si modifié
+            if (stats.modified_acheteur > 0) {
+              try {
+                localStorage.setItem('ePilot_CLIENTS_DATA', JSON.stringify(cd));
+              } catch(e) {
+                console.warn('[Phase1] Impossible de sauvegarder CLIENTS_DATA:', e.message);
+              }
+            }
+          }
+
+          // Log résumé
+          console.log('[Phase1-NormalizeData] Résumé:',
+            'HR=' + stats.modified_hr + '/' + stats.hr_count,
+            'Acheteurs=' + stats.modified_acheteur + '/' + stats.acheteur_count);
+
+        } catch(e) {
+          console.error('[Phase1-NormalizeData] Erreur:', e.message);
+        }
+      }, 100);
+    })();
+
+    // ─────────────────────────────────────────────────────────────
     // [FixClosedChantier v1] Ouverture des chantiers CLÔTURÉS / TERMINÉS
     // depuis Quote, OA, Comptabilité, etc.
     //
