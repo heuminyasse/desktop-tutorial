@@ -7880,6 +7880,7 @@ html body[class] #vac-gantt td.emp .nm{font-weight:500 !important;}</style>
     var chefTel=(chef.telephones&&chef.telephones[0]&&chef.telephones[0].tel)||chef.telephone||chef.tel||chefAcheteur.tel||'';
     var chefEmail=chef.email||chefAcheteur.email||'';
     var contact=(chefTel?'Tél: '+chefTel:'')+(chefEmail?(chefTel?' – ':'')+' Email: '+chefEmail:'');
+    if(typeof console!=='undefined'&&console.log){console.log('📊 RAPPORT DEBUG:','clientContact:',clientContact,'_contactClean:',_contactClean,'acheteur:',acheteur,'demandeurTel:',demandeurTel,'demandeurEmail:',demandeurEmail,'chef:',chef,'chefAcheteur:',chefAcheteur,'superviseur:',superviseur,'chefTel:',chefTel,'chefEmail:',chefEmail);}
 
     /* tâches — priorité Planning Gantt */
     var _pd=window.__getPlanningData&&window.__getPlanningData();
