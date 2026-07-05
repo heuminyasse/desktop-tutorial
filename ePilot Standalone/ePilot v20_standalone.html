@@ -8143,16 +8143,18 @@ html body[class] #vac-gantt td.emp .nm{font-weight:500 !important;}</style>
       +'<div class="hdr-cname">'+esc(clientName)+'</div>'
       +'<div class="hdr-cinfo">'
       +(clientContact?'<div><b>Demandeur :</b> '+esc(clientContact)+'</div>':'')
-      +((demandeurTel||demandeurEmail)
-        ?'<div class="hdr-inline">'
-          +(demandeurTel?'<span>Tel : '+esc(demandeurTel)+'</span>':'')
-          +(demandeurEmail?'<span>Email : '+esc(demandeurEmail)+'</span>':'')
-          +'</div>':'')
+      +'<div class="hdr-inline">'
+        +(demandeurTel?'<span>Tel : '+esc(demandeurTel)+'</span>':'<span style="color:#999;">Tel : —</span>')
+        +(demandeurEmail?'<span>Email : '+esc(demandeurEmail)+'</span>':'<span style="color:#999;">Email : —</span>')
+      +'</div>'
       +'</div></td></tr>'
       +'<tr>'
       +'<td class="hdr-super" style="padding-left:0">'
       +'<div>Superviseur Chantier : '+esc(superviseur)+'</div>'
-      +(contact?'<div>'+esc(contact)+'</div>':'')
+      +'<div>'
+        +(chefTel?'<span>Tél: '+esc(chefTel)+'</span>':'<span style="color:#999;">Tél: —</span>')
+        +(chefEmail?' <span>Email: '+esc(chefEmail)+'</span>':'<span style="color:#999;"> Email: —</span>')
+      +'</div>'
       +'</td>'
       +'<td style="vertical-align:middle">'
       +((projDebut||projFin)?'<span class="hdr-dates">Debut '+esc(projDebut)+'&nbsp;&nbsp;Fin '+esc(projFin)+'</span>':'')
