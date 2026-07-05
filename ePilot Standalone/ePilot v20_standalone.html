@@ -8053,7 +8053,7 @@ html body[class] #vac-gantt td.emp .nm{font-weight:500 !important;}</style>
       +'.tbtn-p{background:var(--am);color:#fff}'
       +'.tbtn-c{background:rgba(255,255,255,.13);color:#fff;border:1px solid rgba(255,255,255,.3)}'
       +'.wrap{display:flex;justify-content:center;padding:20px 12px 32px}'
-      +'.page{width:210mm;background:#fff;box-shadow:0 2px 24px rgba(0,0,0,.18);display:flex;flex-direction:column}'
+      +'.page{width:210mm;height:297mm;background:#fff;box-shadow:0 2px 24px rgba(0,0,0,.18);display:flex;flex-direction:column;page-break-after:always}'
       +'.rpt-head{padding:10px 14px 0;font-family:var(--fh)}'
       +'.hdr-logo{font-family:var(--fl);font-size:26px;font-weight:900;color:var(--nv);letter-spacing:1px;margin-bottom:6px}'
       +'.hdr-grid{width:100%;border-collapse:collapse}'
@@ -8103,7 +8103,9 @@ html body[class] #vac-gantt td.emp .nm{font-weight:500 !important;}</style>
       +'.sig-line{padding-top:4px;font-size:9px;color:#444}'
       +'.foot{margin-top:12px;padding-top:7px;display:flex;justify-content:space-between;font-size:7.5px;color:var(--mu)}'
       +'@media print{.toolbar{display:none!important}.wrap{padding:0;background:none}'
-      +'@page{size:A4 portrait;margin:0}.page{width:auto;box-shadow:none}}';
+      +'@page{size:A4 portrait;margin:0}.page{width:auto;height:auto;box-shadow:none}'
+      +'.cntr-section{page-break-before:avoid;page-break-inside:avoid}'
+      +'.tbl{page-break-inside:avoid;break-inside:avoid}}';
 
     /* HTML */
     var doc='<!DOCTYPE html><html lang="fr"><head>'
