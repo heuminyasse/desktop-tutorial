@@ -7869,13 +7869,16 @@ html body[class] #vac-gantt td.emp .nm{font-weight:500 !important;}</style>
     var rapNum=pv.numero||pv.id||'__';
     var dateStr=fD(pv.date);
     var _nn=function(s){return String(s||'').toLowerCase().replace(/[^a-z0-9]/g,'');};
-    var acheteur=((window.ACHETEURS_DATA||[])).find(function(a){return a.nomN===_nn(clientContact);})||{};
-    var demandeurTel=acheteur.tel||clientTel||'';
-    var demandeurEmail=acheteur.email||clientEmail||'';
+    var _contactClean=String(clientContact||'').split('(')[0].trim();
+    var acheteur=((window.ACHETEURS_DATA||[])).find(function(a){return a.nomN===_nn(_contactClean);})||{};
+    var demandeurTel=acheteur.tel||'';
+    var demandeurEmail=acheteur.email||'';
     var chef=((window.PERSONNEL_DATA||[])).find(function(p){var f1=_nn((p.prenoms||'')+(p.nom||''));var f2=_nn((p.nom||'')+(p.prenoms||''));var t=_nn(jip.chefChantier||'');return t&&(f1===t||f2===t);})||{};
+    var _chefClean=String(jip.chefChantier||'').split('(')[0].trim();
+    var chefAcheteur=((window.ACHETEURS_DATA||[])).find(function(a){return a.nomN===_nn(_chefClean);})||{};
     var superviseur=jip.chefChantier||chef.nom||chef.prenoms||pv.signataire||(pv.jsa&&pv.jsa.signataire)||nomSoc;
-    var chefTel=(chef.telephones&&chef.telephones[0]&&chef.telephones[0].tel)||chef.telephone||chef.tel||'';
-    var chefEmail=chef.email||'';
+    var chefTel=(chef.telephones&&chef.telephones[0]&&chef.telephones[0].tel)||chef.telephone||chef.tel||chefAcheteur.tel||'';
+    var chefEmail=chef.email||chefAcheteur.email||'';
     var contact=(chefTel?'Tél: '+chefTel:'')+(chefEmail?(chefTel?' – ':'')+' Email: '+chefEmail:'');
 
     /* tâches — priorité Planning Gantt */
