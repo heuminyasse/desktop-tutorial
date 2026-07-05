@@ -7890,6 +7890,11 @@ html body[class] #vac-gantt td.emp .nm{font-weight:500 !important;}</style>
     }
     var hasPhases=phaseOrder.length>1||(phaseOrder.length===1&&phaseOrder[0]!=='_');
 
+    /* forcer hasPoids: assigner poids défaut à chaque tâche si absent */
+    tasks.forEach(function(t){
+      if(t.poids==null||t.poids==='')t.poids=0;
+    });
+
     /* dates projet */
     var dtMin=null,dtMax=null;
     if(!_pd){
@@ -7965,7 +7970,7 @@ html body[class] #vac-gantt td.emp .nm{font-weight:500 !important;}</style>
     /* pie chart par phase */
     var pieColors=['#0d9488','#f97316','#374151','#6b7280','#1a3a8f','#dc2626','#16a34a','#f59e0b'];
     var pieSvg='';
-    if(hasPhases&&phaseOrder.length>1){
+    if(hasPhases){
       var pW=[],pT=0;
       phaseOrder.forEach(function(ph){
         var w=0; phaseMap[ph].forEach(function(t){w+=Number(t.poids)||0;}); pW.push(w); pT+=w;
@@ -8186,10 +8191,10 @@ html body[class] #vac-gantt td.emp .nm{font-weight:500 !important;}</style>
       +'</div>'
       +'<div style="flex:5;display:flex;flex-direction:column;gap:8px">'
       +'<div class="sec-lbl" style="margin:0 0 4px">Photos des activités</div>'
-      +'<div style="flex:1;min-height:120px;overflow:hidden;background:#fff;border:none">'
+      +'<div style="flex:1;min-height:120px;overflow:hidden;background:#fff;border:1px solid #d1d5db">'
       +(photos[0]?'<img src="'+photos[0]+'" style="width:100%;height:100%;object-fit:cover" alt="Photo 1"/>':'')
       +'</div>'
-      +'<div style="flex:1;min-height:120px;overflow:hidden;background:#fff;border:none">'
+      +'<div style="flex:1;min-height:120px;overflow:hidden;background:#fff;border:1px solid #d1d5db">'
       +(photos[1]?'<img src="'+photos[1]+'" style="width:100%;height:100%;object-fit:cover" alt="Photo 2"/>':'')
       +'</div>'
       +'</div>'
