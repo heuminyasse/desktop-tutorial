@@ -1368,6 +1368,264 @@ document.addEventListener('DOMContentLoaded', async function() {
     })();
 
     // ─────────────────────────────────────────────────────────────
+    // [RapportAvancement] Générateur PDF de Rapport d'Avancement
+    // Utilise les FKs normalisés pour générer des rapports
+    // ─────────────────────────────────────────────────────────────
+    (function initReportGenerator() {
+      window.RAPPORT_AVANCEMENT = {
+        generateForProject: function(projetId) {
+          var projet = (window.PROJETS_INDEX || {})[projetId];
+          if (!projet) {
+            console.error('[RapportAvancement] Projet non trouvé:', projetId);
+            return null;
+          }
+
+          // Résoudre les FKs
+          var org = (window.ORGANISATIONS_INDEX || {})[projet.organisationId] || {};
+          var site = (window.SITES_INDEX || {})[projet.siteId] || {};
+          var chef = (window.PERSONNES_HR || []).find(function(p) { return p.id === projet.chefChantierPersonneId; }) || {};
+          var demandeur = (window.PERSONNES_CLIENTS || []).find(function(p) { return p.id === projet.demandeurPersonneId; }) || {};
+
+          // Récupérer articles du projet
+          var articlesProjet = (window.ARTICLES_BY_PROJET || {})[projetId] || [];
+
+          // Récupérer dépenses du projet
+          var depensesProjet = (window.DEPENSES_BY_PROJET || {})[projetId] || [];
+
+          // Récupérer OA du projet
+          var oaProjet = (window.OA_DOCUMENTS_BY_PROJET || {})[projetId] || [];
+
+          // Générer le rapport HTML
+          var html = generateReportHTML({
+            projet: projet,
+            org: org,
+            site: site,
+            chef: chef,
+            demandeur: demandeur,
+            articles: articlesProjet,
+            depenses: depensesProjet,
+            oaDocs: oaProjet
+          });
+
+          return html;
+        },
+
+        displayReport: function(projetId) {
+          var html = this.generateForProject(projetId);
+          if (!html) return false;
+
+          var win = window.open('', 'RapportAvancement_' + projetId);
+          if (!win) {
+            console.error('[RapportAvancement] Impossible d\'ouvrir la fenêtre');
+            return false;
+          }
+
+          win.document.write(html);
+          win.document.close();
+          return true;
+        },
+
+        downloadPDF: function(projetId) {
+          var html = this.generateForProject(projetId);
+          if (!html) return false;
+
+          var win = window.open('', 'RapportAvancement_' + projetId);
+          if (!win) {
+            console.error('[RapportAvancement] Impossible d\'ouvrir la fenêtre');
+            return false;
+          }
+
+          win.document.write(html);
+          win.document.close();
+
+          setTimeout(function() {
+            win.print();
+          }, 500);
+
+          return true;
+        }
+      };
+
+      function generateReportHTML(data) {
+        var projet = data.projet;
+        var org = data.org;
+        var site = data.site;
+        var chef = data.chef;
+        var demandeur = data.demandeur;
+        var articles = data.articles || [];
+        var depenses = data.depenses || [];
+        var oaDocs = data.oaDocs || [];
+
+        var montantArticles = articles.reduce(function(s, a) { return s + (a.montantTotal || 0); }, 0);
+        var montantDepenses = depenses.reduce(function(s, d) { return s + (d.montant || 0); }, 0);
+        var montantOA = oaDocs.reduce(function(s, oa) { return s + (oa.montant || 0); }, 0);
+
+        var html = '<!DOCTYPE html><html><head>';
+        html += '<meta charset="UTF-8">';
+        html += '<meta name="viewport" content="width=device-width, initial-scale=1.0">';
+        html += '<title>Rapport d\'Avancement - ' + projet.id + '</title>';
+        html += '<style>';
+        html += 'body { font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif; margin: 0; padding: 20px; background: #fff; color: #333; line-height: 1.6; }';
+        html += '.header { border-bottom: 3px solid #B5000A; padding-bottom: 20px; margin-bottom: 30px; }';
+        html += '.logo { font-size: 28px; font-weight: bold; color: #B5000A; margin-bottom: 10px; }';
+        html += '.title { font-size: 24px; font-weight: bold; color: #1e2a3b; margin: 20px 0; }';
+        html += '.section { margin-bottom: 30px; page-break-inside: avoid; }';
+        html += '.section-title { font-size: 16px; font-weight: bold; color: #B5000A; border-bottom: 2px solid #e0e0e0; padding-bottom: 10px; margin-bottom: 15px; }';
+        html += '.info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px; }';
+        html += '.info-box { background: #f9f9f9; padding: 15px; border-radius: 4px; border-left: 4px solid #B5000A; }';
+        html += '.info-label { font-size: 12px; font-weight: bold; color: #666; text-transform: uppercase; margin-bottom: 5px; }';
+        html += '.info-value { font-size: 14px; color: #333; margin-bottom: 5px; }';
+        html += '.contact-info { font-size: 12px; color: #666; margin-top: 10px; }';
+        html += '.contact-row { margin: 3px 0; }';
+        html += 'table { width: 100%; border-collapse: collapse; margin-top: 15px; }';
+        html += 'th { background: #f0f0f0; padding: 12px; text-align: left; font-weight: bold; border-bottom: 2px solid #ddd; }';
+        html += 'td { padding: 10px 12px; border-bottom: 1px solid #eee; }';
+        html += 'tr:hover { background: #f9f9f9; }';
+        html += '.summary { display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; margin-top: 20px; }';
+        html += '.summary-box { text-align: center; padding: 15px; background: #f0f0f0; border-radius: 4px; }';
+        html += '.summary-label { font-size: 12px; color: #666; text-transform: uppercase; margin-bottom: 5px; }';
+        html += '.summary-value { font-size: 22px; font-weight: bold; color: #B5000A; }';
+        html += '.footer { margin-top: 40px; padding-top: 20px; border-top: 1px solid #ddd; font-size: 11px; color: #999; text-align: center; }';
+        html += '@media print { body { padding: 0; } .header { border-bottom: 3px solid #B5000A; } }';
+        html += '</style></head><body>';
+
+        // Header
+        html += '<div class="header">';
+        html += '<div class="logo">HBO</div>';
+        html += '<div class="title">Rapport d\'Avancement</div>';
+        html += '<div style="font-size: 12px; color: #999;">Généré le ' + new Date().toLocaleDateString('fr-FR') + ' à ' + new Date().toLocaleTimeString('fr-FR') + '</div>';
+        html += '</div>';
+
+        // Project Info
+        html += '<div class="section">';
+        html += '<div class="section-title">📋 Informations du Projet</div>';
+        html += '<div class="info-grid">';
+        html += '<div class="info-box">';
+        html += '<div class="info-label">ID Projet</div>';
+        html += '<div class="info-value">' + htmlEscape(projet.id) + '</div>';
+        html += '</div>';
+        html += '<div class="info-box">';
+        html += '<div class="info-label">Statut</div>';
+        html += '<div class="info-value">' + htmlEscape(projet.statut || 'N/A') + '</div>';
+        html += '</div>';
+        html += '</div>';
+        html += '</div>';
+
+        // Client Info
+        html += '<div class="section">';
+        html += '<div class="section-title">🏢 Informations Client</div>';
+        html += '<div class="info-grid">';
+        html += '<div class="info-box">';
+        html += '<div class="info-label">Client</div>';
+        html += '<div class="info-value">' + htmlEscape(org.nom || 'N/A') + '</div>';
+        html += '<div class="contact-info">';
+        if (org.adresse) html += '<div class="contact-row">📍 ' + htmlEscape(org.adresse) + '</div>';
+        if (org.tel) html += '<div class="contact-row">☎️ ' + htmlEscape(org.tel) + '</div>';
+        if (org.email) html += '<div class="contact-row">✉️ ' + htmlEscape(org.email) + '</div>';
+        html += '</div>';
+        html += '</div>';
+        html += '<div class="info-box">';
+        html += '<div class="info-label">Lieu de Production</div>';
+        html += '<div class="info-value">' + htmlEscape(site.nom || 'N/A') + '</div>';
+        html += '<div class="contact-info">';
+        if (site.adresse) html += '<div class="contact-row">📍 ' + htmlEscape(site.adresse) + '</div>';
+        if (site.tel) html += '<div class="contact-row">☎️ ' + htmlEscape(site.tel) + '</div>';
+        html += '</div>';
+        html += '</div>';
+        html += '</div>';
+        html += '</div>';
+
+        // Contacts
+        html += '<div class="section">';
+        html += '<div class="section-title">👥 Contacts Clés</div>';
+        html += '<div class="info-grid">';
+        html += '<div class="info-box">';
+        html += '<div class="info-label">Chef d\'Équipe / Responsable</div>';
+        html += '<div class="info-value">' + htmlEscape(chef.nomComplet || 'N/A') + '</div>';
+        html += '<div class="contact-info">';
+        if (chef.tel) html += '<div class="contact-row">☎️ ' + htmlEscape(chef.tel) + '</div>';
+        if (chef.email) html += '<div class="contact-row">✉️ <a href="mailto:' + htmlEscape(chef.email) + '" style="color: #B5000A; text-decoration: none;">' + htmlEscape(chef.email) + '</a></div>';
+        if (chef.fonction) html += '<div class="contact-row"><strong>' + htmlEscape(chef.fonction) + '</strong></div>';
+        html += '</div>';
+        html += '</div>';
+        html += '<div class="info-box">';
+        html += '<div class="info-label">Demandeur / Acheteur</div>';
+        html += '<div class="info-value">' + htmlEscape(demandeur.nomComplet || 'N/A') + '</div>';
+        html += '<div class="contact-info">';
+        if (demandeur.tel) html += '<div class="contact-row">☎️ ' + htmlEscape(demandeur.tel) + '</div>';
+        if (demandeur.email) html += '<div class="contact-row">✉️ <a href="mailto:' + htmlEscape(demandeur.email) + '" style="color: #B5000A; text-decoration: none;">' + htmlEscape(demandeur.email) + '</a></div>';
+        if (demandeur.fonction) html += '<div class="contact-row"><strong>' + htmlEscape(demandeur.fonction) + '</strong></div>';
+        html += '</div>';
+        html += '</div>';
+        html += '</div>';
+        html += '</div>';
+
+        // Articles
+        if (articles.length > 0) {
+          html += '<div class="section">';
+          html += '<div class="section-title">📦 Articles / Services</div>';
+          html += '<table>';
+          html += '<thead><tr><th>Désignation</th><th style="text-align: right;">Quantité</th><th style="text-align: right;">Prix Unitaire</th><th style="text-align: right;">Montant</th></tr></thead>';
+          html += '<tbody>';
+          articles.forEach(function(art) {
+            html += '<tr>';
+            html += '<td>' + htmlEscape(art.designation || 'N/A') + '</td>';
+            html += '<td style="text-align: right;">' + (art.quantite || 0) + ' ' + htmlEscape(art.unite || '') + '</td>';
+            html += '<td style="text-align: right;">' + (art.prixUnitaire || 0).toFixed(2) + '€</td>';
+            html += '<td style="text-align: right; font-weight: bold;">' + (art.montantTotal || 0).toFixed(2) + '€</td>';
+            html += '</tr>';
+          });
+          html += '</tbody>';
+          html += '</table>';
+          html += '</div>';
+        }
+
+        // Summary
+        html += '<div class="section">';
+        html += '<div class="section-title">💰 Résumé Financier</div>';
+        html += '<div class="summary">';
+        html += '<div class="summary-box">';
+        html += '<div class="summary-label">Articles</div>';
+        html += '<div class="summary-value">' + montantArticles.toFixed(2) + '€</div>';
+        html += '</div>';
+        html += '<div class="summary-box">';
+        html += '<div class="summary-label">Dépenses</div>';
+        html += '<div class="summary-value">' + montantDepenses.toFixed(2) + '€</div>';
+        html += '</div>';
+        html += '<div class="summary-box">';
+        html += '<div class="summary-label">Commandes (OA)</div>';
+        html += '<div class="summary-value">' + montantOA.toFixed(2) + '€</div>';
+        html += '</div>';
+        html += '</div>';
+        html += '<div style="text-align: right; font-size: 16px; font-weight: bold; margin-top: 20px; padding-top: 15px; border-top: 2px solid #B5000A;">';
+        html += 'Total: ' + (montantArticles + montantDepenses + montantOA).toFixed(2) + '€';
+        html += '</div>';
+        html += '</div>';
+
+        // Footer
+        html += '<div class="footer">';
+        html += 'Ce rapport a été généré automatiquement par ePilot - ' + new Date().getFullYear();
+        html += '</div>';
+
+        html += '</body></html>';
+
+        return html;
+      }
+
+      function htmlEscape(text) {
+        if (!text) return '';
+        return String(text)
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;')
+          .replace(/"/g, '&quot;')
+          .replace(/'/g, '&#039;');
+      }
+
+      console.log('[RapportAvancement] Module chargé. Usage: window.RAPPORT_AVANCEMENT.displayReport(projetId)');
+    })();
+
+    // ─────────────────────────────────────────────────────────────
     // [FixClosedChantier v1] Ouverture des chantiers CLÔTURÉS / TERMINÉS
     // depuis Quote, OA, Comptabilité, etc.
     //
