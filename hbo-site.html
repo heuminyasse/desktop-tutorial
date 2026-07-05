@@ -1478,9 +1478,92 @@ document.addEventListener('keydown', e => {
 });
 
 /* ═══════════════════════════════════════════
+   ADMIN SYNC
+═══════════════════════════════════════════ */
+function syncAdminData() {
+  const adminData = localStorage.getItem('hbo-site-data');
+  if (!adminData) return;
+
+  try {
+    const data = JSON.parse(adminData);
+
+    // Update text content
+    Object.entries(data).forEach(([key, value]) => {
+      if (typeof value === 'string') {
+        const elements = document.querySelectorAll(`[data-key="${key}"]`);
+        elements.forEach(el => {
+          if (el.tagName === 'TEXTAREA' || el.tagName === 'INPUT') {
+            el.value = value;
+          } else {
+            el.textContent = value;
+          }
+        });
+      }
+    });
+
+    // Update arrays
+    if (data.services && Array.isArray(data.services)) {
+      updateServicesDisplay(data.services);
+    }
+    if (data.values && Array.isArray(data.values)) {
+      updateValuesDisplay(data.values);
+    }
+    if (data.projects && Array.isArray(data.projects)) {
+      updateProjectsDisplay(data.projects);
+    }
+  } catch (e) {
+    console.log('Admin sync info:', e.message);
+  }
+}
+
+function updateServicesDisplay(services) {
+  const grid = document.querySelector('.services-grid');
+  if (!grid) return;
+
+  grid.innerHTML = services.slice(0, 6).map((srv, i) => `
+    <div class="service-card">
+      <div class="service-icon">⚡</div>
+      <h3 class="service-name">${srv.name}</h3>
+      <p class="service-desc">${srv.desc}</p>
+    </div>
+  `).join('');
+}
+
+function updateValuesDisplay(values) {
+  const grid = document.querySelector('.values-grid');
+  if (!grid) return;
+
+  grid.innerHTML = values.map(val => `
+    <div class="val-item">
+      <div class="val-ico">✨</div>
+      <div>
+        <div class="val-title">${val.title}</div>
+        <div class="val-desc">${val.desc}</div>
+      </div>
+    </div>
+  `).join('');
+}
+
+function updateProjectsDisplay(projects) {
+  const grid = document.querySelector('.projects-grid');
+  if (!grid) return;
+
+  grid.innerHTML = projects.slice(0, 5).map(proj => `
+    <div class="proj-card">
+      <div class="proj-bg">🏢</div>
+      <div class="proj-overlay">
+        <div class="proj-cat">${proj.cat}</div>
+        <div class="proj-name">${proj.name}</div>
+      </div>
+    </div>
+  `).join('');
+}
+
+/* ═══════════════════════════════════════════
    INIT
 ═══════════════════════════════════════════ */
 document.addEventListener('DOMContentLoaded', () => {
+  syncAdminData();
   loadSavedChanges();
   showNotification('✏ Cliquez sur le bouton orange en bas à droite pour éditer le site', 'info');
   renderProducts();

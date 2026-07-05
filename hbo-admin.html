@@ -1,0 +1,1154 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>HBO Cameroun — Admin Panel</title>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --primary: #E8A020;
+      --primary-d: #C07010;
+      --dark: #F5F7FA;
+      --d1: #ECEFF3;
+      --d2: #FFFFFF;
+      --d3: #F1F4F8;
+      --txt: #16202E;
+      --muted: #5B6675;
+      --accent: #10A87D;
+      --font: 'Outfit', sans-serif;
+      --font2: 'Space Grotesk', sans-serif;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body { background: var(--d1); color: var(--txt); font-family: var(--font); }
+
+    /* Layout */
+    .admin-container {
+      display: grid;
+      grid-template-columns: 280px 1fr;
+      min-height: 100vh;
+    }
+
+    /* Sidebar */
+    .sidebar {
+      background: var(--d2);
+      border-right: 1px solid #e0e0e0;
+      padding: 24px 0;
+      position: fixed;
+      left: 0;
+      top: 0;
+      width: 280px;
+      height: 100vh;
+      overflow-y: auto;
+    }
+
+    .sidebar-header {
+      padding: 0 20px 24px;
+      border-bottom: 1px solid #e0e0e0;
+      margin-bottom: 24px;
+    }
+
+    .sidebar-logo {
+      font-size: 18px;
+      font-weight: 800;
+      color: var(--primary);
+      margin-bottom: 4px;
+    }
+
+    .sidebar-sub {
+      font-size: 11px;
+      color: var(--muted);
+      font-weight: 500;
+    }
+
+    .menu-section {
+      margin-bottom: 24px;
+      padding: 0 12px;
+    }
+
+    .menu-label {
+      font-size: 10px;
+      text-transform: uppercase;
+      color: var(--muted);
+      font-weight: 700;
+      margin: 0 8px 8px;
+      letter-spacing: 0.5px;
+    }
+
+    .menu-item {
+      padding: 12px 16px;
+      margin-bottom: 4px;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.2s;
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--txt);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .menu-item:hover {
+      background: var(--d3);
+    }
+
+    .menu-item.active {
+      background: var(--primary);
+      color: #000;
+      font-weight: 700;
+    }
+
+    .menu-icon {
+      font-size: 16px;
+    }
+
+    /* Main Content */
+    .main-content {
+      grid-column: 2;
+      padding: 32px;
+      background: var(--d1);
+    }
+
+    .content-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 32px;
+      padding-bottom: 24px;
+      border-bottom: 1px solid #e0e0e0;
+    }
+
+    .content-title {
+      font-size: 28px;
+      font-weight: 800;
+    }
+
+    .content-tools {
+      display: flex;
+      gap: 12px;
+    }
+
+    .btn {
+      padding: 10px 18px;
+      border: none;
+      border-radius: 8px;
+      font-weight: 600;
+      cursor: pointer;
+      font-size: 12px;
+      transition: all 0.2s;
+      font-family: var(--font);
+    }
+
+    .btn-primary {
+      background: var(--primary);
+      color: #000;
+    }
+
+    .btn-primary:hover {
+      background: #FBBF24;
+    }
+
+    .btn-secondary {
+      background: var(--d2);
+      color: var(--txt);
+      border: 1px solid #e0e0e0;
+    }
+
+    .btn-secondary:hover {
+      background: var(--d3);
+    }
+
+    .btn-small {
+      padding: 6px 12px;
+      font-size: 11px;
+    }
+
+    /* Forms */
+    .form-section {
+      background: var(--d2);
+      border-radius: 12px;
+      padding: 24px;
+      margin-bottom: 20px;
+      border: 1px solid #e0e0e0;
+    }
+
+    .form-section-title {
+      font-size: 16px;
+      font-weight: 700;
+      margin-bottom: 20px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .form-group {
+      margin-bottom: 18px;
+    }
+
+    .form-label {
+      display: block;
+      font-size: 12px;
+      font-weight: 700;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 8px;
+      letter-spacing: 0.5px;
+    }
+
+    .form-input,
+    .form-textarea,
+    .form-select {
+      width: 100%;
+      padding: 12px 14px;
+      border: 1px solid #e0e0e0;
+      border-radius: 8px;
+      font-family: var(--font);
+      font-size: 13px;
+      color: var(--txt);
+      background: #f9f9f9;
+    }
+
+    .form-input:focus,
+    .form-textarea:focus,
+    .form-select:focus {
+      outline: none;
+      border-color: var(--primary);
+      background: #fff;
+      box-shadow: 0 0 0 3px rgba(232, 160, 32, 0.1);
+    }
+
+    .form-textarea {
+      resize: vertical;
+      min-height: 120px;
+    }
+
+    .form-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+    }
+
+    .form-row-3 {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 16px;
+    }
+
+    /* Image Upload */
+    .image-upload {
+      border: 2px dashed #e0e0e0;
+      border-radius: 8px;
+      padding: 20px;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .image-upload:hover {
+      border-color: var(--primary);
+      background: #fafafa;
+    }
+
+    .image-preview {
+      max-width: 200px;
+      max-height: 200px;
+      border-radius: 8px;
+      margin-top: 12px;
+    }
+
+    .upload-text {
+      font-size: 12px;
+      color: var(--muted);
+    }
+
+    /* Tabs */
+    .tab-buttons {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 20px;
+      border-bottom: 1px solid #e0e0e0;
+    }
+
+    .tab-btn {
+      padding: 12px 16px;
+      background: none;
+      border: none;
+      font-weight: 600;
+      color: var(--muted);
+      cursor: pointer;
+      border-bottom: 3px solid transparent;
+      transition: all 0.2s;
+      font-family: var(--font);
+    }
+
+    .tab-btn.active {
+      color: var(--primary);
+      border-bottom-color: var(--primary);
+    }
+
+    .tab-content {
+      display: none;
+    }
+
+    .tab-content.active {
+      display: block;
+    }
+
+    /* Status */
+    .status-bar {
+      position: fixed;
+      bottom: 0;
+      right: 0;
+      background: #10A87D;
+      color: white;
+      padding: 12px 20px;
+      border-radius: 8px 0 0 0;
+      font-size: 12px;
+      font-weight: 600;
+      z-index: 1000;
+      animation: slideUp 0.3s;
+    }
+
+    @keyframes slideUp {
+      from { transform: translateY(100%); }
+      to { transform: translateY(0); }
+    }
+
+    /* Service Cards Management */
+    .service-card {
+      background: var(--d3);
+      padding: 16px;
+      border-radius: 8px;
+      margin-bottom: 16px;
+      border-left: 4px solid var(--primary);
+    }
+
+    .card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 12px;
+    }
+
+    .card-title {
+      font-weight: 700;
+      font-size: 13px;
+    }
+
+    .card-actions {
+      display: flex;
+      gap: 6px;
+    }
+
+    /* Empty State */
+    .empty-state {
+      text-align: center;
+      padding: 40px;
+      color: var(--muted);
+    }
+
+    .empty-icon {
+      font-size: 48px;
+      margin-bottom: 12px;
+    }
+
+    /* Success Message */
+    .success-msg {
+      background: #d4edda;
+      color: #155724;
+      padding: 12px 16px;
+      border-radius: 8px;
+      margin-bottom: 16px;
+      font-size: 12px;
+      animation: slideDown 0.3s;
+    }
+
+    @keyframes slideDown {
+      from { transform: translateY(-20px); opacity: 0; }
+      to { transform: translateY(0); opacity: 1; }
+    }
+
+    /* Responsive */
+    @media (max-width: 1024px) {
+      .admin-container {
+        grid-template-columns: 1fr;
+      }
+      .sidebar {
+        position: relative;
+        width: 100%;
+        height: auto;
+        border-right: none;
+        border-bottom: 1px solid #e0e0e0;
+      }
+      .main-content {
+        grid-column: 1;
+      }
+    }
+
+    .hidden { display: none !important; }
+  </style>
+</head>
+<body>
+
+<div class="admin-container">
+  <!-- SIDEBAR -->
+  <div class="sidebar">
+    <div class="sidebar-header">
+      <div class="sidebar-logo">🔧 Admin</div>
+      <div class="sidebar-sub">Gestion du site HBO</div>
+    </div>
+
+    <div class="menu-section">
+      <div class="menu-label">Interface</div>
+      <div class="menu-item active" onclick="switchTab('identite')">
+        <span class="menu-icon">🏢</span> Identité
+      </div>
+      <div class="menu-item" onclick="switchTab('hero')">
+        <span class="menu-icon">🎯</span> Hero/Bannière
+      </div>
+      <div class="menu-item" onclick="switchTab('services')">
+        <span class="menu-icon">⚙️</span> Services
+      </div>
+      <div class="menu-item" onclick="switchTab('about')">
+        <span class="menu-icon">📋</span> À propos
+      </div>
+    </div>
+
+    <div class="menu-section">
+      <div class="menu-label">Contenu</div>
+      <div class="menu-item" onclick="switchTab('projects')">
+        <span class="menu-icon">🏗️</span> Projets
+      </div>
+      <div class="menu-item" onclick="switchTab('products')">
+        <span class="menu-icon">🛒</span> Produits Boutique
+      </div>
+      <div class="menu-item" onclick="switchTab('contact')">
+        <span class="menu-icon">📧</span> Contact
+      </div>
+    </div>
+
+    <div class="menu-section">
+      <div class="menu-label">Gestion</div>
+      <div class="menu-item" onclick="switchTab('settings')">
+        <span class="menu-icon">⚡</span> Paramètres
+      </div>
+      <div class="menu-item" onclick="switchTab('backup')">
+        <span class="menu-icon">💾</span> Sauvegarde
+      </div>
+    </div>
+  </div>
+
+  <!-- MAIN CONTENT -->
+  <div class="main-content">
+    <div class="content-header">
+      <h1 class="content-title" id="page-title">Identité du Site</h1>
+      <div class="content-tools">
+        <button class="btn btn-secondary btn-small" onclick="previewChanges()">👁️ Aperçu</button>
+        <button class="btn btn-primary btn-small" onclick="saveAllChanges()">💾 Sauvegarder</button>
+      </div>
+    </div>
+
+    <div id="success-msg"></div>
+
+    <!-- TAB: IDENTITÉ -->
+    <div id="tab-identite" class="tab-content active">
+      <div class="form-section">
+        <div class="form-section-title">📝 Informations Principales</div>
+        <div class="form-group">
+          <label class="form-label">Nom de l'entreprise</label>
+          <input type="text" class="form-input" id="company-name" placeholder="HBO Cameroun">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Tagline</label>
+          <input type="text" class="form-input" id="company-tagline" placeholder="Bureau d'études · Ingénierie">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Bouton CTA Principal</label>
+          <input type="text" class="form-input" id="cta-text" placeholder="Devis gratuit">
+        </div>
+      </div>
+
+      <div class="form-section">
+        <div class="form-section-title">🌐 Informations de Contact</div>
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Adresse</label>
+            <input type="text" class="form-input" id="addr" placeholder="Sous-préfecture Kotto, Douala">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Email</label>
+            <input type="email" class="form-input" id="email" placeholder="sales@hbocameroon.com">
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Téléphone</label>
+            <input type="tel" class="form-input" id="phone" placeholder="+237 6XX XXX XXX">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Horaires</label>
+            <input type="text" class="form-input" id="hours" placeholder="Lun–Ven 8h–18h">
+          </div>
+        </div>
+      </div>
+
+      <div class="form-section">
+        <div class="form-section-title">📄 Description Footer</div>
+        <div class="form-group">
+          <label class="form-label">Description de l'entreprise</label>
+          <textarea class="form-textarea" id="footer-desc" placeholder="Bureau d'études pluridisciplinaire..."></textarea>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB: HERO -->
+    <div id="tab-hero" class="tab-content">
+      <div class="form-section">
+        <div class="form-section-title">🎨 Bannière (Hero)</div>
+        <div class="form-group">
+          <label class="form-label">Titre Principal - Ligne 1</label>
+          <input type="text" class="form-input" id="hero-title-1" placeholder="Solutions en">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Titre Principal - Ligne 2</label>
+          <input type="text" class="form-input" id="hero-title-2" placeholder="Génie Électrique">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Titre Principal - Ligne 3</label>
+          <input type="text" class="form-input" id="hero-title-3" placeholder="& Génie Civil">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Sous-titre</label>
+          <textarea class="form-textarea" id="hero-sub" placeholder="Études, conception, réalisation..."></textarea>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Bouton 1</label>
+            <input type="text" class="form-input" id="hero-btn1" placeholder="Demander un devis">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Bouton 2</label>
+            <input type="text" class="form-input" id="hero-btn2" placeholder="Nos services →">
+          </div>
+        </div>
+      </div>
+
+      <div class="form-section">
+        <div class="form-section-title">📊 Statistiques</div>
+        <div class="form-row-3">
+          <div class="form-group">
+            <label class="form-label">Stat 1 - Nombre</label>
+            <input type="text" class="form-input" id="stat1-num" placeholder="9+">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Stat 1 - Label</label>
+            <input type="text" class="form-input" id="stat1-lbl" placeholder="Années d'expérience">
+          </div>
+          <div></div>
+        </div>
+        <div class="form-row-3">
+          <div class="form-group">
+            <label class="form-label">Stat 2 - Nombre</label>
+            <input type="text" class="form-input" id="stat2-num" placeholder="150+">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Stat 2 - Label</label>
+            <input type="text" class="form-input" id="stat2-lbl" placeholder="Projets réalisés">
+          </div>
+          <div></div>
+        </div>
+        <div class="form-row-3">
+          <div class="form-group">
+            <label class="form-label">Stat 3 - Nombre</label>
+            <input type="text" class="form-input" id="stat3-num" placeholder="100%">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Stat 3 - Label</label>
+            <input type="text" class="form-input" id="stat3-lbl" placeholder="Satisfaction client">
+          </div>
+          <div></div>
+        </div>
+        <div class="form-row-3">
+          <div class="form-group">
+            <label class="form-label">Stat 4 - Nombre</label>
+            <input type="text" class="form-input" id="stat4-num" placeholder="5">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Stat 4 - Label</label>
+            <input type="text" class="form-input" id="stat4-lbl" placeholder="Domaines d'expertise">
+          </div>
+          <div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB: SERVICES -->
+    <div id="tab-services" class="tab-content">
+      <div class="form-section">
+        <div class="form-section-title">⚙️ Section Services</div>
+        <div class="form-group">
+          <label class="form-label">Titre de la section</label>
+          <input type="text" class="form-input" id="serv-title" placeholder="Ce que nous faisons">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Description</label>
+          <textarea class="form-textarea" id="serv-desc" placeholder="Description de vos services..."></textarea>
+        </div>
+      </div>
+
+      <div class="form-section">
+        <div class="form-section-title">📌 Services (6 cartes)</div>
+        <div id="services-list"></div>
+        <button class="btn btn-secondary btn-small" onclick="addService()">+ Ajouter un service</button>
+      </div>
+    </div>
+
+    <!-- TAB: ABOUT -->
+    <div id="tab-about" class="tab-content">
+      <div class="form-section">
+        <div class="form-section-title">📋 À propos de nous</div>
+        <div class="form-group">
+          <label class="form-label">Titre</label>
+          <input type="text" class="form-input" id="about-title" placeholder="Qui sommes-nous ?">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Description longue</label>
+          <textarea class="form-textarea" id="about-desc" placeholder="Description complète de votre entreprise..."></textarea>
+        </div>
+      </div>
+
+      <div class="form-section">
+        <div class="form-section-title">✨ Nos Valeurs</div>
+        <div id="values-list"></div>
+      </div>
+    </div>
+
+    <!-- TAB: PROJECTS -->
+    <div id="tab-projects" class="tab-content">
+      <div class="form-section">
+        <div class="form-section-title">🏗️ Projets Récents</div>
+        <div class="form-group">
+          <label class="form-label">Titre de la section</label>
+          <input type="text" class="form-input" id="proj-title" placeholder="Nos projets récents">
+        </div>
+      </div>
+
+      <div class="form-section">
+        <div class="form-section-title">📌 Projets (5 cartes)</div>
+        <div id="projects-list"></div>
+        <button class="btn btn-secondary btn-small" onclick="addProject()">+ Ajouter un projet</button>
+      </div>
+    </div>
+
+    <!-- TAB: PRODUCTS -->
+    <div id="tab-products" class="tab-content">
+      <div class="form-section">
+        <div class="form-section-title">🛒 Gestion des Produits Boutique</div>
+        <p style="font-size: 12px; color: var(--muted); margin-bottom: 16px;">Modifiez les produits disponibles dans la boutique</p>
+        <div id="products-list"></div>
+        <button class="btn btn-secondary btn-small" onclick="addProduct()">+ Ajouter un produit</button>
+      </div>
+    </div>
+
+    <!-- TAB: CONTACT -->
+    <div id="tab-contact" class="tab-content">
+      <div class="form-section">
+        <div class="form-section-title">📧 Section Contact</div>
+        <div class="form-group">
+          <label class="form-label">Titre CTA</label>
+          <input type="text" class="form-input" id="cta-title" placeholder="Prêt à démarrer ?">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Sous-titre CTA</label>
+          <textarea class="form-textarea" id="cta-sub" placeholder="Notre équipe d'experts..."></textarea>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB: SETTINGS -->
+    <div id="tab-settings" class="tab-content">
+      <div class="form-section">
+        <div class="form-section-title">⚡ Paramètres Généraux</div>
+        <div class="form-group">
+          <label class="form-label">Couleur Primaire</label>
+          <input type="color" class="form-input" id="color-primary" value="#E8A020" style="height: 50px; cursor: pointer;">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Couleur Accent</label>
+          <input type="color" class="form-input" id="color-accent" value="#10A87D" style="height: 50px; cursor: pointer;">
+        </div>
+      </div>
+
+      <div class="form-section">
+        <div class="form-section-title">📱 Version du Site</div>
+        <p style="font-size: 12px; color: var(--muted); margin-bottom: 12px;">Dernière modification: <span id="last-save">--</span></p>
+      </div>
+    </div>
+
+    <!-- TAB: BACKUP -->
+    <div id="tab-backup" class="tab-content">
+      <div class="form-section">
+        <div class="form-section-title">💾 Sauvegarde & Restauration</div>
+        <p style="font-size: 12px; color: var(--muted); margin-bottom: 16px;">Sauvegardez et restaurez vos données facilement</p>
+        <div style="display: flex; gap: 12px;">
+          <button class="btn btn-primary" onclick="exportData()">⬇️ Exporter les données</button>
+          <button class="btn btn-secondary" onclick="importData()">⬆️ Importer les données</button>
+          <button class="btn btn-secondary" onclick="clearData()" style="color: #d32f2f;">🗑️ Réinitialiser</button>
+        </div>
+        <input type="file" id="import-file" accept=".json" style="display: none;" onchange="handleImport()">
+      </div>
+
+      <div class="form-section">
+        <div class="form-section-title">📋 Historique</div>
+        <div id="history-list" style="font-size: 12px; color: var(--muted);"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════
+// CONFIGURATION & STATE MANAGEMENT
+// ═══════════════════════════════════════════
+
+const STORAGE_KEY = 'hbo-site-data';
+const HISTORY_KEY = 'hbo-site-history';
+
+let siteData = {
+  // Identity
+  'company-name': 'HBO Cameroun',
+  'company-tagline': 'Bureau d\'études · Ingénierie',
+  'cta-text': 'Devis gratuit',
+
+  // Contact
+  'addr': 'Sous-préfecture Kotto, Douala',
+  'email': 'sales@hbocameroon.com',
+  'phone': '+237 6XX XXX XXX',
+  'hours': 'Lun–Ven 8h–18h',
+  'footer-desc': 'Bureau d\'études pluridisciplinaire fondée en 2016. Expertise en génie électrique, génie civil et solutions énergie.',
+
+  // Hero
+  'hero-title-1': 'Solutions en',
+  'hero-title-2': 'Génie Électrique',
+  'hero-title-3': '& Génie Civil',
+  'hero-sub': 'Études, conception et réalisation d\'infrastructures électriques et génie civil. Nous accompagnons votre projet du concept à la livraison avec expertise et rigueur.',
+  'hero-btn1': 'Demander un devis',
+  'hero-btn2': 'Nos services →',
+
+  // Stats
+  'stat1-num': '9+',
+  'stat1-lbl': 'Années d\'expérience',
+  'stat2-num': '150+',
+  'stat2-lbl': 'Projets réalisés',
+  'stat3-num': '100%',
+  'stat3-lbl': 'Satisfaction client',
+  'stat4-num': '5',
+  'stat4-lbl': 'Domaines d\'expertise',
+
+  // Services
+  'serv-title': 'Ce que nous faisons',
+  'serv-desc': 'Notre équipe d\'ingénieurs qualifiés met à votre service une expertise pointue, garantissant maîtrise des coûts, respect des délais et qualité irréprochable sur chaque projet.',
+  'services': [
+    { id: 1, name: 'Études & Conception', desc: 'Études techniques approfondies et conception de projets complexes' },
+    { id: 2, name: 'Réalisation travaux', desc: 'Exécution de travaux d\'installation et de génie électrique' },
+    { id: 3, name: 'Automatisme industriel', desc: 'Solutions de contrôle et d\'automatisation pour l\'industrie' },
+    { id: 4, name: 'Énergie solaire', desc: 'Installation et optimisation de systèmes solaires photovoltaïques' },
+    { id: 5, name: 'Maintenance', desc: 'Maintenance préventive et maintenance corrective' },
+    { id: 6, name: 'Formations', desc: 'Formation technique et certification du personnel' }
+  ],
+
+  // About
+  'about-title': 'Qui sommes-nous ?',
+  'about-desc': 'HBO Cameroun est une entreprise de génie électrique et génie civil fondée en 2016. Nous accompagnons nos clients dans la conception, l\'études et la réalisation de projets complexes.',
+  'values': [
+    { id: 1, title: 'Excellence', desc: 'Résultats de haute qualité sur chaque mission' },
+    { id: 2, title: 'Sécurité', desc: 'Normes IEC/NF appliquées systématiquement' },
+    { id: 3, title: 'Innovation', desc: 'Solutions modernes et durables' },
+    { id: 4, title: 'Confiance', desc: 'Partenariat transparent et durable' }
+  ],
+
+  // Projects
+  'proj-title': 'Nos projets récents',
+  'projects': [
+    { id: 1, name: 'Poste HTA/BT Industriel — Douala', cat: 'Génie Électrique' },
+    { id: 2, name: 'Installation 50 kWc — Yaoundé', cat: 'Solaire' },
+    { id: 3, name: 'Carrefours intelligents — Douala', cat: 'Signalisation' },
+    { id: 4, name: 'Éclairage public LED — 3km', cat: 'Éclairage' },
+    { id: 5, name: 'Infrastructures industrielles', cat: 'Génie Civil' }
+  ],
+
+  // Contact
+  'cta-title': 'Prêt à démarrer ?',
+  'cta-sub': 'Notre équipe d\'experts est disponible pour étudier votre projet et vous proposer une solution sur mesure, adaptée à vos besoins et votre budget.'
+};
+
+// ═══════════════════════════════════════════
+// INITIALIZATION
+// ═══════════════════════════════════════════
+
+function loadData() {
+  const saved = localStorage.getItem(STORAGE_KEY);
+  if (saved) {
+    try {
+      siteData = { ...siteData, ...JSON.parse(saved) };
+    } catch (e) {
+      console.error('Erreur lors du chargement des données', e);
+    }
+  }
+
+  populateForm();
+  updateLastSave();
+}
+
+function populateForm() {
+  // Populate all input fields
+  Object.keys(siteData).forEach(key => {
+    const input = document.getElementById(key);
+    if (input && typeof siteData[key] === 'string') {
+      input.value = siteData[key];
+    }
+  });
+
+  renderServices();
+  renderValues();
+  renderProjects();
+  renderProducts();
+}
+
+// ═══════════════════════════════════════════
+// TAB SWITCHING
+// ═══════════════════════════════════════════
+
+function switchTab(tabName) {
+  // Hide all tabs
+  document.querySelectorAll('.tab-content').forEach(tab => {
+    tab.classList.remove('active');
+  });
+
+  // Show selected tab
+  const tabEl = document.getElementById(`tab-${tabName}`);
+  if (tabEl) {
+    tabEl.classList.add('active');
+  }
+
+  // Update menu
+  document.querySelectorAll('.menu-item').forEach(item => {
+    item.classList.remove('active');
+  });
+  event.target.closest('.menu-item').classList.add('active');
+
+  // Update title
+  const titles = {
+    'identite': '🏢 Identité du Site',
+    'hero': '🎯 Bannière (Hero)',
+    'services': '⚙️ Services',
+    'about': '📋 À propos',
+    'projects': '🏗️ Projets',
+    'products': '🛒 Produits Boutique',
+    'contact': '📧 Contact',
+    'settings': '⚡ Paramètres',
+    'backup': '💾 Sauvegarde'
+  };
+  document.getElementById('page-title').textContent = titles[tabName] || 'Admin';
+}
+
+// ═══════════════════════════════════════════
+// SERVICES MANAGEMENT
+// ═══════════════════════════════════════════
+
+function renderServices() {
+  const list = document.getElementById('services-list');
+  if (!list) return;
+
+  list.innerHTML = (siteData.services || []).map((srv, i) => `
+    <div class="service-card">
+      <div class="card-header">
+        <div class="card-title">Service ${i + 1}</div>
+        <div class="card-actions">
+          <button class="btn btn-secondary btn-small" onclick="removeService(${i})">Supprimer</button>
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Nom du service</label>
+        <input type="text" class="form-input" value="${srv.name}" onchange="updateService(${i}, 'name', this.value)">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Description</label>
+        <input type="text" class="form-input" value="${srv.desc}" onchange="updateService(${i}, 'desc', this.value)">
+      </div>
+    </div>
+  `).join('');
+}
+
+function addService() {
+  if (!siteData.services) siteData.services = [];
+  siteData.services.push({ id: Date.now(), name: 'Nouveau service', desc: 'Description' });
+  renderServices();
+}
+
+function updateService(index, field, value) {
+  if (siteData.services && siteData.services[index]) {
+    siteData.services[index][field] = value;
+  }
+}
+
+function removeService(index) {
+  if (siteData.services) {
+    siteData.services.splice(index, 1);
+    renderServices();
+  }
+}
+
+// ═══════════════════════════════════════════
+// VALUES MANAGEMENT
+// ═══════════════════════════════════════════
+
+function renderValues() {
+  const list = document.getElementById('values-list');
+  if (!list) return;
+
+  list.innerHTML = (siteData.values || []).map((val, i) => `
+    <div class="service-card">
+      <div class="card-header">
+        <div class="card-title">Valeur ${i + 1}</div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Titre</label>
+          <input type="text" class="form-input" value="${val.title}" onchange="updateValue(${i}, 'title', this.value)">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Description</label>
+          <input type="text" class="form-input" value="${val.desc}" onchange="updateValue(${i}, 'desc', this.value)">
+        </div>
+      </div>
+    </div>
+  `).join('');
+}
+
+function updateValue(index, field, value) {
+  if (siteData.values && siteData.values[index]) {
+    siteData.values[index][field] = value;
+  }
+}
+
+// ═══════════════════════════════════════════
+// PROJECTS MANAGEMENT
+// ═══════════════════════════════════════════
+
+function renderProjects() {
+  const list = document.getElementById('projects-list');
+  if (!list) return;
+
+  list.innerHTML = (siteData.projects || []).map((proj, i) => `
+    <div class="service-card">
+      <div class="card-header">
+        <div class="card-title">Projet ${i + 1}</div>
+        <div class="card-actions">
+          <button class="btn btn-secondary btn-small" onclick="removeProject(${i})">Supprimer</button>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Nom du projet</label>
+          <input type="text" class="form-input" value="${proj.name}" onchange="updateProject(${i}, 'name', this.value)">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Catégorie</label>
+          <input type="text" class="form-input" value="${proj.cat}" onchange="updateProject(${i}, 'cat', this.value)">
+        </div>
+      </div>
+    </div>
+  `).join('');
+}
+
+function addProject() {
+  if (!siteData.projects) siteData.projects = [];
+  siteData.projects.push({ id: Date.now(), name: 'Nouveau projet', cat: 'Catégorie' });
+  renderProjects();
+}
+
+function updateProject(index, field, value) {
+  if (siteData.projects && siteData.projects[index]) {
+    siteData.projects[index][field] = value;
+  }
+}
+
+function removeProject(index) {
+  if (siteData.projects) {
+    siteData.projects.splice(index, 1);
+    renderProjects();
+  }
+}
+
+// ═══════════════════════════════════════════
+// PRODUCTS MANAGEMENT
+// ═══════════════════════════════════════════
+
+function renderProducts() {
+  const list = document.getElementById('products-list');
+  if (!list) return;
+
+  // Get products from boutique cart data
+  let products = [];
+  try {
+    const boutiqueProd = [
+      { id: 'P001', name: 'Disjoncteur 3VA12 63A', brand: 'Siemens', category: 'Appareillage', price: 185000, specs: '63A, 230V' },
+      { id: 'P002', name: 'Contacteur LC1-D32 24V', brand: 'Schneider', category: 'Appareillage', price: 92000, specs: '32A, 24V DC' },
+      { id: 'P003', name: 'Relais Temporisé 24V', brand: 'Siemens', category: 'Appareillage', price: 45000, specs: '0.1-100s, 24V' },
+      { id: 'P004', name: 'Variateur G120 1.5kW', brand: 'Siemens', category: 'Variateurs', price: 450000, specs: '1.5kW, 1AC 220V' },
+      { id: 'P005', name: 'Moteur IE3 3kW', brand: 'Schneider', category: 'Variateurs', price: 380000, specs: '3kW, 400V' },
+      { id: 'P006', name: 'API S7-1200 CPU', brand: 'Siemens', category: 'Automatisme', price: 920000, specs: 'Compact, 20 entrées' },
+    ];
+    products = boutiqueProd;
+  } catch (e) {}
+
+  list.innerHTML = products.slice(0, 6).map((prod, i) => `
+    <div class="service-card">
+      <div class="card-header">
+        <div class="card-title">${prod.name}</div>
+      </div>
+      <div class="form-row-3">
+        <div class="form-group">
+          <label class="form-label">Marque</label>
+          <input type="text" class="form-input" value="${prod.brand}">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Catégorie</label>
+          <input type="text" class="form-input" value="${prod.category}">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Prix (XAF)</label>
+          <input type="number" class="form-input" value="${prod.price}">
+        </div>
+      </div>
+    </div>
+  `).join('');
+
+  list.innerHTML += `<p style="font-size: 11px; color: var(--muted); margin-top: 16px;">💡 Gérez les produits depuis hbo-site.html section JavaScript</p>`;
+}
+
+function addProduct() {
+  alert('Ajoutez les produits directement dans le code JavaScript du fichier hbo-site.html');
+}
+
+// ═══════════════════════════════════════════
+// SAVE / EXPORT / IMPORT
+// ═══════════════════════════════════════════
+
+function saveAllChanges() {
+  // Collect all form data
+  document.querySelectorAll('[class*="form-input"], [class*="form-textarea"]').forEach(input => {
+    if (input.id) {
+      siteData[input.id] = input.value;
+    }
+  });
+
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(siteData));
+  addHistory('Sauvegarde effectuée');
+  updateLastSave();
+  showSuccess('✅ Modifications sauvegardées!');
+}
+
+function previewChanges() {
+  alert('Ouvrez hbo-site.html dans un nouvel onglet pour voir les changements en temps réel');
+}
+
+function exportData() {
+  const dataStr = JSON.stringify(siteData, null, 2);
+  const blob = new Blob([dataStr], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `hbo-backup-${new Date().toISOString().split('T')[0]}.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+function importData() {
+  document.getElementById('import-file').click();
+}
+
+function handleImport() {
+  const file = document.getElementById('import-file').files[0];
+  if (!file) return;
+
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    try {
+      const imported = JSON.parse(e.target.result);
+      siteData = { ...siteData, ...imported };
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(siteData));
+      populateForm();
+      addHistory('Import effectué');
+      showSuccess('✅ Données importées avec succès!');
+    } catch (err) {
+      alert('❌ Erreur lors de l\'import du fichier');
+    }
+  };
+  reader.readAsText(file);
+}
+
+function clearData() {
+  if (confirm('⚠️ Êtes-vous sûr? Cette action va réinitialiser toutes les données.')) {
+    localStorage.removeItem(STORAGE_KEY);
+    location.reload();
+  }
+}
+
+// ═══════════════════════════════════════════
+// HISTORY & UTILS
+// ═══════════════════════════════════════════
+
+function addHistory(action) {
+  let history = JSON.parse(localStorage.getItem(HISTORY_KEY) || '[]');
+  history.unshift({
+    action,
+    timestamp: new Date().toLocaleString('fr-FR')
+  });
+  history = history.slice(0, 20);
+  localStorage.setItem(HISTORY_KEY, JSON.stringify(history));
+  renderHistory();
+}
+
+function renderHistory() {
+  const list = document.getElementById('history-list');
+  if (!list) return;
+
+  const history = JSON.parse(localStorage.getItem(HISTORY_KEY) || '[]');
+  list.innerHTML = history.length ? history.map(h => `
+    <div style="padding: 8px; border-bottom: 1px solid #e0e0e0;">
+      <strong>${h.action}</strong><br>
+      <small>${h.timestamp}</small>
+    </div>
+  `).join('') : 'Aucun historique';
+}
+
+function updateLastSave() {
+  const last = localStorage.getItem('hbo-last-save') || new Date().toLocaleString('fr-FR');
+  document.getElementById('last-save').textContent = last;
+}
+
+function showSuccess(msg) {
+  const msgEl = document.getElementById('success-msg');
+  msgEl.innerHTML = `<div class="success-msg">${msg}</div>`;
+  setTimeout(() => msgEl.innerHTML = '', 3000);
+  addHistory(msg);
+  localStorage.setItem('hbo-last-save', new Date().toLocaleString('fr-FR'));
+}
+
+// ═══════════════════════════════════════════
+// INIT
+// ═══════════════════════════════════════════
+
+document.addEventListener('DOMContentLoaded', () => {
+  loadData();
+  renderHistory();
+});
+</script>
+
+</body>
+</html>
