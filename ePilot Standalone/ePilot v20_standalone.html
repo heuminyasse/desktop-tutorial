@@ -7814,7 +7814,7 @@ html body[class] #vac-gantt td.emp .nm{font-weight:500 !important;}</style>
     var _bs=(typeof window!=='undefined'&&window.EPILOT_SETTINGS)||{};
     var _be=_bs.entreprise||{};
     var _bd=_bs.design||{};
-    var acc=_bd.accent||'#1a3a6b';
+    var acc=_bd.accent||'#0f2364';
     var orn='#f59e0b';
     var orn2='#d97706';
     var nomSoc=_be.nom||'Home Business Office';
@@ -7835,7 +7835,10 @@ html body[class] #vac-gantt td.emp .nm{font-weight:500 !important;}</style>
     var temperature=pv.temperature!=null?String(pv.temperature):'';
     var incidents=pv.incidents||'';
 
-    /* ── tâches ── */
+    /* logo abbr */
+    var logoAbbr=logo?'':nomSoc.split(' ').map(function(w){return w[0]||'';}).join('').slice(0,4).toUpperCase();
+
+    /* tâches */
     var tasks=(jip&&jip.tasks)||[];
     var dtMin=null,dtMax=null;
     tasks.forEach(function(t){
@@ -7849,7 +7852,7 @@ html body[class] #vac-gantt td.emp .nm{font-weight:500 !important;}</style>
     var dureeJ=(dtMin&&dtMax)?Math.round((dtMax-dtMin)/864e5):null;
 
     var totalAv=pv.avancementGlobal!=null?Number(pv.avancementGlobal)
-      :(tasks.length?Math.round(tasks.reduce(function(s,t){return s+(Number(t.progress||t.pct||0));},0)/tasks.length):0);
+      :(tasks.length?tasks.reduce(function(s,t){return s+(Number(t.progress||t.pct||0));},0)/tasks.length:0);
 
     /* grouper par phase */
     var hasPhases=tasks.some(function(t){return t.phase&&t.phase!=='Sans phase';});
@@ -7863,133 +7866,148 @@ html body[class] #vac-gantt td.emp .nm{font-weight:500 !important;}</style>
     var NCOL=hasPoids?6:5;
     var phasesLabel=hasPhases?phaseOrder.filter(function(p){return p!=='_';}).join(' / '):'';
 
-    /* ── lignes tâches ── */
-    var BD='border:1px solid #d1d5db;';
+    /* lignes tâches */
     var rowIdx=0;
     var taskHtml='';
     if(!tasks.length){
-      taskHtml='<tr><td colspan="'+NCOL+'" style="'+BD+'padding:10px;text-align:center;color:#aaa;font-size:9px;font-style:italic">Aucune tâche enregistrée</td></tr>';
-    } else {
+      taskHtml='<tr><td colspan="'+NCOL+'" style="border:1px solid #cbd5e1;padding:10px;text-align:center;color:#aaa;font-size:9px;font-style:italic">Aucune tâche enregistrée</td></tr>';
+    }else{
       phaseOrder.forEach(function(ph){
-        /* section header */
         if(hasPhases&&ph!=='_'){
-          taskHtml+='<tr><td colspan="'+NCOL+'" style="'+BD+'padding:3px 8px;font-weight:700;font-size:10px;color:#1a1a2e;background:#fff">'+esc(ph)+'</td></tr>';
+          taskHtml+='<tr class="tr-ph"><td colspan="'+NCOL+'">'+esc(ph)+'</td></tr>';
         }
         phaseMap[ph].forEach(function(t){
           var pct=Number(t.progress||t.pct||t.percent||0);
           var pctW=Math.min(pct,100);
-          var bc=pct>=100?'#16a34a':pct>=60?orn:'#ef4444';
-          /* bar fidèle au PDF : rectangle plein, % à droite */
-          var bar='<div style="display:flex;align-items:center;gap:5px">'
-            +'<div style="flex:1;height:9px;background:#e9ecef;overflow:hidden">'
-            +'<div style="width:'+pctW+'%;height:100%;background:'+bc+'"></div></div>'
-            +'<span style="min-width:36px;text-align:right;font-size:8.5px;font-weight:700;color:'+bc+'">'+pct.toFixed(1)+'%</span></div>';
-          var bg=rowIdx%2?'#f9fafb':'#fff';
-          taskHtml+='<tr style="background:'+bg+'">'
-            +'<td style="'+BD+'padding:3px 8px;font-size:9.5px">'+esc(t.title||t.nom||'')+'</td>'
-            +'<td style="'+BD+'padding:3px 5px;text-align:center;font-size:9px;color:#555">'+(t.jours||t.days||'')+'</td>'
-            +(hasPoids?'<td style="'+BD+'padding:3px 5px;text-align:center;font-size:9px;background:#fffbeb;color:#92400e;font-weight:700">'+(t.poids!=null?Number(t.poids).toFixed(1)+'%':'')+'</td>':'')
-            +'<td style="'+BD+'padding:3px 5px;text-align:center;font-size:9px;color:#555">'+(t.debut||t.dateDebut||t.start?fD(t.debut||t.dateDebut||t.start):'')+'</td>'
-            +'<td style="'+BD+'padding:3px 5px;text-align:center;font-size:9px;color:#555">'+(t.fin||t.dateFin||t.end?fD(t.fin||t.dateFin||t.end):'')+'</td>'
-            +'<td style="'+BD+'padding:3px 8px;min-width:120px">'+bar+'</td>'
+          var bc=pct>=100?'#16a34a':pct>=60?orn:pct>0?'#f97316':'#dc2626';
+          var bar='<div class="bar">'
+            +'<div class="bt"><div class="bf" style="width:'+pctW+'%;background:'+bc+'"></div></div>'
+            +'<span class="bp" style="color:'+bc+'">'+pct.toFixed(1)+'%</span></div>';
+          var rc=rowIdx%2?'tr-ev':'tr-od';
+          taskHtml+='<tr class="'+rc+'">'
+            +'<td>'+esc(t.title||t.nom||'')+'</td>'
+            +'<td class="tc">'+(t.jours||t.days||'')+'</td>'
+            +(hasPoids?'<td class="tp">'+(t.poids!=null?Number(t.poids).toFixed(1)+'%':'')+'</td>':'')
+            +'<td class="tc">'+(t.debut||t.dateDebut||t.start?fD(t.debut||t.dateDebut||t.start):'')+'</td>'
+            +'<td class="tc">'+(t.fin||t.dateFin||t.end?fD(t.fin||t.dateFin||t.end):'')+'</td>'
+            +'<td>'+bar+'</td>'
             +'</tr>';
           rowIdx++;
         });
       });
     }
 
-    /* ── activités ── */
+    /* activités */
     var acts=(pv.activites||[]).filter(function(a){return a&&a.description;});
     var hasQte=acts.some(function(a){return a.quantite!=null&&a.quantite!=='';});
     var actsHtml=acts.length?acts.map(function(a,i){
-      return '<tr style="background:'+(i%2?'#f9fafb':'#fff')+'">'
-        +'<td style="'+BD+'padding:3px 8px;font-size:9.5px">'+esc(a.description)+'</td>'
-        +(hasQte?'<td style="'+BD+'padding:3px 5px;text-align:center;font-size:9px">'+esc(a.quantite!=null?String(a.quantite):'')+'</td>'
-          +'<td style="'+BD+'padding:3px 5px;text-align:center;font-size:9px">'+esc(a.unite||'')+'</td>':'')
+      var rc=i%2?'tr-ev':'tr-od';
+      return '<tr class="'+rc+'">'
+        +'<td>'+esc(a.description)+'</td>'
+        +(hasQte?'<td class="tc">'+esc(a.quantite!=null?String(a.quantite):'')+'</td>'
+          +'<td class="tc">'+esc(a.unite||'')+'</td>':'')
         +'</tr>';
     }).join('')
-    :'<tr><td style="'+BD+'padding:10px;text-align:center;color:#aaa;font-size:9px;font-style:italic">Aucune activité</td></tr>';
+    :'<tr><td style="border:1px solid #cbd5e1;padding:10px;text-align:center;color:#aaa;font-size:9px;font-style:italic">Aucune activité</td></tr>';
 
-    /* ── contraintes ── */
+    /* contraintes */
     var cntrArr=Array.isArray(pv.contraintes)?pv.contraintes:(pv.contraintes?[{description:pv.contraintes,etat:'Ouvert'}]:[]);
     var cntrHtml=cntrArr.filter(function(c){return c.description;}).map(function(c,i){
       var et=c.etat||'Ouvert';
       var isCl=et==='Clôturé'||(et.toLowerCase().indexOf('cl')===0&&et.toLowerCase().indexOf('t')>0);
       var isIP=et==='En cours';
       var dc=isCl?'#16a34a':isIP?orn:'#ef4444';
-      return '<tr style="background:'+(i%2?'#f9fafb':'#fff')+'">'
-        +'<td style="'+BD+'padding:3px 8px;font-size:9.5px">'+esc(c.description)+'</td>'
-        +'<td style="'+BD+'padding:3px 5px;text-align:center">'
-        +'<span style="display:inline-block;width:14px;height:14px;background:'+dc+'"></span></td>'
-        +'<td style="'+BD+'padding:3px 8px;font-size:9.5px">'+esc(c.responsable||'')+'</td>'
-        +'<td style="'+BD+'padding:3px 8px;font-size:9px">'+esc(c.echeance||c.dateConstat||'')+'</td>'
+      var rc=i%2?'tr-ev':'tr-od';
+      return '<tr class="'+rc+'">'
+        +'<td>'+esc(c.description)+'</td>'
+        +'<td style="text-align:center"><span class="sq" style="background:'+dc+'"></span></td>'
+        +'<td>'+esc(c.responsable||'')+'</td>'
+        +'<td class="tc">'+esc(c.dateConstat||'')+'</td>'
+        +'<td class="tc">'+esc(c.echeance||'')+'</td>'
         +'</tr>';
     }).join('')
-    ||'<tr><td colspan="4" style="'+BD+'padding:10px;text-align:center;color:#aaa;font-size:9px;font-style:italic">Aucune contrainte</td></tr>';
+    ||'<tr><td colspan="5" style="border:1px solid #cbd5e1;padding:10px;text-align:center;color:#aaa;font-size:9px;font-style:italic">Aucune contrainte</td></tr>';
 
     var eqText=(pv.equipePresente||[]).map(function(e){
       return esc(e.nom||'')+(e.role?' ('+esc(e.role)+')':'');
     }).join(' · ')||'—';
 
-    /* ── TH commun ── */
-    var TH='background:#f3f4f6;font-size:8.5px;font-weight:700;text-align:left;'+BD+'padding:5px 7px;white-space:nowrap;color:#444;';
-
-    /* ── CSS ── */
+    /* CSS */
     var css=''
-      +'*{box-sizing:border-box;margin:0;padding:0}'
-      +'body{font-family:Arial,Helvetica,sans-serif;color:#111;background:#cfd3da}'
-      +'.toolbar{background:'+acc+';color:#fff;padding:8px 16px;display:flex;gap:10px;'
-      +'align-items:center;position:sticky;top:0;z-index:10;font-family:Arial,sans-serif}'
-      +'.tb-t{flex:1;font-size:13px;font-weight:700}'
-      +'.tbtn{border:0;border-radius:4px;padding:7px 18px;font-size:12px;font-weight:700;cursor:pointer}'
-      +'.tbtn-p{background:#fff;color:'+acc+'}'
-      +'.tbtn-c{background:rgba(255,255,255,.15);color:#fff;border:1px solid rgba(255,255,255,.35)}'
-      +'.wrap{display:flex;justify-content:center;padding:16px}'
-      +'.page{width:210mm;background:#fff;padding:9mm 11mm;box-shadow:0 4px 24px rgba(0,0,0,.2)}'
+      +':root{--am:#f59e0b;--am2:#d97706;--nv:#1a3a8f;--tx:#1e293b;--mu:#64748b;'
+      +'--bd:#cbd5e1;--bg:#f1f5f9;--bga:#f8fafc;--gr:#16a34a;--re:#dc2626;'
+      +'--or:#f97316;--tb:'+acc+';--pb:#fffbeb;--pt:#92400e}'
+      +'*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}'
+      +'body{font-family:Arial,Helvetica,sans-serif;font-size:10px;color:var(--tx);background:#e2e8f0}'
+      +'.toolbar{background:var(--tb);color:#fff;padding:7px 18px;display:flex;gap:8px;'
+      +'align-items:center;position:sticky;top:0;z-index:10;border-bottom:3px solid var(--am)}'
+      +'.tb-t{flex:1;font-size:13px;font-weight:700;letter-spacing:.3px}'
+      +'.tbtn{border:0;border-radius:3px;padding:6px 18px;font-size:11.5px;font-weight:700;cursor:pointer}'
+      +'.tbtn-p{background:var(--am);color:#fff}'
+      +'.tbtn-c{background:rgba(255,255,255,.13);color:#fff;border:1px solid rgba(255,255,255,.3)}'
+      +'.wrap{display:flex;justify-content:center;padding:20px 12px 32px}'
+      +'.page{width:210mm;background:#fff;box-shadow:0 2px 24px rgba(0,0,0,.18);overflow:hidden}'
+      +'.rpt-head{padding:10px 14px 8px;border-top:4px solid var(--am);border-bottom:1px solid var(--bd)}'
+      +'.rpt-top{display:flex;gap:14px;align-items:flex-start}'
+      +'.rpt-left{flex:1}'
+      +'.logo-txt{font-size:22px;font-weight:900;color:var(--nv);letter-spacing:2px;line-height:1}'
+      +'.logo-sub{font-size:6px;color:var(--mu);letter-spacing:.8px;text-transform:uppercase;margin-top:2px;margin-bottom:8px}'
+      +'.rpt-big{font-size:34px;font-weight:900;color:var(--tx);line-height:1;letter-spacing:-.3px;margin-bottom:5px}'
+      +'.rpt-ref{display:inline-block;font-size:11px;font-weight:700;color:var(--am2);'
+      +'border-bottom:2.5px solid var(--am);padding-bottom:1px;margin-bottom:3px}'
+      +'.rpt-phase{font-size:8.5px;color:var(--mu);font-style:italic}'
+      +'.rpt-meta{min-width:195px;font-size:8.5px;color:#555;text-align:right;line-height:1.8}'
+      +'.rpt-meta b{color:var(--tx);font-size:9px}'
+      +'.proj-banner{display:flex;align-items:stretch;border-top:2px solid var(--am);border-bottom:2px solid var(--am)}'
+      +'.proj-name-cell{flex:1;font-size:11.5px;font-weight:900;color:var(--nv);'
+      +'text-transform:uppercase;letter-spacing:.4px;padding:6px 14px;align-self:center}'
+      +'.proj-stats{display:flex;border-left:2px solid var(--am)}'
+      +'.kpi{display:flex;flex-direction:column;justify-content:center;align-items:center}'
+      +'.kpi+.kpi{border-left:1px solid var(--bd)}'
+      +'.kpi-lbl{font-size:7px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;'
+      +'color:var(--pt);background:var(--pb);padding:2px 9px;width:100%;text-align:center;border-bottom:1px solid var(--bd)}'
+      +'.kpi-val{font-size:13px;font-weight:900;padding:3px 14px}'
+      +'.kpi-gr{color:#374151;background:var(--bg)}'
+      +'.kpi-am{color:#fff;background:var(--am)}'
+      +'.body-pad{padding:0 14px 14px}'
+      +'.tbl{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums}'
+      +'.tbl th{background:#f1f5f9;color:#475569;font-size:8px;font-weight:700;text-transform:uppercase;'
+      +'letter-spacing:.4px;padding:5px 7px;border:1px solid var(--bd);white-space:nowrap;border-top:2px solid var(--bd)}'
+      +'.tbl td{padding:3px 7px;border:1px solid var(--bd);vertical-align:middle;font-size:9px}'
+      +'.tc{text-align:center;color:var(--mu)}'
+      +'.tp{text-align:center;background:var(--pb);color:var(--pt);font-weight:700}'
+      +'.tr-ph td{background:#fff;font-size:9px;font-weight:700;color:var(--tx);'
+      +'padding:4px 7px 4px 10px;border-top:2px solid var(--bd);border-bottom:1px solid var(--bd);'
+      +'border-left:4px solid var(--am)}'
+      +'.tr-ev td{background:var(--bga)}'
+      +'.tr-od td{background:#fff}'
+      +'.bar{display:flex;align-items:center;gap:5px}'
+      +'.bt{flex:1;height:10px;background:#e2e8f0;overflow:hidden;border-radius:1px}'
+      +'.bf{height:100%;border-radius:1px}'
+      +'.bp{min-width:40px;text-align:right;font-size:8.5px;font-weight:700}'
+      +'.sec-lbl{margin:12px 0 0;padding:5px 0 4px;border-top:2px solid var(--bd);'
+      +'font-size:9px;font-weight:700;color:var(--tx);letter-spacing:.3px;'
+      +'display:flex;align-items:center;gap:6px}'
+      +'.sec-lbl::before{content:"";display:inline-block;width:14px;height:2px;background:var(--am);flex-shrink:0}'
+      +'.txt-box{border:1px solid var(--bd);background:var(--bga);padding:7px 10px;'
+      +'font-size:9.5px;line-height:1.6;min-height:22px;white-space:pre-wrap}'
+      +'.eq-list{border:1px solid var(--bd);background:var(--bga);padding:7px 10px;font-size:9.5px;line-height:1.6}'
+      +'.sq{display:inline-block;width:13px;height:13px;border-radius:2px;vertical-align:middle}'
+      +'.cond-row{display:flex;margin-top:6px;border:1px solid var(--bd);border-radius:3px;overflow:hidden}'
+      +'.cond-cell{flex:1;padding:5px 8px;font-size:9px;border-right:1px solid var(--bd)}'
+      +'.cond-cell:last-child{border-right:0}'
+      +'.cond-lbl{font-size:7.5px;color:var(--mu);font-weight:700;text-transform:uppercase;letter-spacing:.4px;margin-bottom:2px}'
+      +'.cond-val{font-size:10px;font-weight:700;color:var(--tx)}'
+      +'.sigs{display:grid;grid-template-columns:1fr 1fr;gap:40px;'
+      +'margin-top:24px;padding-top:12px;border-top:1px solid var(--bd)}'
+      +'.sig-lbl{font-size:7.5px;color:var(--mu);text-transform:uppercase;letter-spacing:.5px;margin-bottom:22px}'
+      +'.sig-line{border-top:1.5px solid #94a3b8;padding-top:4px;font-size:9px;color:#444}'
+      +'.foot{margin-top:12px;padding-top:7px;border-top:1px solid var(--bd);'
+      +'display:flex;justify-content:space-between;font-size:7.5px;color:var(--mu)}'
       +'@media print{.toolbar{display:none!important}.wrap{padding:0;background:none}'
-      +'@page{size:A4 portrait;margin:0}.page{width:auto;box-shadow:none;padding:8mm 10mm}}'
+      +'@page{size:A4 portrait;margin:0}.page{width:auto;box-shadow:none}}';
 
-      /* header 2 col */
-      +'.hdr{display:flex;align-items:flex-start;gap:8px;padding-bottom:6px;'
-      +'border-bottom:1px solid #e5e7eb;margin-bottom:5px}'
-      +'.hdr-l{flex:1}'
-      +'.rap-big{font-size:31px;font-weight:900;color:#111;line-height:1.0;margin-bottom:5px}'
-      +'.rap-ref{font-size:11px;font-weight:700;color:'+orn2+';'
-      +'border-bottom:2.5px solid '+orn+';display:inline-block;padding-bottom:1px}'
-      +'.rap-meta{font-size:8.5px;color:#777;font-style:italic;margin-top:3px}'
-      +'.hdr-r{min-width:192px;font-size:9px;color:#444;text-align:right;line-height:1.6}'
-      +'.hdr-r b{color:#111}'
-
-      /* proj row */
-      +'.proj-row{display:flex;align-items:stretch;border-top:1px solid #e5e7eb;'
-      +'border-bottom:1px solid #e5e7eb;margin-bottom:6px}'
-      +'.proj-name{flex:1;font-size:11.5px;font-weight:900;color:#1a3a8f;'
-      +'padding:5px 0;text-transform:uppercase;letter-spacing:.3px;align-self:center}'
-      +'.proj-stats{display:flex;align-items:stretch;border-left:1px solid #e5e7eb}'
-      +'.sc{display:flex;align-items:center}'
-      +'.sc+.sc{border-left:1px solid #e5e7eb}'
-      +'.sc-lbl{padding:2px 6px;font-size:7.5px;font-weight:700;color:#92400e;background:#fffbeb;white-space:nowrap}'
-      +'.sc-val{padding:2px 8px;font-size:11px;font-weight:900;white-space:nowrap}'
-      +'.sv-orn{background:'+orn+';color:#fff}'
-      +'.sv-gr{background:#f3f4f6;color:#333}'
-
-      /* section label (avant une table secondaire) */
-      +'.sec-lbl{font-size:9.5px;font-weight:700;color:#111;margin-top:10px;'
-      +'padding:4px 0 2px;border-top:2px solid #374151}'
-      +'.tbl{width:100%;border-collapse:collapse}'
-
-      /* obs / txt */
-      +'.txt{border:1px solid #d1d5db;background:#f9fafb;padding:7px 9px;'
-      +'font-size:10px;white-space:pre-wrap;min-height:24px;line-height:1.6;margin-top:0}'
-      +'.eq-box{border:1px solid #d1d5db;background:#fafafa;padding:6px 9px;font-size:10px;line-height:1.5}'
-
-      /* signatures */
-      +'.sigs{display:grid;grid-template-columns:1fr 1fr;gap:50px;'
-      +'margin-top:18px;padding-top:9px;border-top:1px solid #e5e7eb}'
-      +'.sig-lbl{font-size:7.5px;color:#aaa;text-transform:uppercase;letter-spacing:.5px;margin-bottom:18px}'
-      +'.sig-line{border-top:1.5px solid #333;padding-top:4px;font-size:9px;color:#444}';
-
-    /* ── HTML ── */
+    /* HTML */
     var doc='<!DOCTYPE html><html lang="fr"><head>'
       +'<meta charset="utf-8"><meta name="viewport" content="width=device-width">'
       +'<title>Rapport d\'Avancement – RAP'+esc(rapNum)+'</title>'
@@ -7999,83 +8017,111 @@ html body[class] #vac-gantt td.emp .nm{font-weight:500 !important;}</style>
       +'<div class="toolbar">'
       +'<span class="tb-t">Rapport d\'Avancement – RAP'+esc(rapNum)+'</span>'
       +'<button class="tbtn tbtn-p" onclick="window.print()">&#9113; Imprimer / PDF</button>'
-      +'<button class="tbtn tbtn-c" onclick="window.close()">Fermer</button>'
+      +'<button class="tbtn tbtn-c" onclick="window.close()">× Fermer</button>'
       +'</div>'
+
       +'<div class="wrap"><div class="page">'
 
-      /* ── en-tête ── */
-      +'<div class="hdr">'
-      +'<div class="hdr-l">'
-      +(logo?'<img src="'+esc(logo)+'" style="height:38px;object-fit:contain;display:block;margin-bottom:5px" alt=""/>':'')
-      +'<div class="rap-big">Rapport d\'Avancement</div>'
-      +'<div class="rap-ref">RAP'+esc(rapNum)+' – Chantier '+esc(jipId)+' du '+esc(dateStr)+'</div>'
-      +(phasesLabel?'<div class="rap-meta">Phase : '+esc(phasesLabel)+'</div>':'')
-      +((pv.heureDebut||pv.heureFin)?'<div class="rap-meta">Horaires : '+esc(pv.heureDebut||'—')+' → '+esc(pv.heureFin||'—')+'</div>':'')
-      +((meteo||temperature)?'<div class="rap-meta">Météo : '+esc(meteo)+(temperature?' · '+esc(temperature)+'°C':'')+'</div>':'')
+      /* en-tête */
+      +'<div class="rpt-head"><div class="rpt-top">'
+      +'<div class="rpt-left">'
+      +(logo
+        ?'<img src="'+esc(logo)+'" style="height:32px;object-fit:contain;display:block;margin-bottom:6px" alt=""/>'
+        :'<div class="logo-txt">'+esc(logoAbbr)+'</div>'
+        +'<div class="logo-sub">'+esc(nomSoc)+'</div>')
+      +'<div class="rpt-big">Rapport d\'Avancement</div>'
+      +'<div><span class="rpt-ref">RAP'+esc(rapNum)+' – Chantier '+esc(jipId)+' du '+esc(dateStr)+'</span></div>'
+      +(phasesLabel?'<div class="rpt-phase">Phase : '+esc(phasesLabel)+'</div>':'')
       +'</div>'
-      +'<div class="hdr-r">'
+      +'<div class="rpt-meta">'
       +'<div><b>Client :</b> '+esc(clientName)+'</div>'
       +'<div><b>Superviseur Chantier :</b> '+esc(superviseur)+'</div>'
-      +(contact?'<div><b>Contact :</b> '+esc(contact)+'</div>':'')
-      +(nomSoc&&nomSoc!=='Home Business Office'?'<div><b>Société :</b> '+esc(nomSoc)+'</div>':'')
-      +((projDebut||projFin)?'<div><b>Début</b> '+esc(projDebut)+'&nbsp;&nbsp;<b>Fin</b> '+esc(projFin)+'</div>':'')
+      +(contact?'<div>Contact : '+esc(contact)+'</div>':'')
+      +((projDebut||projFin)?'<div><b>Debut</b> '+esc(projDebut)+'&nbsp;&nbsp;<b>Fin</b> '+esc(projFin)+'</div>':'')
+      +'</div>'
       +'</div></div>'
 
-      /* ── ligne projet + stats ── */
-      +'<div class="proj-row">'
-      +'<div class="proj-name">'+esc(projNom)+'</div>'
+      /* bandeau projet */
+      +'<div class="proj-banner">'
+      +'<div class="proj-name-cell">'+esc(projNom)+'</div>'
       +'<div class="proj-stats">'
-      +(dureeJ!=null?'<div class="sc"><span class="sc-lbl">Durée Chantier</span><span class="sc-val sv-gr">'+dureeJ+' Jour(s)</span></div>':'')
-      +'<div class="sc"><span class="sc-lbl">Avancement Global</span><span class="sc-val sv-orn">'+totalAv+'%</span></div>'
+      +(dureeJ!=null?'<div class="kpi"><div class="kpi-lbl">Durée Chantier</div>'
+        +'<div class="kpi-val kpi-gr">'+dureeJ+' Jour(s)</div></div>':'')
+      +'<div class="kpi"><div class="kpi-lbl">Avancement Global</div>'
+      +'<div class="kpi-val kpi-am">'+totalAv.toFixed(2)+'%</div></div>'
       +'</div></div>'
 
-      /* ── tableau tâches ── */
-      +'<table class="tbl"><thead><tr>'
-      +'<th style="'+TH+'">Description</th>'
-      +'<th style="'+TH+'width:38px;text-align:center">jour</th>'
-      +(hasPoids?'<th style="'+TH+'width:48px;text-align:center">Poids</th>':'')
-      +'<th style="'+TH+'width:74px;text-align:center">Début</th>'
-      +'<th style="'+TH+'width:74px;text-align:center">Fin</th>'
-      +'<th style="'+TH+'width:128px">Avancement</th>'
+      +'<div class="body-pad">'
+
+      /* tableau tâches */
+      +'<table class="tbl" style="margin-top:8px"><thead><tr>'
+      +'<th style="text-align:left">Description de la tâche</th>'
+      +'<th style="width:32px;text-align:center">Jours</th>'
+      +(hasPoids?'<th style="width:48px;text-align:center">Poids</th>':'')
+      +'<th style="width:68px;text-align:center">Début</th>'
+      +'<th style="width:68px;text-align:center">Fin</th>'
+      +'<th style="width:130px">Avancement</th>'
       +'</tr></thead><tbody>'+taskHtml+'</tbody></table>'
 
-      /* ── activités ── */
-      +(acts.length?'<div class="sec-lbl">Activités du jour</div>'
-        +'<table class="tbl"><thead><tr>'
-        +'<th style="'+TH+'">Description</th>'
-        +(hasQte?'<th style="'+TH+'width:66px;text-align:center">Qté</th>'
-          +'<th style="'+TH+'width:60px;text-align:center">Unité</th>':'')
-        +'</tr></thead><tbody>'+actsHtml+'</tbody></table>':'')
+      /* activités */
+      +(acts.length
+        ?'<div class="sec-lbl">Activités réalisées</div>'
+          +'<table class="tbl"><thead><tr>'
+          +'<th style="text-align:left;text-transform:none;font-size:8.5px">Description</th>'
+          +(hasQte?'<th style="width:66px;text-align:center">Qté</th>'
+            +'<th style="width:60px;text-align:center">Unité</th>':'')
+          +'</tr></thead><tbody>'+actsHtml+'</tbody></table>':'')
 
-      /* ── observations ── */
-      +(pv.notes?'<div class="sec-lbl">Observations</div>'
-        +'<div class="txt">'+esc(pv.notes)+'</div>':'')
+      /* observations */
+      +(pv.notes?'<div class="sec-lbl">Observations</div><div class="txt-box">'+esc(pv.notes)+'</div>':'')
 
-      /* ── incidents ── */
-      +(incidents?'<div class="sec-lbl">Incidents / Accidents</div>'
-        +'<div class="txt">'+esc(incidents)+'</div>':'')
+      /* incidents */
+      +(incidents?'<div class="sec-lbl">Incidents / Accidents</div><div class="txt-box">'+esc(incidents)+'</div>':'')
 
-      /* ── contraintes : label = 1ère cellule du header ── */
-      +'<div style="margin-top:14px"></div>'
+      /* contraintes */
+      +'<div class="sec-lbl">Tâches supplémentaires, urgentes et difficultés</div>'
       +'<table class="tbl"><thead><tr>'
-      +'<th style="'+TH+'font-size:9.5px;color:#111;font-weight:700">Tâches supplémentaires, urgentes, difficultés</th>'
-      +'<th style="'+TH+'width:46px;text-align:center">Etat</th>'
-      +'<th style="'+TH+'width:98px">Resp.</th>'
-      +'<th style="'+TH+'width:44px;text-align:center">Date</th>'
-      +'<th style="'+TH+'width:76px">Echeance</th>'
+      +'<th style="text-align:left;text-transform:none;font-size:8.5px;font-weight:700;color:#1e293b">Description</th>'
+      +'<th style="width:42px;text-align:center">État</th>'
+      +'<th style="width:88px">Responsable</th>'
+      +'<th style="width:56px;text-align:center">Constaté</th>'
+      +'<th style="width:72px;text-align:center">Échéance</th>'
       +'</tr></thead><tbody>'+cntrHtml+'</tbody></table>'
 
-      /* ── équipe ── */
+      /* équipe */
       +(pv.equipePresente&&pv.equipePresente.length
         ?'<div class="sec-lbl">Équipe présente</div>'
-          +'<div class="eq-box">'+eqText+'</div>':'')
+          +'<div class="eq-list">'+eqText+'</div>':'')
 
-      /* ── signatures ── */
+      /* conditions du chantier */
+      +((meteo||temperature||pv.heureDebut||pv.heureFin)
+        ?'<div class="sec-lbl">Conditions du chantier</div>'
+          +'<div class="cond-row">'
+          +(meteo?'<div class="cond-cell"><div class="cond-lbl">Météo</div>'
+            +'<div class="cond-val">'+esc(meteo)+'</div></div>':'')
+          +(temperature?'<div class="cond-cell"><div class="cond-lbl">Température</div>'
+            +'<div class="cond-val">'+esc(temperature)+' °C</div></div>':'')
+          +(pv.heureDebut?'<div class="cond-cell"><div class="cond-lbl">Heure début</div>'
+            +'<div class="cond-val">'+esc(pv.heureDebut)+'</div></div>':'')
+          +(pv.heureFin?'<div class="cond-cell"><div class="cond-lbl">Heure fin</div>'
+            +'<div class="cond-val">'+esc(pv.heureFin)+'</div></div>':'')
+          +'</div>':'')
+
+      /* signatures */
       +'<div class="sigs">'
-      +'<div><div class="sig-lbl">Superviseur chantier</div><div class="sig-line">'+esc(superviseur)+'</div></div>'
-      +'<div><div class="sig-lbl">Client / Représentant</div><div class="sig-line">&nbsp;</div></div>'
+      +'<div><div class="sig-lbl">Superviseur chantier</div>'
+      +'<div class="sig-line">'+esc(superviseur)+'</div></div>'
+      +'<div><div class="sig-lbl">Client / Représentant</div>'
+      +'<div class="sig-line">&nbsp;</div></div>'
       +'</div>'
 
+      /* footer */
+      +'<div class="foot">'
+      +'<span>'+esc(nomSoc)+(contact?' · '+esc(contact):'')+'</span>'
+      +'<span>RAP'+esc(rapNum)+' | '+esc(dateStr)+' | Page 1/1</span>'
+      +'</div>'
+
+      +'</div>'
       +'</div></div></body></html>';
 
     var w=window.open('','_blank','width=960,height=860,scrollbars=yes,resizable=yes');
