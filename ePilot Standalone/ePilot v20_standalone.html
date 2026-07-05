@@ -7798,13 +7798,12 @@ html body[class] #vac-gantt td.emp .nm{font-weight:500 !important;}</style>
 <!-- PV Print: rapport d'activite -->
 <script id="__PV_PRINT_v1__">
 (function(){
-  /* dd/Mon/yy  ex: 15/Oct/24 */
   var _MON=['Jan','Fév','Mar','Avr','Mai','Jun','Jul','Aoû','Sep','Oct','Nov','Déc'];
   function fD(d){
     if(!d)return '';
-    try{var dt=new Date(d+'T00:00:00');
+    try{var dt=new Date((String(d).indexOf('T')<0?d+'T00:00:00':d));
       return String(dt.getDate()).padStart(2,'0')+'/'+_MON[dt.getMonth()]+'/'+String(dt.getFullYear()).slice(-2);
-    }catch(e){return d;}
+    }catch(e){return String(d);}
   }
   function esc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
 
@@ -7831,174 +7830,250 @@ html body[class] #vac-gantt td.emp .nm{font-weight:500 !important;}</style>
     var dateStr=fD(pv.date);
     var superviseur=pv.signataire||(pv.jsa&&pv.jsa.signataire)||nomSoc;
     var contact=(telSoc?'tél: '+telSoc:'')+(emailSoc?(telSoc?' – ':'')+emailSoc:'');
+    var meteo=pv.meteo||'';
+    var temperature=pv.temperature!=null?String(pv.temperature):'';
+    var incidents=pv.incidents||'';
 
+    /* ── tâches ── */
     var tasks=(jip&&jip.tasks)||[];
-    var totalPct=tasks.length?Math.round(tasks.reduce(function(s,t){return s+(Number(t.progress)||0);},0)/tasks.length):0;
-    var avPctW=Math.min(totalPct,100);
 
-    /* --- tableau tâches --- */
-    var taskRowsHtml=tasks.length?tasks.map(function(t,i){
-      var pct=Number(t.progress||0);
-      var pctW=Math.min(pct,100);
-      var bc=pct>=100?'#16a34a':pct>=60?orn:'#ef4444';
-      var bar='<div style="display:flex;align-items:center;gap:4px">'
-        +'<div style="flex:1;height:8px;background:#e5e7eb;border-radius:2px;overflow:hidden">'
-        +'<div style="width:'+pctW+'%;height:100%;background:'+bc+'"></div></div>'
-        +'<span style="min-width:38px;text-align:right;font-size:8.5px;font-weight:700;color:'+bc+'">'+pct.toFixed(1)+'%</span></div>';
+    /* date range du projet depuis les tâches */
+    var dtMin=null,dtMax=null;
+    tasks.forEach(function(t){
+      var ds=t.debut||t.dateDebut||t.start;
+      var de=t.fin||t.dateFin||t.end;
+      if(ds){var d=new Date(String(ds).indexOf('T')<0?ds+'T00:00:00':ds);if(!isNaN(d)&&(!dtMin||d<dtMin))dtMin=d;}
+      if(de){var d2=new Date(String(de).indexOf('T')<0?de+'T00:00:00':de);if(!isNaN(d2)&&(!dtMax||d2>dtMax))dtMax=d2;}
+    });
+    var projDebut=dtMin?fD(dtMin.toISOString().split('T')[0]):'';
+    var projFin=dtMax?fD(dtMax.toISOString().split('T')[0]):'';
+    var dureeJ=(dtMin&&dtMax)?Math.round((dtMax-dtMin)/864e5):null;
+
+    /* avancement global */
+    var totalAv=pv.avancementGlobal!=null?Number(pv.avancementGlobal):
+      (tasks.length?Math.round(tasks.reduce(function(s,t){return s+(Number(t.progress||t.pct||0));},0)/tasks.length):0);
+
+    /* groupes de tâches par phase */
+    var hasPhases=tasks.some(function(t){return t.phase&&t.phase!=='Sans phase';});
+    var hasPoids=tasks.some(function(t){return t.poids!=null&&t.poids!=='';});
+    var phaseMap={},phaseOrder=[];
+    tasks.forEach(function(t){
+      var ph=hasPhases?(t.phase||'Autres'):'_flat_';
+      if(!phaseMap[ph]){phaseMap[ph]=[];phaseOrder.push(ph);}
+      phaseMap[ph].push(t);
+    });
+
+    /* build task rows HTML */
+    var NCOL=hasPoids?6:5;
+    var rowIdx=0;
+    var taskHtml='';
+    if(!tasks.length){
+      taskHtml='<tr><td colspan="'+NCOL+'" style="padding:10px;text-align:center;color:#aaa;font-size:9px;font-style:italic">Aucune tâche enregistrée</td></tr>';
+    } else {
+      phaseOrder.forEach(function(ph){
+        if(hasPhases&&ph!=='_flat_'){
+          taskHtml+='<tr style="background:#efefef">'
+            +'<td colspan="'+NCOL+'" style="padding:4px 9px;font-weight:700;font-size:9.5px;color:#1a1a2e;border-bottom:1px solid #d4d4d4;border-top:2px solid #d1d5db">'+esc(ph)+'</td>'
+            +'</tr>';
+        }
+        phaseMap[ph].forEach(function(t){
+          var pct=Number(t.progress||t.pct||t.percent||0);
+          var pctW=Math.min(pct,100);
+          var bc=pct>=100?'#16a34a':pct>=60?orn:'#ef4444';
+          var bar='<div style="display:flex;align-items:center;gap:3px">'
+            +'<div style="flex:1;height:8px;background:#e5e7eb;border-radius:2px;overflow:hidden">'
+            +'<div style="width:'+pctW+'%;height:100%;background:'+bc+'"></div></div>'
+            +'<span style="min-width:36px;text-align:right;font-size:8px;font-weight:700;color:'+bc+'">'+pct.toFixed(1)+'%</span></div>';
+          taskHtml+='<tr style="background:'+(rowIdx%2?'#fafafa':'#fff')+'">'
+            +'<td style="padding:3px 9px;border-bottom:1px solid #e5e7eb;font-size:9.5px">'+esc(t.title||t.nom||'')+'</td>'
+            +'<td style="padding:3px 5px;border-bottom:1px solid #e5e7eb;text-align:center;font-size:9px;color:#666">'+(t.jours||t.days||'')+'</td>'
+            +(hasPoids?'<td style="padding:3px 5px;border-bottom:1px solid #e5e7eb;text-align:center;font-size:9px;color:#555">'+(t.poids!=null?Number(t.poids).toFixed(1)+'%':'')+'</td>':'')
+            +'<td style="padding:3px 5px;border-bottom:1px solid #e5e7eb;text-align:center;font-size:9px;color:#666">'+(t.debut||t.dateDebut||t.start?fD(t.debut||t.dateDebut||t.start):'')+'</td>'
+            +'<td style="padding:3px 5px;border-bottom:1px solid #e5e7eb;text-align:center;font-size:9px;color:#666">'+(t.fin||t.dateFin||t.end?fD(t.fin||t.dateFin||t.end):'')+'</td>'
+            +'<td style="padding:3px 8px;border-bottom:1px solid #e5e7eb">'+bar+'</td>'
+            +'</tr>';
+          rowIdx++;
+        });
+      });
+    }
+
+    /* activités */
+    var acts=(pv.activites||[]).filter(function(a){return a&&a.description;});
+    var hasQte=acts.some(function(a){return a.quantite!=null&&a.quantite!=='';});
+    var actsHtml=acts.length?acts.map(function(a,i){
       return '<tr style="background:'+(i%2?'#fafafa':'#fff')+'">'
-        +'<td style="padding:3px 8px;border-bottom:1px solid #e5e7eb;font-size:9.5px">'+esc(t.title||t.nom||'')+'</td>'
-        +'<td style="padding:3px 5px;border-bottom:1px solid #e5e7eb;text-align:center;font-size:9px;color:#666">'+(t.jours||t.days||'')+'</td>'
-        +'<td style="padding:3px 5px;border-bottom:1px solid #e5e7eb;text-align:center;font-size:9px;color:#666">'+(t.debut||t.dateDebut?fD(t.debut||t.dateDebut):'')+'</td>'
-        +'<td style="padding:3px 5px;border-bottom:1px solid #e5e7eb;text-align:center;font-size:9px;color:#666">'+(t.fin||t.dateFin?fD(t.fin||t.dateFin):'')+'</td>'
-        +'<td style="padding:3px 8px;border-bottom:1px solid #e5e7eb;width:128px">'+bar+'</td>'
+        +'<td style="padding:3px 9px;border-bottom:1px solid #e5e7eb;font-size:9.5px">'+esc(a.description)+'</td>'
+        +(hasQte?'<td style="padding:3px 5px;border-bottom:1px solid #e5e7eb;text-align:center;font-size:9px;color:#555">'+esc(a.quantite!=null?String(a.quantite):'')+'</td>'
+          +(a.unite!=null?'<td style="padding:3px 5px;border-bottom:1px solid #e5e7eb;text-align:center;font-size:9px;color:#555">'+esc(a.unite||'')+'</td>':'')
+        :'')
         +'</tr>';
-    }).join(''):'<tr><td colspan="5" style="padding:10px;text-align:center;color:#aaa;font-size:9.5px;font-style:italic">Aucune tâche enregistrée</td></tr>';
+    }).join('')
+    :'<tr><td colspan="'+(hasQte?3:1)+'" style="padding:10px;text-align:center;color:#aaa;font-size:9px;font-style:italic">Aucune activité enregistrée</td></tr>';
 
-    /* --- tableau contraintes --- */
+    /* contraintes */
     var cntrArr=Array.isArray(pv.contraintes)?pv.contraintes:(pv.contraintes?[{description:pv.contraintes,etat:'Ouvert'}]:[]);
-    var cntrRows=cntrArr.filter(function(c){return c.description;}).map(function(c,i){
+    var cntrHtml=cntrArr.filter(function(c){return c.description;}).map(function(c,i){
       var et=c.etat||'Ouvert';
-      var isClosed=et==='Clôturé'||(et.toLowerCase().indexOf('cl')===0&&et.toLowerCase().indexOf('t')>0);
-      var isInProg=et==='En cours';
-      var dotC=isClosed?'#16a34a':isInProg?orn:'#ef4444';
-      var dot='<span style="display:inline-block;width:14px;height:14px;background:'+dotC+';border-radius:2px"></span>';
+      var isCl=et==='Clôturé'||(et.toLowerCase().indexOf('cl')===0&&et.toLowerCase().indexOf('t')>0);
+      var isIP=et==='En cours';
+      var dc=isCl?'#16a34a':isIP?orn:'#ef4444';
       return '<tr style="background:'+(i%2?'#fafafa':'#fff')+'">'
-        +'<td style="padding:3px 8px;border-bottom:1px solid #e5e7eb;font-size:9.5px">'+esc(c.description)+'</td>'
-        +'<td style="padding:3px 5px;border-bottom:1px solid #e5e7eb;text-align:center">'+dot+'</td>'
-        +'<td style="padding:3px 8px;border-bottom:1px solid #e5e7eb;font-size:9.5px">'+esc(c.responsable||'')+'</td>'
-        +'<td style="padding:3px 8px;border-bottom:1px solid #e5e7eb;font-size:9px;white-space:nowrap">'+esc(c.echeance||'')+'</td>'
+        +'<td style="padding:3px 9px;border-bottom:1px solid #e5e7eb;font-size:9.5px">'+esc(c.description)+'</td>'
+        +'<td style="padding:3px 5px;border-bottom:1px solid #e5e7eb;text-align:center">'
+        +'<span style="display:inline-block;width:14px;height:14px;background:'+dc+';border-radius:2px"></span></td>'
+        +'<td style="padding:3px 9px;border-bottom:1px solid #e5e7eb;font-size:9.5px">'+esc(c.responsable||'')+'</td>'
+        +'<td style="padding:3px 9px;border-bottom:1px solid #e5e7eb;font-size:9px;white-space:nowrap">'+esc(c.echeance||c.dateConstat||'')+'</td>'
         +'</tr>';
-    }).join('')||'<tr><td colspan="4" style="padding:10px;text-align:center;color:#aaa;font-size:9.5px;font-style:italic">Aucune contrainte</td></tr>';
+    }).join('')||'<tr><td colspan="4" style="padding:10px;text-align:center;color:#aaa;font-size:9px;font-style:italic">Aucune contrainte</td></tr>';
 
     var eqText=(pv.equipePresente||[]).map(function(e){
       return esc(e.nom||'')+(e.role?' ('+esc(e.role)+')':'');
     }).join(' · ')||'—';
 
-    /* ====== CSS ====== */
+    var phasesLabel=hasPhases?phaseOrder.filter(function(p){return p!=='_flat_';}).join(' / '):'';
+
+    /* ── CSS ── */
     var css=''
       +'*{box-sizing:border-box;margin:0;padding:0}'
-      +'body{font-family:Arial,Helvetica,sans-serif;color:#111;background:#d1d5db}'
-      +'.toolbar{background:'+acc+';color:#fff;padding:8px 16px;display:flex;gap:10px;align-items:center;position:sticky;top:0;z-index:10;font-family:Arial,sans-serif}'
+      +'body{font-family:Arial,Helvetica,sans-serif;color:#111;background:#cfd3da}'
+      +'.toolbar{background:'+acc+';color:#fff;padding:8px 16px;display:flex;gap:10px;align-items:center;'
+      +'position:sticky;top:0;z-index:10;font-family:Arial,sans-serif}'
       +'.tb-t{flex:1;font-size:13px;font-weight:700}'
-      +'.tbtn{border:0;border-radius:4px;padding:7px 18px;font-size:12px;font-weight:700;cursor:pointer}'
+      +'.tbtn{border:0;border-radius:4px;padding:7px 18px;font-size:12px;font-weight:700;cursor:pointer;transition:opacity .15s}'
+      +'.tbtn:hover{opacity:.85}'
       +'.tbtn-p{background:#fff;color:'+acc+'}'
       +'.tbtn-c{background:rgba(255,255,255,.15);color:#fff;border:1px solid rgba(255,255,255,.35)}'
-      +'.wrap{display:flex;justify-content:center;padding:16px}'
-      +'.page{width:210mm;background:#fff;padding:9mm 11mm;box-shadow:0 3px 20px rgba(0,0,0,.25)}'
+      +'.wrap{display:flex;justify-content:center;padding:16px 12px}'
+      +'.page{width:210mm;background:#fff;padding:9mm 11mm;box-shadow:0 4px 24px rgba(0,0,0,.2)}'
       +'@media print{.toolbar{display:none!important}.wrap{padding:0;background:none}'
-      +'@page{size:A4 portrait;margin:0}.page{width:auto;box-shadow:none;padding:7mm 9mm}}'
-
+      +'@page{size:A4 portrait;margin:0}.page{width:auto;box-shadow:none;padding:8mm 10mm}}'
       /* header */
-      +'.hdr{display:flex;align-items:flex-start;gap:12px;margin-bottom:6px}'
+      +'.hdr{display:flex;align-items:flex-start;gap:10px;margin-bottom:4px}'
       +'.hdr-l{flex:1}'
-      +'.rap-big{font-size:29px;font-weight:900;color:#111;line-height:1.1;margin-bottom:6px}'
-      +'.rap-ref{font-size:11px;font-weight:700;color:'+orn2+';border-bottom:2.5px solid '+orn+';display:inline-block;padding-bottom:1px}'
-      +'.rap-phase{font-size:9px;color:#888;font-style:italic;margin-top:3px}'
-      +'.hdr-r{min-width:195px;text-align:right}'
-      +'.hdr-r .hl{font-size:9px;color:#555;margin-bottom:2px;line-height:1.4}'
-      +'.hdr-r b{color:#111}'
-
+      +'.rap-big{font-size:29px;font-weight:900;color:#111;line-height:1.1;margin-bottom:5px}'
+      +'.rap-ref{font-size:11px;font-weight:700;color:'+orn2+';border-bottom:2.5px solid '+orn
+      +';display:inline-block;padding-bottom:1px;margin-bottom:2px}'
+      +'.rap-meta{font-size:8.5px;color:#777;font-style:italic;margin-top:2px}'
+      +'.hdr-r{min-width:198px;text-align:right}'
+      +'.hr{font-size:9px;color:#555;margin-bottom:2px;line-height:1.45}'
+      +'.hr b{color:#111}'
       /* proj row */
-      +'.proj-row{display:flex;align-items:stretch;border-top:2px solid '+orn+';border-bottom:2px solid '+orn+';margin:5px 0}'
-      +'.proj-name{flex:1;font-size:11px;font-weight:900;color:#111;padding:4px 0;text-transform:uppercase;letter-spacing:.4px;align-self:center}'
-      +'.proj-av{display:flex;align-items:center;border-left:1px solid '+orn+'}'
-      +'.av-lbl{padding:4px 8px;font-size:8.5px;font-weight:700;color:#92400e;background:#fffbeb;white-space:nowrap}'
-      +'.av-val{padding:4px 12px;font-size:13px;font-weight:900;background:'+orn+';color:#fff;white-space:nowrap}'
-
-      /* task table */
+      +'.proj-row{display:flex;align-items:stretch;border-top:2px solid '+orn
+      +';border-bottom:2px solid '+orn+';margin:5px 0}'
+      +'.proj-name{flex:1;font-size:11px;font-weight:900;color:#111;padding:5px 0'
+      +';text-transform:uppercase;letter-spacing:.4px;align-self:center}'
+      +'.proj-stats{display:flex;align-items:stretch}'
+      +'.stat-cell{display:flex;align-items:center;border-left:1px solid '+orn+'}'
+      +'.stat-lbl{padding:3px 7px;font-size:8px;font-weight:700;color:#92400e;background:#fffbeb;white-space:nowrap}'
+      +'.stat-val{padding:3px 10px;font-size:12px;font-weight:900;white-space:nowrap}'
+      +'.sv-orn{background:'+orn+';color:#fff}'
+      +'.sv-gray{background:#f3f4f6;color:#333}'
+      /* table */
       +'.tbl{width:100%;border-collapse:collapse}'
-      +'.tbl-hdr th{background:#f3f4f6;color:#444;padding:5px 7px;font-size:8.5px;font-weight:700;text-align:left;border:1px solid #ddd;white-space:nowrap}'
-
-      /* contraintes table */
-      +'.sec-dark{background:#374151;color:#fff;font-size:9.5px;font-weight:700;padding:5px 9px;margin-top:10px;text-transform:uppercase;letter-spacing:.5px}'
-      +'.cntr-th{background:#4b5563;color:#fff;font-size:8.5px;font-weight:700;padding:4px 7px;text-align:left;border:1px solid #374151}'
-
-      /* equipe */
-      +'.eq-box{border:1px solid #e5e7eb;background:#fafafa;padding:7px 10px;font-size:10px}'
-
-      /* observations */
-      +'.obs-box{border:1px solid #e5e7eb;background:#f9fafb;padding:8px 10px;font-size:10px;white-space:pre-wrap;min-height:28px;line-height:1.6}'
-
+      +'.th{background:#f3f4f6;color:#444;padding:5px 7px;font-size:8.5px;font-weight:700'
+      +';text-align:left;border:1px solid #d4d4d4;white-space:nowrap}'
+      /* section headers */
+      +'.sec{background:#374151;color:#fff;font-size:9.5px;font-weight:700'
+      +';padding:5px 9px;margin-top:10px;text-transform:uppercase;letter-spacing:.5px}'
+      +'.sec-th{background:#4b5563;color:#fff;font-size:8.5px;font-weight:700'
+      +';padding:4px 7px;text-align:left;border:1px solid #374151}'
+      /* text boxes */
+      +'.txt-box{border:1px solid #e5e7eb;background:#f9fafb;padding:8px 10px'
+      +';font-size:10px;white-space:pre-wrap;min-height:26px;line-height:1.6}'
+      +'.eq-box{border:1px solid #e5e7eb;background:#fafafa;padding:7px 10px;font-size:10px;line-height:1.5}'
       /* signatures */
       +'.sigs{display:grid;grid-template-columns:1fr 1fr;gap:50px;margin-top:20px;padding-top:10px;border-top:1px solid #e5e7eb}'
-      +'.sig-lbl{font-size:8px;color:#aaa;text-transform:uppercase;letter-spacing:.5px;margin-bottom:20px}'
+      +'.sig-lbl{font-size:7.5px;color:#aaa;text-transform:uppercase;letter-spacing:.5px;margin-bottom:20px}'
       +'.sig-line{border-top:1.5px solid #333;padding-top:4px;font-size:9px;color:#444}';
 
-    /* ====== DOC HTML ====== */
+    /* ── HTML ── */
     var doc='<!DOCTYPE html><html lang="fr"><head>'
       +'<meta charset="utf-8"><meta name="viewport" content="width=device-width">'
       +'<title>Rapport d\'Avancement – RAP'+esc(rapNum)+'</title>'
       +'<style>'+css+'</style></head><body>'
-
-      /* toolbar */
       +'<div class="toolbar">'
       +'<span class="tb-t">Rapport d\'Avancement – RAP'+esc(rapNum)+'</span>'
-      +'<button class="tbtn tbtn-p" onclick="window.print()">Imprimer / PDF</button>'
+      +'<button class="tbtn tbtn-p" onclick="window.print()">&#9113; Imprimer / PDF</button>'
       +'<button class="tbtn tbtn-c" onclick="window.close()">Fermer</button>'
       +'</div>'
-
       +'<div class="wrap"><div class="page">'
 
-      /* ── en-tête ── */
+      /* en-tête */
       +'<div class="hdr">'
       +'<div class="hdr-l">'
-      +(logo?'<img src="'+esc(logo)+'" style="height:40px;object-fit:contain;display:block;margin-bottom:5px" alt=""/>':'')
+      +(logo?'<img src="'+esc(logo)+'" style="height:40px;object-fit:contain;display:block;margin-bottom:4px" alt=""/>':'')
       +'<div class="rap-big">Rapport d\'Avancement</div>'
       +'<div class="rap-ref">RAP'+esc(rapNum)+' – Chantier '+esc(jipId)+' du '+esc(dateStr)+'</div>'
-      +(pv.heureDebut||pv.heureFin?'<div class="rap-phase">Horaires : '+esc(pv.heureDebut||'—')+' → '+esc(pv.heureFin||'—')+'</div>':'')
+      +(phasesLabel?'<div class="rap-meta">Phase(s) : '+esc(phasesLabel)+'</div>':'')
+      +((pv.heureDebut||pv.heureFin)?'<div class="rap-meta">Horaires : '+esc(pv.heureDebut||'—')+' → '+esc(pv.heureFin||'—')+'</div>':'')
+      +((meteo||temperature)?'<div class="rap-meta">Météo : '+esc(meteo)+(temperature?' · '+esc(temperature)+'°C':'')+'</div>':'')
       +'</div>'
       +'<div class="hdr-r">'
-      +'<div class="hl"><b>Client :</b> '+esc(clientName)+'</div>'
-      +'<div class="hl"><b>Superviseur :</b> '+esc(superviseur)+'</div>'
-      +(contact?'<div class="hl"><b>Contact :</b> '+esc(contact)+'</div>':'')
-      +(nomSoc?'<div class="hl"><b>Société :</b> '+esc(nomSoc)+'</div>':'')
+      +'<div class="hr"><b>Client :</b> '+esc(clientName)+'</div>'
+      +'<div class="hr"><b>Superviseur :</b> '+esc(superviseur)+'</div>'
+      +(contact?'<div class="hr"><b>Contact :</b> '+esc(contact)+'</div>':'')
+      +(nomSoc?'<div class="hr"><b>Société :</b> '+esc(nomSoc)+'</div>':'')
+      +((projDebut||projFin)?'<div class="hr" style="margin-top:3px"><b>Début :</b> '+esc(projDebut)+'  <b>Fin :</b> '+esc(projFin)+'</div>':'')
       +'</div></div>'
 
-      /* ── projet + avancement global ── */
+      /* projet + stats */
       +'<div class="proj-row">'
       +'<div class="proj-name">'+esc(projNom)+'</div>'
-      +'<div class="proj-av">'
-      +'<span class="av-lbl">Avancement Global</span>'
-      +'<span class="av-val">'+totalPct+'%</span>'
+      +'<div class="proj-stats">'
+      +(dureeJ!=null
+        ?'<div class="stat-cell"><span class="stat-lbl">Durée Chantier</span>'
+          +'<span class="stat-val sv-gray">'+dureeJ+' j</span></div>':'')
+      +'<div class="stat-cell"><span class="stat-lbl">Avancement Global</span>'
+      +'<span class="stat-val sv-orn">'+totalAv+'%</span></div>'
       +'</div></div>'
 
-      /* ── tableau tâches ── */
-      +'<table class="tbl"><thead class="tbl-hdr"><tr>'
-      +'<th>Description</th>'
-      +'<th style="width:40px;text-align:center">Jours</th>'
-      +'<th style="width:76px;text-align:center">Début</th>'
-      +'<th style="width:76px;text-align:center">Fin</th>'
-      +'<th style="width:128px">Avancement</th>'
-      +'</tr></thead><tbody>'+taskRowsHtml+'</tbody></table>'
-
-      /* ── observations ── */
-      +(pv.notes?'<div class="sec-dark">Observations</div>'
-        +'<div class="obs-box">'+esc(pv.notes)+'</div>':'')
-
-      /* ── tâches supp. / contraintes ── */
-      +'<div class="sec-dark">Tâches supplémentaires, urgentes, difficultés</div>'
+      /* tableau tâches */
       +'<table class="tbl"><thead><tr>'
-      +'<th class="cntr-th">Description</th>'
-      +'<th class="cntr-th" style="width:46px;text-align:center">État</th>'
-      +'<th class="cntr-th" style="width:100px">Resp.</th>'
-      +'<th class="cntr-th" style="width:84px">Date Échéance</th>'
-      +'</tr></thead><tbody>'+cntrRows+'</tbody></table>'
+      +'<th class="th">Description</th>'
+      +'<th class="th" style="width:38px;text-align:center">Jours</th>'
+      +(hasPoids?'<th class="th" style="width:48px;text-align:center">Poids</th>':'')
+      +'<th class="th" style="width:74px;text-align:center">Début</th>'
+      +'<th class="th" style="width:74px;text-align:center">Fin</th>'
+      +'<th class="th" style="width:128px">Avancement</th>'
+      +'</tr></thead><tbody>'+taskHtml+'</tbody></table>'
 
-      /* ── équipe ── */
+      /* activités */
+      +(acts.length?'<div class="sec">Activités du jour</div>'
+        +'<table class="tbl"><thead><tr><th class="sec-th">Description</th>'
+        +(hasQte?'<th class="sec-th" style="width:66px;text-align:center">Qté</th>'
+          +'<th class="sec-th" style="width:60px;text-align:center">Unité</th>':'')
+        +'</tr></thead><tbody>'+actsHtml+'</tbody></table>':'')
+
+      /* observations */
+      +(pv.notes?'<div class="sec">Observations</div>'
+        +'<div class="txt-box">'+esc(pv.notes)+'</div>':'')
+
+      /* incidents */
+      +(incidents?'<div class="sec">Incidents / Accidents</div>'
+        +'<div class="txt-box">'+esc(incidents)+'</div>':'')
+
+      /* contraintes */
+      +'<div class="sec">Tâches supplémentaires, urgentes, difficultés</div>'
+      +'<table class="tbl"><thead><tr>'
+      +'<th class="sec-th">Description</th>'
+      +'<th class="sec-th" style="width:46px;text-align:center">État</th>'
+      +'<th class="sec-th" style="width:100px">Resp.</th>'
+      +'<th class="sec-th" style="width:82px">Date Échéance</th>'
+      +'</tr></thead><tbody>'+cntrHtml+'</tbody></table>'
+
+      /* équipe */
       +(pv.equipePresente&&pv.equipePresente.length
-        ?'<div class="sec-dark">Équipe présente</div>'
-          +'<div class="eq-box">'+eqText+'</div>'
-        :'')
+        ?'<div class="sec">Équipe présente</div>'
+          +'<div class="eq-box">'+eqText+'</div>':'')
 
-      /* ── signatures ── */
+      /* signatures */
       +'<div class="sigs">'
       +'<div><div class="sig-lbl">Superviseur chantier</div><div class="sig-line">'+esc(superviseur)+'</div></div>'
       +'<div><div class="sig-lbl">Client / Représentant</div><div class="sig-line">&nbsp;</div></div>'
       +'</div>'
-
       +'</div></div></body></html>';
 
-    var w=window.open('','_blank','width=950,height=840,scrollbars=yes,resizable=yes');
+    var w=window.open('','_blank','width=960,height=860,scrollbars=yes,resizable=yes');
     if(!w){alert('Veuillez autoriser les popups pour ce fichier (file://).');return;}
     w.document.open();
     w.document.write(doc);
