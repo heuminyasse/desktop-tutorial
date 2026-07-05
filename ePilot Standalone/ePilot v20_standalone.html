@@ -7856,8 +7856,10 @@ html body[class] #vac-gantt td.emp .nm{font-weight:500 !important;}</style>
     var logo=_be.logo||'';
     var logoAbbr=logo?'':nomSoc.split(' ').map(function(w){return w[0]||'';}).join('').slice(0,4).toUpperCase();
 
-    var cl=((window.CLIENTS_DATA||{}).clients||[]).find(function(c){return c.id===(jip&&jip.clientId);})||{};
-    var clientName=cl.name||cl.nom||cl.Nom||'—';
+    var _q=((window.QUOTE_DATA||[]).find(function(x){return x.Dossier===jipId;}))||{};
+    var _CD=(window.CLIENTS_DATA||{});
+    var cl=((_CD.clients||[]).find(function(c){return (jip&&jip.clientId&&c.id===(jip.clientId))||(c.CodeClient&&_q.CodeClient&&c.CodeClient===_q.CodeClient)||(c.Nom===_q.Client);})||{});
+    var clientName=_q.Client||cl.Nom||cl.nom||cl.name||'—';
     var clientTel=cl.tel||'';
     var clientEmail=cl.email||'';
     var clientContact=jip.acheteurNom||jip.demandeur||jip.acheteur||cl.contact||cl.representant||cl.demandeur||'';
