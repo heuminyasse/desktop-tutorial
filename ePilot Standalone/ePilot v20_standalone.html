@@ -522,6 +522,152 @@ document.addEventListener('DOMContentLoaded', async function() {
     })();
 
     // ─────────────────────────────────────────────────────────────
+    // [Phase3A-CreateOrganisationsSites] Créer ORGANISATIONS et SITES
+    // Objectif: Consolider organisations clients et leurs sites de production
+    // ─────────────────────────────────────────────────────────────
+    (function createOrganisationsSites() {
+      setTimeout(function() {
+        try {
+          // ─ Extraire ORGANISATIONS uniques ─
+          var orgsMap = {};
+
+          // 1. Ajouter HBO
+          orgsMap['ORG_HBO'] = {
+            id: 'ORG_HBO',
+            type: 'INTERNAL',
+            nom: 'Home Business Office',
+            nomCourt: 'HBO',
+            codeClient: null,
+            niu: null,
+            rccm: null,
+            email: '',
+            telephone: '',
+            adresse: '',
+            ville: 'Douala',
+            pays: 'Cameroun',
+            actif: true,
+            createdAt: new Date().toISOString()
+          };
+
+          // 2. Extraire organisations clients depuis CLIENTS_DATA.acheteurs
+          (window.CLIENTS_DATA && window.CLIENTS_DATA.acheteurs || []).forEach(function(a) {
+            var orgId = 'ORG_' + String(a.Entreprise || 'UNKNOWN')
+              .substring(0, 20)
+              .replace(/[^a-z0-9]/gi, '')
+              .toUpperCase();
+
+            if (!orgsMap[orgId]) {
+              orgsMap[orgId] = {
+                id: orgId,
+                type: 'CLIENT',
+                nom: a.Entreprise || 'Unknown',
+                nomCourt: (a.Entreprise || 'UNK').substring(0, 4),
+                codeClient: null,
+                niu: null,
+                rccm: null,
+                email: '',
+                telephone: '',
+                adresse: '',
+                ville: '',
+                pays: 'Cameroun',
+                actif: true,
+                createdAt: new Date().toISOString()
+              };
+            }
+          });
+
+          var organisations = Object.values(orgsMap);
+          window.ORGANISATIONS = organisations;
+
+          // ─ Extraire SITES uniques ─
+          var sitesMap = {};
+
+          // Sites depuis CLIENTS_DATA.acheteurs
+          (window.CLIENTS_DATA && window.CLIENTS_DATA.acheteurs || []).forEach(function(a) {
+            if (!a.Unite) return;
+
+            var siteId = 'SITE_' + String(a.Unite || '')
+              .substring(0, 20)
+              .replace(/[^a-z0-9]/gi, '')
+              .toUpperCase();
+
+            var orgId = 'ORG_' + String(a.Entreprise || 'UNKNOWN')
+              .substring(0, 20)
+              .replace(/[^a-z0-9]/gi, '')
+              .toUpperCase();
+
+            if (!sitesMap[siteId]) {
+              sitesMap[siteId] = {
+                id: siteId,
+                organisationId: orgId,
+                nom: a.Unite || '',
+                nomNormalise: a.unitNormalise || String(a.Unite || '').toLowerCase(),
+                type: 'PRODUCTION',
+                adresse: '',
+                ville: '',
+                codePostal: '',
+                pays: 'Cameroun',
+                telephone: '',
+                email: '',
+                responsableSitePersonneId: null, // À lier via PERSONNES_CLIENTS
+                actif: true,
+                createdAt: new Date().toISOString()
+              };
+            }
+          });
+
+          var sites = Object.values(sitesMap);
+          window.SITES = sites;
+
+          // ─ Créer INDEX pour lookup rapide ─
+          window.ORGANISATIONS_INDEX = {};
+          window.SITES_INDEX = {};
+
+          organisations.forEach(function(o) {
+            window.ORGANISATIONS_INDEX[o.id] = o;
+            // Index par nom normalisé aussi
+            var nomN = String(o.nom || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+            if (nomN) window.ORGANISATIONS_INDEX[nomN] = o;
+          });
+
+          sites.forEach(function(s) {
+            window.SITES_INDEX[s.id] = s;
+            // Index par nomNormalise aussi
+            if (s.nomNormalise) window.SITES_INDEX[s.nomNormalise] = s;
+          });
+
+          // ─ Mettre à jour AFFECTATIONS_CLIENTS avec siteId correct ─
+          // (Les sites existent maintenant, on peut les référencer)
+          (window.AFFECTATIONS_CLIENTS || []).forEach(function(a) {
+            if (!a.siteId && a.personneId) {
+              var p = (window.PERSONNES_CLIENTS || []).find(function(pc) {
+                return pc.id === a.personneId;
+              });
+              if (p && p.siteId) {
+                a.siteId = p.siteId;
+              }
+            }
+          });
+
+          // ─ Sauvegarder en localStorage ─
+          try {
+            localStorage.setItem('ePilot_ORGANISATIONS', JSON.stringify(organisations));
+            localStorage.setItem('ePilot_SITES', JSON.stringify(sites));
+          } catch(e) {
+            console.warn('[Phase3A] Impossible de sauvegarder:', e.message);
+          }
+
+          console.log('[Phase3A-OrganisationsSites] Résumé:',
+            'ORGANISATIONS=' + organisations.length,
+            'SITES=' + sites.length);
+
+        } catch(e) {
+          console.error('[Phase3A-OrganisationsSites] Erreur:', e.message, e.stack);
+        }
+      }, 300); // Après Phase 2 (200ms)
+    })();
+
+    // ─────────────────────────────────────────────────────────────
     // [FixClosedChantier v1] Ouverture des chantiers CLÔTURÉS / TERMINÉS
     // depuis Quote, OA, Comptabilité, etc.
     //
