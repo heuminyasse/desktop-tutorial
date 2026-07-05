@@ -889,6 +889,222 @@ document.addEventListener('DOMContentLoaded', async function() {
     })();
 
     // ─────────────────────────────────────────────────────────────
+    // [Phase3C-NormalizeArticles] Créer FOURNISSEURS + ARTICLES avec FKs
+    // Objectif: Remplacer texte brut par FK robustes (fournisseurId, projetId)
+    // ─────────────────────────────────────────────────────────────
+    (function normalizeArticles() {
+      setTimeout(function() {
+        try {
+          // ─ Fonction helper pour normaliser ─
+          function normalize(s) {
+            return String(s || '').normalize('NFD')
+              .replace(/[̀-ͯ]/g, '')
+              .toLowerCase()
+              .replace(/[^a-z0-9]/g, ' ')
+              .replace(/\s+/g, ' ')
+              .trim();
+          }
+
+          // ─ Créer FOURNISSEURS table ─
+          var fournisseurs = [];
+          var fournisseurMap = {}; // Par nom normalisé pour dédup
+          var fourId = 0;
+
+          // Extraire depuis SOURCING_DATA
+          (window.SOURCING_DATA || []).forEach(function(src) {
+            if (!src.Fournisseur) return;
+            var normName = normalize(src.Fournisseur);
+            if (fournisseurMap[normName]) return; // Déjà vu
+
+            fournisseurMap[normName] = 'FOUR_' + (++fourId);
+            fournisseurs.push({
+              id: 'FOUR_' + fourId,
+              nom: src.Fournisseur,
+              nomNormalise: normName,
+              contact: src.ContactFournisseur || null,
+              tel: src.TelFournisseur || null,
+              email: src.EmailFournisseur || null,
+              adresse: src.AdresseFournisseur || null,
+              type: 'VENDOR', // Fournisseur de composants/services
+              createdAt: new Date().toISOString()
+            });
+          });
+
+          // Extraire depuis QUOTE_DATA (champs fournisseur)
+          (window.QUOTE_DATA || []).forEach(function(quote) {
+            // Certaines quotes peuvent avoir des champs fournisseur
+            var fournName = quote.Fournisseur || quote.Supplier || null;
+            if (!fournName) return;
+
+            var normName = normalize(fournName);
+            if (fournisseurMap[normName]) return; // Déjà vu
+
+            fournisseurMap[normName] = 'FOUR_' + (++fourId);
+            fournisseurs.push({
+              id: 'FOUR_' + fourId,
+              nom: fournName,
+              nomNormalise: normName,
+              type: 'QUOTE_SUPPLIER',
+              createdAt: new Date().toISOString()
+            });
+          });
+
+          // ─ Fonction helper pour trouver fournisseur par nom ─
+          function findFournisseur(nomText) {
+            if (!nomText) return null;
+            var normName = normalize(nomText);
+
+            var exact = fournisseurs.find(function(f) {
+              return f.nomNormalise === normName;
+            });
+            if (exact) return exact;
+
+            // Recherche partielle
+            var partial = fournisseurs.find(function(f) {
+              return f.nomNormalise.indexOf(normName) >= 0 ||
+                     normName.indexOf(f.nomNormalise) >= 0;
+            });
+            return partial;
+          }
+
+          // ─ Créer ARTICLES table ─
+          var articles = [];
+          var artId = 0;
+
+          (window.QUOTE_DATA || []).forEach(function(quote) {
+            // Extraire articles depuis SOURCING_DATA lié au même Dossier
+            var sourcingItems = (window.SOURCING_DATA || []).filter(function(src) {
+              return src.Dossier === quote.Dossier || src.Imputation === quote.Dossier;
+            });
+
+            // Si pas de sourcing, créer article générique depuis quote
+            if (sourcingItems.length === 0) {
+              if (quote.Description || quote.Libelle) {
+                var fourId = null;
+                if (quote.Fournisseur) {
+                  var four = findFournisseur(quote.Fournisseur);
+                  fourId = four ? four.id : null;
+                }
+
+                articles.push({
+                  id: 'ART_' + (++artId),
+                  projetId: quote.Dossier,
+                  designation: quote.Description || quote.Libelle || 'Article sans titre',
+                  description: quote.Description || null,
+                  quantite: quote.Quantite || 1,
+                  unite: quote.Unite || quote.Unit || 'U',
+                  prixUnitaire: quote.PrixUnitaire || quote.Price || 0,
+                  montantTotal: (quote.Quantite || 1) * (quote.PrixUnitaire || quote.Price || 0),
+                  fournisseurId: fourId,
+                  referenceInterne: quote.Reference || quote.Ref || null,
+                  statut: 'FROM_QUOTE',
+                  createdAt: new Date().toISOString()
+                });
+              }
+            } else {
+              // Créer un article par item sourcing
+              sourcingItems.forEach(function(src) {
+                var four = findFournisseur(src.Fournisseur);
+                articles.push({
+                  id: 'ART_' + (++artId),
+                  projetId: quote.Dossier,
+                  designation: src.Description || src.Designation || 'Article sans titre',
+                  description: src.Details || null,
+                  quantite: src.Quantite || 1,
+                  unite: src.Unite || 'U',
+                  prixUnitaire: src.PrixUnitaire || src.Price || 0,
+                  montantTotal: (src.Quantite || 1) * (src.PrixUnitaire || src.Price || 0),
+                  fournisseurId: four ? four.id : null,
+                  referenceInterne: src.Reference || src.RefInterne || null,
+                  dateDevis: src.DateDevis || null,
+                  statut: 'FROM_SOURCING',
+                  createdAt: new Date().toISOString()
+                });
+              });
+            }
+          });
+
+          // ─ Vérifier intégrité des FKs ─
+          var projets = window.PROJETS || [];
+          articles.forEach(function(art) {
+            if (art.projetId && !projets.some(function(p) { return p.id === art.projetId; })) {
+              art.projetIdValid = false;
+            } else {
+              art.projetIdValid = !!art.projetId;
+            }
+
+            if (art.fournisseurId && !fournisseurs.some(function(f) { return f.id === art.fournisseurId; })) {
+              art.fournisseurIdValid = false;
+            } else {
+              art.fournisseurIdValid = !!art.fournisseurId;
+            }
+          });
+
+          window.FOURNISSEURS = fournisseurs;
+          window.ARTICLES = articles;
+
+          // ─ Créer INDEX pour lookup rapide ─
+          window.FOURNISSEURS_INDEX = {};
+          fournisseurs.forEach(function(f) {
+            window.FOURNISSEURS_INDEX[f.id] = f;
+          });
+
+          window.ARTICLES_INDEX = {};
+          articles.forEach(function(a) {
+            window.ARTICLES_INDEX[a.id] = a;
+          });
+
+          // Index par projet pour requêtes rapides
+          window.ARTICLES_BY_PROJET = {};
+          articles.forEach(function(a) {
+            if (!window.ARTICLES_BY_PROJET[a.projetId]) {
+              window.ARTICLES_BY_PROJET[a.projetId] = [];
+            }
+            window.ARTICLES_BY_PROJET[a.projetId].push(a);
+          });
+
+          // Index par fournisseur
+          window.ARTICLES_BY_FOURNISSEUR = {};
+          articles.forEach(function(a) {
+            if (a.fournisseurId) {
+              if (!window.ARTICLES_BY_FOURNISSEUR[a.fournisseurId]) {
+                window.ARTICLES_BY_FOURNISSEUR[a.fournisseurId] = [];
+              }
+              window.ARTICLES_BY_FOURNISSEUR[a.fournisseurId].push(a);
+            }
+          });
+
+          // ─ Statistiques sur les FKs ─
+          var stats = {
+            fournisseurs: fournisseurs.length,
+            articles: articles.length,
+            articlesWithFournisseur: articles.filter(function(a) { return a.fournisseurId; }).length,
+            articlesWithProjet: articles.filter(function(a) { return a.projetId; }).length,
+            montantTotal: articles.reduce(function(sum, a) { return sum + (a.montantTotal || 0); }, 0)
+          };
+
+          // ─ Sauvegarder en localStorage ─
+          try {
+            localStorage.setItem('ePilot_FOURNISSEURS', JSON.stringify(fournisseurs));
+            localStorage.setItem('ePilot_ARTICLES', JSON.stringify(articles));
+          } catch(e) {
+            console.warn('[Phase3C] Impossible de sauvegarder:', e.message);
+          }
+
+          console.log('[Phase3C-NormalizeArticles] Résumé:',
+            'FOURNISSEURS=' + stats.fournisseurs,
+            '| ARTICLES=' + stats.articles,
+            '| WithFournisseur=' + stats.articlesWithFournisseur + '/' + stats.articles,
+            '| WithProjet=' + stats.articlesWithProjet + '/' + stats.articles,
+            '| Montant total=' + stats.montantTotal.toFixed(2));
+
+        } catch(e) {
+          console.error('[Phase3C-NormalizeArticles] Erreur:', e.message, e.stack);
+        }
+      }, 500); // Après Phase 3B (400ms)
+    })();
+
+    // ─────────────────────────────────────────────────────────────
     // [FixClosedChantier v1] Ouverture des chantiers CLÔTURÉS / TERMINÉS
     // depuis Quote, OA, Comptabilité, etc.
     //
