@@ -361,6 +361,167 @@ document.addEventListener('DOMContentLoaded', async function() {
     })();
 
     // ─────────────────────────────────────────────────────────────
+    // [Phase2-SeparatePersonnesHRClients] Séparer HR / Acheteurs clients
+    // Objectif: Deux domaines distincts - HBO interne vs Contacts clients
+    // ─────────────────────────────────────────────────────────────
+    (function createSeparatePersonnes() {
+      setTimeout(function() {
+        try {
+          // ─ Définir ROLES (séparé par domaine) ─
+          window.ROLES_HR = [
+            {id: 'ROLE_HR_001', code: 'CHEF_CHANTIER', nom: 'Chef de Chantier', domaine: 'HR'},
+            {id: 'ROLE_HR_002', code: 'CHAUFFEUR', nom: 'Chauffeur', domaine: 'HR'},
+            {id: 'ROLE_HR_003', code: 'ELECTRICIEN', nom: 'Électricien', domaine: 'HR'},
+            {id: 'ROLE_HR_004', code: 'OPERATEUR', nom: 'Opérateur', domaine: 'HR'},
+            {id: 'ROLE_HR_005', code: 'TECHNICIEN', nom: 'Technicien', domaine: 'HR'}
+          ];
+
+          window.ROLES_CLIENTS = [
+            {id: 'ROLE_CLI_001', code: 'DEMANDEUR', nom: 'Demandeur', domaine: 'CLIENT'},
+            {id: 'ROLE_CLI_002', code: 'ACHETEUR', nom: 'Acheteur', domaine: 'CLIENT'},
+            {id: 'ROLE_CLI_003', code: 'RESPONSABLE_SITE', nom: 'Responsable Site', domaine: 'CLIENT'},
+            {id: 'ROLE_CLI_004', code: 'INGENIEUR_MARCHE', nom: 'Ingénieur du Marché', domaine: 'CLIENT'}
+          ];
+
+          // ─ Créer PERSONNES_HR (Employés HBO uniquement) ─
+          var personnesHR = [];
+          (window.PERSONNEL_DATA || []).forEach(function(p) {
+            if (!p.id) return;
+
+            personnesHR.push({
+              id: p.id,
+              domaine: 'HR',
+              nom: p.nom || '',
+              prenoms: p.prenoms || '',
+              nomComplet: p.nomComplet || '',
+              nomNormalise: p.nomNormalise || '',
+              telephone: p.tel || p.telephone || '',
+              telephones: p.telephones || [],
+              email: p.email || p.Email || '',
+              fonction: p.fonction || p.poste || '',
+              organisationId: 'ORG_HBO',
+              siteId: null,
+              actif: true,
+              createdAt: new Date().toISOString()
+            });
+          });
+
+          window.PERSONNES_HR = personnesHR;
+
+          // ─ Créer PERSONNES_CLIENTS (Contacts clients uniquement) ─
+          var personnesClients = [];
+          (window.CLIENTS_DATA && window.CLIENTS_DATA.acheteurs || []).forEach(function(a) {
+            if (!a.id) return;
+
+            personnesClients.push({
+              id: a.id,
+              domaine: 'CLIENT',
+              nom: (a.NomAcheteur || '').split(/\s+/).pop() || '',
+              prenoms: (a.NomAcheteur || '').split(/\s+/).slice(0, -1).join(' ') || '',
+              nomComplet: a.NomAcheteur || '',
+              nomNormalise: a.nomNormalise || '',
+              telephone: a.Telephone || '',
+              telephones: a.Telephone ? [{type: 'mobile', tel: a.Telephone}] : [],
+              email: a.Email || '',
+              fonction: a.Fonction || '',
+              departement: a.Departement || '',
+              unite: a.Unite || '',
+              unitNormalise: a.unitNormalise || '',
+              organisationId: 'ORG_' + String(a.Entreprise || 'UNKNOWN')
+                .substring(0, 20)
+                .replace(/[^a-z0-9]/gi, '')
+                .toUpperCase(),
+              siteId: a.Unite ? 'SITE_' + String(a.Unite || '')
+                .substring(0, 20)
+                .replace(/[^a-z0-9]/gi, '')
+                .toUpperCase() : null,
+              actif: true,
+              createdAt: new Date().toISOString()
+            });
+          });
+
+          window.PERSONNES_CLIENTS = personnesClients;
+
+          // ─ Créer AFFECTATIONS_HR ─
+          var affectationsHR = [];
+          var affId = 0;
+
+          personnesHR.forEach(function(p) {
+            var roleId = 'ROLE_HR_001';
+            if ((p.fonction || '').toLowerCase().indexOf('chauffeur') >= 0) {
+              roleId = 'ROLE_HR_002';
+            } else if ((p.fonction || '').toLowerCase().indexOf('electr') >= 0) {
+              roleId = 'ROLE_HR_003';
+            }
+
+            affectationsHR.push({
+              id: 'AFF_HR_' + String(affId++).padStart(3, '0'),
+              personneId: p.id,
+              roleId: roleId,
+              organisationId: 'ORG_HBO',
+              siteId: null,
+              projectId: null,
+              dateDebut: '2020-01-01',
+              dateFin: null,
+              principal: true,
+              actif: true
+            });
+          });
+
+          window.AFFECTATIONS_HR = affectationsHR;
+
+          // ─ Créer AFFECTATIONS_CLIENTS ─
+          var affectationsClients = [];
+          affId = 0;
+
+          personnesClients.forEach(function(p) {
+            var roleId = 'ROLE_CLI_001';
+            if ((p.fonction || '').toLowerCase().indexOf('achats') >= 0 ||
+                (p.fonction || '').toLowerCase().indexOf('acheteur') >= 0) {
+              roleId = 'ROLE_CLI_002';
+            } else if ((p.fonction || '').toLowerCase().indexOf('responsable') >= 0) {
+              roleId = 'ROLE_CLI_003';
+            }
+
+            affectationsClients.push({
+              id: 'AFF_CLI_' + String(affId++).padStart(3, '0'),
+              personneId: p.id,
+              roleId: roleId,
+              organisationId: p.organisationId,
+              siteId: p.siteId,
+              projectId: null,
+              dateDebut: '2020-01-01',
+              dateFin: null,
+              principal: true,
+              actif: true
+            });
+          });
+
+          window.AFFECTATIONS_CLIENTS = affectationsClients;
+
+          // ─ Sauvegarder en localStorage ─
+          try {
+            localStorage.setItem('ePilot_PERSONNES_HR', JSON.stringify(personnesHR));
+            localStorage.setItem('ePilot_PERSONNES_CLIENTS', JSON.stringify(personnesClients));
+            localStorage.setItem('ePilot_ROLES_HR', JSON.stringify(window.ROLES_HR));
+            localStorage.setItem('ePilot_ROLES_CLIENTS', JSON.stringify(window.ROLES_CLIENTS));
+            localStorage.setItem('ePilot_AFFECTATIONS_HR', JSON.stringify(affectationsHR));
+            localStorage.setItem('ePilot_AFFECTATIONS_CLIENTS', JSON.stringify(affectationsClients));
+          } catch(e) {
+            console.warn('[Phase2] Impossible de sauvegarder:', e.message);
+          }
+
+          console.log('[Phase2-SeparatePersonnes] Résumé:',
+            'HR=' + personnesHR.length + ', Clients=' + personnesClients.length,
+            'Aff_HR=' + affectationsHR.length + ', Aff_Clients=' + affectationsClients.length);
+
+        } catch(e) {
+          console.error('[Phase2-SeparatePersonnes] Erreur:', e.message, e.stack);
+        }
+      }, 200);
+    })();
+
+    // ─────────────────────────────────────────────────────────────
     // [FixClosedChantier v1] Ouverture des chantiers CLÔTURÉS / TERMINÉS
     // depuis Quote, OA, Comptabilité, etc.
     //
