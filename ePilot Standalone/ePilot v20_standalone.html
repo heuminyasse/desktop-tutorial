@@ -1939,6 +1939,336 @@ document.addEventListener('DOMContentLoaded', async function() {
     })();
 
     // ─────────────────────────────────────────────────────────────
+    // [Validation] Contraintes et intégrité des données
+    // ─────────────────────────────────────────────────────────────
+    (function initValidation() {
+      window.VALIDATION = {
+        validateProject: function(projet) {
+          var errors = [];
+          if (!projet.id) errors.push('ID manquant');
+          if (projet.organisationId && !(window.ORGANISATIONS || []).some(function(o) { return o.id === projet.organisationId; })) {
+            errors.push('Organisation FK invalide');
+          }
+          if (projet.chefChantierPersonneId && !(window.PERSONNES_HR || []).some(function(p) { return p.id === projet.chefChantierPersonneId; })) {
+            errors.push('Chef FK invalide');
+          }
+          return { valid: errors.length === 0, errors: errors };
+        },
+
+        validateArticle: function(article) {
+          var errors = [];
+          if (!article.designation) errors.push('Désignation manquante');
+          if (article.quantite <= 0) errors.push('Quantité invalide');
+          if (article.prixUnitaire < 0) errors.push('Prix invalide');
+          if (article.projetId && !(window.PROJETS || []).some(function(p) { return p.id === article.projetId; })) {
+            errors.push('Projet FK invalide');
+          }
+          return { valid: errors.length === 0, errors: errors };
+        },
+
+        validateEntity: function(entity, type) {
+          if (type === 'project') return this.validateProject(entity);
+          if (type === 'article') return this.validateArticle(entity);
+          return { valid: true, errors: [] };
+        },
+
+        validateAll: function() {
+          var issues = [];
+          (window.PROJETS || []).forEach(function(p) {
+            var v = window.VALIDATION.validateProject(p);
+            if (!v.valid) issues.push({ entity: 'PROJETS', id: p.id, errors: v.errors });
+          });
+          (window.ARTICLES || []).forEach(function(a) {
+            var v = window.VALIDATION.validateArticle(a);
+            if (!v.valid) issues.push({ entity: 'ARTICLES', id: a.id, errors: v.errors });
+          });
+          return { valid: issues.length === 0, issues: issues };
+        }
+      };
+
+      console.log('[Validation] Module chargé. Usage: window.VALIDATION.validateAll()');
+    })();
+
+    // ─────────────────────────────────────────────────────────────
+    // [Events] Système d'événements et réactivité
+    // ─────────────────────────────────────────────────────────────
+    (function initEvents() {
+      var listeners = {};
+
+      window.EVENTS = {
+        on: function(event, callback) {
+          if (!listeners[event]) listeners[event] = [];
+          listeners[event].push(callback);
+        },
+
+        off: function(event, callback) {
+          if (!listeners[event]) return;
+          listeners[event] = listeners[event].filter(function(c) { return c !== callback; });
+        },
+
+        emit: function(event, data) {
+          if (!listeners[event]) return;
+          listeners[event].forEach(function(callback) {
+            try { callback(data); } catch(e) { console.error('[Events] Erreur:', e); }
+          });
+        },
+
+        entityCreated: function(type, entity) {
+          this.emit('entity:created', { type: type, entity: entity, timestamp: new Date().toISOString() });
+        },
+
+        entityUpdated: function(type, entity) {
+          this.emit('entity:updated', { type: type, entity: entity, timestamp: new Date().toISOString() });
+        },
+
+        entityDeleted: function(type, id) {
+          this.emit('entity:deleted', { type: type, id: id, timestamp: new Date().toISOString() });
+        }
+      };
+
+      console.log('[Events] Module chargé. Usage: window.EVENTS.on("entity:created", callback)');
+    })();
+
+    // ─────────────────────────────────────────────────────────────
+    // [Audit] Logs et traçabilité
+    // ─────────────────────────────────────────────────────────────
+    (function initAudit() {
+      var logs = [];
+      var maxLogs = 10000;
+
+      window.AUDIT = {
+        log: function(action, details) {
+          var entry = {
+            timestamp: new Date().toISOString(),
+            action: action,
+            details: details,
+            id: 'LOG_' + logs.length
+          };
+          logs.push(entry);
+          if (logs.length > maxLogs) logs.shift();
+
+          try {
+            localStorage.setItem('ePilot_AUDIT_LOG', JSON.stringify(logs.slice(-1000)));
+          } catch(e) {}
+
+          return entry.id;
+        },
+
+        getLogs: function(action, limit) {
+          var filtered = action ? logs.filter(function(l) { return l.action === action; }) : logs;
+          return limit ? filtered.slice(-limit) : filtered;
+        },
+
+        getStats: function() {
+          var stats = {};
+          logs.forEach(function(l) {
+            stats[l.action] = (stats[l.action] || 0) + 1;
+          });
+          return stats;
+        },
+
+        export: function() {
+          return JSON.stringify(logs, null, 2);
+        }
+      };
+
+      // Log automatic events
+      window.EVENTS && window.EVENTS.on('entity:created', function(data) {
+        window.AUDIT.log('entity_created', { type: data.type, id: data.entity.id });
+      });
+
+      console.log('[Audit] Module chargé. Usage: window.AUDIT.log("action", details)');
+    })();
+
+    // ─────────────────────────────────────────────────────────────
+    // [Security] Sanitization et protection
+    // ─────────────────────────────────────────────────────────────
+    (function initSecurity() {
+      window.SECURITY = {
+        sanitizeString: function(str) {
+          if (!str) return '';
+          return String(str)
+            .replace(/[<>\"']/g, function(c) {
+              var map = { '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' };
+              return map[c];
+            });
+        },
+
+        sanitizeObject: function(obj) {
+          if (!obj) return obj;
+          if (typeof obj !== 'object') return this.sanitizeString(obj);
+          var result = Array.isArray(obj) ? [] : {};
+          for (var key in obj) {
+            if (obj.hasOwnProperty(key)) {
+              result[key] = typeof obj[key] === 'string' ? this.sanitizeString(obj[key]) : obj[key];
+            }
+          }
+          return result;
+        },
+
+        hashString: function(str) {
+          var hash = 0;
+          for (var i = 0; i < str.length; i++) {
+            hash = ((hash << 5) - hash) + str.charCodeAt(i);
+            hash = hash & hash;
+          }
+          return Math.abs(hash).toString(36);
+        },
+
+        validateEmail: function(email) {
+          return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+        },
+
+        validatePhone: function(phone) {
+          return /^[0-9\s\-\+\(\)\.]+$/.test(phone);
+        }
+      };
+
+      console.log('[Security] Module chargé. Usage: window.SECURITY.sanitizeString(str)');
+    })();
+
+    // ─────────────────────────────────────────────────────────────
+    // [Performance] Monitoring et optimisations
+    // ─────────────────────────────────────────────────────────────
+    (function initPerformance() {
+      var metrics = {};
+
+      window.PERFORMANCE = {
+        startMeasure: function(name) {
+          if (!metrics[name]) metrics[name] = [];
+          metrics[name].push({ start: Date.now() });
+        },
+
+        endMeasure: function(name) {
+          if (!metrics[name] || !metrics[name].length) return null;
+          var last = metrics[name][metrics[name].length - 1];
+          last.duration = Date.now() - last.start;
+          return last.duration;
+        },
+
+        getStats: function(name) {
+          if (!metrics[name]) return null;
+          var data = metrics[name];
+          var durations = data.map(function(m) { return m.duration || 0; });
+          return {
+            count: data.length,
+            min: Math.min.apply(null, durations),
+            max: Math.max.apply(null, durations),
+            avg: durations.reduce(function(a, b) { return a + b; }, 0) / data.length
+          };
+        },
+
+        getMemoryEstimate: function() {
+          return {
+            projets: (window.PROJETS || []).length * 200,
+            articles: (window.ARTICLES || []).length * 150,
+            depenses: (window.DEPENSES || []).length * 100,
+            total: ((window.PROJETS || []).length * 200 +
+                    (window.ARTICLES || []).length * 150 +
+                    (window.DEPENSES || []).length * 100) / 1024
+          };
+        }
+      };
+
+      console.log('[Performance] Module chargé. Usage: window.PERFORMANCE.startMeasure("name")');
+    })();
+
+    // ─────────────────────────────────────────────────────────────
+    // [UI] Interface utilisateur pour les modules
+    // ─────────────────────────────────────────────────────────────
+    (function initUI() {
+      window.UI = {
+        createSearchPanel: function() {
+          var html = '<div style="padding: 20px; background: #f9f9f9; border-radius: 8px; margin: 20px 0;">';
+          html += '<input id="searchInput" type="text" placeholder="Rechercher projets, personnes, articles..." style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px;">';
+          html += '<div id="searchResults" style="margin-top: 15px;"></div>';
+          html += '</div>';
+          return html;
+        },
+
+        createDashboard: function() {
+          var stats = window.DASHBOARD.getProjectStats();
+          var html = '<div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px; padding: 20px;">';
+          html += '<div style="background: #f0f0f0; padding: 20px; border-radius: 8px; border-left: 4px solid #B5000A;">';
+          html += '<div style="font-size: 12px; color: #666; text-transform: uppercase;">Projets</div>';
+          html += '<div style="font-size: 28px; font-weight: bold; color: #B5000A;">' + stats.totalProjets + '</div>';
+          html += '</div>';
+          html += '<div style="background: #f0f0f0; padding: 20px; border-radius: 8px; border-left: 4px solid #B5000A;">';
+          html += '<div style="font-size: 12px; color: #666; text-transform: uppercase;">Articles</div>';
+          html += '<div style="font-size: 28px; font-weight: bold; color: #B5000A;">' + stats.totalArticles + '</div>';
+          html += '</div>';
+          html += '<div style="background: #f0f0f0; padding: 20px; border-radius: 8px; border-left: 4px solid #B5000A;">';
+          html += '<div style="font-size: 12px; color: #666; text-transform: uppercase;">Valeur</div>';
+          html += '<div style="font-size: 28px; font-weight: bold; color: #B5000A;">' + stats.totalArticleValue.toFixed(0) + '€</div>';
+          html += '</div>';
+          html += '<div style="background: #f0f0f0; padding: 20px; border-radius: 8px; border-left: 4px solid #B5000A;">';
+          html += '<div style="font-size: 12px; color: #666; text-transform: uppercase;">Moyenne</div>';
+          html += '<div style="font-size: 28px; font-weight: bold; color: #B5000A;">' + stats.averageProjectValue.toFixed(0) + '€</div>';
+          html += '</div>';
+          html += '</div>';
+          return html;
+        },
+
+        renderReportButton: function(projetId) {
+          return '<button onclick="window.RAPPORT_AVANCEMENT.displayReport(\'' + projetId + '\')" style="padding: 10px 15px; background: #B5000A; color: white; border: none; border-radius: 4px; cursor: pointer;">📄 Rapport</button>';
+        }
+      };
+
+      console.log('[UI] Module chargé. Usage: window.UI.createDashboard()');
+    })();
+
+    // ─────────────────────────────────────────────────────────────
+    // [Integration] Connexion avec ePilot existant
+    // ─────────────────────────────────────────────────────────────
+    (function initIntegration() {
+      window.INTEGRATION = {
+        registerWithePilot: function() {
+          if (!window.ePilotModules) window.ePilotModules = {};
+          window.ePilotModules.normalized = {
+            tables: 13,
+            indexes: 19,
+            modules: ['Dashboard', 'Search', 'ReportTypes', 'Export', 'API', 'Validation', 'Events', 'Audit', 'Security', 'Performance', 'UI'],
+            version: '1.0.0'
+          };
+          console.log('[Integration] ePilot modules registered');
+          return window.ePilotModules.normalized;
+        },
+
+        getProjectReport: function(projetId) {
+          return window.RAPPORT_AVANCEMENT.generateForProject(projetId);
+        },
+
+        searchAll: function(query) {
+          return {
+            projects: window.SEARCH.searchProjects(query),
+            people: window.SEARCH.searchPeople(query),
+            vendors: window.SEARCH.searchVendors(query),
+            articles: window.SEARCH.searchArticles(query)
+          };
+        },
+
+        getProjectMetadata: function(projetId) {
+          var projet = (window.PROJETS_INDEX || {})[projetId];
+          if (!projet) return null;
+          var relations = window.EPILOT_API.relations('project', projetId);
+          return {
+            projet: projet,
+            articles: relations.articles,
+            expenses: relations.expenses,
+            documents: relations.documents,
+            org: (window.ORGANISATIONS_INDEX || {})[projet.organisationId],
+            site: (window.SITES_INDEX || {})[projet.siteId]
+          };
+        }
+      };
+
+      // Auto-register on load
+      window.INTEGRATION.registerWithePilot();
+
+      console.log('[Integration] Module chargé. Usage: window.INTEGRATION.registerWithePilot()');
+    })();
+
+    // ─────────────────────────────────────────────────────────────
     // [FixClosedChantier v1] Ouverture des chantiers CLÔTURÉS / TERMINÉS
     // depuis Quote, OA, Comptabilité, etc.
     //
