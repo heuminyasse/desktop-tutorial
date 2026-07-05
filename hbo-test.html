@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Page Switching Test</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #f5f5f5;
+    }
+
+    nav {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      background-color: #333;
+      padding: 15px;
+      display: flex;
+      gap: 10px;
+      z-index: 100;
+    }
+
+    nav button {
+      padding: 10px 20px;
+      background-color: #555;
+      color: white;
+      border: none;
+      cursor: pointer;
+      font-size: 14px;
+    }
+
+    nav button:hover {
+      background-color: #777;
+    }
+
+    .page {
+      display: none;
+      padding: 80px 20px 20px 20px;
+      min-height: 100vh;
+    }
+
+    .page.active {
+      display: block;
+    }
+
+    #page-home {
+      background-color: #e8f4f8;
+    }
+
+    #page-services {
+      background-color: #f0e8f8;
+    }
+
+    #page-products {
+      background-color: #f8f4e8;
+    }
+
+    #page-contact {
+      background-color: #f8e8e8;
+    }
+
+    .page h1 {
+      margin-bottom: 20px;
+      color: #333;
+    }
+
+    .page p {
+      line-height: 1.6;
+      color: #555;
+    }
+  </style>
+</head>
+<body>
+  <nav>
+    <button onclick="showPage('home')">Home</button>
+    <button onclick="showPage('services')">Services</button>
+    <button onclick="showPage('products')">Products</button>
+    <button onclick="showPage('contact')">Contact</button>
+  </nav>
+
+  <div id="page-home" class="page active">
+    <h1>Home Page</h1>
+    <p>This is the home page. Click the navbar buttons to switch between pages.</p>
+  </div>
+
+  <div id="page-services" class="page">
+    <h1>Services Page</h1>
+    <p>This is the services page. Only this page should be visible when you click the Services button.</p>
+  </div>
+
+  <div id="page-products" class="page">
+    <h1>Products Page</h1>
+    <p>This is the products page. Only this page should be visible when you click the Products button.</p>
+  </div>
+
+  <div id="page-contact" class="page">
+    <h1>Contact Page</h1>
+    <p>This is the contact page. Only this page should be visible when you click the Contact button.</p>
+  </div>
+
+  <script>
+    function showPage(id) {
+      // Hide all pages
+      document.querySelectorAll('.page').forEach(function(page) {
+        page.classList.remove('active');
+      });
+      // Show selected page
+      document.getElementById('page-' + id).classList.add('active');
+    }
+  </script>
+</body>
+</html>
