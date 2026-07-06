@@ -1652,6 +1652,53 @@ document.addEventListener('DOMContentLoaded', async function() {
           }, 500);
 
           return true;
+        },
+
+        displayReportWithProject: function(projetId, projetOverride) {
+          var projet = projetOverride || (window.PROJETS_INDEX || {})[projetId];
+          if (!projet) {
+            console.error('[RapportAvancement] Projet non trouvé:', projetId);
+            return false;
+          }
+
+          // Résoudre les FKs avec le projet override
+          var org = (window.ORGANISATIONS_INDEX || {})[projet.organisationId] || {};
+          var site = (window.SITES_INDEX || {})[projet.siteId] || {};
+          var chef = (window.PERSONNES_HR || []).find(function(p) { return p.id === projet.chefChantierPersonneId; }) || {};
+          var demandeur = (window.PERSONNES_CLIENTS || []).find(function(p) { return p.id === projet.demandeurPersonneId; }) || {};
+
+          // Récupérer articles du projet
+          var articlesProjet = (window.ARTICLES_BY_PROJET || {})[projetId] || [];
+
+          // Récupérer dépenses du projet
+          var depensesProjet = (window.DEPENSES_BY_PROJET || {})[projetId] || [];
+
+          // Récupérer OA du projet
+          var oaProjet = (window.OA_DOCUMENTS_BY_PROJET || {})[projetId] || [];
+
+          // Générer le rapport HTML
+          var html = generateReportHTML({
+            projet: projet,
+            org: org,
+            site: site,
+            chef: chef,
+            demandeur: demandeur,
+            articles: articlesProjet,
+            depenses: depensesProjet,
+            oaDocs: oaProjet
+          });
+
+          if (!html) return false;
+
+          var win = window.open('', 'RapportAvancement_' + projetId);
+          if (!win) {
+            console.error('[RapportAvancement] Impossible d\'ouvrir la fenêtre');
+            return false;
+          }
+
+          win.document.write(html);
+          win.document.close();
+          return true;
         }
       };
 
@@ -2482,6 +2529,89 @@ document.addEventListener('DOMContentLoaded', async function() {
     // Branche le générateur de rapport avec les données réelles
     // ─────────────────────────────────────────────────────────────
     (function initRapportUI() {
+      // Formulaire de sélection superviseur + acheteur
+      function showRapportSelectionForm(jipId, projet) {
+        var personnesHR = window.PERSONNES_HR || [];
+        var personnesClients = window.PERSONNES_CLIENTS || [];
+
+        // Valeurs par défaut
+        var superviseurId = projet.chefChantierPersonneId || '';
+        var acheteurId = projet.demandeurPersonneId || '';
+
+        // Créer overlay modal
+        var overlay = document.createElement('div');
+        overlay.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center;z-index:10000';
+
+        var modal = document.createElement('div');
+        modal.style.cssText = 'background:white;border-radius:8px;padding:24px;width:90%;max-width:500px;box-shadow:0 4px 12px rgba(0,0,0,0.2)';
+
+        var title = document.createElement('div');
+        title.style.cssText = 'font-size:18px;font-weight:700;margin-bottom:20px;color:#1a1a1a';
+        title.textContent = 'Sélection: Superviseur & Acheteur';
+        modal.appendChild(title);
+
+        // Superviseur
+        var labelSup = document.createElement('label');
+        labelSup.style.cssText = 'display:block;font-size:13px;font-weight:600;margin-bottom:6px;color:#333';
+        labelSup.textContent = 'Superviseur (Employé HR)';
+        modal.appendChild(labelSup);
+
+        var selectSup = document.createElement('select');
+        selectSup.style.cssText = 'width:100%;padding:8px;margin-bottom:16px;border:1px solid #ddd;border-radius:4px;font-size:13px';
+        selectSup.appendChild(Object.assign(document.createElement('option'), {value: '', textContent: '— Choisir un employé —'}));
+        personnesHR.forEach(function(p) {
+          selectSup.appendChild(Object.assign(document.createElement('option'), {value: p.id, textContent: p.nomComplet}));
+        });
+        selectSup.value = superviseurId;
+        modal.appendChild(selectSup);
+
+        // Acheteur
+        var labelAch = document.createElement('label');
+        labelAch.style.cssText = 'display:block;font-size:13px;font-weight:600;margin-bottom:6px;color:#333';
+        labelAch.textContent = 'Responsable Site (Acheteur)';
+        modal.appendChild(labelAch);
+
+        var selectAch = document.createElement('select');
+        selectAch.style.cssText = 'width:100%;padding:8px;margin-bottom:20px;border:1px solid #ddd;border-radius:4px;font-size:13px';
+        selectAch.appendChild(Object.assign(document.createElement('option'), {value: '', textContent: '— Choisir un acheteur —'}));
+        personnesClients.forEach(function(p) {
+          selectAch.appendChild(Object.assign(document.createElement('option'), {value: p.id, textContent: p.nomComplet}));
+        });
+        selectAch.value = acheteurId;
+        modal.appendChild(selectAch);
+
+        // Boutons
+        var btnContainer = document.createElement('div');
+        btnContainer.style.cssText = 'display:flex;gap:12px;justify-content:flex-end';
+
+        var btnCancel = document.createElement('button');
+        btnCancel.textContent = 'Annuler';
+        btnCancel.style.cssText = 'padding:8px 16px;border:1px solid #ddd;background:#f5f5f5;border-radius:4px;cursor:pointer;font-size:13px';
+        btnCancel.onclick = function() { document.body.removeChild(overlay); };
+
+        var btnGenerate = document.createElement('button');
+        btnGenerate.textContent = 'Générer Rapport';
+        btnGenerate.style.cssText = 'padding:8px 16px;background:#B5000A;color:white;border:none;border-radius:4px;cursor:pointer;font-size:13px;font-weight:600';
+        btnGenerate.onclick = function() {
+          // Override les IDs du projet
+          projet.chefChantierPersonneId = selectSup.value;
+          projet.demandeurPersonneId = selectAch.value;
+
+          // Fermer modal et générer rapport
+          document.body.removeChild(overlay);
+          window.RAPPORT_AVANCEMENT.displayReportWithProject(jipId, projet);
+        };
+
+        btnContainer.appendChild(btnCancel);
+        btnContainer.appendChild(btnGenerate);
+        modal.appendChild(btnContainer);
+
+        overlay.appendChild(modal);
+        document.body.appendChild(overlay);
+
+        return true;
+      }
+
       window.showRapportAvancement = function(jipId) {
         if (!jipId) {
           console.error('[RapportUI] JIP ID manquant');
@@ -2512,8 +2642,8 @@ document.addEventListener('DOMContentLoaded', async function() {
         try {
           // Générer le rapport
           if (projet) {
-            // Cas idéal: données normalisées disponibles
-            return window.RAPPORT_AVANCEMENT.displayReport(jipId);
+            // Afficher formulaire de sélection superviseur + acheteur
+            return showRapportSelectionForm(jipId, projet);
           } else {
             // Cas fallback: utiliser données brutes
             var html = generateLegacyReport(jipId, quote, jip);
