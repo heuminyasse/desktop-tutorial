@@ -2531,6 +2531,8 @@ document.addEventListener('DOMContentLoaded', async function() {
     (function initRapportUI() {
       // Formulaire de sélection superviseur + acheteur
       function showRapportSelectionForm(jipId, projet) {
+        console.log('[showRapportSelectionForm] APPELÉE pour:', jipId);
+
         // Charger les données depuis localStorage si pas en mémoire
         var personnesHR = window.PERSONNES_HR || [];
         var personnesClients = window.PERSONNES_CLIENTS || [];
@@ -2582,12 +2584,14 @@ document.addEventListener('DOMContentLoaded', async function() {
         var superviseurId = projet.chefChantierPersonneId || '';
         var acheteurId = projet.demandeurPersonneId || '';
 
+        console.log('[showRapportSelectionForm] Création overlay...');
+
         // Créer overlay modal
         var overlay = document.createElement('div');
-        overlay.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center;z-index:10000';
+        overlay.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.7);display:flex;align-items:center;justify-content:center;z-index:999999;font-family:Arial,sans-serif';
 
         var modal = document.createElement('div');
-        modal.style.cssText = 'background:white;border-radius:8px;padding:24px;width:90%;max-width:500px;box-shadow:0 4px 12px rgba(0,0,0,0.2)';
+        modal.style.cssText = 'background:white;border-radius:12px;padding:30px;width:95%;max-width:550px;box-shadow:0 10px 40px rgba(0,0,0,0.3);max-height:90vh;overflow-y:auto';
 
         var title = document.createElement('div');
         title.style.cssText = 'font-size:18px;font-weight:700;margin-bottom:20px;color:#1a1a1a';
@@ -2663,6 +2667,8 @@ document.addEventListener('DOMContentLoaded', async function() {
 
         overlay.appendChild(modal);
         document.body.appendChild(overlay);
+
+        console.log('[showRapportSelectionForm] Modal ajouté au DOM avec', personnesHR.length, 'HR et', personnesClients.length, 'acheteurs');
 
         return true;
       }
