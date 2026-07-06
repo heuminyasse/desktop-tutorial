@@ -765,27 +765,37 @@ document.addEventListener('DOMContentLoaded', async function() {
             var imputation = quote.Dossier || quote.Imputation;
 
             // ─ Lookup: Organisation ─
-            var clientNom = jip.Client || jip.societe || quote.Client || '';
+            // Essayer plusieurs noms de champs (Client, Societe, Enterprise, Entreprise, etc.)
+            var clientNom = jip.Client || jip.societe || jip.Entreprise ||
+                           quote.Client || quote.Societe || quote.Entreprise || '';
             var org = findOrgByNom(clientNom);
             var organisationId = org ? org.id : null;
 
             // ─ Lookup: Site ─
-            var siteNom = jip.Unite || quote.Unite || '';
+            // Essayer plusieurs noms de champs (Unite, Site, Chantier, Location, etc.)
+            var siteNom = jip.Unite || jip.Site || jip.Chantier || jip.Lieu ||
+                         quote.Unite || quote.Site || quote.Chantier || '';
             var site = findSiteByNom(siteNom);
             var siteId = site ? site.id : null;
 
             // ─ Lookup: Chef de chantier (PERSONNEL_HR) ─
-            var chefNom = jip.chefChantier || '';
+            // Essayer plusieurs noms de champs (chefChantier, Chef, ChefEquipe, TeamLead, etc.)
+            var chefNom = jip.chefChantier || jip.Chef || jip.ChefEquipe ||
+                         jip.TeamLead || jip.ResponsableSite || jip.NomChef || '';
             var chef = findPersonneByNom(chefNom, 'HR');
             var chefChantierPersonneId = chef ? chef.id : null;
 
             // ─ Lookup: Demandeur/Acheteur (PERSONNES_CLIENTS) ─
-            var acheteurNom = quote.Acheteur || '';
+            // Essayer plusieurs noms de champs (Acheteur, Demandeur, Contact, NomAcheteur, etc.)
+            var acheteurNom = quote.Acheteur || quote.Demandeur || quote.Contact ||
+                             quote.NomAcheteur || quote.NomContact || quote.Buyer || '';
             var demandeur = findPersonneByNom(acheteurNom, 'CLIENT');
             var demandeurPersonneId = demandeur ? demandeur.id : null;
 
             // ─ Lookup: Ingénieur (PERSONNES_HR ou PERSONNES_CLIENTS) ─
-            var ingNom = quote.IngenieurAff || '';
+            // Essayer plusieurs noms de champs
+            var ingNom = quote.IngenieurAff || quote.Ingenieur || quote.Engineer ||
+                        quote.NomIngenieur || quote.Personne || '';
             var ing = findPersonneByNom(ingNom); // Cherche dans les deux domaines
             var ingenieurPersonneId = ing ? ing.id : null;
 
@@ -989,12 +999,12 @@ document.addEventListener('DOMContentLoaded', async function() {
                 articles.push({
                   id: 'ART_' + (++artId),
                   projetId: quote.Dossier,
-                  designation: quote.Description || quote.Libelle || 'Article sans titre',
+                  designation: quote.Description || quote.Libelle || quote.Objet || 'Article sans titre',
                   description: quote.Description || null,
-                  quantite: quote.Quantite || 1,
-                  unite: quote.Unite || quote.Unit || 'U',
-                  prixUnitaire: quote.PrixUnitaire || quote.Price || 0,
-                  montantTotal: (quote.Quantite || 1) * (quote.PrixUnitaire || quote.Price || 0),
+                  quantite: Number(quote.Quantite) || 1,
+                  unite: quote.UniteMesure || quote.Unit || quote.U || 'U',
+                  prixUnitaire: Number(quote.PrixUnitaire) || Number(quote.Price) || 0,
+                  montantTotal: (Number(quote.Quantite) || 1) * (Number(quote.PrixUnitaire) || Number(quote.Price) || 0),
                   fournisseurId: fourId,
                   referenceInterne: quote.Reference || quote.Ref || null,
                   statut: 'FROM_QUOTE',
@@ -1008,12 +1018,12 @@ document.addEventListener('DOMContentLoaded', async function() {
                 articles.push({
                   id: 'ART_' + (++artId),
                   projetId: quote.Dossier,
-                  designation: src.Description || src.Designation || 'Article sans titre',
-                  description: src.Details || null,
-                  quantite: src.Quantite || 1,
-                  unite: src.Unite || 'U',
-                  prixUnitaire: src.PrixUnitaire || src.Price || 0,
-                  montantTotal: (src.Quantite || 1) * (src.PrixUnitaire || src.Price || 0),
+                  designation: src.Description || src.Designation || src.Libelle || 'Article sans titre',
+                  description: src.Details || src.Observations || null,
+                  quantite: Number(src.Quantite) || 1,
+                  unite: src.UniteMesure || src.Unite || src.Unit || 'U',
+                  prixUnitaire: Number(src.PrixUnitaire) || Number(src.Price) || 0,
+                  montantTotal: (Number(src.Quantite) || 1) * (Number(src.PrixUnitaire) || Number(src.Price) || 0),
                   fournisseurId: four ? four.id : null,
                   referenceInterne: src.Reference || src.RefInterne || null,
                   dateDevis: src.DateDevis || null,
