@@ -10232,6 +10232,9 @@ html body[class] #vac-gantt td.emp .nm{font-weight:500 !important;}</style>
     var chef=((window.PERSONNEL_DATA||[])).find(function(p){var f1=_nn((p.prenoms||'')+(p.nom||''));var f2=_nn((p.nom||'')+(p.prenoms||''));var t=_nn(jip.chefChantier||'');return t&&(f1===t||f2===t);})||{};
     var _chefClean=String(jip.chefChantier||'').split('(')[0].trim();
     var chefAcheteur=((_CD.acheteurs||[])).find(function(a){return _nn(a.NomAcheteur)===_nn(_chefClean);})||{};
+    // Chercher aussi dans PERSONNES_HR (données normalisées avec ID)
+    var chefPers=(window.PERSONNES_HR||[]).find(function(p){return _nn(p.nomComplet)===_nn(_chefClean);});
+    var chefId=(chefPers&&chefPers.id)||'';
     var superviseur=jip.chefChantier||chef.nom||chef.prenoms||pv.signataire||(pv.jsa&&pv.jsa.signataire)||nomSoc;
     var chefTel=(chef.telephones&&chef.telephones[0]&&chef.telephones[0].tel)||chef.telephone||chef.tel||chefAcheteur.Telephone||'';
     var chefEmail=chef.email||chefAcheteur.Email||'';
@@ -10507,7 +10510,7 @@ html body[class] #vac-gantt td.emp .nm{font-weight:500 !important;}</style>
       +'</div></td></tr>'
       +'<tr>'
       +'<td class="hdr-super" style="padding-left:0">'
-      +'<div>Employé HR : '+esc(superviseur)+'</div>'
+      +'<div>Employé HR : '+esc(superviseur)+(chefId?' ('+esc(chefId)+')':'')+'</div>'
       +'<div>'
         +(chefTel?'<span>Telephone employe HR : '+esc(chefTel)+'</span>':'<span style="color:#999;">Telephone employe HR : —</span>')
         +(chefEmail?' <span>Email employe HR : '+esc(chefEmail)+'</span>':'<span style="color:#999;"> Email employe HR : —</span>')
