@@ -2531,8 +2531,37 @@ document.addEventListener('DOMContentLoaded', async function() {
     (function initRapportUI() {
       // Formulaire de sélection superviseur + acheteur
       function showRapportSelectionForm(jipId, projet) {
+        // Charger les données depuis localStorage si pas en mémoire
         var personnesHR = window.PERSONNES_HR || [];
         var personnesClients = window.PERSONNES_CLIENTS || [];
+
+        if (personnesHR.length === 0) {
+          try {
+            var hrData = localStorage.getItem('ePilot_PERSONNES_HR');
+            if (hrData) {
+              personnesHR = JSON.parse(hrData);
+              console.log('[RapportForm] Chargé PERSONNES_HR depuis localStorage:', personnesHR.length, 'records');
+            }
+          } catch(e) {
+            console.warn('Impossible de charger PERSONNES_HR depuis localStorage:', e.message);
+          }
+        } else {
+          console.log('[RapportForm] PERSONNES_HR en mémoire:', personnesHR.length, 'records');
+        }
+
+        if (personnesClients.length === 0) {
+          try {
+            var cliData = localStorage.getItem('ePilot_PERSONNES_CLIENTS');
+            if (cliData) {
+              personnesClients = JSON.parse(cliData);
+              console.log('[RapportForm] Chargé PERSONNES_CLIENTS depuis localStorage:', personnesClients.length, 'records');
+            }
+          } catch(e) {
+            console.warn('Impossible de charger PERSONNES_CLIENTS depuis localStorage:', e.message);
+          }
+        } else {
+          console.log('[RapportForm] PERSONNES_CLIENTS en mémoire:', personnesClients.length, 'records');
+        }
 
         // Valeurs par défaut
         var superviseurId = projet.chefChantierPersonneId || '';
@@ -2549,6 +2578,17 @@ document.addEventListener('DOMContentLoaded', async function() {
         title.style.cssText = 'font-size:18px;font-weight:700;margin-bottom:20px;color:#1a1a1a';
         title.textContent = 'Sélection: Superviseur & Acheteur';
         modal.appendChild(title);
+
+        // Message si pas de données
+        if (personnesHR.length === 0 || personnesClients.length === 0) {
+          var msgError = document.createElement('div');
+          msgError.style.cssText = 'background:#fff3cd;border:1px solid #ffc107;padding:12px;border-radius:4px;margin-bottom:16px;color:#856404;font-size:13px';
+          msgError.innerHTML = '<strong>⚠️ Données manquantes:</strong><br>' +
+            (personnesHR.length === 0 ? '- Employés HR non trouvés<br>' : '') +
+            (personnesClients.length === 0 ? '- Acheteurs non trouvés<br>' : '') +
+            'Vérifiez que les données sont chargées.';
+          modal.appendChild(msgError);
+        }
 
         // Superviseur
         var labelSup = document.createElement('label');
