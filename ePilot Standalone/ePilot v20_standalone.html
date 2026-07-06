@@ -367,6 +367,21 @@ document.addEventListener('DOMContentLoaded', async function() {
     (function createSeparatePersonnes() {
       setTimeout(function() {
         try {
+          // ─ Mapping d'alias pour organisations (utilisé dans toute cette phase) ─
+          var orgAliasMap = {
+            'Boissons du Cameroun': 'ORG_BOISSON_SABC',
+            'BOISSONS DU CAMEROUN': 'ORG_BOISSON_SABC',
+            'boissons du cameroun': 'ORG_BOISSON_SABC'
+          };
+
+          function resolveOrgIdLocal(entreprise) {
+            if (orgAliasMap[entreprise]) return orgAliasMap[entreprise];
+            return 'ORG_' + String(entreprise || 'UNKNOWN')
+              .substring(0, 20)
+              .replace(/[^a-z0-9]/gi, '')
+              .toUpperCase();
+          }
+
           // ─ Définir ROLES (séparé par domaine) ─
           window.ROLES_HR = [
             {id: 'ROLE_HR_001', code: 'CHEF_CHANTIER', nom: 'Chef de Chantier', domaine: 'HR'},
@@ -427,10 +442,7 @@ document.addEventListener('DOMContentLoaded', async function() {
               departement: a.Departement || '',
               unite: a.Unite || '',
               unitNormalise: a.unitNormalise || '',
-              organisationId: 'ORG_' + String(a.Entreprise || 'UNKNOWN')
-                .substring(0, 20)
-                .replace(/[^a-z0-9]/gi, '')
-                .toUpperCase(),
+              organisationId: resolveOrgIdLocal(a.Entreprise),
               siteId: a.Unite ? 'SITE_' + String(a.Unite || '')
                 .substring(0, 20)
                 .replace(/[^a-z0-9]/gi, '')
@@ -528,6 +540,21 @@ document.addEventListener('DOMContentLoaded', async function() {
     (function createOrganisationsSites() {
       setTimeout(function() {
         try {
+          // ─ Mapping d'alias pour organisations ─
+          var orgAliasMap = {
+            'Boissons du Cameroun': 'ORG_BOISSON_SABC',
+            'BOISSONS DU CAMEROUN': 'ORG_BOISSON_SABC',
+            'boissons du cameroun': 'ORG_BOISSON_SABC'
+          };
+
+          function resolveOrgId(entreprise) {
+            if (orgAliasMap[entreprise]) return orgAliasMap[entreprise];
+            return 'ORG_' + String(entreprise || 'UNKNOWN')
+              .substring(0, 20)
+              .replace(/[^a-z0-9]/gi, '')
+              .toUpperCase();
+          }
+
           // ─ Extraire ORGANISATIONS uniques ─
           var orgsMap = {};
 
@@ -549,19 +576,40 @@ document.addEventListener('DOMContentLoaded', async function() {
             createdAt: new Date().toISOString()
           };
 
-          // 2. Extraire organisations clients depuis CLIENTS_DATA.acheteurs
+          // 2. Ajouter organisation SOCIETE ANONYME DES BOISSONS DU CAMEROUN (avant d'extraire depuis acheteurs)
+          orgsMap['ORG_BOISSON_SABC'] = {
+            id: 'ORG_BOISSON_SABC',
+            type: 'CLIENT',
+            nom: 'SOCIETE ANONYME DES BOISSONS DU CAMEROUN',
+            nomCourt: 'SABC',
+            codeClient: 'SABC2020007',
+            niu: null,
+            rccm: null,
+            email: '',
+            telephone: '',
+            adresse: '',
+            ville: 'Douala',
+            pays: 'Cameroun',
+            actif: true,
+            createdAt: new Date().toISOString()
+          };
+
+          // 3. Extraire organisations clients depuis CLIENTS_DATA.acheteurs (avec mapping d'alias)
           (window.CLIENTS_DATA && window.CLIENTS_DATA.acheteurs || []).forEach(function(a) {
-            var orgId = 'ORG_' + String(a.Entreprise || 'UNKNOWN')
-              .substring(0, 20)
-              .replace(/[^a-z0-9]/gi, '')
-              .toUpperCase();
+            var orgId = resolveOrgId(a.Entreprise);
 
             if (!orgsMap[orgId]) {
+              // Si c'est un alias, utiliser le nom officiel
+              var nomOfficiel = a.Entreprise;
+              if (orgId === 'ORG_BOISSON_SABC') {
+                nomOfficiel = 'SOCIETE ANONYME DES BOISSONS DU CAMEROUN';
+              }
+
               orgsMap[orgId] = {
                 id: orgId,
                 type: 'CLIENT',
-                nom: a.Entreprise || 'Unknown',
-                nomCourt: (a.Entreprise || 'UNK').substring(0, 4),
+                nom: nomOfficiel,
+                nomCourt: (nomOfficiel || 'UNK').substring(0, 4),
                 codeClient: null,
                 niu: null,
                 rccm: null,
@@ -575,24 +623,6 @@ document.addEventListener('DOMContentLoaded', async function() {
               };
             }
           });
-
-          // 3. Ajouter organisation Boissons du Cameroun (override pour PI25190)
-          orgsMap['ORG_BOISSON_SABC'] = {
-            id: 'ORG_BOISSON_SABC',
-            type: 'CLIENT',
-            nom: 'Boissons du Cameroun',
-            nomCourt: 'SABC',
-            codeClient: 'SABC2020007',
-            niu: null,
-            rccm: null,
-            email: '',
-            telephone: '',
-            adresse: '',
-            ville: 'Douala',
-            pays: 'Cameroun',
-            actif: true,
-            createdAt: new Date().toISOString()
-          };
 
           var organisations = Object.values(orgsMap);
           window.ORGANISATIONS = organisations;
@@ -609,10 +639,7 @@ document.addEventListener('DOMContentLoaded', async function() {
               .replace(/[^a-z0-9]/gi, '')
               .toUpperCase();
 
-            var orgId = 'ORG_' + String(a.Entreprise || 'UNKNOWN')
-              .substring(0, 20)
-              .replace(/[^a-z0-9]/gi, '')
-              .toUpperCase();
+            var orgId = resolveOrgId(a.Entreprise);
 
             if (!sitesMap[siteId]) {
               sitesMap[siteId] = {
