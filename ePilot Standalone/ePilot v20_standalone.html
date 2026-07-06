@@ -2535,15 +2535,26 @@ document.addEventListener('DOMContentLoaded', async function() {
         var personnesHR = window.PERSONNES_HR || [];
         var personnesClients = window.PERSONNES_CLIENTS || [];
 
+        console.log('[RapportForm] Début chargement données', {
+          hrMemory: personnesHR.length,
+          cliMemory: personnesClients.length,
+          PERSONNEL_DATA: (window.PERSONNEL_DATA || []).length,
+          CLIENTS_DATA_acheteurs: ((window.CLIENTS_DATA || {}).acheteurs || []).length
+        });
+
         if (personnesHR.length === 0) {
           try {
             var hrData = localStorage.getItem('ePilot_PERSONNES_HR');
             if (hrData) {
               personnesHR = JSON.parse(hrData);
               console.log('[RapportForm] Chargé PERSONNES_HR depuis localStorage:', personnesHR.length, 'records');
+            } else {
+              // Fallback: créer depuis PERSONNEL_DATA
+              personnesHR = window.PERSONNEL_DATA || [];
+              console.log('[RapportForm] Fallback: PERSONNES_HR de PERSONNEL_DATA:', personnesHR.length, 'records');
             }
           } catch(e) {
-            console.warn('Impossible de charger PERSONNES_HR depuis localStorage:', e.message);
+            console.warn('Impossible de charger PERSONNES_HR:', e.message);
           }
         } else {
           console.log('[RapportForm] PERSONNES_HR en mémoire:', personnesHR.length, 'records');
@@ -2555,9 +2566,13 @@ document.addEventListener('DOMContentLoaded', async function() {
             if (cliData) {
               personnesClients = JSON.parse(cliData);
               console.log('[RapportForm] Chargé PERSONNES_CLIENTS depuis localStorage:', personnesClients.length, 'records');
+            } else {
+              // Fallback: créer depuis CLIENTS_DATA.acheteurs
+              personnesClients = (window.CLIENTS_DATA || {}).acheteurs || [];
+              console.log('[RapportForm] Fallback: PERSONNES_CLIENTS de CLIENTS_DATA:', personnesClients.length, 'records');
             }
           } catch(e) {
-            console.warn('Impossible de charger PERSONNES_CLIENTS depuis localStorage:', e.message);
+            console.warn('Impossible de charger PERSONNES_CLIENTS:', e.message);
           }
         } else {
           console.log('[RapportForm] PERSONNES_CLIENTS en mémoire:', personnesClients.length, 'records');
