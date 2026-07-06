@@ -10501,16 +10501,16 @@ html body[class] #vac-gantt td.emp .nm{font-weight:500 !important;}</style>
       +'<div class="hdr-cinfo">'
       +(clientContact?'<div><b>Acheteur :</b> '+esc(clientContact)+'</div>':'')
       +'<div class="hdr-inline">'
-        +(demandeurTel?'<span>Tel : '+esc(demandeurTel)+'</span>':'<span style="color:#999;">Tel : —</span>')
-        +(demandeurEmail?'<span>Email : '+esc(demandeurEmail)+'</span>':'<span style="color:#999;">Email : —</span>')
+        +(demandeurTel?'<span>Telephone acheteur : '+esc(demandeurTel)+'</span>':'<span style="color:#999;">Telephone acheteur : —</span>')
+        +(demandeurEmail?'<span>Email acheteur : '+esc(demandeurEmail)+'</span>':'<span style="color:#999;">Email acheteur : —</span>')
       +'</div>'
       +'</div></td></tr>'
       +'<tr>'
       +'<td class="hdr-super" style="padding-left:0">'
-      +'<div>Employé : '+esc(superviseur)+'</div>'
+      +'<div>Employé HR : '+esc(superviseur)+'</div>'
       +'<div>'
-        +(chefTel?'<span>Tél: '+esc(chefTel)+'</span>':'<span style="color:#999;">Tél: —</span>')
-        +(chefEmail?' <span>Email: '+esc(chefEmail)+'</span>':'<span style="color:#999;"> Email: —</span>')
+        +(chefTel?'<span>Telephone employe HR : '+esc(chefTel)+'</span>':'<span style="color:#999;">Telephone employe HR : —</span>')
+        +(chefEmail?' <span>Email employe HR : '+esc(chefEmail)+'</span>':'<span style="color:#999;"> Email employe HR : —</span>')
       +'</div>'
       +'</td>'
       +'<td style="vertical-align:middle">'
