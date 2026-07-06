@@ -576,6 +576,24 @@ document.addEventListener('DOMContentLoaded', async function() {
             }
           });
 
+          // 3. Ajouter organisation SOCIETE ANONYME DES BOISSONS DU CAMEROUN (override pour PI25190)
+          orgsMap['ORG_BOISSON_SABC'] = {
+            id: 'ORG_BOISSON_SABC',
+            type: 'CLIENT',
+            nom: 'SOCIETE ANONYME DES BOISSONS DU CAMEROUN',
+            nomCourt: 'SABC',
+            codeClient: 'SABC2020007',
+            niu: null,
+            rccm: null,
+            email: '',
+            telephone: '',
+            adresse: '',
+            ville: 'Douala',
+            pays: 'Cameroun',
+            actif: true,
+            createdAt: new Date().toISOString()
+          };
+
           var organisations = Object.values(orgsMap);
           window.ORGANISATIONS = organisations;
 
@@ -865,6 +883,26 @@ document.addEventListener('DOMContentLoaded', async function() {
           projets.forEach(function(p) {
             window.PROJETS_INDEX[p.id] = p;
             if (p.oaNum) window.PROJETS_INDEX[p.oaNum] = p;
+          });
+
+          // ─ MAPPINGS SPÉCIFIQUES: Corriger les libellés bruts avec les vrais IDs ─
+          // PI25190: SOCIETE ANONYME DES BOISSONS DU CAMEROUN, Rosine Kati, Chef HBO
+          var mappings = [
+            {
+              projetId: 'PI25190',
+              organisationId: 'ORG_BOISSON_SABC',
+              demandeurPersonneId: 'PRS_CLI_082',
+              chefChantierPersonneId: 'PRS_HR_000'
+            }
+          ];
+
+          mappings.forEach(function(mapping) {
+            var projet = window.PROJETS_INDEX[mapping.projetId];
+            if (projet) {
+              if (mapping.organisationId) projet.organisationId = mapping.organisationId;
+              if (mapping.demandeurPersonneId) projet.demandeurPersonneId = mapping.demandeurPersonneId;
+              if (mapping.chefChantierPersonneId) projet.chefChantierPersonneId = mapping.chefChantierPersonneId;
+            }
           });
 
           // ─ Statistiques sur les FKs ─
