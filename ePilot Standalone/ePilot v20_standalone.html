@@ -2531,144 +2531,77 @@ document.addEventListener('DOMContentLoaded', async function() {
     (function initRapportUI() {
       // Formulaire de sélection superviseur + acheteur
       function showRapportSelectionForm(jipId, projet) {
-        console.log('[showRapportSelectionForm] APPELÉE pour:', jipId);
+        var personnesHR = window.PERSONNES_HR || window.PERSONNEL_DATA || [];
+        var personnesClients = window.PERSONNES_CLIENTS || ((window.CLIENTS_DATA || {}).acheteurs || []);
 
-        // Charger les données depuis localStorage si pas en mémoire
-        var personnesHR = window.PERSONNES_HR || [];
-        var personnesClients = window.PERSONNES_CLIENTS || [];
-
-        console.log('[RapportForm] Début chargement données', {
-          hrMemory: personnesHR.length,
-          cliMemory: personnesClients.length,
-          PERSONNEL_DATA: (window.PERSONNEL_DATA || []).length,
-          CLIENTS_DATA_acheteurs: ((window.CLIENTS_DATA || {}).acheteurs || []).length
-        });
-
-        if (personnesHR.length === 0) {
-          try {
-            var hrData = localStorage.getItem('ePilot_PERSONNES_HR');
-            if (hrData) {
-              personnesHR = JSON.parse(hrData);
-              console.log('[RapportForm] Chargé PERSONNES_HR depuis localStorage:', personnesHR.length, 'records');
-            } else {
-              // Fallback: créer depuis PERSONNEL_DATA
-              personnesHR = window.PERSONNEL_DATA || [];
-              console.log('[RapportForm] Fallback: PERSONNES_HR de PERSONNEL_DATA:', personnesHR.length, 'records');
-            }
-          } catch(e) {
-            console.warn('Impossible de charger PERSONNES_HR:', e.message);
-          }
-        } else {
-          console.log('[RapportForm] PERSONNES_HR en mémoire:', personnesHR.length, 'records');
-        }
-
-        if (personnesClients.length === 0) {
-          try {
-            var cliData = localStorage.getItem('ePilot_PERSONNES_CLIENTS');
-            if (cliData) {
-              personnesClients = JSON.parse(cliData);
-              console.log('[RapportForm] Chargé PERSONNES_CLIENTS depuis localStorage:', personnesClients.length, 'records');
-            } else {
-              // Fallback: créer depuis CLIENTS_DATA.acheteurs
-              personnesClients = (window.CLIENTS_DATA || {}).acheteurs || [];
-              console.log('[RapportForm] Fallback: PERSONNES_CLIENTS de CLIENTS_DATA:', personnesClients.length, 'records');
-            }
-          } catch(e) {
-            console.warn('Impossible de charger PERSONNES_CLIENTS:', e.message);
-          }
-        } else {
-          console.log('[RapportForm] PERSONNES_CLIENTS en mémoire:', personnesClients.length, 'records');
-        }
-
-        // Valeurs par défaut
         var superviseurId = projet.chefChantierPersonneId || '';
         var acheteurId = projet.demandeurPersonneId || '';
 
-        console.log('[showRapportSelectionForm] Création overlay...');
-
-        // Créer overlay modal
         var overlay = document.createElement('div');
-        overlay.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.7);display:flex;align-items:center;justify-content:center;z-index:999999;font-family:Arial,sans-serif';
+        overlay.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.6);display:flex;align-items:center;justify-content:center;z-index:999999';
 
         var modal = document.createElement('div');
-        modal.style.cssText = 'background:white;border-radius:12px;padding:30px;width:95%;max-width:550px;box-shadow:0 10px 40px rgba(0,0,0,0.3);max-height:90vh;overflow-y:auto';
+        modal.style.cssText = 'background:white;border-radius:10px;padding:25px;width:95%;max-width:480px;box-shadow:0 10px 30px rgba(0,0,0,0.3)';
 
-        var title = document.createElement('div');
-        title.style.cssText = 'font-size:18px;font-weight:700;margin-bottom:20px;color:#1a1a1a';
-        title.textContent = 'Sélection: Superviseur & Acheteur';
+        var title = document.createElement('h3');
+        title.style.cssText = 'margin:0 0 20px 0;color:#333;font-size:16px;font-weight:600';
+        title.textContent = 'Sélectionner Superviseur & Acheteur';
         modal.appendChild(title);
 
-        // Message si pas de données
-        if (personnesHR.length === 0 || personnesClients.length === 0) {
-          var msgError = document.createElement('div');
-          msgError.style.cssText = 'background:#fff3cd;border:1px solid #ffc107;padding:12px;border-radius:4px;margin-bottom:16px;color:#856404;font-size:13px';
-          msgError.innerHTML = '<strong>⚠️ Données manquantes:</strong><br>' +
-            (personnesHR.length === 0 ? '- Employés HR non trouvés<br>' : '') +
-            (personnesClients.length === 0 ? '- Acheteurs non trouvés<br>' : '') +
-            'Vérifiez que les données sont chargées.';
-          modal.appendChild(msgError);
-        }
-
-        // Superviseur
         var labelSup = document.createElement('label');
-        labelSup.style.cssText = 'display:block;font-size:13px;font-weight:600;margin-bottom:6px;color:#333';
-        labelSup.textContent = 'Superviseur (Employé HR)';
+        labelSup.style.cssText = 'display:block;font-weight:600;margin-bottom:5px;color:#333;font-size:13px';
+        labelSup.textContent = 'Employé HBO';
         modal.appendChild(labelSup);
 
         var selectSup = document.createElement('select');
-        selectSup.style.cssText = 'width:100%;padding:8px;margin-bottom:16px;border:1px solid #ddd;border-radius:4px;font-size:13px';
-        selectSup.appendChild(Object.assign(document.createElement('option'), {value: '', textContent: '— Choisir un employé —'}));
+        selectSup.style.cssText = 'width:100%;padding:10px;margin-bottom:15px;border:1px solid #ccc;border-radius:4px;font-size:13px';
+        selectSup.appendChild(Object.assign(document.createElement('option'), {value: '', textContent: '-- Choisir --'}));
         personnesHR.forEach(function(p) {
-          selectSup.appendChild(Object.assign(document.createElement('option'), {value: p.id, textContent: p.nomComplet}));
+          var txt = p.nomComplet || ((p.prenoms || '') + ' ' + (p.nom || '')).trim() || p.NomAcheteur || '';
+          if (txt) selectSup.appendChild(Object.assign(document.createElement('option'), {value: p.id, textContent: txt}));
         });
         selectSup.value = superviseurId;
         modal.appendChild(selectSup);
 
-        // Acheteur
         var labelAch = document.createElement('label');
-        labelAch.style.cssText = 'display:block;font-size:13px;font-weight:600;margin-bottom:6px;color:#333';
-        labelAch.textContent = 'Responsable Site (Acheteur)';
+        labelAch.style.cssText = 'display:block;font-weight:600;margin-bottom:5px;color:#333;font-size:13px';
+        labelAch.textContent = 'Acheteur Client';
         modal.appendChild(labelAch);
 
         var selectAch = document.createElement('select');
-        selectAch.style.cssText = 'width:100%;padding:8px;margin-bottom:20px;border:1px solid #ddd;border-radius:4px;font-size:13px';
-        selectAch.appendChild(Object.assign(document.createElement('option'), {value: '', textContent: '— Choisir un acheteur —'}));
+        selectAch.style.cssText = 'width:100%;padding:10px;margin-bottom:20px;border:1px solid #ccc;border-radius:4px;font-size:13px';
+        selectAch.appendChild(Object.assign(document.createElement('option'), {value: '', textContent: '-- Choisir --'}));
         personnesClients.forEach(function(p) {
-          selectAch.appendChild(Object.assign(document.createElement('option'), {value: p.id, textContent: p.nomComplet}));
+          var txt = p.nomComplet || p.NomAcheteur || '';
+          if (txt) selectAch.appendChild(Object.assign(document.createElement('option'), {value: p.id, textContent: txt}));
         });
         selectAch.value = acheteurId;
         modal.appendChild(selectAch);
 
-        // Boutons
-        var btnContainer = document.createElement('div');
-        btnContainer.style.cssText = 'display:flex;gap:12px;justify-content:flex-end';
+        var btnDiv = document.createElement('div');
+        btnDiv.style.cssText = 'display:flex;gap:10px;justify-content:flex-end';
 
-        var btnCancel = document.createElement('button');
-        btnCancel.textContent = 'Annuler';
-        btnCancel.style.cssText = 'padding:8px 16px;border:1px solid #ddd;background:#f5f5f5;border-radius:4px;cursor:pointer;font-size:13px';
-        btnCancel.onclick = function() { document.body.removeChild(overlay); };
+        var btnNo = document.createElement('button');
+        btnNo.textContent = 'Annuler';
+        btnNo.style.cssText = 'padding:10px 20px;background:#f0f0f0;border:1px solid #ccc;border-radius:4px;cursor:pointer;font-size:13px';
+        btnNo.onclick = function() { overlay.remove(); };
 
-        var btnGenerate = document.createElement('button');
-        btnGenerate.textContent = 'Générer Rapport';
-        btnGenerate.style.cssText = 'padding:8px 16px;background:#B5000A;color:white;border:none;border-radius:4px;cursor:pointer;font-size:13px;font-weight:600';
-        btnGenerate.onclick = function() {
-          // Override les IDs du projet
+        var btnYes = document.createElement('button');
+        btnYes.textContent = 'Générer';
+        btnYes.style.cssText = 'padding:10px 20px;background:#B5000A;color:white;border:none;border-radius:4px;cursor:pointer;font-size:13px;font-weight:600';
+        btnYes.onclick = function() {
           projet.chefChantierPersonneId = selectSup.value;
           projet.demandeurPersonneId = selectAch.value;
-
-          // Fermer modal et générer rapport
-          document.body.removeChild(overlay);
+          overlay.remove();
           window.RAPPORT_AVANCEMENT.displayReportWithProject(jipId, projet);
         };
 
-        btnContainer.appendChild(btnCancel);
-        btnContainer.appendChild(btnGenerate);
-        modal.appendChild(btnContainer);
+        btnDiv.appendChild(btnNo);
+        btnDiv.appendChild(btnYes);
+        modal.appendChild(btnDiv);
 
         overlay.appendChild(modal);
         document.body.appendChild(overlay);
-
-        console.log('[showRapportSelectionForm] Modal ajouté au DOM avec', personnesHR.length, 'HR et', personnesClients.length, 'acheteurs');
 
         return true;
       }
