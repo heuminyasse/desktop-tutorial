@@ -1416,6 +1416,140 @@ document.addEventListener('DOMContentLoaded', async function() {
     })();
 
     // ─────────────────────────────────────────────────────────────
+    // [PhaseUPDATE-ACHETEURS] Mettre à jour email et téléphone des acheteurs
+    // ─────────────────────────────────────────────────────────────
+    (function updateAcheteursContact() {
+      setTimeout(function() {
+        try {
+          console.log('[PhaseUPDATE-ACHETEURS] Début mise à jour...');
+
+          // Données des acheteurs avec email et téléphone
+          var acheteursData = [
+            {nom: 'Alain Serge NOUNY NGASSAM', tel: '00237 698961877', email: 'ngassam.nouny@castel-afrique.com'},
+            {nom: 'Anicet GHISLAIN FOKA', tel: '699 71 04 89', email: 'anicet.foka@castel-afrique.com'},
+            {nom: 'Annette Nicole OBOM', tel: '223 33 51 218', email: 'annette.obom@castel-afrique.com'},
+            {nom: 'Arielle Mbondja', tel: '690 95 84 34', email: 'ambondja@scdp.cm'},
+            {nom: 'Aurelien KWANDA', tel: '690 44 29 63', email: 'aurelien.kouanda@castel-afrique.com'},
+            {nom: 'NGENDEME Hervige', tel: '656 350 895', email: 'hervige.ngendeme@dixstone.com'},
+            {nom: 'Sarah EDOUL', tel: '691 102 637', email: 'louise.edoul@dixstone.com'},
+            {nom: 'Roger Ndoping', tel: '690 33 10 84', email: 'rogerndoping@yahoo.com'},
+            {nom: 'Benjamin N. Eteh', tel: '00237 650000039', email: 'Benjamin.Eteh@DANGOTE.COM'},
+            {nom: 'Bernadette NGASSOM', tel: '699 81 88 54', email: 'bernadette.ngassom@castel-afrique.com'},
+            {nom: 'Alex Noubissi', tel: 'xxx xx xx xx', email: 'alexnoubissi222@gmail.com'},
+            {nom: 'Berthe Dibao', tel: '683 71 42 63', email: 'bdibao@scdp.cm'},
+            {nom: 'Boris Armel NGAHA TCHAHO', tel: '00237 693619804', email: 'boris.ngaha@castel-afrique.com'},
+            {nom: 'Saurelle Metiegoum', tel: '675 98 03 70', email: 'Saurelle.Metiegoum@DANGOTE.COM'},
+            {nom: 'Cecile TCHUIENCHE', tel: '699 67 75 72', email: 'cecile.tchuienche@castel afrique.com'},
+            {nom: 'Cedric NGAKAM', tel: '698 95 72 40', email: 'cedric.ngakam@castel afrique.com'},
+            {nom: 'Ekassi Etogo', tel: '690 15 99 52', email: 'guy.ekassi@pak.cm'},
+            {nom: 'Christel TCHATO', tel: '690 04 67 61', email: 'christel.tchato@castel-afrique.com'},
+            {nom: 'Eithel Chuyeh', tel: '6 55 31 76 63', email: 'eithel.chuyeh@coca-cola-gracedom.com'},
+            {nom: 'Dieudonné Nyimi', tel: '650 21 05 69', email: 'dnyimi@scdp.cm'},
+            {nom: 'Francois OUNKAP', tel: '679 50 15 05', email: 'founkap@scdp.cm'},
+            {nom: 'Giselle ETEM', tel: '677 09 80 94', email: 'gisele.etem@tradexsa.com'},
+            {nom: 'Hassan FOUAPON KOUOTOU', tel: '693 59 06 86', email: 'hassan.fouapon@castel-afrique.com'},
+            {nom: 'Irene Audrey KUISSEU', tel: '698 23 62 33', email: 'kuisseuirene@gmail.com'},
+            {nom: 'Iris Michael DKOUAM', tel: '698 80 55 28', email: 'iris.dkouam@castel afrique.com'},
+            {nom: 'Irene Pokam', tel: '6 79 22 15 40', email: 'ipokam@groupebocom.com'},
+            {nom: 'Victor William MPONDO', tel: '697 45 90 76', email: 'victor.mouyeme@castel-afrique.com'},
+            {nom: 'Joseph DJIEUBOU', tel: '696 15 69 56', email: 'joseph.djieubou@castel-afrique.com'},
+            {nom: 'Martine KACTHE BIDEG', tel: '699 30 04 09', email: 'martine.kacthe@castel-afrique.com'},
+            {nom: 'Luc Degaul NGOUBEYOU', tel: '233500000   Ext : 10113', email: 'luc.ngoubeyou@castel-afrique.com'},
+            {nom: 'Rommel CHEUGOUA', tel: '695 16 89 80', email: 'rommel.cheugoua@castel-afrique.com'},
+            {nom: 'Voltaire TCHOTCHOU', tel: '699 69 55 46', email: 'voltaire.tchotchou@castel-afrique.com'},
+            {nom: 'Michel KAMGA DZETCHU', tel: '696 97 33 33', email: 'michel.kamga@castel-afrique.com'},
+            {nom: 'Michel KENMOE', tel: '695 29 61 11', email: 'michel.kenmoe@castel-afrique.com'},
+            {nom: 'Morgan Eyambe', tel: '6 50 89 19 88', email: 'morgan.eyambe@tradexsa.com'},
+            {nom: 'Philemon SANDJONG TCHAZOU', tel: '694 45 34 11', email: 'philemon.sandjong@castel-afrique.com'},
+            {nom: 'Hassan Adamou', tel: '699 84 37 28', email: 'hassan.adamou@castel-afrique.com'},
+            {nom: 'Raoul Djampou', tel: '693 67 55 31', email: 'Djampou@yahoo.com'},
+            {nom: 'Roland Takam', tel: '6 91 52 68 41', email: 'rtakam@bnb-investment.com'},
+            {nom: 'Atangana Francois', tel: '699 93 24 08', email: 'francois.atangana@castel-afrique.com'},
+            {nom: 'Romel FOPA', tel: '699 95 55 87', email: 'rommel.fopa@castel-afrique.com'},
+            {nom: 'Serge Alain Nouny Ngassam', tel: '698 96 18 77', email: 'ngassam.nouny@castel-afrique.com'},
+            {nom: 'Rosine Kati', tel: '677 48 23 51', email: 'rosine.kati@castel-afrique.com'},
+            {nom: 'Marie-line Ntyame', tel: '233 40 27 79', email: 'mlntyame@scdp.cm'},
+            {nom: 'Joseph Nong', tel: '691 77 88 13', email: 'jnong@scdp.cm'},
+            {nom: 'Stheve NGAPE LONTE', tel: '696 55 73 86', email: 'stheve.ngape@castel-afrique.com'},
+            {nom: 'Emmanuel Biyong', tel: '693 10 92 58', email: 'ebiyong@socapalm.org'},
+            {nom: 'Anne Chantal Ngo Ngidjol', tel: '699 11 58 31', email: 'ango@socapalm.org'},
+            {nom: 'Patrick RANDRIAMISATA', tel: '698 97 39 01', email: 'prandriamisata@socapalm.org'},
+            {nom: 'Basile DONNANG DONGMO', tel: '', email: 'basile.donnang@castel afrique.com'},
+            {nom: 'Clement Tchientcheu', tel: '699 47 40 80', email: 'clement.tientcheu@castel afrique.com'},
+            {nom: 'Adolphe Missammhe', tel: '698 61 45 43', email: 'amissammhe@socapalm.org'},
+            {nom: 'Fikoue Aime Hamo', tel: '698 24 43 57', email: 'patrick.hamo@castel-afrique.com'},
+            {nom: 'Pie Owona', tel: '699 67 53 98', email: 'powona@scdp.cm'},
+            {nom: 'Thierry Ekendjoum', tel: '697 24 34 31', email: 'thierry.ekendjoum@castel afrique.com'},
+            {nom: 'Valdyce Mbogoum', tel: '691 10 78 50', email: 'vmbogoum@groupebocom.com'},
+            {nom: 'Adriane Flora DJUIKOM', tel: '233 40 33 33', email: 'adriane.djuikom@castel afrique.com'},
+            {nom: 'Leo SIKATI', tel: '640 65 66 63', email: 'info@neoindustrysa.com'},
+            {nom: 'Jules Bakak', tel: '698 45 81 49', email: 'jules_bakak@barry-callebaut.com'},
+            {nom: 'Bernard Eding Ndenga', tel: '696 60 22 84', email: 'bernard_eding@barry-callebaut.com'},
+            {nom: 'Christian E. Nitcheu', tel: '650 00 85 82', email: 'Christian.Nitcheu@DANGOTE.COM'},
+            {nom: 'Germain Olivier PONDI', tel: '693 58 64 32', email: 'germain.pondi@castel-afrique.com'},
+            {nom: 'Fidel Kenzam', tel: '657 41 44 20', email: 'fdongmo@socapalm.org'},
+            {nom: 'Sylvain LONCHELE', tel: '695 34 41 14', email: 'silvain.lonchele@castel-afrique.com'},
+            {nom: 'Benjamin BAYANG', tel: '693 45 23 90', email: 'benjamin.bayang@castel afrique.com'},
+            {nom: 'Marie Solange ABANS', tel: '', email: 'marie.abans@castel-afrique.com'},
+            {nom: 'Carelle BELLA ETEME', tel: '', email: 'carelle.bella@castel-afrique.com'},
+            {nom: 'Antoine Desire Delvis KEUMELIEU', tel: '699 03 02 27', email: 'antoine.keumelieu@castel-afrique.com'},
+            {nom: 'Romuald Mengue', tel: '690 46 96 21', email: 'romuald-valdese.menguealima@vinci-energies.com'},
+            {nom: 'Yves Merlin AJOUMESSI', tel: '', email: 'yves.ajoumessi@castel-afrique.com'},
+            {nom: 'Hassan ATWI', tel: '695 92 92 92', email: 'atwi@soticam.com'},
+            {nom: 'Joseph KEMMOE', tel: '653446675', email: 'joseph.kemmoe@neoindustrysa.com'},
+            {nom: 'Kimmie Hassiatou SCDP', tel: '651 99 87 98', email: 'hsaidou@scdp.cm'},
+            {nom: 'Carine MANFOUO NGNINTEDEM', tel: '', email: 'carine.manfouo@castel‑afrique.com'},
+            {nom: 'Arnaud Valentin DZOGNE', tel: '699 630 524', email: 'ADzogne@slb.com'},
+            {nom: 'Thierry DIFFO', tel: '679 33 10 19', email: 'Thierry.DIFFO@cimentsafrique.com'},
+            {nom: 'Anne Chantal Ngo Ngidjol', tel: '699 11 58 31', email: 'a.ngo@opalm-cm.com'},
+            {nom: 'Cyrille.Njoko', tel: '233 43 57 00 Ext 5000', email: 'Cyrille.Njoko@cm.addaxpetroleum.com'},
+            {nom: 'John Patrick OTTOU II', tel: '691 33 37 59', email: 'john.ottou@castel-afrique.com'},
+            {nom: 'Philippe Marie De GAYFFIER', tel: '696 59 79 66', email: ''},
+            {nom: 'Bakoura Moussa', tel: '699 93 74 08', email: 'mbakoura17@gmail.com'},
+            {nom: 'Beas Chrispo Michel', tel: '679 90 54 17', email: 'michel.b@olamagri.com'}
+          ];
+
+          // Normaliser pour match
+          function normalize(s) {
+            return String(s || '').normalize('NFD')
+              .replace(/[̀-ͯ]/g, '')
+              .toLowerCase()
+              .replace(/[^a-z0-9]/g, ' ')
+              .replace(/\s+/g, ' ')
+              .trim();
+          }
+
+          // Mettre à jour PERSONNES_CLIENTS
+          var updated = 0;
+          acheteursData.forEach(function(ach) {
+            var person = (window.PERSONNES_CLIENTS || []).find(function(p) {
+              return normalize(p.nomComplet) === normalize(ach.nom) ||
+                     normalize(p.nomComplet).includes(normalize(ach.nom));
+            });
+
+            if (person) {
+              if (ach.email) person.email = ach.email;
+              if (ach.tel) person.tel = ach.tel;
+              updated++;
+            }
+          });
+
+          // Sauvegarder en localStorage
+          try {
+            localStorage.setItem('ePilot_PERSONNES_CLIENTS', JSON.stringify(window.PERSONNES_CLIENTS));
+          } catch(e) {
+            console.warn('[PhaseUPDATE-ACHETEURS] Impossible de sauvegarder:', e.message);
+          }
+
+          console.log('[PhaseUPDATE-ACHETEURS] Résumé: ' + updated + '/' + acheteursData.length + ' acheteurs mis à jour');
+
+        } catch(e) {
+          console.error('[PhaseUPDATE-ACHETEURS] Erreur:', e.message, e.stack);
+        }
+      }, 800); // Après Phase 3E (700ms)
+    })();
+
+    // ─────────────────────────────────────────────────────────────
     // [RapportAvancement] Générateur PDF de Rapport d'Avancement
     // Utilise les FKs normalisés pour générer des rapports
     // ─────────────────────────────────────────────────────────────
