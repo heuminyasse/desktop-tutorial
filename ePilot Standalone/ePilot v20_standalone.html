@@ -10225,8 +10225,10 @@ html body[class] #vac-gantt td.emp .nm{font-weight:500 !important;}</style>
     var _CD=(window.CLIENTS_DATA||{});
     var _contactClean=String(clientContact||'').split('(')[0].trim();
     var acheteur=((_CD.acheteurs||[])).find(function(a){return _nn(a.NomAcheteur)===_nn(_contactClean);})||{};
-    var demandeurTel=acheteur.Telephone||'';
-    var demandeurEmail=acheteur.Email||'';
+    // Chercher aussi dans PERSONNES_CLIENTS (données à jour)
+    var acheteurPers=(window.PERSONNES_CLIENTS||[]).find(function(p){return _nn(p.nomComplet)===_nn(_contactClean);});
+    var demandeurTel=(acheteurPers&&acheteurPers.telephone)||(acheteur.Telephone)||'';
+    var demandeurEmail=(acheteurPers&&acheteurPers.email)||(acheteur.Email)||'';
     var chef=((window.PERSONNEL_DATA||[])).find(function(p){var f1=_nn((p.prenoms||'')+(p.nom||''));var f2=_nn((p.nom||'')+(p.prenoms||''));var t=_nn(jip.chefChantier||'');return t&&(f1===t||f2===t);})||{};
     var _chefClean=String(jip.chefChantier||'').split('(')[0].trim();
     var chefAcheteur=((_CD.acheteurs||[])).find(function(a){return _nn(a.NomAcheteur)===_nn(_chefClean);})||{};
