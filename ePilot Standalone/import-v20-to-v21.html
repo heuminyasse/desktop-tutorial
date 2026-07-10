@@ -124,13 +124,41 @@
 
         function extractData(content) {
             try {
-                const match = content.match(/localStorage\.setItem\('([^']+)',\s*'({[^}]+}|{[^}]*{[^}]*}[^}]*)'\)/);
+                // Try multiple extraction methods for v20 data
+
+                // Method 1: localStorage.setItem pattern
+                let match = content.match(/localStorage\.setItem\('([^']+)',\s*'(.+?)'\)\s*;/);
                 if (match) {
-                    const dataStr = match[2].replace(/\\'/g, "'");
-                    return JSON.parse(dataStr);
+                    try {
+                        const dataStr = match[2].replace(/\\'/g, "'").replace(/\\"/g, '"');
+                        return JSON.parse(dataStr);
+                    } catch (e) {
+                        // Continue to next method
+                    }
                 }
+
+                // Method 2: Look for app.db or similar global assignments
+                match = content.match(/(?:app\.db|window\.APP_DATA|db)\s*=\s*(\{[\s\S]*?\});/);
+                if (match) {
+                    return JSON.parse(match[1]);
+                }
+
+                // Method 3: Look for any JSON blob with PERSONNEL_DATA
+                match = content.match(/(\{[\s\S]*?"PERSONNEL_DATA"[\s\S]*?\})/);
+                if (match) {
+                    // Try to parse the found JSON
+                    try {
+                        return JSON.parse(match[1]);
+                    } catch (e) {
+                        // Try to clean up and parse
+                        const cleaned = match[1].replace(/\\'/g, "'").replace(/\\"/g, '"');
+                        return JSON.parse(cleaned);
+                    }
+                }
+
                 return null;
             } catch (e) {
+                console.error('Error extracting v20 data:', e);
                 return null;
             }
         }
