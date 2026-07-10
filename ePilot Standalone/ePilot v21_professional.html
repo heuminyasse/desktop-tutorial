@@ -458,6 +458,9 @@
 
             <!-- SITES Section -->
             <div id="sites-section" style="display: none;">
+                <div style="background: #fffaed; border-left: 4px solid #f59e0b; padding: 12px; margin-bottom: 20px; border-radius: 4px;">
+                    <strong>ℹ️ Remarque:</strong> Créez d'abord au moins un client dans l'onglet "Clients"
+                </div>
                 <div class="section-title" style="border: none; margin-bottom: 20px;">Ajouter/Modifier Site</div>
                 <form id="sites-form">
                     <div class="form-group">
@@ -533,6 +536,9 @@
 
             <!-- ACHETEURS Section -->
             <div id="acheteurs-section" style="display: none;">
+                <div style="background: #fffaed; border-left: 4px solid #f59e0b; padding: 12px; margin-bottom: 20px; border-radius: 4px;">
+                    <strong>ℹ️ Remarque:</strong> Créez d'abord un site dans l'onglet "Sites"
+                </div>
                 <div class="section-title" style="border: none; margin-bottom: 20px;">Ajouter/Modifier Acheteur</div>
                 <form id="acheteurs-form">
                     <div class="form-group">
@@ -1027,10 +1033,23 @@
 
             // ==================== SITES MANAGEMENT ====================
             saveSites() {
+                const client_id = document.getElementById('sites-client-id').value;
+                const nom = document.getElementById('sites-nom').value;
+
+                // Validation
+                if (!client_id) {
+                    this.showAlert('clients', '✗ Veuillez sélectionner un client', 'error');
+                    return;
+                }
+                if (!nom) {
+                    this.showAlert('clients', '✗ Veuillez entrer le nom du site', 'error');
+                    return;
+                }
+
                 const site = {
                     id: document.getElementById('sites-id').value || this.generateId('SIT'),
-                    client_id: document.getElementById('sites-client-id').value,
-                    nom: document.getElementById('sites-nom').value,
+                    client_id: client_id,
+                    nom: nom,
                     adresse: document.getElementById('sites-adresse').value,
                     type: document.getElementById('sites-type').value,
                     responsable: document.getElementById('sites-responsable').value,
@@ -1118,10 +1137,23 @@
 
             // ==================== ACHETEURS MANAGEMENT ====================
             saveAcheteurs() {
+                const site_id = document.getElementById('acheteurs-site-id').value;
+                const nom = document.getElementById('acheteurs-nom').value;
+
+                // Validation
+                if (!site_id) {
+                    this.showAlert('clients', '✗ Veuillez sélectionner un site', 'error');
+                    return;
+                }
+                if (!nom) {
+                    this.showAlert('clients', '✗ Veuillez entrer le nom de l\'acheteur', 'error');
+                    return;
+                }
+
                 const acheteur = {
                     id: document.getElementById('acheteurs-id').value || this.generateId('ACH'),
-                    site_id: document.getElementById('acheteurs-site-id').value,
-                    nom: document.getElementById('acheteurs-nom').value,
+                    site_id: site_id,
+                    nom: nom,
                     fonction: document.getElementById('acheteurs-fonction').value,
                     email: document.getElementById('acheteurs-email').value.toLowerCase(),
                     telephone: document.getElementById('acheteurs-telephone').value,
