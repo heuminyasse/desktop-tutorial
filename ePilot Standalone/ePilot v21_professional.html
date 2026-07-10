@@ -1,0 +1,745 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ePilot v21 Professional - ERP Professionnel</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: #f5f7fa;
+            color: #1a1a1a;
+        }
+
+        .header {
+            background: #B5000A;
+            color: white;
+            padding: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        .header h1 { font-size: 24px; }
+        .header .user { font-size: 13px; opacity: 0.9; }
+
+        .nav {
+            display: flex;
+            gap: 10px;
+            background: white;
+            padding: 10px 20px;
+            border-bottom: 1px solid #ddd;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+        }
+
+        .nav button {
+            background: none;
+            border: none;
+            padding: 8px 16px;
+            cursor: pointer;
+            border-bottom: 3px solid transparent;
+            color: #666;
+            font-weight: 500;
+            transition: all 0.2s;
+        }
+
+        .nav button.active {
+            color: #B5000A;
+            border-bottom-color: #B5000A;
+        }
+
+        .nav button:hover {
+            color: #B5000A;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .panel {
+            display: none;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+            padding: 20px;
+        }
+
+        .panel.active { display: block; }
+
+        .section-title {
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 20px;
+            color: #1a1a1a;
+            border-bottom: 2px solid #B5000A;
+            padding-bottom: 10px;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+        }
+
+        .form-control {
+            flex: 1;
+            min-width: 200px;
+        }
+
+        .form-control label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 500;
+            font-size: 13px;
+            color: #333;
+        }
+
+        .form-control input,
+        .form-control select {
+            width: 100%;
+            padding: 8px 12px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 13px;
+        }
+
+        .form-control input:focus,
+        .form-control select:focus {
+            outline: none;
+            border-color: #B5000A;
+            box-shadow: 0 0 0 3px rgba(181,0,10,0.1);
+        }
+
+        .form-actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+        }
+
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: 500;
+            font-size: 13px;
+            transition: all 0.2s;
+        }
+
+        .btn-primary {
+            background: #B5000A;
+            color: white;
+        }
+
+        .btn-primary:hover { background: #8a0008; }
+
+        .btn-secondary {
+            background: #f0f0f0;
+            color: #333;
+        }
+
+        .btn-secondary:hover { background: #e0e0e0; }
+
+        .btn-success {
+            background: #16a34a;
+            color: white;
+        }
+
+        .btn-danger {
+            background: #dc2626;
+            color: white;
+        }
+
+        .table-container {
+            overflow-x: auto;
+            margin-top: 20px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+        }
+
+        thead {
+            background: #f9fafb;
+            border-bottom: 2px solid #e5e7eb;
+        }
+
+        th {
+            padding: 12px;
+            text-align: left;
+            font-weight: 600;
+            color: #333;
+        }
+
+        td {
+            padding: 12px;
+            border-bottom: 1px solid #e5e7eb;
+        }
+
+        tbody tr:hover { background: #f9fafb; }
+
+        .action-btn {
+            padding: 4px 8px;
+            border: none;
+            border-radius: 3px;
+            cursor: pointer;
+            font-size: 12px;
+            margin-right: 5px;
+        }
+
+        .action-edit {
+            background: #3b82f6;
+            color: white;
+        }
+
+        .action-delete {
+            background: #ef4444;
+            color: white;
+        }
+
+        .alert {
+            padding: 12px 16px;
+            border-radius: 4px;
+            margin-bottom: 15px;
+            font-size: 13px;
+        }
+
+        .alert-success {
+            background: #d1fae5;
+            color: #065f46;
+            border-left: 4px solid #10b981;
+        }
+
+        .alert-error {
+            background: #fee2e2;
+            color: #7f1d1d;
+            border-left: 4px solid #ef4444;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.5);
+            z-index: 1000;
+        }
+
+        .modal.active { display: flex; align-items: center; justify-content: center; }
+
+        .modal-content {
+            background: white;
+            border-radius: 8px;
+            padding: 30px;
+            max-width: 500px;
+            width: 90%;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🏢 ePilot v21 Professional</h1>
+        <div class="user">Connecté: <strong>Vous</strong></div>
+    </div>
+
+    <div class="nav">
+        <button class="nav-btn active" data-tab="personnel">👥 Personnel HBO</button>
+        <button class="nav-btn" data-tab="clients">🏭 Clients</button>
+        <button class="nav-btn" data-tab="fournisseurs">🚚 Fournisseurs</button>
+        <button class="nav-btn" data-tab="articles-vente">📦 Articles Vente</button>
+        <button class="nav-btn" data-tab="articles-achat">📥 Articles Achat</button>
+        <button class="nav-btn" data-tab="settings">⚙️ Paramètres</button>
+    </div>
+
+    <div class="container">
+        <!-- PERSONNEL_HBO Panel -->
+        <div class="panel active" id="personnel">
+            <div class="section-title">👥 Gestion du Personnel HBO</div>
+
+            <div id="alert-personnel"></div>
+
+            <div style="background: #f0f0f0; padding: 15px; border-radius: 4px; margin-bottom: 20px;">
+                <strong>Import de l'ancienne version:</strong>
+                <button class="btn btn-secondary" onclick="document.getElementById('v20-import-file').click()" style="margin-left: 10px;">
+                    📥 Charger fichier v20
+                </button>
+                <input type="file" id="v20-import-file" style="display: none;" accept=".html,.json" onchange="app.handleV20FileImport(event)">
+                <small style="display: block; margin-top: 8px; color: #666;">Ou importer depuis le fichier ePilot v20_standalone.html</small>
+            </div>
+
+            <div class="section-title" style="border: none; margin-top: 30px;">Ajouter/Modifier Personnel</div>
+
+            <form id="personnel-form">
+                <div class="form-group">
+                    <div class="form-control">
+                        <label>ID (auto)</label>
+                        <input type="text" id="personnel-id" readonly style="background: #f0f0f0;">
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <div class="form-control">
+                        <label>Nom *</label>
+                        <input type="text" id="personnel-nom" placeholder="Ex: DUPONT" required>
+                    </div>
+                    <div class="form-control">
+                        <label>Prénoms *</label>
+                        <input type="text" id="personnel-prenoms" placeholder="Ex: Jean" required>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <div class="form-control">
+                        <label>Fonction *</label>
+                        <select id="personnel-fonction" required>
+                            <option value="">-- Sélectionner --</option>
+                            <option value="Chef de Projet">Chef de Projet</option>
+                            <option value="Acheteur">Acheteur</option>
+                            <option value="Magasinier">Magasinier</option>
+                            <option value="Chauffeur">Chauffeur</option>
+                            <option value="Ouvrier">Ouvrier</option>
+                            <option value="Responsable HSE">Responsable HSE</option>
+                            <option value="Administrateur">Administrateur</option>
+                            <option value="Directeur">Directeur</option>
+                            <option value="Autre">Autre</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <div class="form-control">
+                        <label>Email</label>
+                        <input type="email" id="personnel-email" placeholder="ex@hbo.cm">
+                    </div>
+                    <div class="form-control">
+                        <label>Téléphone</label>
+                        <input type="tel" id="personnel-telephone" placeholder="+237 2XX XXX XXX">
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <div class="form-control">
+                        <label>Statut</label>
+                        <select id="personnel-statut">
+                            <option value="Actif">Actif</option>
+                            <option value="Congé">Congé</option>
+                            <option value="Inactif">Inactif</option>
+                        </select>
+                    </div>
+                    <div class="form-control">
+                        <label>Date d'embauche</label>
+                        <input type="date" id="personnel-date-embauche">
+                    </div>
+                </div>
+
+                <div class="form-actions">
+                    <button type="submit" class="btn btn-primary">💾 Enregistrer</button>
+                    <button type="reset" class="btn btn-secondary" onclick="app.resetPersonnelForm()">🔄 Réinitialiser</button>
+                </div>
+            </form>
+
+            <div class="section-title" style="border: none; margin-top: 40px;">Liste du Personnel</div>
+            <div class="table-container">
+                <table id="personnel-table">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Nom</th>
+                            <th>Prénom</th>
+                            <th>Fonction</th>
+                            <th>Email</th>
+                            <th>Téléphone</th>
+                            <th>Statut</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- CLIENTS Panel -->
+        <div class="panel" id="clients">
+            <div class="section-title">🏭 Clients (En préparation)</div>
+            <p style="color: #666;">Module Clients - Sites - Acheteurs en cours de création...</p>
+        </div>
+
+        <!-- FOURNISSEURS Panel -->
+        <div class="panel" id="fournisseurs">
+            <div class="section-title">🚚 Fournisseurs (En préparation)</div>
+            <p style="color: #666;">Module Fournisseurs en cours de création...</p>
+        </div>
+
+        <!-- ARTICLES_VENTE Panel -->
+        <div class="panel" id="articles-vente">
+            <div class="section-title">📦 Articles de Vente (En préparation)</div>
+            <p style="color: #666;">Module Articles/Services qu'on vend en cours de création...</p>
+        </div>
+
+        <!-- ARTICLES_ACHAT Panel -->
+        <div class="panel" id="articles-achat">
+            <div class="section-title">📥 Articles d'Achat (En préparation)</div>
+            <p style="color: #666;">Module Articles/Services qu'on achète en cours de création...</p>
+        </div>
+
+        <!-- SETTINGS Panel -->
+        <div class="panel" id="settings">
+            <div class="section-title">⚙️ Paramètres</div>
+
+            <h3 style="margin-top: 20px; font-size: 16px;">Données</h3>
+            <div class="form-actions">
+                <button class="btn btn-secondary" onclick="app.exportAllData()">📤 Exporter (JSON)</button>
+                <button class="btn btn-secondary" onclick="app.backupData()">💾 Sauvegarder</button>
+                <button class="btn btn-danger" onclick="app.clearAllData()">🗑️ Effacer TOUT (Attention!)</button>
+            </div>
+
+            <h3 style="margin-top: 30px; font-size: 16px;">Info Système</h3>
+            <table style="width: 100%; margin-top: 10px;">
+                <tr>
+                    <td><strong>Version:</strong></td>
+                    <td>ePilot v21 Professional</td>
+                </tr>
+                <tr>
+                    <td><strong>Dernière sauvegarde:</strong></td>
+                    <td id="last-backup">-</td>
+                </tr>
+                <tr>
+                    <td><strong>Espace utilisé:</strong></td>
+                    <td id="storage-size">-</td>
+                </tr>
+            </table>
+        </div>
+    </div>
+
+    <script>
+        // ==================== APP STATE ====================
+        const app = {
+            db: {
+                PERSONNEL_DATA: [],
+                CLIENTS_DATA: [],
+                FOURNISSEURS_DATA: [],
+                ARTICLES_VENTE_DATA: [],
+                ARTICLES_ACHAT_DATA: [],
+            },
+
+            currentEditingId: null,
+
+            // ==================== INITIALIZATION ====================
+            init() {
+                this.loadFromStorage();
+                this.setupEventListeners();
+                this.renderPersonnel();
+                this.updateStorageInfo();
+                console.log('ePilot v21 Professional initialized');
+            },
+
+            setupEventListeners() {
+                // Navigation
+                document.querySelectorAll('.nav-btn').forEach(btn => {
+                    btn.addEventListener('click', (e) => {
+                        document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+                        document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+                        e.target.classList.add('active');
+                        const tabId = e.target.dataset.tab;
+                        document.getElementById(tabId)?.classList.add('active');
+                    });
+                });
+
+                // Personnel Form
+                document.getElementById('personnel-form').addEventListener('submit', (e) => {
+                    e.preventDefault();
+                    this.savePersonnel();
+                });
+            },
+
+            // ==================== PERSONNEL MANAGEMENT ====================
+            savePersonnel() {
+                const personnel = {
+                    id: document.getElementById('personnel-id').value || this.generateId('PRS'),
+                    nom: document.getElementById('personnel-nom').value.toUpperCase(),
+                    prenoms: document.getElementById('personnel-prenoms').value,
+                    fonction: document.getElementById('personnel-fonction').value,
+                    email: document.getElementById('personnel-email').value.toLowerCase(),
+                    telephone: document.getElementById('personnel-telephone').value,
+                    statut: document.getElementById('personnel-statut').value,
+                    date_embauche: document.getElementById('personnel-date-embauche').value,
+                    created_at: new Date().toISOString(),
+                    updated_at: new Date().toISOString(),
+                };
+
+                if (this.currentEditingId) {
+                    const index = this.db.PERSONNEL_DATA.findIndex(p => p.id === this.currentEditingId);
+                    personnel.created_at = this.db.PERSONNEL_DATA[index].created_at;
+                    this.db.PERSONNEL_DATA[index] = personnel;
+                    this.showAlert('personnel', '✓ Personnel modifié avec succès', 'success');
+                } else {
+                    this.db.PERSONNEL_DATA.push(personnel);
+                    this.showAlert('personnel', '✓ Personnel ajouté avec succès', 'success');
+                }
+
+                this.saveToStorage();
+                this.renderPersonnel();
+                this.resetPersonnelForm();
+            },
+
+            editPersonnel(id) {
+                const personnel = this.db.PERSONNEL_DATA.find(p => p.id === id);
+                if (!personnel) return;
+
+                document.getElementById('personnel-id').value = personnel.id;
+                document.getElementById('personnel-nom').value = personnel.nom;
+                document.getElementById('personnel-prenoms').value = personnel.prenoms;
+                document.getElementById('personnel-fonction').value = personnel.fonction;
+                document.getElementById('personnel-email').value = personnel.email;
+                document.getElementById('personnel-telephone').value = personnel.telephone;
+                document.getElementById('personnel-statut').value = personnel.statut;
+                document.getElementById('personnel-date-embauche').value = personnel.date_embauche;
+
+                this.currentEditingId = id;
+                document.querySelector('[data-tab="personnel"]').click();
+                document.getElementById('personnel-nom').focus();
+            },
+
+            deletePersonnel(id) {
+                if (confirm('Êtes-vous sûr? Cette action est irréversible.')) {
+                    this.db.PERSONNEL_DATA = this.db.PERSONNEL_DATA.filter(p => p.id !== id);
+                    this.saveToStorage();
+                    this.renderPersonnel();
+                    this.showAlert('personnel', '✓ Personnel supprimé', 'success');
+                }
+            },
+
+            resetPersonnelForm() {
+                document.getElementById('personnel-form').reset();
+                this.currentEditingId = null;
+            },
+
+            renderPersonnel() {
+                const tbody = document.querySelector('#personnel-table tbody');
+                tbody.innerHTML = '';
+
+                if (this.db.PERSONNEL_DATA.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="8" style="text-align: center; color: #999;">Aucun personnel enregistré</td></tr>';
+                    return;
+                }
+
+                this.db.PERSONNEL_DATA.forEach(p => {
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td><code style="background: #f0f0f0; padding: 2px 6px; border-radius: 3px; font-size: 11px;">${p.id}</code></td>
+                        <td>${p.nom}</td>
+                        <td>${p.prenoms}</td>
+                        <td><strong>${p.fonction}</strong></td>
+                        <td>${p.email || '-'}</td>
+                        <td>${p.telephone || '-'}</td>
+                        <td><span style="background: ${p.statut === 'Actif' ? '#d1fae5' : '#fee2e2'}; padding: 3px 8px; border-radius: 3px; font-size: 12px;">${p.statut}</span></td>
+                        <td>
+                            <button class="action-btn action-edit" onclick="app.editPersonnel('${p.id}')">✎ Edit</button>
+                            <button class="action-btn action-delete" onclick="app.deletePersonnel('${p.id}')">✕ Del</button>
+                        </td>
+                    `;
+                    tbody.appendChild(row);
+                });
+            },
+
+            // ==================== IMPORT FROM V20 ====================
+            handleV20FileImport(event) {
+                const file = event.target.files[0];
+                if (!file) return;
+
+                const self = this;
+                const reader = new FileReader();
+
+                reader.onload = function(e) {
+                    try {
+                        const html = e.target.result;
+
+                        // Try to parse PERSONNEL_DATA directly from HTML using regex
+                        const personnelMatch = html.match(/window\.PERSONNEL_DATA\s*=\s*(\[[\s\S]*?\]);/);
+                        if (personnelMatch) {
+                            try {
+                                const v20Personnel = eval('(' + personnelMatch[1] + ')');
+                                self.processV20Import(v20Personnel);
+                                return;
+                            } catch (parseErr) {
+                                console.log('Direct parse failed, trying iframe method...', parseErr);
+                            }
+                        }
+
+                        // Fallback: Create iframe with sandbox that allows data access
+                        const iframe = document.createElement('iframe');
+                        iframe.style.display = 'none';
+                        iframe.sandbox.add('allow-scripts');
+                        document.body.appendChild(iframe);
+
+                        // Inject a script that sends data to parent
+                        const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
+                        iframeDoc.open();
+                        iframeDoc.write(html);
+
+                        // Inject message handler
+                        const script = iframeDoc.createElement('script');
+                        script.textContent = `
+                            window.addEventListener('load', function() {
+                                if (window.PERSONNEL_DATA) {
+                                    parent.postMessage({
+                                        type: 'v20Import',
+                                        data: window.PERSONNEL_DATA
+                                    }, '*');
+                                }
+                            });
+                        `;
+                        iframeDoc.body.appendChild(script);
+                        iframeDoc.close();
+
+                        // Set up message handler
+                        const messageHandler = (event) => {
+                            if (event.data && event.data.type === 'v20Import') {
+                                window.removeEventListener('message', messageHandler);
+                                self.processV20Import(event.data.data);
+                                document.body.removeChild(iframe);
+                            }
+                        };
+                        window.addEventListener('message', messageHandler);
+
+                        // Timeout
+                        setTimeout(() => {
+                            window.removeEventListener('message', messageHandler);
+                            if (document.contains(iframe)) {
+                                document.body.removeChild(iframe);
+                            }
+                            self.showAlert('personnel', '⚠️ Impossible d\'accéder aux données du fichier v20', 'error');
+                        }, 5000);
+                    } catch (e) {
+                        console.error('File processing error:', e);
+                        self.showAlert('personnel', '✗ Erreur de traitement: ' + e.message, 'error');
+                    }
+                };
+
+                reader.onerror = () => {
+                    self.showAlert('personnel', '✗ Impossible de lire le fichier', 'error');
+                };
+
+                reader.readAsText(file);
+            },
+
+            processV20Import(v20Personnel) {
+                if (!v20Personnel || v20Personnel.length === 0) {
+                    this.showAlert('personnel', '⚠️ Aucune donnée Personnel trouvée dans le fichier', 'error');
+                    return;
+                }
+
+                // Transform v20 data to v21 format
+                const imported = v20Personnel.map(p => ({
+                    id: this.generateId('PRS'),
+                    nom: (p.nom || '').toUpperCase(),
+                    prenoms: p.prenoms || '',
+                    fonction: p.fonction || 'Autre',
+                    email: '',
+                    telephone: (p.telephones && p.telephones[0] && p.telephones[0].tel) ? p.telephones[0].tel : '',
+                    statut: p.statut === 'Employé' ? 'Actif' : 'Inactif',
+                    date_embauche: p.dateEmbauche || '',
+                    created_at: new Date().toISOString(),
+                    updated_at: new Date().toISOString(),
+                    _source: 'v20_import',
+                    _v20_matricule: p.matricule || ''
+                }));
+
+                // Add to existing data
+                this.db.PERSONNEL_DATA.push(...imported);
+                this.saveToStorage();
+                this.renderPersonnel();
+
+                this.showAlert('personnel', `✓ ${imported.length} personnel importés depuis v20 (Total: ${this.db.PERSONNEL_DATA.length})`, 'success');
+            },
+
+            importPersonnelFromV20() {
+                this.showAlert('personnel', 'ℹ️ Utilisez le bouton "Charger fichier v20" pour importer depuis un fichier', 'info');
+            },
+
+            // ==================== STORAGE ====================
+            saveToStorage() {
+                localStorage.setItem('epillot_v21_db', JSON.stringify(this.db));
+                localStorage.setItem('epillot_v21_backup', new Date().toISOString());
+            },
+
+            loadFromStorage() {
+                const stored = localStorage.getItem('epillot_v21_db');
+                if (stored) {
+                    this.db = JSON.parse(stored);
+                }
+            },
+
+            exportAllData() {
+                const dataStr = JSON.stringify(this.db, null, 2);
+                const dataBlob = new Blob([dataStr], { type: 'application/json' });
+                const url = URL.createObjectURL(dataBlob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `ePilot_export_${new Date().toISOString().slice(0, 10)}.json`;
+                a.click();
+                this.showAlert('settings', '✓ Données exportées', 'success');
+            },
+
+            backupData() {
+                this.saveToStorage();
+                this.showAlert('settings', '✓ Données sauvegardées', 'success');
+                this.updateStorageInfo();
+            },
+
+            clearAllData() {
+                if (confirm('⚠️ ATTENTION: Cela effacera TOUTES les données!\n\nÊtes-vous absolument sûr?')) {
+                    if (confirm('Dernière confirmation: Effacer TOUT?')) {
+                        this.db = {
+                            PERSONNEL_DATA: [],
+                            CLIENTS_DATA: [],
+                            FOURNISSEURS_DATA: [],
+                            ARTICLES_VENTE_DATA: [],
+                            ARTICLES_ACHAT_DATA: [],
+                        };
+                        this.saveToStorage();
+                        this.renderPersonnel();
+                        this.showAlert('settings', '⚠️ Toutes les données ont été effacées', 'error');
+                    }
+                }
+            },
+
+            updateStorageInfo() {
+                const size = new Blob([JSON.stringify(this.db)]).size;
+                document.getElementById('storage-size').textContent = (size / 1024).toFixed(2) + ' KB';
+                const backup = localStorage.getItem('epillot_v21_backup');
+                document.getElementById('last-backup').textContent = backup ? new Date(backup).toLocaleString() : '-';
+            },
+
+            // ==================== UTILITIES ====================
+            generateId(prefix) {
+                return prefix + '_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+            },
+
+            showAlert(panelId, message, type = 'success') {
+                const alertDiv = document.getElementById(`alert-${panelId}`);
+                if (!alertDiv) return;
+                alertDiv.innerHTML = `<div class="alert alert-${type}">${message}</div>`;
+                setTimeout(() => { alertDiv.innerHTML = ''; }, 4000);
+            }
+        };
+
+        // Initialize when DOM is ready
+        document.addEventListener('DOMContentLoaded', () => {
+            app.init();
+        });
+    </script>
+</body>
+</html>
