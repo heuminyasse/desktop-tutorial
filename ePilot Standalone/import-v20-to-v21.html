@@ -19,22 +19,25 @@
             background: white;
             border-radius: 8px;
             box-shadow: 0 10px 40px rgba(0,0,0,0.3);
-            max-width: 600px;
+            max-width: 700px;
             width: 100%;
             padding: 40px;
         }
-        h1 { color: #B5000A; margin-bottom: 30px; text-align: center; }
+        h1 { color: #B5000A; margin-bottom: 30px; text-align: center; font-size: 24px; }
         .step { margin-bottom: 30px; }
-        .step h3 { color: #333; margin-bottom: 10px; }
+        .step h3 { color: #333; font-size: 16px; margin-bottom: 10px; }
+        .step p { color: #666; font-size: 14px; line-height: 1.6; margin-bottom: 10px; }
         .upload-area {
             border: 2px dashed #ddd;
             border-radius: 4px;
             padding: 30px;
             text-align: center;
             cursor: pointer;
+            transition: all 0.3s;
             margin: 15px 0;
         }
         .upload-area:hover { border-color: #B5000A; background: #f9f9f9; }
+        .upload-area.active { border-color: #B5000A; background: #fff5f5; }
         input[type="file"] { display: none; }
         .btn {
             background: #B5000A;
@@ -43,52 +46,64 @@
             padding: 12px 24px;
             border-radius: 4px;
             cursor: pointer;
+            font-size: 14px;
             font-weight: 500;
+            transition: all 0.3s;
         }
         .btn:hover { background: #8B0007; }
         .btn:disabled { background: #ccc; cursor: not-allowed; }
         .btn-secondary { background: #666; }
         .btn-secondary:hover { background: #333; }
-        textarea { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px; font-family: monospace; min-height: 100px; }
-        .progress-list li { padding: 8px; margin: 5px 0; background: #f0f0f0; border-radius: 4px; }
+        textarea { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px; font-family: monospace; font-size: 12px; min-height: 100px; }
+        .progress-list { list-style: none; margin: 15px 0; }
+        .progress-list li { padding: 8px; margin: 5px 0; background: #f0f0f0; border-radius: 4px; font-size: 13px; }
         .progress-list li.done { background: #d1fae5; color: #065f46; }
+        .status { margin-top: 20px; padding: 15px; border-radius: 4px; font-size: 13px; }
+        .status.loading { background: #dbeafe; color: #1e40af; }
+        .status.error { background: #fee2e2; color: #7f1d1d; border-left: 4px solid #ef4444; }
+        .status.success { background: #d1fae5; color: #065f46; border-left: 4px solid #10b981; }
+        iframe { display: none; }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>🔄 Import v20 → v21</h1>
+        <h1>🔄 Import ePilot v20 → v21</h1>
 
         <div class="step">
             <h3>📁 Étape 1: Charger fichier v20</h3>
+            <p>Sélectionnez votre fichier ePilot v20_standalone.html</p>
             <div class="upload-area" id="upload-area">
                 <p>📁 Cliquez ou glissez votre fichier v20 ici</p>
                 <input type="file" id="file-input" accept=".html">
             </div>
+            <div id="status-load"></div>
         </div>
 
         <div class="step">
-            <h3>📊 Résumé</h3>
+            <h3>📊 Étape 2: Résumé extraction</h3>
             <ul class="progress-list" id="extract-results"></ul>
         </div>
 
         <div class="step">
-            <h3>💾 Code d'import</h3>
-            <textarea id="import-code" readonly placeholder="Le code apparaîtra ici..."></textarea>
-            <button class="btn btn-secondary" id="copy-btn" disabled style="margin-top: 10px; width: 100%;">📋 Copier</button>
+            <h3>💾 Étape 3: Code d'import</h3>
+            <p>Copiez ce code et exécutez-le dans la console de v21 (F12)</p>
+            <textarea id="import-code" readonly placeholder="Le code d'import apparaîtra ici..."></textarea>
+            <button class="btn btn-secondary" id="copy-btn" disabled style="margin-top: 10px; width: 100%;">📋 Copier le code</button>
         </div>
 
         <div class="step">
-            <h3>Instructions</h3>
-            <ol style="margin-left: 20px; font-size: 13px; line-height: 1.8;">
-                <li>Chargez votre fichier v20_standalone.html</li>
-                <li>Cliquez "Copier le code"</li>
-                <li>Ouvrez ePilot v21 dans un autre onglet</li>
-                <li>Appuyez sur F12 → Console</li>
-                <li>Collez le code et appuyez Entrée</li>
-                <li>Rechargez v21</li>
+            <h3>Instructions finales</h3>
+            <ol style="margin-left: 20px; color: #666; font-size: 13px; line-height: 1.8;">
+                <li>Cliquez sur "Copier le code" ci-dessus</li>
+                <li>Ouvrez ePilot v21 dans le navigateur</li>
+                <li>Appuyez sur F12 pour ouvrir la console</li>
+                <li>Collez le code et appuyez sur Entrée</li>
+                <li>Les données seront importées! Rechargez la page</li>
             </ol>
         </div>
     </div>
+
+    <iframe id="v20-frame"></iframe>
 
     <script>
         const uploadArea = document.getElementById('upload-area');
@@ -96,94 +111,127 @@
         const extractResults = document.getElementById('extract-results');
         const importCode = document.getElementById('import-code');
         const copyBtn = document.getElementById('copy-btn');
+        const statusLoad = document.getElementById('status-load');
+        const v20Frame = document.getElementById('v20-frame');
 
         uploadArea.addEventListener('click', () => fileInput.click());
-        uploadArea.addEventListener('dragover', (e) => e.preventDefault());
+        uploadArea.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadArea.classList.add('active');
+        });
+        uploadArea.addEventListener('dragleave', () => uploadArea.classList.remove('active'));
         uploadArea.addEventListener('drop', (e) => {
             e.preventDefault();
+            uploadArea.classList.remove('active');
             handleFile(e.dataTransfer.files[0]);
         });
 
         fileInput.addEventListener('change', (e) => handleFile(e.target.files[0]));
 
+        function showStatus(message, type = 'loading') {
+            statusLoad.innerHTML = `<div class="status ${type}">${message}</div>`;
+        }
+
         function handleFile(file) {
+            if (!file) return;
+
+            showStatus('⏳ Chargement et extraction des données...');
+
             const reader = new FileReader();
             reader.onload = (e) => {
-                const content = e.target.result;
-                const v20Data = extractData(content);
+                const htmlContent = e.target.result;
 
-                if (v20Data) {
-                    showResults(v20Data);
-                    generateCode(v20Data);
-                } else {
-                    alert('Impossible de lire les données');
-                }
+                // Create a blob URL and load it in iframe
+                const blob = new Blob([htmlContent], { type: 'text/html' });
+                const blobUrl = URL.createObjectURL(blob);
+
+                v20Frame.src = blobUrl;
+
+                // Wait for iframe to load, then extract data
+                v20Frame.onload = () => {
+                    setTimeout(() => {
+                        try {
+                            const iframeWindow = v20Frame.contentWindow;
+                            const v20Data = {};
+
+                            // Get all localStorage items from the iframe
+                            const storageKeys = ['ePilot_QUOTE_DATA', 'ePilot_JIP_DATA', 'ePilot_PERSONNEL_DATA',
+                                                'ePilot_CLIENTS_DATA', 'ePilot_FOURNISSEURS_DATA', 'ePilot_ARTICLES_DATA'];
+
+                            for (const key of storageKeys) {
+                                try {
+                                    const value = iframeWindow.localStorage.getItem(key);
+                                    if (value) {
+                                        v20Data[key] = JSON.parse(value);
+                                    }
+                                } catch (e) {
+                                    console.warn(`Could not parse ${key}:`, e);
+                                }
+                            }
+
+                            if (Object.keys(v20Data).length > 0) {
+                                showStatus('✓ Données extraites avec succès!', 'success');
+                                showResults(v20Data);
+                                generateCode(v20Data);
+                            } else {
+                                showStatus('✗ Aucune donnée trouvée dans le fichier v20', 'error');
+                            }
+                        } catch (e) {
+                            showStatus('✗ Erreur lors de l\'extraction: ' + e.message, 'error');
+                            console.error('Extraction error:', e);
+                        }
+
+                        URL.revokeObjectURL(blobUrl);
+                    }, 1500);
+                };
+
+                v20Frame.onerror = () => {
+                    showStatus('✗ Erreur lors du chargement du fichier', 'error');
+                    URL.revokeObjectURL(blobUrl);
+                };
             };
             reader.readAsText(file);
         }
 
-        function extractData(content) {
-            try {
-                // Try multiple extraction methods for v20 data
-
-                // Method 1: localStorage.setItem pattern
-                let match = content.match(/localStorage\.setItem\('([^']+)',\s*'(.+?)'\)\s*;/);
-                if (match) {
-                    try {
-                        const dataStr = match[2].replace(/\\'/g, "'").replace(/\\"/g, '"');
-                        return JSON.parse(dataStr);
-                    } catch (e) {
-                        // Continue to next method
-                    }
-                }
-
-                // Method 2: Look for app.db or similar global assignments
-                match = content.match(/(?:app\.db|window\.APP_DATA|db)\s*=\s*(\{[\s\S]*?\});/);
-                if (match) {
-                    return JSON.parse(match[1]);
-                }
-
-                // Method 3: Look for any JSON blob with PERSONNEL_DATA
-                match = content.match(/(\{[\s\S]*?"PERSONNEL_DATA"[\s\S]*?\})/);
-                if (match) {
-                    // Try to parse the found JSON
-                    try {
-                        return JSON.parse(match[1]);
-                    } catch (e) {
-                        // Try to clean up and parse
-                        const cleaned = match[1].replace(/\\'/g, "'").replace(/\\"/g, '"');
-                        return JSON.parse(cleaned);
-                    }
-                }
-
-                return null;
-            } catch (e) {
-                console.error('Error extracting v20 data:', e);
-                return null;
-            }
-        }
-
         function showResults(v20Data) {
             extractResults.innerHTML = '';
-            const items = [
-                { label: 'Personnel', key: 'PERSONNEL_DATA' },
-                { label: 'Clients', key: 'CLIENTS_DATA' },
-                { label: 'Fournisseurs', key: 'FOURNISSEURS_DATA' },
-                { label: 'Articles', key: 'ARTICLES_DATA' },
-            ];
 
-            items.forEach(item => {
-                const data = v20Data[item.key] || [];
+            const keyMapping = {
+                'ePilot_QUOTE_DATA': 'Devis/Quotes',
+                'ePilot_JIP_DATA': 'Projets JIP',
+                'ePilot_PERSONNEL_DATA': 'Personnel',
+                'ePilot_CLIENTS_DATA': 'Clients',
+                'ePilot_FOURNISSEURS_DATA': 'Fournisseurs',
+                'ePilot_ARTICLES_DATA': 'Articles'
+            };
+
+            Object.entries(v20Data).forEach(([key, data]) => {
+                const label = keyMapping[key] || key;
                 const count = Array.isArray(data) ? data.length : 0;
                 const li = document.createElement('li');
                 li.className = count > 0 ? 'done' : '';
-                li.textContent = `${item.label}: ${count} enregistrements`;
+                li.textContent = `✓ ${label}: ${count} enregistrements`;
                 extractResults.appendChild(li);
             });
         }
 
         function generateCode(v20Data) {
-            const code = `app.db = {...app.db, PERSONNEL_DATA: ${JSON.stringify(v20Data.PERSONNEL_DATA || [])}, CLIENTS_DATA: ${JSON.stringify(v20Data.CLIENTS_DATA || [])}, FOURNISSEURS_DATA: ${JSON.stringify(v20Data.FOURNISSEURS_DATA || [])}}; app.saveToStorage(); app.renderPersonnel(); app.renderClients(); app.renderFournisseurs(); alert('✓ Import terminé!');`;
+            // Map v20 keys to v21 structure
+            const mappedData = {
+                QUOTE_DATA: v20Data['ePilot_QUOTE_DATA'] || [],
+                JIP_DATA: v20Data['ePilot_JIP_DATA'] || [],
+                PERSONNEL_DATA: v20Data['ePilot_PERSONNEL_DATA'] || [],
+                CLIENTS_DATA: v20Data['ePilot_CLIENTS_DATA'] || [],
+                FOURNISSEURS_DATA: v20Data['ePilot_FOURNISSEURS_DATA'] || [],
+                ARTICLES_DATA: v20Data['ePilot_ARTICLES_DATA'] || []
+            };
+
+            const code = `const v20Import = ${JSON.stringify(mappedData, null, 2)};
+Object.assign(app.db, v20Import);
+app.saveToStorage();
+alert('✓ Import v20 terminé! ' + Object.values(v20Import).reduce((sum, arr) => sum + (Array.isArray(arr) ? arr.length : 0), 0) + ' enregistrements importés');
+location.reload();`;
+
             importCode.value = code;
             copyBtn.disabled = false;
         }
@@ -191,8 +239,9 @@
         copyBtn.addEventListener('click', () => {
             importCode.select();
             document.execCommand('copy');
+            const originalText = copyBtn.textContent;
             copyBtn.textContent = '✓ Copié!';
-            setTimeout(() => copyBtn.textContent = '📋 Copier', 2000);
+            setTimeout(() => copyBtn.textContent = originalText, 2000);
         });
     </script>
 </body>
