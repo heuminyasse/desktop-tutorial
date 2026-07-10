@@ -154,18 +154,31 @@
                             const iframeWindow = v20Frame.contentWindow;
                             const v20Data = {};
 
-                            // Get all localStorage items from the iframe
-                            const storageKeys = ['ePilot_QUOTE_DATA', 'ePilot_JIP_DATA', 'ePilot_PERSONNEL_DATA',
-                                                'ePilot_CLIENTS_DATA', 'ePilot_FOURNISSEURS_DATA', 'ePilot_ARTICLES_DATA'];
+                            // Get ALL localStorage items from iframe to find what's actually there
+                            let foundKeys = [];
+                            try {
+                                for (let i = 0; i < iframeWindow.localStorage.length; i++) {
+                                    foundKeys.push(iframeWindow.localStorage.key(i));
+                                }
+                            } catch (e) {
+                                console.warn('Could not enumerate localStorage:', e);
+                            }
 
-                            for (const key of storageKeys) {
+                            console.log('Found keys in v20:', foundKeys);
+
+                            // Try to parse all JSON items
+                            for (const key of foundKeys) {
                                 try {
                                     const value = iframeWindow.localStorage.getItem(key);
                                     if (value) {
-                                        v20Data[key] = JSON.parse(value);
+                                        const parsed = JSON.parse(value);
+                                        // Store if it looks like data (object or array)
+                                        if (typeof parsed === 'object' && parsed !== null) {
+                                            v20Data[key] = parsed;
+                                        }
                                     }
                                 } catch (e) {
-                                    console.warn(`Could not parse ${key}:`, e);
+                                    // Skip non-JSON items
                                 }
                             }
 
@@ -175,6 +188,7 @@
                                 generateCode(v20Data);
                             } else {
                                 showStatus('✗ Aucune donnée trouvée dans le fichier v20', 'error');
+                                console.log('Available keys:', foundKeys);
                             }
                         } catch (e) {
                             showStatus('✗ Erreur lors de l\'extraction: ' + e.message, 'error');
@@ -182,7 +196,7 @@
                         }
 
                         URL.revokeObjectURL(blobUrl);
-                    }, 1500);
+                    }, 2500);
                 };
 
                 v20Frame.onerror = () => {
@@ -202,34 +216,47 @@
                 'ePilot_PERSONNEL_DATA': 'Personnel',
                 'ePilot_CLIENTS_DATA': 'Clients',
                 'ePilot_FOURNISSEURS_DATA': 'Fournisseurs',
-                'ePilot_ARTICLES_DATA': 'Articles'
+                'ePilot_ARTICLES_DATA': 'Articles',
+                'epilot_pde_paliers_v1': 'Paliers PDE',
+                'epilot_university_v1': 'Université/Certifications'
             };
 
             Object.entries(v20Data).forEach(([key, data]) => {
                 const label = keyMapping[key] || key;
-                const count = Array.isArray(data) ? data.length : 0;
+                const count = Array.isArray(data) ? data.length : (typeof data === 'object' ? Object.keys(data).length : 0);
                 const li = document.createElement('li');
-                li.className = count > 0 ? 'done' : '';
-                li.textContent = `✓ ${label}: ${count} enregistrements`;
+                li.className = 'done';
+                li.textContent = `✓ ${label}: ${count} item(s)`;
                 extractResults.appendChild(li);
             });
         }
 
         function generateCode(v20Data) {
             // Map v20 keys to v21 structure
-            const mappedData = {
-                QUOTE_DATA: v20Data['ePilot_QUOTE_DATA'] || [],
-                JIP_DATA: v20Data['ePilot_JIP_DATA'] || [],
-                PERSONNEL_DATA: v20Data['ePilot_PERSONNEL_DATA'] || [],
-                CLIENTS_DATA: v20Data['ePilot_CLIENTS_DATA'] || [],
-                FOURNISSEURS_DATA: v20Data['ePilot_FOURNISSEURS_DATA'] || [],
-                ARTICLES_DATA: v20Data['ePilot_ARTICLES_DATA'] || []
-            };
+            const mappedData = {};
+
+            // Map known keys
+            if (v20Data['ePilot_QUOTE_DATA']) mappedData.QUOTE_DATA = v20Data['ePilot_QUOTE_DATA'];
+            if (v20Data['ePilot_JIP_DATA']) mappedData.JIP_DATA = v20Data['ePilot_JIP_DATA'];
+            if (v20Data['ePilot_PERSONNEL_DATA']) mappedData.PERSONNEL_DATA = v20Data['ePilot_PERSONNEL_DATA'];
+            if (v20Data['ePilot_CLIENTS_DATA']) mappedData.CLIENTS_DATA = v20Data['ePilot_CLIENTS_DATA'];
+            if (v20Data['ePilot_FOURNISSEURS_DATA']) mappedData.FOURNISSEURS_DATA = v20Data['ePilot_FOURNISSEURS_DATA'];
+            if (v20Data['ePilot_ARTICLES_DATA']) mappedData.ARTICLES_DATA = v20Data['ePilot_ARTICLES_DATA'];
+
+            // Map university/certification data
+            if (v20Data['epilot_university_v1']) mappedData.CERTIFICATIONS_DATA = v20Data['epilot_university_v1'];
+            if (v20Data['epilot_pde_paliers_v1']) mappedData.PDE_DATA = v20Data['epilot_pde_paliers_v1'];
+
+            const totalRecords = Object.values(mappedData).reduce((sum, data) => {
+                if (Array.isArray(data)) return sum + data.length;
+                if (typeof data === 'object') return sum + Object.keys(data).length;
+                return sum;
+            }, 0);
 
             const code = `const v20Import = ${JSON.stringify(mappedData, null, 2)};
 Object.assign(app.db, v20Import);
 app.saveToStorage();
-alert('✓ Import v20 terminé! ' + Object.values(v20Import).reduce((sum, arr) => sum + (Array.isArray(arr) ? arr.length : 0), 0) + ' enregistrements importés');
+alert('✓ Import v20 terminé!\\n${totalRecords} enregistrements importés');
 location.reload();`;
 
             importCode.value = code;
