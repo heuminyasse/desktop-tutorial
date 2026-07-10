@@ -696,15 +696,183 @@
         </div>
 
         <!-- ARTICLES_VENTE Panel -->
+        <!-- ARTICLES_VENTE Panel -->
         <div class="panel" id="articles-vente">
-            <div class="section-title">📦 Articles de Vente (En préparation)</div>
-            <p style="color: #666;">Module Articles/Services qu'on vend en cours de création...</p>
+            <div id="alert-articles-vente"></div>
+
+            <div class="section-title">📦 Articles/Services de Vente</div>
+            <div style="background: #f0f0f0; padding: 15px; border-radius: 4px; margin-bottom: 20px;">
+                <strong>Articles qu'on vend aux clients:</strong> Matériaux, services, produits finis pour BR/BL/Factures
+            </div>
+
+            <div class="section-title" style="border: none; margin-bottom: 20px;">Ajouter/Modifier Article</div>
+            <form id="articles-vente-form">
+                <div class="form-group">
+                    <div class="form-control">
+                        <label>ID (auto)</label>
+                        <input type="text" id="articles-vente-id" readonly style="background: #f0f0f0;">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <div class="form-control">
+                        <label>Code *</label>
+                        <input type="text" id="articles-vente-code" placeholder="Ex: ART-001" required>
+                    </div>
+                    <div class="form-control">
+                        <label>Désignation *</label>
+                        <input type="text" id="articles-vente-designation" placeholder="Ex: Tuyau PVC 50mm" required>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <div class="form-control">
+                        <label>Catégorie</label>
+                        <input type="text" id="articles-vente-categorie" placeholder="Ex: Matériaux, Main d'œuvre">
+                    </div>
+                    <div class="form-control">
+                        <label>Unité</label>
+                        <select id="articles-vente-unite">
+                            <option value="u">Unité (u)</option>
+                            <option value="m">Mètre (m)</option>
+                            <option value="m2">Mètre carré (m²)</option>
+                            <option value="m3">Mètre cube (m³)</option>
+                            <option value="kg">Kilogramme (kg)</option>
+                            <option value="l">Litre (l)</option>
+                            <option value="h">Heure (h)</option>
+                            <option value="jour">Jour</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <div class="form-control">
+                        <label>Prix Unitaire (XAF)</label>
+                        <input type="number" id="articles-vente-prix" placeholder="0" step="100">
+                    </div>
+                    <div class="form-control">
+                        <label>Statut</label>
+                        <select id="articles-vente-statut">
+                            <option value="Actif">Actif</option>
+                            <option value="Inactif">Inactif</option>
+                            <option value="Arrêté">Arrêté</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-actions">
+                    <button type="submit" class="btn btn-primary">💾 Enregistrer</button>
+                    <button type="reset" class="btn btn-secondary" onclick="app.resetArticlesVenteForm()">🔄 Réinitialiser</button>
+                </div>
+            </form>
+
+            <div class="section-title" style="border: none; margin-top: 40px;">Liste des Articles de Vente</div>
+            <div class="table-container">
+                <table id="articles-vente-table">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Code</th>
+                            <th>Désignation</th>
+                            <th>Catégorie</th>
+                            <th>Unité</th>
+                            <th>Prix</th>
+                            <th>Statut</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
         </div>
 
         <!-- ARTICLES_ACHAT Panel -->
         <div class="panel" id="articles-achat">
-            <div class="section-title">📥 Articles d'Achat (En préparation)</div>
-            <p style="color: #666;">Module Articles/Services qu'on achète en cours de création...</p>
+            <div id="alert-articles-achat"></div>
+
+            <div class="section-title">📥 Articles/Services d'Achat</div>
+            <div style="background: #f0f0f0; padding: 15px; border-radius: 4px; margin-bottom: 20px;">
+                <strong>Articles qu'on achète:</strong> Matériaux, produits, services achetés chez les fournisseurs pour les PO
+            </div>
+
+            <div class="section-title" style="border: none; margin-bottom: 20px;">Ajouter/Modifier Article</div>
+            <form id="articles-achat-form">
+                <div class="form-group">
+                    <div class="form-control">
+                        <label>ID (auto)</label>
+                        <input type="text" id="articles-achat-id" readonly style="background: #f0f0f0;">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <div class="form-control">
+                        <label>Code *</label>
+                        <input type="text" id="articles-achat-code" placeholder="Ex: ACH-001" required>
+                    </div>
+                    <div class="form-control">
+                        <label>Désignation *</label>
+                        <input type="text" id="articles-achat-designation" placeholder="Ex: Ciment 50kg" required>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <div class="form-control">
+                        <label>Catégorie</label>
+                        <input type="text" id="articles-achat-categorie" placeholder="Ex: Matériaux, Équipements">
+                    </div>
+                    <div class="form-control">
+                        <label>Unité</label>
+                        <select id="articles-achat-unite">
+                            <option value="u">Unité (u)</option>
+                            <option value="m">Mètre (m)</option>
+                            <option value="m2">Mètre carré (m²)</option>
+                            <option value="m3">Mètre cube (m³)</option>
+                            <option value="kg">Kilogramme (kg)</option>
+                            <option value="l">Litre (l)</option>
+                            <option value="sac">Sac</option>
+                            <option value="palette">Palette</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <div class="form-control">
+                        <label>Fournisseur</label>
+                        <select id="articles-achat-fournisseur"></select>
+                    </div>
+                    <div class="form-control">
+                        <label>Prix Achat (XAF)</label>
+                        <input type="number" id="articles-achat-prix" placeholder="0" step="100">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <div class="form-control">
+                        <label>Statut</label>
+                        <select id="articles-achat-statut">
+                            <option value="Actif">Actif</option>
+                            <option value="Inactif">Inactif</option>
+                            <option value="Rupture">Rupture de stock</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-actions">
+                    <button type="submit" class="btn btn-primary">💾 Enregistrer</button>
+                    <button type="reset" class="btn btn-secondary" onclick="app.resetArticlesAchatForm()">🔄 Réinitialiser</button>
+                </div>
+            </form>
+
+            <div class="section-title" style="border: none; margin-top: 40px;">Liste des Articles d'Achat</div>
+            <div class="table-container">
+                <table id="articles-achat-table">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Code</th>
+                            <th>Désignation</th>
+                            <th>Catégorie</th>
+                            <th>Unité</th>
+                            <th>Fournisseur</th>
+                            <th>Prix</th>
+                            <th>Statut</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
         </div>
 
         <!-- SETTINGS Panel -->
@@ -761,6 +929,9 @@
                 this.renderSites();
                 this.renderAcheteurs();
                 this.renderFournisseurs();
+                this.renderArticlesVente();
+                this.renderArticlesAchat();
+                this.updateFournisseursSelect();
                 this.updateStorageInfo();
                 console.log('ePilot v21 Professional initialized');
             },
@@ -820,6 +991,18 @@
                 document.getElementById('fournisseurs-form').addEventListener('submit', (e) => {
                     e.preventDefault();
                     this.saveFournisseurs();
+                });
+
+                // Articles Vente Form
+                document.getElementById('articles-vente-form').addEventListener('submit', (e) => {
+                    e.preventDefault();
+                    this.saveArticlesVente();
+                });
+
+                // Articles Achat Form
+                document.getElementById('articles-achat-form').addEventListener('submit', (e) => {
+                    e.preventDefault();
+                    this.saveArticlesAchat();
                 });
             },
 
@@ -1446,6 +1629,214 @@
                         tbody.appendChild(row);
                     });
                 }
+                this.updateFournisseursSelect();
+            },
+
+            // ==================== ARTICLES_VENTE MANAGEMENT ====================
+            saveArticlesVente() {
+                const code = document.getElementById('articles-vente-code').value;
+                const designation = document.getElementById('articles-vente-designation').value;
+
+                if (!code || !designation) {
+                    this.showAlert('articles-vente', '✗ Code et Désignation sont obligatoires', 'error');
+                    return;
+                }
+
+                const article = {
+                    id: document.getElementById('articles-vente-id').value || this.generateId('ART'),
+                    code: code.toUpperCase(),
+                    designation: designation,
+                    categorie: document.getElementById('articles-vente-categorie').value,
+                    unite: document.getElementById('articles-vente-unite').value,
+                    prix: parseFloat(document.getElementById('articles-vente-prix').value) || 0,
+                    statut: document.getElementById('articles-vente-statut').value,
+                    created_at: new Date().toISOString(),
+                    updated_at: new Date().toISOString(),
+                };
+
+                if (this.currentEditingId && this.currentEditingSection === 'articles-vente') {
+                    const index = this.db.ARTICLES_VENTE_DATA.findIndex(a => a.id === this.currentEditingId);
+                    article.created_at = this.db.ARTICLES_VENTE_DATA[index].created_at;
+                    this.db.ARTICLES_VENTE_DATA[index] = article;
+                    this.showAlert('articles-vente', '✓ Article modifié', 'success');
+                } else {
+                    this.db.ARTICLES_VENTE_DATA.push(article);
+                    this.showAlert('articles-vente', '✓ Article ajouté', 'success');
+                }
+
+                this.saveToStorage();
+                this.renderArticlesVente();
+                this.resetArticlesVenteForm();
+            },
+
+            editArticlesVente(id) {
+                const article = this.db.ARTICLES_VENTE_DATA.find(a => a.id === id);
+                if (!article) return;
+
+                document.getElementById('articles-vente-id').value = article.id;
+                document.getElementById('articles-vente-code').value = article.code;
+                document.getElementById('articles-vente-designation').value = article.designation;
+                document.getElementById('articles-vente-categorie').value = article.categorie;
+                document.getElementById('articles-vente-unite').value = article.unite;
+                document.getElementById('articles-vente-prix').value = article.prix;
+                document.getElementById('articles-vente-statut').value = article.statut;
+
+                this.currentEditingId = id;
+                this.currentEditingSection = 'articles-vente';
+                document.querySelector('[data-tab="articles-vente"]').click();
+            },
+
+            deleteArticlesVente(id) {
+                if (confirm('Êtes-vous sûr?')) {
+                    this.db.ARTICLES_VENTE_DATA = this.db.ARTICLES_VENTE_DATA.filter(a => a.id !== id);
+                    this.saveToStorage();
+                    this.renderArticlesVente();
+                    this.showAlert('articles-vente', '✓ Article supprimé', 'success');
+                }
+            },
+
+            resetArticlesVenteForm() {
+                document.getElementById('articles-vente-form').reset();
+                this.currentEditingId = null;
+                this.currentEditingSection = null;
+            },
+
+            renderArticlesVente() {
+                const tbody = document.querySelector('#articles-vente-table tbody');
+                tbody.innerHTML = '';
+
+                if (this.db.ARTICLES_VENTE_DATA.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="8" style="text-align: center; color: #999;">Aucun article</td></tr>';
+                } else {
+                    this.db.ARTICLES_VENTE_DATA.forEach(a => {
+                        const row = document.createElement('tr');
+                        row.innerHTML = `
+                            <td><code style="font-size: 11px;">${a.id}</code></td>
+                            <td><strong>${a.code}</strong></td>
+                            <td>${a.designation}</td>
+                            <td>${a.categorie || '-'}</td>
+                            <td>${a.unite}</td>
+                            <td style="text-align: right;">${a.prix.toLocaleString()}</td>
+                            <td><span style="background: ${a.statut === 'Actif' ? '#d1fae5' : '#fee2e2'}; padding: 3px 8px; border-radius: 3px; font-size: 12px;">${a.statut}</span></td>
+                            <td>
+                                <button class="action-btn action-edit" onclick="app.editArticlesVente('${a.id}')">✎</button>
+                                <button class="action-btn action-delete" onclick="app.deleteArticlesVente('${a.id}')">✕</button>
+                            </td>
+                        `;
+                        tbody.appendChild(row);
+                    });
+                }
+            },
+
+            // ==================== ARTICLES_ACHAT MANAGEMENT ====================
+            saveArticlesAchat() {
+                const code = document.getElementById('articles-achat-code').value;
+                const designation = document.getElementById('articles-achat-designation').value;
+
+                if (!code || !designation) {
+                    this.showAlert('articles-achat', '✗ Code et Désignation sont obligatoires', 'error');
+                    return;
+                }
+
+                const article = {
+                    id: document.getElementById('articles-achat-id').value || this.generateId('ACH'),
+                    code: code.toUpperCase(),
+                    designation: designation,
+                    categorie: document.getElementById('articles-achat-categorie').value,
+                    unite: document.getElementById('articles-achat-unite').value,
+                    fournisseur_id: document.getElementById('articles-achat-fournisseur').value,
+                    prix: parseFloat(document.getElementById('articles-achat-prix').value) || 0,
+                    statut: document.getElementById('articles-achat-statut').value,
+                    created_at: new Date().toISOString(),
+                    updated_at: new Date().toISOString(),
+                };
+
+                if (this.currentEditingId && this.currentEditingSection === 'articles-achat') {
+                    const index = this.db.ARTICLES_ACHAT_DATA.findIndex(a => a.id === this.currentEditingId);
+                    article.created_at = this.db.ARTICLES_ACHAT_DATA[index].created_at;
+                    this.db.ARTICLES_ACHAT_DATA[index] = article;
+                    this.showAlert('articles-achat', '✓ Article modifié', 'success');
+                } else {
+                    this.db.ARTICLES_ACHAT_DATA.push(article);
+                    this.showAlert('articles-achat', '✓ Article ajouté', 'success');
+                }
+
+                this.saveToStorage();
+                this.renderArticlesAchat();
+                this.resetArticlesAchatForm();
+            },
+
+            editArticlesAchat(id) {
+                const article = this.db.ARTICLES_ACHAT_DATA.find(a => a.id === id);
+                if (!article) return;
+
+                document.getElementById('articles-achat-id').value = article.id;
+                document.getElementById('articles-achat-code').value = article.code;
+                document.getElementById('articles-achat-designation').value = article.designation;
+                document.getElementById('articles-achat-categorie').value = article.categorie;
+                document.getElementById('articles-achat-unite').value = article.unite;
+                document.getElementById('articles-achat-fournisseur').value = article.fournisseur_id || '';
+                document.getElementById('articles-achat-prix').value = article.prix;
+                document.getElementById('articles-achat-statut').value = article.statut;
+
+                this.currentEditingId = id;
+                this.currentEditingSection = 'articles-achat';
+                document.querySelector('[data-tab="articles-achat"]').click();
+            },
+
+            deleteArticlesAchat(id) {
+                if (confirm('Êtes-vous sûr?')) {
+                    this.db.ARTICLES_ACHAT_DATA = this.db.ARTICLES_ACHAT_DATA.filter(a => a.id !== id);
+                    this.saveToStorage();
+                    this.renderArticlesAchat();
+                    this.showAlert('articles-achat', '✓ Article supprimé', 'success');
+                }
+            },
+
+            resetArticlesAchatForm() {
+                document.getElementById('articles-achat-form').reset();
+                this.currentEditingId = null;
+                this.currentEditingSection = null;
+            },
+
+            renderArticlesAchat() {
+                const tbody = document.querySelector('#articles-achat-table tbody');
+                tbody.innerHTML = '';
+
+                if (this.db.ARTICLES_ACHAT_DATA.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="9" style="text-align: center; color: #999;">Aucun article</td></tr>';
+                } else {
+                    this.db.ARTICLES_ACHAT_DATA.forEach(a => {
+                        const fournisseur = this.db.FOURNISSEURS_DATA.find(f => f.id === a.fournisseur_id);
+                        const row = document.createElement('tr');
+                        row.innerHTML = `
+                            <td><code style="font-size: 11px;">${a.id}</code></td>
+                            <td><strong>${a.code}</strong></td>
+                            <td>${a.designation}</td>
+                            <td>${a.categorie || '-'}</td>
+                            <td>${a.unite}</td>
+                            <td>${fournisseur ? fournisseur.nom : '-'}</td>
+                            <td style="text-align: right;">${a.prix.toLocaleString()}</td>
+                            <td><span style="background: ${a.statut === 'Actif' ? '#d1fae5' : '#fee2e2'}; padding: 3px 8px; border-radius: 3px; font-size: 12px;">${a.statut}</span></td>
+                            <td>
+                                <button class="action-btn action-edit" onclick="app.editArticlesAchat('${a.id}')">✎</button>
+                                <button class="action-btn action-delete" onclick="app.deleteArticlesAchat('${a.id}')">✕</button>
+                            </td>
+                        `;
+                        tbody.appendChild(row);
+                    });
+                }
+            },
+
+            updateFournisseursSelect() {
+                const select = document.getElementById('articles-achat-fournisseur');
+                select.innerHTML = '<option value="">-- Aucun fournisseur --</option>';
+                this.db.FOURNISSEURS_DATA.forEach(f => {
+                    const option = document.createElement('option');
+                    option.value = f.id;
+                    option.textContent = f.nom;
+                    select.appendChild(option);
+                });
             },
 
             // ==================== STORAGE ====================
