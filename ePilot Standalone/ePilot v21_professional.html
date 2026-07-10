@@ -264,6 +264,7 @@
         <button class="nav-btn" data-tab="depenses">💰 Dépenses</button>
         <button class="nav-btn" data-tab="requetes">📋 Requêtes</button>
         <button class="nav-btn" data-tab="papiers">📄 Papiers</button>
+        <button class="nav-btn" data-tab="boutique">🛒 Boutique</button>
         <button class="nav-btn" data-tab="settings">⚙️ Paramètres</button>
     </div>
 
@@ -1292,6 +1293,188 @@
             </div>
         </div>
 
+        <!-- BOUTIQUE Panel -->
+        <div class="panel" id="boutique">
+            <div class="section-title">🛒 Boutique - E-Commerce</div>
+
+            <div id="alert-boutique"></div>
+
+            <!-- Sous-tabs -->
+            <div style="display: flex; gap: 10px; margin-bottom: 20px; border-bottom: 2px solid #ddd; padding-bottom: 10px;">
+                <button class="nav-btn" data-boutique-tab="produits" style="border-bottom: 3px solid #B5000A; color: #B5000A;">📦 Produits</button>
+                <button class="nav-btn" data-boutique-tab="commandes" onclick="document.querySelector('[data-boutique-tab=commandes]').style.borderBottom='3px solid #B5000A'; document.querySelector('[data-boutique-tab=produits]').style.borderBottom='none'; document.getElementById('boutique-produits-section').style.display='none'; document.getElementById('boutique-commandes-section').style.display='block';">🛍️ Commandes</button>
+            </div>
+
+            <!-- PRODUITS Section -->
+            <div id="boutique-produits-section">
+                <div style="background: #f0f0f0; padding: 15px; border-radius: 4px; margin-bottom: 20px;">
+                    <strong>Gestion de l'inventaire:</strong> Ajouter et gérer les produits disponibles en boutique
+                </div>
+
+                <form id="boutique-produits-form">
+                    <div class="form-group">
+                        <div class="form-control">
+                            <label>ID (Auto-généré)</label>
+                            <input type="text" id="boutique-id" readonly style="background: #f0f0f0;">
+                        </div>
+                        <div class="form-control">
+                            <label>Code Produit</label>
+                            <input type="text" id="boutique-code" placeholder="PROD-001" required>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <div class="form-control">
+                            <label>Nom du Produit *</label>
+                            <input type="text" id="boutique-nom" placeholder="Nom du produit" required>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <div class="form-control">
+                            <label>Prix (XAF)</label>
+                            <input type="number" id="boutique-prix" placeholder="0" step="100" required>
+                        </div>
+                        <div class="form-control">
+                            <label>Quantité disponible</label>
+                            <input type="text" id="boutique-quantite" placeholder="Ex: 100, 500m, 1 palette" required>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <div class="form-control">
+                            <label>Description</label>
+                            <textarea id="boutique-description" placeholder="Description du produit" style="min-height: 60px; padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-family: inherit;"></textarea>
+                        </div>
+                    </div>
+
+                    <div class="form-actions">
+                        <button type="submit" class="btn btn-primary">💾 Enregistrer</button>
+                        <button type="reset" class="btn btn-secondary" onclick="app.resetBoutiqueForm()">🔄 Réinitialiser</button>
+                    </div>
+                </form>
+
+                <div class="section-title" style="border: none; margin-top: 40px;">Inventaire des Produits</div>
+                <div class="table-container">
+                    <table id="boutique-produits-table">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Code</th>
+                                <th>Nom</th>
+                                <th>Prix (XAF)</th>
+                                <th>Quantité</th>
+                                <th>Description</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- COMMANDES Section -->
+            <div id="boutique-commandes-section" style="display: none;">
+                <div style="background: #f0f0f0; padding: 15px; border-radius: 4px; margin-bottom: 20px;">
+                    <strong>Commandes Clients:</strong> Traiter les commandes des clients
+                </div>
+
+                <form id="boutique-commandes-form">
+                    <div class="form-group">
+                        <div class="form-control">
+                            <label>ID Commande (Auto-généré)</label>
+                            <input type="text" id="boutique-commande-id" readonly style="background: #f0f0f0;">
+                        </div>
+                        <div class="form-control">
+                            <label>N° Commande</label>
+                            <input type="text" id="boutique-numero-commande" placeholder="CMD-2026-001" required>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <div class="form-control">
+                            <label>Nom Client *</label>
+                            <input type="text" id="boutique-client-nom" placeholder="Nom du client" required>
+                        </div>
+                        <div class="form-control">
+                            <label>Email</label>
+                            <input type="email" id="boutique-client-email" placeholder="client@example.cm">
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <div class="form-control">
+                            <label>Téléphone</label>
+                            <input type="tel" id="boutique-client-tel" placeholder="+237 6XX XXX XXX">
+                        </div>
+                        <div class="form-control">
+                            <label>Adresse de livraison</label>
+                            <input type="text" id="boutique-adresse-livraison" placeholder="Adresse">
+                        </div>
+                    </div>
+
+                    <div style="border: 1px solid #ddd; padding: 15px; border-radius: 4px; margin-bottom: 20px;">
+                        <h4 style="margin-bottom: 15px; font-size: 14px;">Ajouter des articles</h4>
+                        <div class="form-group">
+                            <div class="form-control">
+                                <label>Produit</label>
+                                <select id="boutique-produit-select">
+                                    <option value="">-- Sélectionner un produit --</option>
+                                </select>
+                            </div>
+                            <div class="form-control">
+                                <label>Quantité</label>
+                                <input type="number" id="boutique-quantite-commande" placeholder="1" step="1" min="1" value="1">
+                            </div>
+                            <button type="button" id="boutique-ajouter-article-btn" class="btn btn-secondary" style="margin-top: 25px;">➕ Ajouter</button>
+                        </div>
+
+                        <div id="boutique-articles-liste" style="margin-top: 15px;"></div>
+                    </div>
+
+                    <div class="form-group">
+                        <div class="form-control">
+                            <label>Statut</label>
+                            <select id="boutique-statut-commande">
+                                <option value="En attente">En attente</option>
+                                <option value="Confirmée">Confirmée</option>
+                                <option value="Expédiée">Expédiée</option>
+                                <option value="Livrée">Livrée</option>
+                                <option value="Annulée">Annulée</option>
+                            </select>
+                        </div>
+                        <div class="form-control">
+                            <label>Notes</label>
+                            <textarea id="boutique-notes-commande" placeholder="Remarques..." style="min-height: 60px; padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-family: inherit;"></textarea>
+                        </div>
+                    </div>
+
+                    <div class="form-actions">
+                        <button type="submit" class="btn btn-primary">💾 Enregistrer Commande</button>
+                        <button type="reset" class="btn btn-secondary" onclick="app.resetCommande()">🔄 Réinitialiser</button>
+                    </div>
+                </form>
+
+                <div class="section-title" style="border: none; margin-top: 40px;">Liste des Commandes</div>
+                <div class="table-container">
+                    <table id="boutique-commandes-table">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>N° Commande</th>
+                                <th>Client</th>
+                                <th>Total (XAF)</th>
+                                <th>Statut</th>
+                                <th>Date</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
         <!-- SETTINGS Panel -->
         <div class="panel" id="settings">
             <div class="section-title">⚙️ Paramètres</div>
@@ -1336,6 +1519,8 @@
                 EXPENSES_DATA: [],
                 REQUETES_DATA: [],
                 PAPIERS_DATA: [],
+                BOUTIQUE_PRODUITS_DATA: [],
+                BOUTIQUE_COMMANDES_DATA: [],
             },
 
             currentEditingId: null,
@@ -1356,10 +1541,13 @@
                 this.renderDepenses();
                 this.renderRequetes();
                 this.renderPapiers();
+                this.renderBoutiqueProduits();
+                this.renderBoutiqueCommandes();
                 this.updateFournisseursSelect();
                 this.updateRequetesClientsSelect();
                 this.updatePapiersClientsSelect();
                 this.updateCertificationsPersonnelSelect();
+                this.updateBoutiqueProduitSelect();
                 this.updateStorageInfo();
                 console.log('ePilot v21 Professional initialized');
             },
@@ -1452,6 +1640,32 @@
                 document.getElementById('certifications-form').addEventListener('submit', (e) => {
                     e.preventDefault();
                     this.saveCertifications();
+                });
+
+                document.getElementById('boutique-produits-form').addEventListener('submit', (e) => {
+                    e.preventDefault();
+                    this.saveBoutiqueProduit();
+                });
+
+                document.getElementById('boutique-commandes-form').addEventListener('submit', (e) => {
+                    e.preventDefault();
+                    this.saveBoutiqueCommande();
+                });
+
+                document.getElementById('boutique-ajouter-article-btn').addEventListener('click', () => {
+                    this.ajouterArticleCommande();
+                });
+
+                // Boutique sub-tabs
+                document.querySelectorAll('[data-boutique-tab]').forEach(btn => {
+                    btn.addEventListener('click', (e) => {
+                        const tab = e.target.getAttribute('data-boutique-tab');
+                        document.getElementById('boutique-produits-section').style.display = tab === 'produits' ? 'block' : 'none';
+                        document.getElementById('boutique-commandes-section').style.display = tab === 'commandes' ? 'block' : 'none';
+                        document.querySelectorAll('[data-boutique-tab]').forEach(b => b.style.borderBottom = 'none');
+                        e.target.style.borderBottom = '3px solid #B5000A';
+                        e.target.style.color = '#B5000A';
+                    });
                 });
             },
 
@@ -2760,6 +2974,263 @@
                 this.currentEditingId = null;
             },
 
+            // ==================== BOUTIQUE MANAGEMENT ====================
+            saveBoutiqueProduit() {
+                const nom = document.getElementById('boutique-nom').value;
+                const prix = document.getElementById('boutique-prix').value;
+                const quantite = document.getElementById('boutique-quantite').value;
+
+                if (!nom || !prix || !quantite) {
+                    this.showAlert('boutique', '⚠️ Tous les champs obligatoires doivent être remplis', 'error');
+                    return;
+                }
+
+                const produit = {
+                    id: document.getElementById('boutique-id').value || this.generateId('PROD'),
+                    code: document.getElementById('boutique-code').value.toUpperCase(),
+                    nom: nom,
+                    prix: parseInt(prix),
+                    quantite: quantite,
+                    description: document.getElementById('boutique-description').value || '',
+                    created_at: this.currentEditingId ? this.db.BOUTIQUE_PRODUITS_DATA.find(p => p.id === this.currentEditingId)?.created_at : new Date().toISOString(),
+                    updated_at: new Date().toISOString()
+                };
+
+                if (this.currentEditingId) {
+                    const index = this.db.BOUTIQUE_PRODUITS_DATA.findIndex(p => p.id === this.currentEditingId);
+                    if (index > -1) this.db.BOUTIQUE_PRODUITS_DATA[index] = produit;
+                } else {
+                    this.db.BOUTIQUE_PRODUITS_DATA.push(produit);
+                }
+
+                this.saveToStorage();
+                this.renderBoutiqueProduits();
+                this.updateBoutiqueProduitSelect();
+                this.resetBoutiqueForm();
+                this.showAlert('boutique', '✓ Produit enregistré', 'success');
+            },
+
+            editBoutiqueProduit(id) {
+                const produit = this.db.BOUTIQUE_PRODUITS_DATA.find(p => p.id === id);
+                if (!produit) return;
+
+                document.getElementById('boutique-id').value = produit.id;
+                document.getElementById('boutique-code').value = produit.code;
+                document.getElementById('boutique-nom').value = produit.nom;
+                document.getElementById('boutique-prix').value = produit.prix;
+                document.getElementById('boutique-quantite').value = produit.quantite;
+                document.getElementById('boutique-description').value = produit.description || '';
+
+                this.currentEditingId = id;
+            },
+
+            deleteBoutiqueProduit(id) {
+                if (!confirm('Confirmer la suppression de ce produit?')) return;
+                this.db.BOUTIQUE_PRODUITS_DATA = this.db.BOUTIQUE_PRODUITS_DATA.filter(p => p.id !== id);
+                this.saveToStorage();
+                this.renderBoutiqueProduits();
+                this.updateBoutiqueProduitSelect();
+                this.showAlert('boutique', '✓ Produit supprimé', 'success');
+            },
+
+            renderBoutiqueProduits() {
+                const tbody = document.querySelector('#boutique-produits-table tbody');
+                tbody.innerHTML = '';
+
+                if (this.db.BOUTIQUE_PRODUITS_DATA.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="7" style="text-align: center; color: #999;">Aucun produit enregistré</td></tr>';
+                } else {
+                    this.db.BOUTIQUE_PRODUITS_DATA.forEach(p => {
+                        const row = document.createElement('tr');
+                        row.innerHTML = `
+                            <td><code style="font-size: 11px;">${p.id}</code></td>
+                            <td>${p.code}</td>
+                            <td>${p.nom}</td>
+                            <td style="text-align: right; font-weight: bold;">${p.prix.toLocaleString()}</td>
+                            <td>${p.quantite}</td>
+                            <td>${p.description || '-'}</td>
+                            <td>
+                                <button class="action-btn action-edit" onclick="app.editBoutiqueProduit('${p.id}')">✎</button>
+                                <button class="action-btn action-delete" onclick="app.deleteBoutiqueProduit('${p.id}')">✕</button>
+                            </td>
+                        `;
+                        tbody.appendChild(row);
+                    });
+                }
+            },
+
+            resetBoutiqueForm() {
+                document.getElementById('boutique-produits-form').reset();
+                document.getElementById('boutique-id').value = '';
+                this.currentEditingId = null;
+            },
+
+            updateBoutiqueProduitSelect() {
+                const select = document.getElementById('boutique-produit-select');
+                select.innerHTML = '<option value="">-- Sélectionner un produit --</option>';
+                this.db.BOUTIQUE_PRODUITS_DATA.forEach(p => {
+                    const option = document.createElement('option');
+                    option.value = p.id;
+                    option.textContent = `${p.nom} (${p.prix.toLocaleString()} XAF)`;
+                    select.appendChild(option);
+                });
+            },
+
+            boutiqueArticlesCommande: [],
+
+            ajouterArticleCommande() {
+                const produitId = document.getElementById('boutique-produit-select').value;
+                const quantite = parseInt(document.getElementById('boutique-quantite-commande').value) || 1;
+
+                if (!produitId) {
+                    alert('Sélectionner un produit');
+                    return;
+                }
+
+                const produit = this.db.BOUTIQUE_PRODUITS_DATA.find(p => p.id === produitId);
+                if (!produit) return;
+
+                this.boutiqueArticlesCommande.push({
+                    produit_id: produitId,
+                    nom: produit.nom,
+                    prix: produit.prix,
+                    quantite: quantite,
+                    soustotal: produit.prix * quantite
+                });
+
+                this.afficherArticlesCommande();
+                document.getElementById('boutique-produit-select').value = '';
+                document.getElementById('boutique-quantite-commande').value = '1';
+            },
+
+            afficherArticlesCommande() {
+                const div = document.getElementById('boutique-articles-liste');
+                div.innerHTML = '';
+
+                if (this.boutiqueArticlesCommande.length === 0) {
+                    div.innerHTML = '<p style="color: #999; font-size: 13px;">Aucun article ajouté</p>';
+                    return;
+                }
+
+                let html = '<table style="width: 100%; font-size: 13px;"><tr style="background: #f0f0f0;"><th>Produit</th><th style="text-align: right;">Prix</th><th style="text-align: right;">Qté</th><th style="text-align: right;">S/Total</th><th></th></tr>';
+                let total = 0;
+
+                this.boutiqueArticlesCommande.forEach((art, idx) => {
+                    total += art.soustotal;
+                    html += `<tr><td>${art.nom}</td><td style="text-align: right;">${art.prix.toLocaleString()}</td><td style="text-align: right;">${art.quantite}</td><td style="text-align: right; font-weight: bold;">${art.soustotal.toLocaleString()}</td><td><button type="button" class="btn" style="padding: 2px 8px; font-size: 11px;" onclick="app.supprimerArticleCommande(${idx})">✕</button></td></tr>`;
+                });
+
+                html += `<tr style="background: #f0f0f0; font-weight: bold;"><td colspan="3" style="text-align: right;">TOTAL:</td><td style="text-align: right;">${total.toLocaleString()} XAF</td><td></td></tr></table>`;
+                div.innerHTML = html;
+            },
+
+            supprimerArticleCommande(idx) {
+                this.boutiqueArticlesCommande.splice(idx, 1);
+                this.afficherArticlesCommande();
+            },
+
+            saveBoutiqueCommande() {
+                const clientNom = document.getElementById('boutique-client-nom').value;
+                const numeroCommande = document.getElementById('boutique-numero-commande').value;
+
+                if (!clientNom || !numeroCommande || this.boutiqueArticlesCommande.length === 0) {
+                    this.showAlert('boutique', '⚠️ Remplir tous les champs et ajouter au moins un article', 'error');
+                    return;
+                }
+
+                const total = this.boutiqueArticlesCommande.reduce((sum, art) => sum + art.soustotal, 0);
+
+                const commande = {
+                    id: document.getElementById('boutique-commande-id').value || this.generateId('CMD'),
+                    numero: numeroCommande.toUpperCase(),
+                    client_nom: clientNom,
+                    client_email: document.getElementById('boutique-client-email').value || '',
+                    client_tel: document.getElementById('boutique-client-tel').value || '',
+                    adresse_livraison: document.getElementById('boutique-adresse-livraison').value || '',
+                    articles: JSON.parse(JSON.stringify(this.boutiqueArticlesCommande)),
+                    total: total,
+                    statut: document.getElementById('boutique-statut-commande').value,
+                    notes: document.getElementById('boutique-notes-commande').value || '',
+                    date: new Date().toISOString().split('T')[0],
+                    created_at: this.currentEditingId ? this.db.BOUTIQUE_COMMANDES_DATA.find(c => c.id === this.currentEditingId)?.created_at : new Date().toISOString(),
+                    updated_at: new Date().toISOString()
+                };
+
+                if (this.currentEditingId) {
+                    const index = this.db.BOUTIQUE_COMMANDES_DATA.findIndex(c => c.id === this.currentEditingId);
+                    if (index > -1) this.db.BOUTIQUE_COMMANDES_DATA[index] = commande;
+                } else {
+                    this.db.BOUTIQUE_COMMANDES_DATA.push(commande);
+                }
+
+                this.saveToStorage();
+                this.renderBoutiqueCommandes();
+                this.resetCommande();
+                this.showAlert('boutique', '✓ Commande enregistrée', 'success');
+            },
+
+            editBoutiqueCommande(id) {
+                const commande = this.db.BOUTIQUE_COMMANDES_DATA.find(c => c.id === id);
+                if (!commande) return;
+
+                document.getElementById('boutique-commande-id').value = commande.id;
+                document.getElementById('boutique-numero-commande').value = commande.numero;
+                document.getElementById('boutique-client-nom').value = commande.client_nom;
+                document.getElementById('boutique-client-email').value = commande.client_email || '';
+                document.getElementById('boutique-client-tel').value = commande.client_tel || '';
+                document.getElementById('boutique-adresse-livraison').value = commande.adresse_livraison || '';
+                document.getElementById('boutique-statut-commande').value = commande.statut;
+                document.getElementById('boutique-notes-commande').value = commande.notes || '';
+
+                this.boutiqueArticlesCommande = JSON.parse(JSON.stringify(commande.articles));
+                this.afficherArticlesCommande();
+
+                this.currentEditingId = id;
+            },
+
+            deleteBoutiqueCommande(id) {
+                if (!confirm('Confirmer la suppression de cette commande?')) return;
+                this.db.BOUTIQUE_COMMANDES_DATA = this.db.BOUTIQUE_COMMANDES_DATA.filter(c => c.id !== id);
+                this.saveToStorage();
+                this.renderBoutiqueCommandes();
+                this.showAlert('boutique', '✓ Commande supprimée', 'success');
+            },
+
+            renderBoutiqueCommandes() {
+                const tbody = document.querySelector('#boutique-commandes-table tbody');
+                tbody.innerHTML = '';
+
+                if (this.db.BOUTIQUE_COMMANDES_DATA.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="7" style="text-align: center; color: #999;">Aucune commande enregistrée</td></tr>';
+                } else {
+                    this.db.BOUTIQUE_COMMANDES_DATA.forEach(c => {
+                        const statusColor = c.statut === 'Livrée' ? '#d1fae5' : c.statut === 'Annulée' ? '#fee2e2' : c.statut === 'Expédiée' ? '#dbeafe' : '#fef3c7';
+                        const row = document.createElement('tr');
+                        row.innerHTML = `
+                            <td><code style="font-size: 11px;">${c.id}</code></td>
+                            <td>${c.numero}</td>
+                            <td>${c.client_nom}</td>
+                            <td style="text-align: right; font-weight: bold;">${c.total.toLocaleString()}</td>
+                            <td><span style="background: ${statusColor}; padding: 3px 8px; border-radius: 3px; font-size: 12px;">${c.statut}</span></td>
+                            <td>${c.date}</td>
+                            <td>
+                                <button class="action-btn action-edit" onclick="app.editBoutiqueCommande('${c.id}')">✎</button>
+                                <button class="action-btn action-delete" onclick="app.deleteBoutiqueCommande('${c.id}')">✕</button>
+                            </td>
+                        `;
+                        tbody.appendChild(row);
+                    });
+                }
+            },
+
+            resetCommande() {
+                document.getElementById('boutique-commandes-form').reset();
+                document.getElementById('boutique-commande-id').value = '';
+                this.boutiqueArticlesCommande = [];
+                this.afficherArticlesCommande();
+                this.currentEditingId = null;
+            },
+
             // ==================== STORAGE ====================
             saveToStorage() {
                 localStorage.setItem('epillot_v21_db', JSON.stringify(this.db));
@@ -2805,6 +3276,8 @@
                             EXPENSES_DATA: [],
                             REQUETES_DATA: [],
                             PAPIERS_DATA: [],
+                            BOUTIQUE_PRODUITS_DATA: [],
+                            BOUTIQUE_COMMANDES_DATA: [],
                         };
                         this.saveToStorage();
                         this.renderPersonnel();
@@ -2814,9 +3287,12 @@
                         this.renderDepenses();
                         this.renderRequetes();
                         this.renderPapiers();
+                        this.renderBoutiqueProduits();
+                        this.renderBoutiqueCommandes();
                         this.updateRequetesClientsSelect();
                         this.updatePapiersClientsSelect();
                         this.updateCertificationsPersonnelSelect();
+                        this.updateBoutiqueProduitSelect();
                         this.showAlert('settings', '⚠️ Toutes les données ont été effacées', 'error');
                     }
                 }
