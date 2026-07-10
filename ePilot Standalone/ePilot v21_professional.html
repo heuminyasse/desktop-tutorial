@@ -372,8 +372,233 @@
 
         <!-- CLIENTS Panel -->
         <div class="panel" id="clients">
-            <div class="section-title">🏭 Clients (En préparation)</div>
-            <p style="color: #666;">Module Clients - Sites - Acheteurs en cours de création...</p>
+            <div id="alert-clients"></div>
+
+            <!-- Client Tabs -->
+            <div style="border-bottom: 1px solid #ddd; margin-bottom: 20px;">
+                <button class="nav-btn" data-clients-tab="clients" style="padding: 10px 15px; border-bottom: 3px solid #B5000A; color: #B5000A; cursor: pointer;">👥 Clients</button>
+                <button class="nav-btn" data-clients-tab="sites" style="padding: 10px 15px; border: none; border-bottom: 3px solid transparent; color: #666; cursor: pointer;">📍 Sites</button>
+                <button class="nav-btn" data-clients-tab="acheteurs" style="padding: 10px 15px; border: none; border-bottom: 3px solid transparent; color: #666; cursor: pointer;">💼 Acheteurs</button>
+            </div>
+
+            <!-- CLIENTS Section -->
+            <div id="clients-section" style="display: block;">
+                <div class="section-title" style="border: none; margin-bottom: 20px;">Ajouter/Modifier Client</div>
+                <form id="clients-form">
+                    <div class="form-group">
+                        <div class="form-control">
+                            <label>ID (auto)</label>
+                            <input type="text" id="clients-id" readonly style="background: #f0f0f0;">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <div class="form-control">
+                            <label>Nom du Client *</label>
+                            <input type="text" id="clients-nom" placeholder="Ex: ACME Corp" required>
+                        </div>
+                        <div class="form-control">
+                            <label>Secteur d'activité</label>
+                            <input type="text" id="clients-secteur" placeholder="Ex: Construction, Énergie">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <div class="form-control">
+                            <label>Adresse</label>
+                            <input type="text" id="clients-adresse" placeholder="Ex: 123 Rue de la Paix">
+                        </div>
+                        <div class="form-control">
+                            <label>Ville</label>
+                            <input type="text" id="clients-ville" placeholder="Ex: Douala">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <div class="form-control">
+                            <label>Téléphone</label>
+                            <input type="tel" id="clients-telephone" placeholder="+237 2XX XXX XXX">
+                        </div>
+                        <div class="form-control">
+                            <label>Email</label>
+                            <input type="email" id="clients-email" placeholder="contact@client.com">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <div class="form-control">
+                            <label>Statut</label>
+                            <select id="clients-statut">
+                                <option value="Actif">Actif</option>
+                                <option value="Inactif">Inactif</option>
+                                <option value="Suspendu">Suspendu</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-actions">
+                        <button type="submit" class="btn btn-primary">💾 Enregistrer</button>
+                        <button type="reset" class="btn btn-secondary" onclick="app.resetClientsForm()">🔄 Réinitialiser</button>
+                    </div>
+                </form>
+
+                <div class="section-title" style="border: none; margin-top: 40px;">Liste des Clients</div>
+                <div class="table-container">
+                    <table id="clients-table">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Nom</th>
+                                <th>Secteur</th>
+                                <th>Ville</th>
+                                <th>Téléphone</th>
+                                <th>Statut</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- SITES Section -->
+            <div id="sites-section" style="display: none;">
+                <div class="section-title" style="border: none; margin-bottom: 20px;">Ajouter/Modifier Site</div>
+                <form id="sites-form">
+                    <div class="form-group">
+                        <div class="form-control">
+                            <label>ID (auto)</label>
+                            <input type="text" id="sites-id" readonly style="background: #f0f0f0;">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <div class="form-control">
+                            <label>Client *</label>
+                            <select id="sites-client-id" required></select>
+                        </div>
+                        <div class="form-control">
+                            <label>Nom du Site *</label>
+                            <input type="text" id="sites-nom" placeholder="Ex: Chantier Principal" required>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <div class="form-control">
+                            <label>Adresse</label>
+                            <input type="text" id="sites-adresse" placeholder="Adresse du site">
+                        </div>
+                        <div class="form-control">
+                            <label>Type</label>
+                            <select id="sites-type">
+                                <option value="">-- Sélectionner --</option>
+                                <option value="Chantier">Chantier</option>
+                                <option value="Bureau">Bureau</option>
+                                <option value="Entrepôt">Entrepôt</option>
+                                <option value="Usine">Usine</option>
+                                <option value="Autre">Autre</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <div class="form-control">
+                            <label>Responsable du site</label>
+                            <input type="text" id="sites-responsable" placeholder="Nom du responsable">
+                        </div>
+                        <div class="form-control">
+                            <label>Statut</label>
+                            <select id="sites-statut">
+                                <option value="Actif">Actif</option>
+                                <option value="Inactif">Inactif</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-actions">
+                        <button type="submit" class="btn btn-primary">💾 Enregistrer</button>
+                        <button type="reset" class="btn btn-secondary" onclick="app.resetSitesForm()">🔄 Réinitialiser</button>
+                    </div>
+                </form>
+
+                <div class="section-title" style="border: none; margin-top: 40px;">Liste des Sites</div>
+                <div class="table-container">
+                    <table id="sites-table">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Client</th>
+                                <th>Site</th>
+                                <th>Type</th>
+                                <th>Responsable</th>
+                                <th>Statut</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- ACHETEURS Section -->
+            <div id="acheteurs-section" style="display: none;">
+                <div class="section-title" style="border: none; margin-bottom: 20px;">Ajouter/Modifier Acheteur</div>
+                <form id="acheteurs-form">
+                    <div class="form-group">
+                        <div class="form-control">
+                            <label>ID (auto)</label>
+                            <input type="text" id="acheteurs-id" readonly style="background: #f0f0f0;">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <div class="form-control">
+                            <label>Site *</label>
+                            <select id="acheteurs-site-id" required></select>
+                        </div>
+                        <div class="form-control">
+                            <label>Nom *</label>
+                            <input type="text" id="acheteurs-nom" placeholder="Ex: Jean DUPONT" required>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <div class="form-control">
+                            <label>Titre/Fonction</label>
+                            <input type="text" id="acheteurs-fonction" placeholder="Ex: Directeur d'Achat">
+                        </div>
+                        <div class="form-control">
+                            <label>Email</label>
+                            <input type="email" id="acheteurs-email" placeholder="prenom.nom@client.com">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <div class="form-control">
+                            <label>Téléphone Direct</label>
+                            <input type="tel" id="acheteurs-telephone" placeholder="+237 6XX XXX XXX">
+                        </div>
+                        <div class="form-control">
+                            <label>Statut</label>
+                            <select id="acheteurs-statut">
+                                <option value="Actif">Actif</option>
+                                <option value="Inactif">Inactif</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-actions">
+                        <button type="submit" class="btn btn-primary">💾 Enregistrer</button>
+                        <button type="reset" class="btn btn-secondary" onclick="app.resetAcheteursForm()">🔄 Réinitialiser</button>
+                    </div>
+                </form>
+
+                <div class="section-title" style="border: none; margin-top: 40px;">Liste des Acheteurs</div>
+                <div class="table-container">
+                    <table id="acheteurs-table">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Site</th>
+                                <th>Nom</th>
+                                <th>Fonction</th>
+                                <th>Email</th>
+                                <th>Téléphone</th>
+                                <th>Statut</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+            </div>
         </div>
 
         <!-- FOURNISSEURS Panel -->
@@ -429,27 +654,33 @@
             db: {
                 PERSONNEL_DATA: [],
                 CLIENTS_DATA: [],
+                SITES_DATA: [],
+                ACHETEURS_DATA: [],
                 FOURNISSEURS_DATA: [],
                 ARTICLES_VENTE_DATA: [],
                 ARTICLES_ACHAT_DATA: [],
             },
 
             currentEditingId: null,
+            currentEditingSection: null,
 
             // ==================== INITIALIZATION ====================
             init() {
                 this.loadFromStorage();
                 this.setupEventListeners();
                 this.renderPersonnel();
+                this.renderClients();
+                this.renderSites();
+                this.renderAcheteurs();
                 this.updateStorageInfo();
                 console.log('ePilot v21 Professional initialized');
             },
 
             setupEventListeners() {
-                // Navigation
-                document.querySelectorAll('.nav-btn').forEach(btn => {
+                // Main Navigation
+                document.querySelectorAll('.nav-btn:not([data-clients-tab])').forEach(btn => {
                     btn.addEventListener('click', (e) => {
-                        document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+                        document.querySelectorAll('.nav-btn:not([data-clients-tab])').forEach(b => b.classList.remove('active'));
                         document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
                         e.target.classList.add('active');
                         const tabId = e.target.dataset.tab;
@@ -457,10 +688,43 @@
                     });
                 });
 
+                // Clients Sub-tabs
+                document.querySelectorAll('[data-clients-tab]').forEach(btn => {
+                    btn.addEventListener('click', (e) => {
+                        document.querySelectorAll('[data-clients-tab]').forEach(b => {
+                            b.style.borderBottom = '3px solid transparent';
+                            b.style.color = '#666';
+                        });
+                        document.querySelectorAll('[id$="-section"]').forEach(s => s.style.display = 'none');
+                        e.target.style.borderBottom = '3px solid #B5000A';
+                        e.target.style.color = '#B5000A';
+                        const sectionId = e.target.dataset.clientsTab + '-section';
+                        document.getElementById(sectionId).style.display = 'block';
+                    });
+                });
+
                 // Personnel Form
                 document.getElementById('personnel-form').addEventListener('submit', (e) => {
                     e.preventDefault();
                     this.savePersonnel();
+                });
+
+                // Clients Form
+                document.getElementById('clients-form').addEventListener('submit', (e) => {
+                    e.preventDefault();
+                    this.saveClients();
+                });
+
+                // Sites Form
+                document.getElementById('sites-form').addEventListener('submit', (e) => {
+                    e.preventDefault();
+                    this.saveSites();
+                });
+
+                // Acheteurs Form
+                document.getElementById('acheteurs-form').addEventListener('submit', (e) => {
+                    e.preventDefault();
+                    this.saveAcheteurs();
                 });
             },
 
@@ -669,6 +933,301 @@
                 this.showAlert('personnel', 'ℹ️ Utilisez le bouton "Charger fichier v20" pour importer depuis un fichier', 'info');
             },
 
+            // ==================== CLIENTS MANAGEMENT ====================
+            saveClients() {
+                const client = {
+                    id: document.getElementById('clients-id').value || this.generateId('CLT'),
+                    nom: document.getElementById('clients-nom').value.toUpperCase(),
+                    secteur: document.getElementById('clients-secteur').value,
+                    adresse: document.getElementById('clients-adresse').value,
+                    ville: document.getElementById('clients-ville').value,
+                    telephone: document.getElementById('clients-telephone').value,
+                    email: document.getElementById('clients-email').value.toLowerCase(),
+                    statut: document.getElementById('clients-statut').value,
+                    created_at: new Date().toISOString(),
+                    updated_at: new Date().toISOString(),
+                };
+
+                if (this.currentEditingId && this.currentEditingSection === 'clients') {
+                    const index = this.db.CLIENTS_DATA.findIndex(c => c.id === this.currentEditingId);
+                    client.created_at = this.db.CLIENTS_DATA[index].created_at;
+                    this.db.CLIENTS_DATA[index] = client;
+                    this.showAlert('clients', '✓ Client modifié avec succès', 'success');
+                } else {
+                    this.db.CLIENTS_DATA.push(client);
+                    this.showAlert('clients', '✓ Client ajouté avec succès', 'success');
+                }
+
+                this.saveToStorage();
+                this.renderClients();
+                this.resetClientsForm();
+            },
+
+            editClients(id) {
+                const client = this.db.CLIENTS_DATA.find(c => c.id === id);
+                if (!client) return;
+
+                document.getElementById('clients-id').value = client.id;
+                document.getElementById('clients-nom').value = client.nom;
+                document.getElementById('clients-secteur').value = client.secteur;
+                document.getElementById('clients-adresse').value = client.adresse;
+                document.getElementById('clients-ville').value = client.ville;
+                document.getElementById('clients-telephone').value = client.telephone;
+                document.getElementById('clients-email').value = client.email;
+                document.getElementById('clients-statut').value = client.statut;
+
+                this.currentEditingId = id;
+                this.currentEditingSection = 'clients';
+                document.querySelector('[data-clients-tab="clients"]').click();
+            },
+
+            deleteClients(id) {
+                if (confirm('Êtes-vous sûr? Cette action est irréversible.')) {
+                    this.db.CLIENTS_DATA = this.db.CLIENTS_DATA.filter(c => c.id !== id);
+                    this.db.SITES_DATA = this.db.SITES_DATA.filter(s => s.client_id !== id);
+                    this.saveToStorage();
+                    this.renderClients();
+                    this.showAlert('clients', '✓ Client supprimé', 'success');
+                }
+            },
+
+            resetClientsForm() {
+                document.getElementById('clients-form').reset();
+                this.currentEditingId = null;
+                this.currentEditingSection = null;
+            },
+
+            renderClients() {
+                const tbody = document.querySelector('#clients-table tbody');
+                tbody.innerHTML = '';
+
+                if (this.db.CLIENTS_DATA.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="7" style="text-align: center; color: #999;">Aucun client enregistré</td></tr>';
+                } else {
+                    this.db.CLIENTS_DATA.forEach(c => {
+                        const row = document.createElement('tr');
+                        row.innerHTML = `
+                            <td><code style="background: #f0f0f0; padding: 2px 6px; border-radius: 3px; font-size: 11px;">${c.id}</code></td>
+                            <td>${c.nom}</td>
+                            <td>${c.secteur || '-'}</td>
+                            <td>${c.ville || '-'}</td>
+                            <td>${c.telephone || '-'}</td>
+                            <td><span style="background: ${c.statut === 'Actif' ? '#d1fae5' : '#fee2e2'}; padding: 3px 8px; border-radius: 3px; font-size: 12px;">${c.statut}</span></td>
+                            <td>
+                                <button class="action-btn action-edit" onclick="app.editClients('${c.id}')">✎ Edit</button>
+                                <button class="action-btn action-delete" onclick="app.deleteClients('${c.id}')">✕ Del</button>
+                            </td>
+                        `;
+                        tbody.appendChild(row);
+                    });
+                }
+
+                this.updateSitesClientSelect();
+            },
+
+            // ==================== SITES MANAGEMENT ====================
+            saveSites() {
+                const site = {
+                    id: document.getElementById('sites-id').value || this.generateId('SIT'),
+                    client_id: document.getElementById('sites-client-id').value,
+                    nom: document.getElementById('sites-nom').value,
+                    adresse: document.getElementById('sites-adresse').value,
+                    type: document.getElementById('sites-type').value,
+                    responsable: document.getElementById('sites-responsable').value,
+                    statut: document.getElementById('sites-statut').value,
+                    created_at: new Date().toISOString(),
+                    updated_at: new Date().toISOString(),
+                };
+
+                if (this.currentEditingId && this.currentEditingSection === 'sites') {
+                    const index = this.db.SITES_DATA.findIndex(s => s.id === this.currentEditingId);
+                    site.created_at = this.db.SITES_DATA[index].created_at;
+                    this.db.SITES_DATA[index] = site;
+                    this.showAlert('clients', '✓ Site modifié avec succès', 'success');
+                } else {
+                    this.db.SITES_DATA.push(site);
+                    this.showAlert('clients', '✓ Site ajouté avec succès', 'success');
+                }
+
+                this.saveToStorage();
+                this.renderSites();
+                this.resetSitesForm();
+            },
+
+            editSites(id) {
+                const site = this.db.SITES_DATA.find(s => s.id === id);
+                if (!site) return;
+
+                document.getElementById('sites-id').value = site.id;
+                document.getElementById('sites-client-id').value = site.client_id;
+                document.getElementById('sites-nom').value = site.nom;
+                document.getElementById('sites-adresse').value = site.adresse;
+                document.getElementById('sites-type').value = site.type;
+                document.getElementById('sites-responsable').value = site.responsable;
+                document.getElementById('sites-statut').value = site.statut;
+
+                this.currentEditingId = id;
+                this.currentEditingSection = 'sites';
+                document.querySelector('[data-clients-tab="sites"]').click();
+            },
+
+            deleteSites(id) {
+                if (confirm('Êtes-vous sûr? Cette action supprimera aussi les acheteurs du site.')) {
+                    this.db.SITES_DATA = this.db.SITES_DATA.filter(s => s.id !== id);
+                    this.db.ACHETEURS_DATA = this.db.ACHETEURS_DATA.filter(a => a.site_id !== id);
+                    this.saveToStorage();
+                    this.renderSites();
+                    this.showAlert('clients', '✓ Site supprimé', 'success');
+                }
+            },
+
+            resetSitesForm() {
+                document.getElementById('sites-form').reset();
+                this.currentEditingId = null;
+                this.currentEditingSection = null;
+            },
+
+            renderSites() {
+                const tbody = document.querySelector('#sites-table tbody');
+                tbody.innerHTML = '';
+
+                if (this.db.SITES_DATA.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="7" style="text-align: center; color: #999;">Aucun site enregistré</td></tr>';
+                } else {
+                    this.db.SITES_DATA.forEach(s => {
+                        const client = this.db.CLIENTS_DATA.find(c => c.id === s.client_id);
+                        const row = document.createElement('tr');
+                        row.innerHTML = `
+                            <td><code style="background: #f0f0f0; padding: 2px 6px; border-radius: 3px; font-size: 11px;">${s.id}</code></td>
+                            <td>${client ? client.nom : 'N/A'}</td>
+                            <td>${s.nom}</td>
+                            <td>${s.type || '-'}</td>
+                            <td>${s.responsable || '-'}</td>
+                            <td><span style="background: ${s.statut === 'Actif' ? '#d1fae5' : '#fee2e2'}; padding: 3px 8px; border-radius: 3px; font-size: 12px;">${s.statut}</span></td>
+                            <td>
+                                <button class="action-btn action-edit" onclick="app.editSites('${s.id}')">✎ Edit</button>
+                                <button class="action-btn action-delete" onclick="app.deleteSites('${s.id}')">✕ Del</button>
+                            </td>
+                        `;
+                        tbody.appendChild(row);
+                    });
+                }
+
+                this.updateAcheteursSelect();
+            },
+
+            // ==================== ACHETEURS MANAGEMENT ====================
+            saveAcheteurs() {
+                const acheteur = {
+                    id: document.getElementById('acheteurs-id').value || this.generateId('ACH'),
+                    site_id: document.getElementById('acheteurs-site-id').value,
+                    nom: document.getElementById('acheteurs-nom').value,
+                    fonction: document.getElementById('acheteurs-fonction').value,
+                    email: document.getElementById('acheteurs-email').value.toLowerCase(),
+                    telephone: document.getElementById('acheteurs-telephone').value,
+                    statut: document.getElementById('acheteurs-statut').value,
+                    created_at: new Date().toISOString(),
+                    updated_at: new Date().toISOString(),
+                };
+
+                if (this.currentEditingId && this.currentEditingSection === 'acheteurs') {
+                    const index = this.db.ACHETEURS_DATA.findIndex(a => a.id === this.currentEditingId);
+                    acheteur.created_at = this.db.ACHETEURS_DATA[index].created_at;
+                    this.db.ACHETEURS_DATA[index] = acheteur;
+                    this.showAlert('clients', '✓ Acheteur modifié avec succès', 'success');
+                } else {
+                    this.db.ACHETEURS_DATA.push(acheteur);
+                    this.showAlert('clients', '✓ Acheteur ajouté avec succès', 'success');
+                }
+
+                this.saveToStorage();
+                this.renderAcheteurs();
+                this.resetAcheteursForm();
+            },
+
+            editAcheteurs(id) {
+                const acheteur = this.db.ACHETEURS_DATA.find(a => a.id === id);
+                if (!acheteur) return;
+
+                document.getElementById('acheteurs-id').value = acheteur.id;
+                document.getElementById('acheteurs-site-id').value = acheteur.site_id;
+                document.getElementById('acheteurs-nom').value = acheteur.nom;
+                document.getElementById('acheteurs-fonction').value = acheteur.fonction;
+                document.getElementById('acheteurs-email').value = acheteur.email;
+                document.getElementById('acheteurs-telephone').value = acheteur.telephone;
+                document.getElementById('acheteurs-statut').value = acheteur.statut;
+
+                this.currentEditingId = id;
+                this.currentEditingSection = 'acheteurs';
+                document.querySelector('[data-clients-tab="acheteurs"]').click();
+            },
+
+            deleteAcheteurs(id) {
+                if (confirm('Êtes-vous sûr? Cette action est irréversible.')) {
+                    this.db.ACHETEURS_DATA = this.db.ACHETEURS_DATA.filter(a => a.id !== id);
+                    this.saveToStorage();
+                    this.renderAcheteurs();
+                    this.showAlert('clients', '✓ Acheteur supprimé', 'success');
+                }
+            },
+
+            resetAcheteursForm() {
+                document.getElementById('acheteurs-form').reset();
+                this.currentEditingId = null;
+                this.currentEditingSection = null;
+            },
+
+            renderAcheteurs() {
+                const tbody = document.querySelector('#acheteurs-table tbody');
+                tbody.innerHTML = '';
+
+                if (this.db.ACHETEURS_DATA.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="8" style="text-align: center; color: #999;">Aucun acheteur enregistré</td></tr>';
+                } else {
+                    this.db.ACHETEURS_DATA.forEach(a => {
+                        const site = this.db.SITES_DATA.find(s => s.id === a.site_id);
+                        const row = document.createElement('tr');
+                        row.innerHTML = `
+                            <td><code style="background: #f0f0f0; padding: 2px 6px; border-radius: 3px; font-size: 11px;">${a.id}</code></td>
+                            <td>${site ? site.nom : 'N/A'}</td>
+                            <td>${a.nom}</td>
+                            <td>${a.fonction || '-'}</td>
+                            <td>${a.email || '-'}</td>
+                            <td>${a.telephone || '-'}</td>
+                            <td><span style="background: ${a.statut === 'Actif' ? '#d1fae5' : '#fee2e2'}; padding: 3px 8px; border-radius: 3px; font-size: 12px;">${a.statut}</span></td>
+                            <td>
+                                <button class="action-btn action-edit" onclick="app.editAcheteurs('${a.id}')">✎ Edit</button>
+                                <button class="action-btn action-delete" onclick="app.deleteAcheteurs('${a.id}')">✕ Del</button>
+                            </td>
+                        `;
+                        tbody.appendChild(row);
+                    });
+                }
+            },
+
+            updateSitesClientSelect() {
+                const select = document.getElementById('sites-client-id');
+                select.innerHTML = '<option value="">-- Sélectionner un client --</option>';
+                this.db.CLIENTS_DATA.forEach(c => {
+                    const option = document.createElement('option');
+                    option.value = c.id;
+                    option.textContent = c.nom;
+                    select.appendChild(option);
+                });
+            },
+
+            updateAcheteursSelect() {
+                const select = document.getElementById('acheteurs-site-id');
+                select.innerHTML = '<option value="">-- Sélectionner un site --</option>';
+                this.db.SITES_DATA.forEach(s => {
+                    const client = this.db.CLIENTS_DATA.find(c => c.id === s.client_id);
+                    const option = document.createElement('option');
+                    option.value = s.id;
+                    option.textContent = `${client ? client.nom + ' - ' : ''}${s.nom}`;
+                    select.appendChild(option);
+                });
+            },
+
             // ==================== STORAGE ====================
             saveToStorage() {
                 localStorage.setItem('epillot_v21_db', JSON.stringify(this.db));
@@ -705,12 +1264,15 @@
                         this.db = {
                             PERSONNEL_DATA: [],
                             CLIENTS_DATA: [],
+                            SITES_DATA: [],
+                            ACHETEURS_DATA: [],
                             FOURNISSEURS_DATA: [],
                             ARTICLES_VENTE_DATA: [],
                             ARTICLES_ACHAT_DATA: [],
                         };
                         this.saveToStorage();
                         this.renderPersonnel();
+                        this.renderClients();
                         this.showAlert('settings', '⚠️ Toutes les données ont été effacées', 'error');
                     }
                 }
