@@ -609,8 +609,90 @@
 
         <!-- FOURNISSEURS Panel -->
         <div class="panel" id="fournisseurs">
-            <div class="section-title">🚚 Fournisseurs (En préparation)</div>
-            <p style="color: #666;">Module Fournisseurs en cours de création...</p>
+            <div id="alert-fournisseurs"></div>
+
+            <div class="section-title">🚚 Fournisseurs (Vendeurs/Fabricants)</div>
+
+            <div style="background: #f0f0f0; padding: 15px; border-radius: 4px; margin-bottom: 20px;">
+                <strong>Liste de vos fournisseurs:</strong> Vendeurs, fabricants, distributeurs
+            </div>
+
+            <div class="section-title" style="border: none; margin-bottom: 20px;">Ajouter/Modifier Fournisseur</div>
+            <form id="fournisseurs-form">
+                <div class="form-group">
+                    <div class="form-control">
+                        <label>ID (auto)</label>
+                        <input type="text" id="fournisseurs-id" readonly style="background: #f0f0f0;">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <div class="form-control">
+                        <label>Nom du Fournisseur *</label>
+                        <input type="text" id="fournisseurs-nom" placeholder="Ex: SOMAFASCO, Zénith Distribution" required>
+                    </div>
+                    <div class="form-control">
+                        <label>Secteur d'activité</label>
+                        <input type="text" id="fournisseurs-secteur" placeholder="Ex: Électricité, Quincaillerie, Tôlerie">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <div class="form-control">
+                        <label>Adresse</label>
+                        <input type="text" id="fournisseurs-adresse" placeholder="Ex: Rue Principale">
+                    </div>
+                    <div class="form-control">
+                        <label>Ville</label>
+                        <input type="text" id="fournisseurs-ville" placeholder="Ex: Douala">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <div class="form-control">
+                        <label>Contact (Personne)</label>
+                        <input type="text" id="fournisseurs-contact" placeholder="Ex: Mr. DUPONT">
+                    </div>
+                    <div class="form-control">
+                        <label>Téléphone</label>
+                        <input type="tel" id="fournisseurs-telephone" placeholder="+237 2XX XXX XXX">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <div class="form-control">
+                        <label>Email</label>
+                        <input type="email" id="fournisseurs-email" placeholder="contact@fournisseur.cm">
+                    </div>
+                    <div class="form-control">
+                        <label>Statut</label>
+                        <select id="fournisseurs-statut">
+                            <option value="Actif">Actif</option>
+                            <option value="Inactif">Inactif</option>
+                            <option value="Suspendu">Suspendu</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-actions">
+                    <button type="submit" class="btn btn-primary">💾 Enregistrer</button>
+                    <button type="reset" class="btn btn-secondary" onclick="app.resetFournisseursForm()">🔄 Réinitialiser</button>
+                </div>
+            </form>
+
+            <div class="section-title" style="border: none; margin-top: 40px;">Liste des Fournisseurs</div>
+            <div class="table-container">
+                <table id="fournisseurs-table">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Nom</th>
+                            <th>Secteur</th>
+                            <th>Contact</th>
+                            <th>Téléphone</th>
+                            <th>Email</th>
+                            <th>Statut</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
         </div>
 
         <!-- ARTICLES_VENTE Panel -->
@@ -678,6 +760,7 @@
                 this.renderClients();
                 this.renderSites();
                 this.renderAcheteurs();
+                this.renderFournisseurs();
                 this.updateStorageInfo();
                 console.log('ePilot v21 Professional initialized');
             },
@@ -731,6 +814,12 @@
                 document.getElementById('acheteurs-form').addEventListener('submit', (e) => {
                     e.preventDefault();
                     this.saveAcheteurs();
+                });
+
+                // Fournisseurs Form
+                document.getElementById('fournisseurs-form').addEventListener('submit', (e) => {
+                    e.preventDefault();
+                    this.saveFournisseurs();
                 });
             },
 
@@ -1260,6 +1349,105 @@
                 });
             },
 
+            // ==================== FOURNISSEURS MANAGEMENT ====================
+            saveFournisseurs() {
+                const nom = document.getElementById('fournisseurs-nom').value;
+
+                if (!nom) {
+                    this.showAlert('fournisseurs', '✗ Veuillez entrer le nom du fournisseur', 'error');
+                    return;
+                }
+
+                const fournisseur = {
+                    id: document.getElementById('fournisseurs-id').value || this.generateId('FRN'),
+                    nom: nom.toUpperCase(),
+                    secteur: document.getElementById('fournisseurs-secteur').value,
+                    adresse: document.getElementById('fournisseurs-adresse').value,
+                    ville: document.getElementById('fournisseurs-ville').value,
+                    contact: document.getElementById('fournisseurs-contact').value,
+                    telephone: document.getElementById('fournisseurs-telephone').value,
+                    email: document.getElementById('fournisseurs-email').value.toLowerCase(),
+                    statut: document.getElementById('fournisseurs-statut').value,
+                    created_at: new Date().toISOString(),
+                    updated_at: new Date().toISOString(),
+                };
+
+                if (this.currentEditingId && this.currentEditingSection === 'fournisseurs') {
+                    const index = this.db.FOURNISSEURS_DATA.findIndex(f => f.id === this.currentEditingId);
+                    fournisseur.created_at = this.db.FOURNISSEURS_DATA[index].created_at;
+                    this.db.FOURNISSEURS_DATA[index] = fournisseur;
+                    this.showAlert('fournisseurs', '✓ Fournisseur modifié avec succès', 'success');
+                } else {
+                    this.db.FOURNISSEURS_DATA.push(fournisseur);
+                    this.showAlert('fournisseurs', '✓ Fournisseur ajouté avec succès', 'success');
+                }
+
+                this.saveToStorage();
+                this.renderFournisseurs();
+                this.resetFournisseursForm();
+            },
+
+            editFournisseurs(id) {
+                const fournisseur = this.db.FOURNISSEURS_DATA.find(f => f.id === id);
+                if (!fournisseur) return;
+
+                document.getElementById('fournisseurs-id').value = fournisseur.id;
+                document.getElementById('fournisseurs-nom').value = fournisseur.nom;
+                document.getElementById('fournisseurs-secteur').value = fournisseur.secteur;
+                document.getElementById('fournisseurs-adresse').value = fournisseur.adresse;
+                document.getElementById('fournisseurs-ville').value = fournisseur.ville;
+                document.getElementById('fournisseurs-contact').value = fournisseur.contact;
+                document.getElementById('fournisseurs-telephone').value = fournisseur.telephone;
+                document.getElementById('fournisseurs-email').value = fournisseur.email;
+                document.getElementById('fournisseurs-statut').value = fournisseur.statut;
+
+                this.currentEditingId = id;
+                this.currentEditingSection = 'fournisseurs';
+                document.querySelector('[data-tab="fournisseurs"]').click();
+            },
+
+            deleteFournisseurs(id) {
+                if (confirm('Êtes-vous sûr? Cette action est irréversible.')) {
+                    this.db.FOURNISSEURS_DATA = this.db.FOURNISSEURS_DATA.filter(f => f.id !== id);
+                    this.saveToStorage();
+                    this.renderFournisseurs();
+                    this.showAlert('fournisseurs', '✓ Fournisseur supprimé', 'success');
+                }
+            },
+
+            resetFournisseursForm() {
+                document.getElementById('fournisseurs-form').reset();
+                this.currentEditingId = null;
+                this.currentEditingSection = null;
+            },
+
+            renderFournisseurs() {
+                const tbody = document.querySelector('#fournisseurs-table tbody');
+                tbody.innerHTML = '';
+
+                if (this.db.FOURNISSEURS_DATA.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="8" style="text-align: center; color: #999;">Aucun fournisseur enregistré</td></tr>';
+                } else {
+                    this.db.FOURNISSEURS_DATA.forEach(f => {
+                        const row = document.createElement('tr');
+                        row.innerHTML = `
+                            <td><code style="background: #f0f0f0; padding: 2px 6px; border-radius: 3px; font-size: 11px;">${f.id}</code></td>
+                            <td>${f.nom}</td>
+                            <td>${f.secteur || '-'}</td>
+                            <td>${f.contact || '-'}</td>
+                            <td>${f.telephone || '-'}</td>
+                            <td>${f.email || '-'}</td>
+                            <td><span style="background: ${f.statut === 'Actif' ? '#d1fae5' : '#fee2e2'}; padding: 3px 8px; border-radius: 3px; font-size: 12px;">${f.statut}</span></td>
+                            <td>
+                                <button class="action-btn action-edit" onclick="app.editFournisseurs('${f.id}')">✎ Edit</button>
+                                <button class="action-btn action-delete" onclick="app.deleteFournisseurs('${f.id}')">✕ Del</button>
+                            </td>
+                        `;
+                        tbody.appendChild(row);
+                    });
+                }
+            },
+
             // ==================== STORAGE ====================
             saveToStorage() {
                 localStorage.setItem('epillot_v21_db', JSON.stringify(this.db));
@@ -1305,6 +1493,7 @@
                         this.saveToStorage();
                         this.renderPersonnel();
                         this.renderClients();
+                        this.renderFournisseurs();
                         this.showAlert('settings', '⚠️ Toutes les données ont été effacées', 'error');
                     }
                 }
