@@ -1486,6 +1486,35 @@
                 <button class="btn btn-danger" onclick="app.clearAllData()">🗑️ Effacer TOUT (Attention!)</button>
             </div>
 
+            <h3 style="margin-top: 30px; font-size: 16px;">📊 Export CSV par Module</h3>
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px;">
+                <button class="btn btn-secondary" onclick="app.exportCSV('personnel')">Personnel</button>
+                <button class="btn btn-secondary" onclick="app.exportCSV('certifications')">Certifications</button>
+                <button class="btn btn-secondary" onclick="app.exportCSV('clients')">Clients</button>
+                <button class="btn btn-secondary" onclick="app.exportCSV('fournisseurs')">Fournisseurs</button>
+                <button class="btn btn-secondary" onclick="app.exportCSV('articles')">Articles</button>
+                <button class="btn btn-secondary" onclick="app.exportCSV('depenses')">Dépenses</button>
+                <button class="btn btn-secondary" onclick="app.exportCSV('requetes')">Requêtes</button>
+                <button class="btn btn-secondary" onclick="app.exportCSV('papiers')">Papiers</button>
+                <button class="btn btn-secondary" onclick="app.exportCSV('boutique')">Boutique</button>
+            </div>
+
+            <h3 style="margin-top: 30px; font-size: 16px;">📈 Rapports & Statistiques</h3>
+            <div class="form-actions">
+                <button class="btn btn-secondary" onclick="app.afficherRapports()">📊 Voir Rapports</button>
+            </div>
+            <div id="rapports-section" style="margin-top: 20px; display: none; background: #f0f0f0; padding: 15px; border-radius: 4px;">
+                <h4>Statistiques Globales:</h4>
+                <table style="width: 100%; margin-top: 10px; font-size: 13px;">
+                    <tr><td><strong>Personnel:</strong></td><td id="stat-personnel">0</td></tr>
+                    <tr><td><strong>Clients:</strong></td><td id="stat-clients">0</td></tr>
+                    <tr><td><strong>Fournisseurs:</strong></td><td id="stat-fournisseurs">0</td></tr>
+                    <tr><td><strong>Commandes Boutique:</strong></td><td id="stat-commandes">0</td></tr>
+                    <tr><td><strong>Total Dépenses (XAF):</strong></td><td id="stat-depenses-total">0</td></tr>
+                    <tr><td><strong>Montant Total Commandes (XAF):</strong></td><td id="stat-commandes-total">0</td></tr>
+                </table>
+            </div>
+
             <h3 style="margin-top: 30px; font-size: 16px;">Info Système</h3>
             <table style="width: 100%; margin-top: 10px;">
                 <tr>
@@ -3229,6 +3258,90 @@
                 this.boutiqueArticlesCommande = [];
                 this.afficherArticlesCommande();
                 this.currentEditingId = null;
+            },
+
+            // ==================== EXPORT CSV ====================
+            exportCSV(module) {
+                let data = [];
+                let headers = [];
+                let filename = '';
+
+                if (module === 'personnel') {
+                    headers = ['ID', 'Nom', 'Prénoms', 'Fonction', 'Email', 'Téléphone', 'Statut'];
+                    data = this.db.PERSONNEL_DATA.map(p => [p.id, p.nom, p.prenoms || '', p.fonction || '', p.email || '', p.telephone || '', p.statut]);
+                    filename = 'personnel.csv';
+                } else if (module === 'certifications') {
+                    headers = ['ID', 'Personnel', 'Certification', 'Date Obtention', 'Date Expiration', 'Statut', 'Organisme'];
+                    data = this.db.CERTIFICATIONS_DATA.map(c => {
+                        const p = this.db.PERSONNEL_DATA.find(x => x.id === c.personnel_id);
+                        return [c.id, p ? p.nom : '', c.certification, c.date_obtention || '', c.date_expiration || '', c.statut, c.organisme || ''];
+                    });
+                    filename = 'certifications.csv';
+                } else if (module === 'clients') {
+                    headers = ['ID', 'Nom', 'Secteur', 'Ville', 'Téléphone', 'Email', 'Statut'];
+                    data = this.db.CLIENTS_DATA.map(c => [c.id, c.nom, c.secteur || '', c.ville || '', c.telephone || '', c.email || '', c.statut]);
+                    filename = 'clients.csv';
+                } else if (module === 'fournisseurs') {
+                    headers = ['ID', 'Nom', 'Secteur', 'Ville', 'Contact', 'Téléphone', 'Email', 'Statut'];
+                    data = this.db.FOURNISSEURS_DATA.map(f => [f.id, f.nom, f.secteur || '', f.ville || '', f.contact || '', f.telephone || '', f.email || '', f.statut]);
+                    filename = 'fournisseurs.csv';
+                } else if (module === 'articles') {
+                    headers = ['ID', 'Code', 'Designation', 'Catégorie', 'Unité', 'Prix'];
+                    data = this.db.ARTICLES_VENTE_DATA.map(a => [a.id, a.code, a.designation, a.categorie, a.unite, a.prix]);
+                    filename = 'articles.csv';
+                } else if (module === 'depenses') {
+                    headers = ['ID', 'Date', 'Montant', 'Catégorie', 'Libellé', 'Statut'];
+                    data = this.db.EXPENSES_DATA.map(d => [d.id, d.date, d.montant, d.categorie, d.libelle, d.statut]);
+                    filename = 'depenses.csv';
+                } else if (module === 'requetes') {
+                    headers = ['ID', 'Référence', 'Client', 'Montant', 'Statut', 'Date'];
+                    data = this.db.REQUETES_DATA.map(r => {
+                        const c = this.db.CLIENTS_DATA.find(x => x.id === r.client_id);
+                        return [r.id, r.reference, c ? c.nom : '', r.montant, r.statut, r.date];
+                    });
+                    filename = 'requetes.csv';
+                } else if (module === 'papiers') {
+                    headers = ['ID', 'Référence', 'Client', 'Type', 'Date Émission', 'Statut'];
+                    data = this.db.PAPIERS_DATA.map(p => {
+                        const c = this.db.CLIENTS_DATA.find(x => x.id === p.client_id);
+                        return [p.id, p.reference, c ? c.nom : '', p.type, p.date_emission, p.statut];
+                    });
+                    filename = 'papiers.csv';
+                } else if (module === 'boutique') {
+                    headers = ['ID', 'Code', 'Nom Produit', 'Prix (XAF)', 'Quantité'];
+                    data = this.db.BOUTIQUE_PRODUITS_DATA.map(p => [p.id, p.code, p.nom, p.prix, p.quantite]);
+                    filename = 'boutique-produits.csv';
+                }
+
+                if (data.length === 0) {
+                    alert('Aucune donnée à exporter');
+                    return;
+                }
+
+                const csv = [headers, ...data].map(row => row.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(',')).join('\n');
+                const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+                const link = document.createElement('a');
+                link.href = URL.createObjectURL(blob);
+                link.download = filename;
+                link.click();
+            },
+
+            afficherRapports() {
+                const div = document.getElementById('rapports-section');
+                div.style.display = div.style.display === 'none' ? 'block' : 'none';
+
+                if (div.style.display === 'block') {
+                    document.getElementById('stat-personnel').textContent = this.db.PERSONNEL_DATA.length;
+                    document.getElementById('stat-clients').textContent = this.db.CLIENTS_DATA.length;
+                    document.getElementById('stat-fournisseurs').textContent = this.db.FOURNISSEURS_DATA.length;
+                    document.getElementById('stat-commandes').textContent = this.db.BOUTIQUE_COMMANDES_DATA.length;
+
+                    const totalDepenses = this.db.EXPENSES_DATA.reduce((sum, d) => sum + (d.montant || 0), 0);
+                    document.getElementById('stat-depenses-total').textContent = totalDepenses.toLocaleString() + ' XAF';
+
+                    const totalCommandes = this.db.BOUTIQUE_COMMANDES_DATA.reduce((sum, c) => sum + (c.total || 0), 0);
+                    document.getElementById('stat-commandes-total').textContent = totalCommandes.toLocaleString() + ' XAF';
+                }
             },
 
             // ==================== STORAGE ====================
