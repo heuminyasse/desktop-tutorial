@@ -260,6 +260,7 @@
         <button class="nav-btn" data-tab="fournisseurs">🚚 Fournisseurs</button>
         <button class="nav-btn" data-tab="articles-vente">📦 Articles Vente</button>
         <button class="nav-btn" data-tab="articles-achat">📥 Articles Achat</button>
+        <button class="nav-btn" data-tab="depenses">💰 Dépenses</button>
         <button class="nav-btn" data-tab="settings">⚙️ Paramètres</button>
     </div>
 
@@ -875,6 +876,121 @@
             </div>
         </div>
 
+        <!-- DEPENSES Panel -->
+        <div class="panel" id="depenses">
+            <div id="alert-depenses"></div>
+
+            <div class="section-title">💰 Dépenses</div>
+            <div style="background: #f0f0f0; padding: 15px; border-radius: 4px; margin-bottom: 20px;">
+                <strong>Suivi des dépenses:</strong> Toutes les sorties de caisse (achats, services, frais divers)
+            </div>
+
+            <div class="section-title" style="border: none; margin-bottom: 20px;">Enregistrer une Dépense</div>
+            <form id="depenses-form">
+                <div class="form-group">
+                    <div class="form-control">
+                        <label>ID (auto)</label>
+                        <input type="text" id="depenses-id" readonly style="background: #f0f0f0;">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <div class="form-control">
+                        <label>Date *</label>
+                        <input type="date" id="depenses-date" required>
+                    </div>
+                    <div class="form-control">
+                        <label>Montant (XAF) *</label>
+                        <input type="number" id="depenses-montant" placeholder="0" step="100" required>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <div class="form-control">
+                        <label>Catégorie *</label>
+                        <select id="depenses-categorie" required>
+                            <option value="">-- Sélectionner --</option>
+                            <option value="Matériaux">Matériaux</option>
+                            <option value="Carburant">Carburant/Transport</option>
+                            <option value="Main d'œuvre">Main d'œuvre</option>
+                            <option value="Loyer">Loyer/Locaux</option>
+                            <option value="Salaires">Salaires</option>
+                            <option value="Utilities">Utilities (Eau, Électricité)</option>
+                            <option value="Frais de bureau">Frais de bureau</option>
+                            <option value="Communication">Communication (Téléphone, Internet)</option>
+                            <option value="Assurance">Assurance</option>
+                            <option value="Maintenance">Maintenance/Réparation</option>
+                            <option value="Formation">Formation/Certification</option>
+                            <option value="Autre">Autre</option>
+                        </select>
+                    </div>
+                    <div class="form-control">
+                        <label>Libellé *</label>
+                        <input type="text" id="depenses-libelle" placeholder="Description de la dépense" required>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <div class="form-control">
+                        <label>Bénéficiaire/Fournisseur</label>
+                        <input type="text" id="depenses-beneficiaire" placeholder="Qui a reçu le paiement">
+                    </div>
+                    <div class="form-control">
+                        <label>Mode de paiement</label>
+                        <select id="depenses-paiement">
+                            <option value="Espèces">Espèces</option>
+                            <option value="Chèque">Chèque</option>
+                            <option value="Virement">Virement bancaire</option>
+                            <option value="Carte">Carte bancaire</option>
+                            <option value="Autre">Autre</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <div class="form-control">
+                        <label>Pièce justificative/Référence</label>
+                        <input type="text" id="depenses-piece" placeholder="N° facture, N° chèque, etc.">
+                    </div>
+                    <div class="form-control">
+                        <label>Statut</label>
+                        <select id="depenses-statut">
+                            <option value="Enregistrée">Enregistrée</option>
+                            <option value="Validée">Validée</option>
+                            <option value="Payée">Payée</option>
+                            <option value="Remboursée">Remboursée</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <div class="form-control" style="flex: 1;">
+                        <label>Notes/Commentaires</label>
+                        <input type="text" id="depenses-notes" placeholder="Remarques supplémentaires">
+                    </div>
+                </div>
+                <div class="form-actions">
+                    <button type="submit" class="btn btn-primary">💾 Enregistrer</button>
+                    <button type="reset" class="btn btn-secondary" onclick="app.resetDepensesForm()">🔄 Réinitialiser</button>
+                </div>
+            </form>
+
+            <div class="section-title" style="border: none; margin-top: 40px;">Historique des Dépenses</div>
+            <div class="table-container">
+                <table id="depenses-table">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Date</th>
+                            <th>Montant</th>
+                            <th>Catégorie</th>
+                            <th>Libellé</th>
+                            <th>Bénéficiaire</th>
+                            <th>Paiement</th>
+                            <th>Statut</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+        </div>
+
         <!-- SETTINGS Panel -->
         <div class="panel" id="settings">
             <div class="section-title">⚙️ Paramètres</div>
@@ -915,6 +1031,7 @@
                 FOURNISSEURS_DATA: [],
                 ARTICLES_VENTE_DATA: [],
                 ARTICLES_ACHAT_DATA: [],
+                EXPENSES_DATA: [],
             },
 
             currentEditingId: null,
@@ -931,6 +1048,7 @@
                 this.renderFournisseurs();
                 this.renderArticlesVente();
                 this.renderArticlesAchat();
+                this.renderDepenses();
                 this.updateFournisseursSelect();
                 this.updateStorageInfo();
                 console.log('ePilot v21 Professional initialized');
@@ -1003,6 +1121,12 @@
                 document.getElementById('articles-achat-form').addEventListener('submit', (e) => {
                     e.preventDefault();
                     this.saveArticlesAchat();
+                });
+
+                // Dépenses Form
+                document.getElementById('depenses-form').addEventListener('submit', (e) => {
+                    e.preventDefault();
+                    this.saveDepenses();
                 });
             },
 
@@ -1839,6 +1963,111 @@
                 });
             },
 
+            // ==================== DEPENSES MANAGEMENT ====================
+            saveDepenses() {
+                const date = document.getElementById('depenses-date').value;
+                const montant = document.getElementById('depenses-montant').value;
+                const categorie = document.getElementById('depenses-categorie').value;
+                const libelle = document.getElementById('depenses-libelle').value;
+
+                if (!date || !montant || !categorie || !libelle) {
+                    this.showAlert('depenses', '✗ Date, Montant, Catégorie et Libellé sont obligatoires', 'error');
+                    return;
+                }
+
+                const depense = {
+                    id: document.getElementById('depenses-id').value || this.generateId('DEP'),
+                    date: date,
+                    montant: parseFloat(montant),
+                    categorie: categorie,
+                    libelle: libelle,
+                    beneficiaire: document.getElementById('depenses-beneficiaire').value,
+                    paiement: document.getElementById('depenses-paiement').value,
+                    piece: document.getElementById('depenses-piece').value,
+                    statut: document.getElementById('depenses-statut').value,
+                    notes: document.getElementById('depenses-notes').value,
+                    created_at: new Date().toISOString(),
+                    updated_at: new Date().toISOString(),
+                };
+
+                if (this.currentEditingId && this.currentEditingSection === 'depenses') {
+                    const index = this.db.EXPENSES_DATA.findIndex(d => d.id === this.currentEditingId);
+                    depense.created_at = this.db.EXPENSES_DATA[index].created_at;
+                    this.db.EXPENSES_DATA[index] = depense;
+                    this.showAlert('depenses', '✓ Dépense modifiée', 'success');
+                } else {
+                    this.db.EXPENSES_DATA.push(depense);
+                    this.showAlert('depenses', '✓ Dépense enregistrée', 'success');
+                }
+
+                this.saveToStorage();
+                this.renderDepenses();
+                this.resetDepensesForm();
+            },
+
+            editDepenses(id) {
+                const depense = this.db.EXPENSES_DATA.find(d => d.id === id);
+                if (!depense) return;
+
+                document.getElementById('depenses-id').value = depense.id;
+                document.getElementById('depenses-date').value = depense.date;
+                document.getElementById('depenses-montant').value = depense.montant;
+                document.getElementById('depenses-categorie').value = depense.categorie;
+                document.getElementById('depenses-libelle').value = depense.libelle;
+                document.getElementById('depenses-beneficiaire').value = depense.beneficiaire;
+                document.getElementById('depenses-paiement').value = depense.paiement;
+                document.getElementById('depenses-piece').value = depense.piece;
+                document.getElementById('depenses-statut').value = depense.statut;
+                document.getElementById('depenses-notes').value = depense.notes;
+
+                this.currentEditingId = id;
+                this.currentEditingSection = 'depenses';
+                document.querySelector('[data-tab="depenses"]').click();
+            },
+
+            deleteDepenses(id) {
+                if (confirm('Êtes-vous sûr?')) {
+                    this.db.EXPENSES_DATA = this.db.EXPENSES_DATA.filter(d => d.id !== id);
+                    this.saveToStorage();
+                    this.renderDepenses();
+                    this.showAlert('depenses', '✓ Dépense supprimée', 'success');
+                }
+            },
+
+            resetDepensesForm() {
+                document.getElementById('depenses-form').reset();
+                this.currentEditingId = null;
+                this.currentEditingSection = null;
+            },
+
+            renderDepenses() {
+                const tbody = document.querySelector('#depenses-table tbody');
+                tbody.innerHTML = '';
+
+                if (this.db.EXPENSES_DATA.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="9" style="text-align: center; color: #999;">Aucune dépense enregistrée</td></tr>';
+                } else {
+                    this.db.EXPENSES_DATA.forEach(d => {
+                        const row = document.createElement('tr');
+                        row.innerHTML = `
+                            <td><code style="font-size: 11px;">${d.id}</code></td>
+                            <td>${d.date}</td>
+                            <td style="text-align: right; font-weight: bold;">${d.montant.toLocaleString()}</td>
+                            <td>${d.categorie}</td>
+                            <td>${d.libelle}</td>
+                            <td>${d.beneficiaire || '-'}</td>
+                            <td>${d.paiement || '-'}</td>
+                            <td><span style="background: ${d.statut === 'Payée' ? '#d1fae5' : d.statut === 'Validée' ? '#dbeafe' : '#fee2e2'}; padding: 3px 8px; border-radius: 3px; font-size: 12px;">${d.statut}</span></td>
+                            <td>
+                                <button class="action-btn action-edit" onclick="app.editDepenses('${d.id}')">✎</button>
+                                <button class="action-btn action-delete" onclick="app.deleteDepenses('${d.id}')">✕</button>
+                            </td>
+                        `;
+                        tbody.appendChild(row);
+                    });
+                }
+            },
+
             // ==================== STORAGE ====================
             saveToStorage() {
                 localStorage.setItem('epillot_v21_db', JSON.stringify(this.db));
@@ -1880,11 +2109,13 @@
                             FOURNISSEURS_DATA: [],
                             ARTICLES_VENTE_DATA: [],
                             ARTICLES_ACHAT_DATA: [],
+                            EXPENSES_DATA: [],
                         };
                         this.saveToStorage();
                         this.renderPersonnel();
                         this.renderClients();
                         this.renderFournisseurs();
+                        this.renderDepenses();
                         this.showAlert('settings', '⚠️ Toutes les données ont été effacées', 'error');
                     }
                 }
