@@ -261,6 +261,7 @@
         <button class="nav-btn" data-tab="articles-vente">📦 Articles Vente</button>
         <button class="nav-btn" data-tab="articles-achat">📥 Articles Achat</button>
         <button class="nav-btn" data-tab="depenses">💰 Dépenses</button>
+        <button class="nav-btn" data-tab="requetes">📋 Requêtes</button>
         <button class="nav-btn" data-tab="settings">⚙️ Paramètres</button>
     </div>
 
@@ -991,6 +992,107 @@
             </div>
         </div>
 
+        <!-- REQUÊTES Panel -->
+        <div class="panel" id="requetes">
+            <div class="section-title">📋 Gestion des Requêtes</div>
+
+            <div id="alert-requetes"></div>
+
+            <div style="background: #f0f0f0; padding: 15px; border-radius: 4px; margin-bottom: 20px;">
+                <strong>Quotations / Requests for Quote:</strong> Gérer les demandes de devis pour vos clients
+            </div>
+
+            <form id="requetes-form">
+                <div class="form-group">
+                    <div class="form-control">
+                        <label>ID (Auto-généré)</label>
+                        <input type="text" id="requetes-id" readonly style="background: #f0f0f0;">
+                    </div>
+                    <div class="form-control">
+                        <label>Référence / N° Devis</label>
+                        <input type="text" id="requetes-reference" placeholder="DEVIS-001" required>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <div class="form-control">
+                        <label>Client *</label>
+                        <select id="requetes-client" required onchange="app.updateRequetesSites()">
+                            <option value="">-- Sélectionner un client --</option>
+                        </select>
+                    </div>
+                    <div class="form-control">
+                        <label>Site *</label>
+                        <select id="requetes-site" required>
+                            <option value="">-- D'abord sélectionner un client --</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <div class="form-control">
+                        <label>Objet / Description *</label>
+                        <input type="text" id="requetes-objet" placeholder="Nature des travaux ou fournitures demandés" required>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <div class="form-control">
+                        <label>Montant estimé (XAF)</label>
+                        <input type="number" id="requetes-montant" placeholder="0" step="100">
+                    </div>
+                    <div class="form-control">
+                        <label>Date</label>
+                        <input type="date" id="requetes-date">
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <div class="form-control">
+                        <label>Statut</label>
+                        <select id="requetes-statut">
+                            <option value="Brouillon">Brouillon</option>
+                            <option value="Envoyée">Envoyée</option>
+                            <option value="Acceptée">Acceptée</option>
+                            <option value="Refusée">Refusée</option>
+                            <option value="Convertie en commande">Convertie en commande</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <div class="form-control">
+                        <label>Notes / Remarques</label>
+                        <textarea id="requetes-notes" placeholder="Informations supplémentaires" style="min-height: 80px; padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-family: inherit;"></textarea>
+                    </div>
+                </div>
+
+                <div class="form-actions">
+                    <button type="submit" class="btn btn-primary">💾 Enregistrer</button>
+                    <button type="reset" class="btn btn-secondary" onclick="app.resetRequetesForm()">🔄 Réinitialiser</button>
+                </div>
+            </form>
+
+            <div class="section-title" style="border: none; margin-top: 40px;">Liste des Requêtes</div>
+            <div class="table-container">
+                <table id="requetes-table">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Référence</th>
+                            <th>Client</th>
+                            <th>Site</th>
+                            <th>Montant</th>
+                            <th>Statut</th>
+                            <th>Date</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+        </div>
+
         <!-- SETTINGS Panel -->
         <div class="panel" id="settings">
             <div class="section-title">⚙️ Paramètres</div>
@@ -1032,6 +1134,7 @@
                 ARTICLES_VENTE_DATA: [],
                 ARTICLES_ACHAT_DATA: [],
                 EXPENSES_DATA: [],
+                REQUETES_DATA: [],
             },
 
             currentEditingId: null,
@@ -1049,7 +1152,9 @@
                 this.renderArticlesVente();
                 this.renderArticlesAchat();
                 this.renderDepenses();
+                this.renderRequetes();
                 this.updateFournisseursSelect();
+                this.updateRequetesClientsSelect();
                 this.updateStorageInfo();
                 console.log('ePilot v21 Professional initialized');
             },
@@ -1127,6 +1232,11 @@
                 document.getElementById('depenses-form').addEventListener('submit', (e) => {
                     e.preventDefault();
                     this.saveDepenses();
+                });
+
+                document.getElementById('requetes-form').addEventListener('submit', (e) => {
+                    e.preventDefault();
+                    this.saveRequetes();
                 });
             },
 
@@ -1362,6 +1472,7 @@
 
                 this.saveToStorage();
                 this.renderClients();
+                this.updateRequetesClientsSelect();
                 this.resetClientsForm();
             },
 
@@ -1389,6 +1500,7 @@
                     this.db.SITES_DATA = this.db.SITES_DATA.filter(s => s.client_id !== id);
                     this.saveToStorage();
                     this.renderClients();
+                    this.updateRequetesClientsSelect();
                     this.showAlert('clients', '✓ Client supprimé', 'success');
                 }
             },
@@ -1963,6 +2075,17 @@
                 });
             },
 
+            updateRequetesClientsSelect() {
+                const select = document.getElementById('requetes-client');
+                select.innerHTML = '<option value="">-- Sélectionner un client --</option>';
+                this.db.CLIENTS_DATA.forEach(c => {
+                    const option = document.createElement('option');
+                    option.value = c.id;
+                    option.textContent = c.nom;
+                    select.appendChild(option);
+                });
+            },
+
             // ==================== DEPENSES MANAGEMENT ====================
             saveDepenses() {
                 const date = document.getElementById('depenses-date').value;
@@ -2068,6 +2191,134 @@
                 }
             },
 
+            // ==================== REQUÊTES MANAGEMENT ====================
+            saveRequetes() {
+                const clientId = document.getElementById('requetes-client').value;
+                const siteId = document.getElementById('requetes-site').value;
+
+                if (!clientId) {
+                    this.showAlert('requetes', '⚠️ Sélectionner un client', 'error');
+                    return;
+                }
+                if (!siteId) {
+                    this.showAlert('requetes', '⚠️ Sélectionner un site', 'error');
+                    return;
+                }
+
+                const requete = {
+                    id: document.getElementById('requetes-id').value || this.generateId('DEVIS'),
+                    reference: document.getElementById('requetes-reference').value.toUpperCase(),
+                    client_id: clientId,
+                    site_id: siteId,
+                    objet: document.getElementById('requetes-objet').value,
+                    montant: parseInt(document.getElementById('requetes-montant').value) || 0,
+                    date: document.getElementById('requetes-date').value || new Date().toISOString().split('T')[0],
+                    statut: document.getElementById('requetes-statut').value,
+                    notes: document.getElementById('requetes-notes').value,
+                    created_at: this.currentEditingId ? this.db.REQUETES_DATA.find(r => r.id === this.currentEditingId)?.created_at : new Date().toISOString(),
+                    updated_at: new Date().toISOString()
+                };
+
+                if (this.currentEditingId) {
+                    const index = this.db.REQUETES_DATA.findIndex(r => r.id === this.currentEditingId);
+                    if (index > -1) this.db.REQUETES_DATA[index] = requete;
+                } else {
+                    this.db.REQUETES_DATA.push(requete);
+                }
+
+                this.saveToStorage();
+                this.renderRequetes();
+                this.resetRequetesForm();
+                this.showAlert('requetes', '✓ Requête enregistrée', 'success');
+            },
+
+            editRequetes(id) {
+                const requete = this.db.REQUETES_DATA.find(r => r.id === id);
+                if (!requete) return;
+
+                document.getElementById('requetes-id').value = requete.id;
+                document.getElementById('requetes-reference').value = requete.reference;
+                document.getElementById('requetes-client').value = requete.client_id;
+                this.updateRequetesSites();
+                setTimeout(() => {
+                    document.getElementById('requetes-site').value = requete.site_id;
+                }, 100);
+                document.getElementById('requetes-objet').value = requete.objet;
+                document.getElementById('requetes-montant').value = requete.montant;
+                document.getElementById('requetes-date').value = requete.date;
+                document.getElementById('requetes-statut').value = requete.statut;
+                document.getElementById('requetes-notes').value = requete.notes || '';
+
+                this.currentEditingId = id;
+                this.currentEditingSection = 'requetes';
+            },
+
+            deleteRequetes(id) {
+                if (!confirm('Confirmer la suppression de cette requête?')) return;
+                this.db.REQUETES_DATA = this.db.REQUETES_DATA.filter(r => r.id !== id);
+                this.saveToStorage();
+                this.renderRequetes();
+                this.showAlert('requetes', '✓ Requête supprimée', 'success');
+            },
+
+            renderRequetes() {
+                const tbody = document.querySelector('#requetes-table tbody');
+                tbody.innerHTML = '';
+
+                if (this.db.REQUETES_DATA.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="8" style="text-align: center; color: #999;">Aucune requête enregistrée</td></tr>';
+                } else {
+                    this.db.REQUETES_DATA.forEach(r => {
+                        const client = this.db.CLIENTS_DATA.find(c => c.id === r.client_id);
+                        const site = this.db.SITES_DATA.find(s => s.id === r.site_id);
+                        const clientName = client ? client.nom : '-';
+                        const siteName = site ? site.nom : '-';
+                        const statusColor = r.statut === 'Acceptée' ? '#d1fae5' : r.statut === 'Refusée' ? '#fee2e2' : r.statut === 'Convertie en commande' ? '#c7d2fe' : '#fef3c7';
+
+                        const row = document.createElement('tr');
+                        row.innerHTML = `
+                            <td><code style="font-size: 11px;">${r.id}</code></td>
+                            <td>${r.reference}</td>
+                            <td>${clientName}</td>
+                            <td>${siteName}</td>
+                            <td style="text-align: right; font-weight: bold;">${r.montant.toLocaleString()}</td>
+                            <td><span style="background: ${statusColor}; padding: 3px 8px; border-radius: 3px; font-size: 12px;">${r.statut}</span></td>
+                            <td>${r.date}</td>
+                            <td>
+                                <button class="action-btn action-edit" onclick="app.editRequetes('${r.id}')">✎</button>
+                                <button class="action-btn action-delete" onclick="app.deleteRequetes('${r.id}')">✕</button>
+                            </td>
+                        `;
+                        tbody.appendChild(row);
+                    });
+                }
+            },
+
+            resetRequetesForm() {
+                document.getElementById('requetes-form').reset();
+                document.getElementById('requetes-id').value = '';
+                document.getElementById('requetes-client').value = '';
+                document.getElementById('requetes-site').value = '';
+                this.currentEditingId = null;
+                this.updateRequetesSites();
+            },
+
+            updateRequetesSites() {
+                const clientId = document.getElementById('requetes-client').value;
+                const siteSelect = document.getElementById('requetes-site');
+                siteSelect.innerHTML = '<option value="">-- Sélectionner un site --</option>';
+
+                if (!clientId) return;
+
+                const sites = this.db.SITES_DATA.filter(s => s.client_id === clientId);
+                sites.forEach(site => {
+                    const option = document.createElement('option');
+                    option.value = site.id;
+                    option.textContent = site.nom;
+                    siteSelect.appendChild(option);
+                });
+            },
+
             // ==================== STORAGE ====================
             saveToStorage() {
                 localStorage.setItem('epillot_v21_db', JSON.stringify(this.db));
@@ -2110,12 +2361,15 @@
                             ARTICLES_VENTE_DATA: [],
                             ARTICLES_ACHAT_DATA: [],
                             EXPENSES_DATA: [],
+                            REQUETES_DATA: [],
                         };
                         this.saveToStorage();
                         this.renderPersonnel();
                         this.renderClients();
                         this.renderFournisseurs();
                         this.renderDepenses();
+                        this.renderRequetes();
+                        this.updateRequetesClientsSelect();
                         this.showAlert('settings', '⚠️ Toutes les données ont été effacées', 'error');
                     }
                 }
