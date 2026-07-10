@@ -262,6 +262,7 @@
         <button class="nav-btn" data-tab="articles-achat">📥 Articles Achat</button>
         <button class="nav-btn" data-tab="depenses">💰 Dépenses</button>
         <button class="nav-btn" data-tab="requetes">📋 Requêtes</button>
+        <button class="nav-btn" data-tab="papiers">📄 Papiers</button>
         <button class="nav-btn" data-tab="settings">⚙️ Paramètres</button>
     </div>
 
@@ -1093,6 +1094,109 @@
             </div>
         </div>
 
+        <!-- PAPIERS Panel -->
+        <div class="panel" id="papiers">
+            <div class="section-title">📄 Gestion des Papiers</div>
+
+            <div id="alert-papiers"></div>
+
+            <div style="background: #f0f0f0; padding: 15px; border-radius: 4px; margin-bottom: 20px;">
+                <strong>Documents & Contrats:</strong> Gérer les contrats, accords et documents importants par client
+            </div>
+
+            <form id="papiers-form">
+                <div class="form-group">
+                    <div class="form-control">
+                        <label>ID (Auto-généré)</label>
+                        <input type="text" id="papiers-id" readonly style="background: #f0f0f0;">
+                    </div>
+                    <div class="form-control">
+                        <label>Référence du Document</label>
+                        <input type="text" id="papiers-reference" placeholder="CONTRAT-2026-001" required>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <div class="form-control">
+                        <label>Client *</label>
+                        <select id="papiers-client" required onchange="app.updatePapiersClientsUpdate()">
+                            <option value="">-- Sélectionner un client --</option>
+                        </select>
+                    </div>
+                    <div class="form-control">
+                        <label>Type de Document *</label>
+                        <select id="papiers-type" required>
+                            <option value="">-- Sélectionner --</option>
+                            <option value="Contrat de service">Contrat de service</option>
+                            <option value="Devis accepté">Devis accepté</option>
+                            <option value="Bon de commande">Bon de commande</option>
+                            <option value="Facture">Facture</option>
+                            <option value="Convention">Convention</option>
+                            <option value="Accord confidentiel">Accord confidentiel</option>
+                            <option value="Certificat">Certificat</option>
+                            <option value="Autre">Autre</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <div class="form-control">
+                        <label>Date d'émission</label>
+                        <input type="date" id="papiers-date-emission">
+                    </div>
+                    <div class="form-control">
+                        <label>Date d'expiration</label>
+                        <input type="date" id="papiers-date-expiration">
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <div class="form-control">
+                        <label>Statut</label>
+                        <select id="papiers-statut">
+                            <option value="Brouillon">Brouillon</option>
+                            <option value="En attente signature">En attente signature</option>
+                            <option value="Signé">Signé</option>
+                            <option value="Actif">Actif</option>
+                            <option value="Expiré">Expiré</option>
+                            <option value="Annulé">Annulé</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <div class="form-control">
+                        <label>Notes / Description</label>
+                        <textarea id="papiers-notes" placeholder="Détails ou remarques supplémentaires" style="min-height: 80px; padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-family: inherit;"></textarea>
+                    </div>
+                </div>
+
+                <div class="form-actions">
+                    <button type="submit" class="btn btn-primary">💾 Enregistrer</button>
+                    <button type="reset" class="btn btn-secondary" onclick="app.resetPapiersForm()">🔄 Réinitialiser</button>
+                </div>
+            </form>
+
+            <div class="section-title" style="border: none; margin-top: 40px;">Inventaire des Documents</div>
+            <div class="table-container">
+                <table id="papiers-table">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Référence</th>
+                            <th>Client</th>
+                            <th>Type</th>
+                            <th>Émission</th>
+                            <th>Statut</th>
+                            <th>Expiration</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+        </div>
+
         <!-- SETTINGS Panel -->
         <div class="panel" id="settings">
             <div class="section-title">⚙️ Paramètres</div>
@@ -1135,6 +1239,7 @@
                 ARTICLES_ACHAT_DATA: [],
                 EXPENSES_DATA: [],
                 REQUETES_DATA: [],
+                PAPIERS_DATA: [],
             },
 
             currentEditingId: null,
@@ -1153,8 +1258,10 @@
                 this.renderArticlesAchat();
                 this.renderDepenses();
                 this.renderRequetes();
+                this.renderPapiers();
                 this.updateFournisseursSelect();
                 this.updateRequetesClientsSelect();
+                this.updatePapiersClientsSelect();
                 this.updateStorageInfo();
                 console.log('ePilot v21 Professional initialized');
             },
@@ -1237,6 +1344,11 @@
                 document.getElementById('requetes-form').addEventListener('submit', (e) => {
                     e.preventDefault();
                     this.saveRequetes();
+                });
+
+                document.getElementById('papiers-form').addEventListener('submit', (e) => {
+                    e.preventDefault();
+                    this.savePapiers();
                 });
             },
 
@@ -1473,6 +1585,7 @@
                 this.saveToStorage();
                 this.renderClients();
                 this.updateRequetesClientsSelect();
+                this.updatePapiersClientsSelect();
                 this.resetClientsForm();
             },
 
@@ -1501,6 +1614,7 @@
                     this.saveToStorage();
                     this.renderClients();
                     this.updateRequetesClientsSelect();
+                    this.updatePapiersClientsSelect();
                     this.showAlert('clients', '✓ Client supprimé', 'success');
                 }
             },
@@ -2086,6 +2200,17 @@
                 });
             },
 
+            updatePapiersClientsSelect() {
+                const select = document.getElementById('papiers-client');
+                select.innerHTML = '<option value="">-- Sélectionner un client --</option>';
+                this.db.CLIENTS_DATA.forEach(c => {
+                    const option = document.createElement('option');
+                    option.value = c.id;
+                    option.textContent = c.nom;
+                    select.appendChild(option);
+                });
+            },
+
             // ==================== DEPENSES MANAGEMENT ====================
             saveDepenses() {
                 const date = document.getElementById('depenses-date').value;
@@ -2319,6 +2444,108 @@
                 });
             },
 
+            // ==================== PAPIERS MANAGEMENT ====================
+            savePapiers() {
+                const clientId = document.getElementById('papiers-client').value;
+
+                if (!clientId) {
+                    this.showAlert('papiers', '⚠️ Sélectionner un client', 'error');
+                    return;
+                }
+
+                const papier = {
+                    id: document.getElementById('papiers-id').value || this.generateId('PAP'),
+                    reference: document.getElementById('papiers-reference').value.toUpperCase(),
+                    client_id: clientId,
+                    type: document.getElementById('papiers-type').value,
+                    date_emission: document.getElementById('papiers-date-emission').value || new Date().toISOString().split('T')[0],
+                    date_expiration: document.getElementById('papiers-date-expiration').value || '',
+                    statut: document.getElementById('papiers-statut').value,
+                    notes: document.getElementById('papiers-notes').value,
+                    created_at: this.currentEditingId ? this.db.PAPIERS_DATA.find(p => p.id === this.currentEditingId)?.created_at : new Date().toISOString(),
+                    updated_at: new Date().toISOString()
+                };
+
+                if (this.currentEditingId) {
+                    const index = this.db.PAPIERS_DATA.findIndex(p => p.id === this.currentEditingId);
+                    if (index > -1) this.db.PAPIERS_DATA[index] = papier;
+                } else {
+                    this.db.PAPIERS_DATA.push(papier);
+                }
+
+                this.saveToStorage();
+                this.renderPapiers();
+                this.resetPapiersForm();
+                this.showAlert('papiers', '✓ Document enregistré', 'success');
+            },
+
+            editPapiers(id) {
+                const papier = this.db.PAPIERS_DATA.find(p => p.id === id);
+                if (!papier) return;
+
+                document.getElementById('papiers-id').value = papier.id;
+                document.getElementById('papiers-reference').value = papier.reference;
+                document.getElementById('papiers-client').value = papier.client_id;
+                document.getElementById('papiers-type').value = papier.type;
+                document.getElementById('papiers-date-emission').value = papier.date_emission;
+                document.getElementById('papiers-date-expiration').value = papier.date_expiration || '';
+                document.getElementById('papiers-statut').value = papier.statut;
+                document.getElementById('papiers-notes').value = papier.notes || '';
+
+                this.currentEditingId = id;
+                this.currentEditingSection = 'papiers';
+            },
+
+            deletePapiers(id) {
+                if (!confirm('Confirmer la suppression de ce document?')) return;
+                this.db.PAPIERS_DATA = this.db.PAPIERS_DATA.filter(p => p.id !== id);
+                this.saveToStorage();
+                this.renderPapiers();
+                this.showAlert('papiers', '✓ Document supprimé', 'success');
+            },
+
+            renderPapiers() {
+                const tbody = document.querySelector('#papiers-table tbody');
+                tbody.innerHTML = '';
+
+                if (this.db.PAPIERS_DATA.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="8" style="text-align: center; color: #999;">Aucun document enregistré</td></tr>';
+                } else {
+                    this.db.PAPIERS_DATA.forEach(p => {
+                        const client = this.db.CLIENTS_DATA.find(c => c.id === p.client_id);
+                        const clientName = client ? client.nom : '-';
+                        const statusColor = p.statut === 'Signé' ? '#d1fae5' : p.statut === 'Actif' ? '#dbeafe' : p.statut === 'Expiré' ? '#fee2e2' : p.statut === 'Annulé' ? '#fecaca' : '#fef3c7';
+
+                        const row = document.createElement('tr');
+                        row.innerHTML = `
+                            <td><code style="font-size: 11px;">${p.id}</code></td>
+                            <td>${p.reference}</td>
+                            <td>${clientName}</td>
+                            <td>${p.type}</td>
+                            <td>${p.date_emission}</td>
+                            <td><span style="background: ${statusColor}; padding: 3px 8px; border-radius: 3px; font-size: 12px;">${p.statut}</span></td>
+                            <td>${p.date_expiration || '-'}</td>
+                            <td>
+                                <button class="action-btn action-edit" onclick="app.editPapiers('${p.id}')">✎</button>
+                                <button class="action-btn action-delete" onclick="app.deletePapiers('${p.id}')">✕</button>
+                            </td>
+                        `;
+                        tbody.appendChild(row);
+                    });
+                }
+            },
+
+            resetPapiersForm() {
+                document.getElementById('papiers-form').reset();
+                document.getElementById('papiers-id').value = '';
+                document.getElementById('papiers-client').value = '';
+                this.currentEditingId = null;
+            },
+
+            updatePapiersClientsUpdate() {
+                // This is called when papiers client dropdown changes (just for form state, no sub-dropdowns needed)
+            },
+
             // ==================== STORAGE ====================
             saveToStorage() {
                 localStorage.setItem('epillot_v21_db', JSON.stringify(this.db));
@@ -2362,6 +2589,7 @@
                             ARTICLES_ACHAT_DATA: [],
                             EXPENSES_DATA: [],
                             REQUETES_DATA: [],
+                            PAPIERS_DATA: [],
                         };
                         this.saveToStorage();
                         this.renderPersonnel();
@@ -2369,7 +2597,9 @@
                         this.renderFournisseurs();
                         this.renderDepenses();
                         this.renderRequetes();
+                        this.renderPapiers();
                         this.updateRequetesClientsSelect();
+                        this.updatePapiersClientsSelect();
                         this.showAlert('settings', '⚠️ Toutes les données ont été effacées', 'error');
                     }
                 }
