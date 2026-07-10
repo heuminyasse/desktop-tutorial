@@ -256,6 +256,7 @@
 
     <div class="nav">
         <button class="nav-btn active" data-tab="personnel">👥 Personnel HBO</button>
+        <button class="nav-btn" data-tab="certifications">🎓 Certifications</button>
         <button class="nav-btn" data-tab="clients">🏭 Clients</button>
         <button class="nav-btn" data-tab="fournisseurs">🚚 Fournisseurs</button>
         <button class="nav-btn" data-tab="articles-vente">📦 Articles Vente</button>
@@ -365,6 +366,100 @@
                             <th>Email</th>
                             <th>Téléphone</th>
                             <th>Statut</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- CERTIFICATIONS Panel -->
+        <div class="panel" id="certifications">
+            <div class="section-title">🎓 Gestion des Certifications</div>
+
+            <div id="alert-certifications"></div>
+
+            <div style="background: #f0f0f0; padding: 15px; border-radius: 4px; margin-bottom: 20px;">
+                <strong>Certifications & Formations:</strong> Gérer les certifications et compétences du personnel
+            </div>
+
+            <form id="certifications-form">
+                <div class="form-group">
+                    <div class="form-control">
+                        <label>ID (Auto-généré)</label>
+                        <input type="text" id="certifications-id" readonly style="background: #f0f0f0;">
+                    </div>
+                    <div class="form-control">
+                        <label>Personnel *</label>
+                        <select id="certifications-personnel" required>
+                            <option value="">-- Sélectionner un employé --</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <div class="form-control">
+                        <label>Certification / Compétence *</label>
+                        <input type="text" id="certifications-certification" placeholder="Ex: Électricité, Soudure, ISO 9001..." required>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <div class="form-control">
+                        <label>Date d'obtention</label>
+                        <input type="date" id="certifications-date-obtention">
+                    </div>
+                    <div class="form-control">
+                        <label>Date d'expiration</label>
+                        <input type="date" id="certifications-date-expiration">
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <div class="form-control">
+                        <label>Statut</label>
+                        <select id="certifications-statut">
+                            <option value="Valide">Valide</option>
+                            <option value="Expirée">Expirée</option>
+                            <option value="En cours">En cours</option>
+                            <option value="En attente de renouvellement">En attente de renouvellement</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <div class="form-control">
+                        <label>Organisme / Institution</label>
+                        <input type="text" id="certifications-organisme" placeholder="Organisme délivreur">
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <div class="form-control">
+                        <label>Notes / Référence</label>
+                        <textarea id="certifications-notes" placeholder="Numéro de certificat, détails..." style="min-height: 60px; padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-family: inherit;"></textarea>
+                    </div>
+                </div>
+
+                <div class="form-actions">
+                    <button type="submit" class="btn btn-primary">💾 Enregistrer</button>
+                    <button type="reset" class="btn btn-secondary" onclick="app.resetCertificationsForm()">🔄 Réinitialiser</button>
+                </div>
+            </form>
+
+            <div class="section-title" style="border: none; margin-top: 40px;">Inventaire des Certifications</div>
+            <div class="table-container">
+                <table id="certifications-table">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Personnel</th>
+                            <th>Certification</th>
+                            <th>Obtention</th>
+                            <th>Expiration</th>
+                            <th>Statut</th>
+                            <th>Organisme</th>
                             <th>Actions</th>
                         </tr>
                     </thead>
@@ -1231,6 +1326,7 @@
         const app = {
             db: {
                 PERSONNEL_DATA: [],
+                CERTIFICATIONS_DATA: [],
                 CLIENTS_DATA: [],
                 SITES_DATA: [],
                 ACHETEURS_DATA: [],
@@ -1250,6 +1346,7 @@
                 this.loadFromStorage();
                 this.setupEventListeners();
                 this.renderPersonnel();
+                this.renderCertifications();
                 this.renderClients();
                 this.renderSites();
                 this.renderAcheteurs();
@@ -1262,6 +1359,7 @@
                 this.updateFournisseursSelect();
                 this.updateRequetesClientsSelect();
                 this.updatePapiersClientsSelect();
+                this.updateCertificationsPersonnelSelect();
                 this.updateStorageInfo();
                 console.log('ePilot v21 Professional initialized');
             },
@@ -1350,6 +1448,11 @@
                     e.preventDefault();
                     this.savePapiers();
                 });
+
+                document.getElementById('certifications-form').addEventListener('submit', (e) => {
+                    e.preventDefault();
+                    this.saveCertifications();
+                });
             },
 
             // ==================== PERSONNEL MANAGEMENT ====================
@@ -1379,6 +1482,7 @@
 
                 this.saveToStorage();
                 this.renderPersonnel();
+                this.updateCertificationsPersonnelSelect();
                 this.resetPersonnelForm();
             },
 
@@ -1405,6 +1509,7 @@
                     this.db.PERSONNEL_DATA = this.db.PERSONNEL_DATA.filter(p => p.id !== id);
                     this.saveToStorage();
                     this.renderPersonnel();
+                    this.updateCertificationsPersonnelSelect();
                     this.showAlert('personnel', '✓ Personnel supprimé', 'success');
                 }
             },
@@ -2211,6 +2316,17 @@
                 });
             },
 
+            updateCertificationsPersonnelSelect() {
+                const select = document.getElementById('certifications-personnel');
+                select.innerHTML = '<option value="">-- Sélectionner un employé --</option>';
+                this.db.PERSONNEL_DATA.forEach(p => {
+                    const option = document.createElement('option');
+                    option.value = p.id;
+                    option.textContent = `${p.nom} ${p.prenoms || ''}`.trim();
+                    select.appendChild(option);
+                });
+            },
+
             // ==================== DEPENSES MANAGEMENT ====================
             saveDepenses() {
                 const date = document.getElementById('depenses-date').value;
@@ -2546,6 +2662,104 @@
                 // This is called when papiers client dropdown changes (just for form state, no sub-dropdowns needed)
             },
 
+            // ==================== CERTIFICATIONS MANAGEMENT ====================
+            saveCertifications() {
+                const personnelId = document.getElementById('certifications-personnel').value;
+
+                if (!personnelId) {
+                    this.showAlert('certifications', '⚠️ Sélectionner un employé', 'error');
+                    return;
+                }
+
+                const certification = {
+                    id: document.getElementById('certifications-id').value || this.generateId('CERT'),
+                    personnel_id: personnelId,
+                    certification: document.getElementById('certifications-certification').value,
+                    date_obtention: document.getElementById('certifications-date-obtention').value || '',
+                    date_expiration: document.getElementById('certifications-date-expiration').value || '',
+                    statut: document.getElementById('certifications-statut').value,
+                    organisme: document.getElementById('certifications-organisme').value || '',
+                    notes: document.getElementById('certifications-notes').value || '',
+                    created_at: this.currentEditingId ? this.db.CERTIFICATIONS_DATA.find(c => c.id === this.currentEditingId)?.created_at : new Date().toISOString(),
+                    updated_at: new Date().toISOString()
+                };
+
+                if (this.currentEditingId) {
+                    const index = this.db.CERTIFICATIONS_DATA.findIndex(c => c.id === this.currentEditingId);
+                    if (index > -1) this.db.CERTIFICATIONS_DATA[index] = certification;
+                } else {
+                    this.db.CERTIFICATIONS_DATA.push(certification);
+                }
+
+                this.saveToStorage();
+                this.renderCertifications();
+                this.resetCertificationsForm();
+                this.showAlert('certifications', '✓ Certification enregistrée', 'success');
+            },
+
+            editCertifications(id) {
+                const certification = this.db.CERTIFICATIONS_DATA.find(c => c.id === id);
+                if (!certification) return;
+
+                document.getElementById('certifications-id').value = certification.id;
+                document.getElementById('certifications-personnel').value = certification.personnel_id;
+                document.getElementById('certifications-certification').value = certification.certification;
+                document.getElementById('certifications-date-obtention').value = certification.date_obtention || '';
+                document.getElementById('certifications-date-expiration').value = certification.date_expiration || '';
+                document.getElementById('certifications-statut').value = certification.statut;
+                document.getElementById('certifications-organisme').value = certification.organisme || '';
+                document.getElementById('certifications-notes').value = certification.notes || '';
+
+                this.currentEditingId = id;
+                this.currentEditingSection = 'certifications';
+            },
+
+            deleteCertifications(id) {
+                if (!confirm('Confirmer la suppression de cette certification?')) return;
+                this.db.CERTIFICATIONS_DATA = this.db.CERTIFICATIONS_DATA.filter(c => c.id !== id);
+                this.saveToStorage();
+                this.renderCertifications();
+                this.showAlert('certifications', '✓ Certification supprimée', 'success');
+            },
+
+            renderCertifications() {
+                const tbody = document.querySelector('#certifications-table tbody');
+                tbody.innerHTML = '';
+
+                if (this.db.CERTIFICATIONS_DATA.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="8" style="text-align: center; color: #999;">Aucune certification enregistrée</td></tr>';
+                } else {
+                    this.db.CERTIFICATIONS_DATA.forEach(c => {
+                        const personnel = this.db.PERSONNEL_DATA.find(p => p.id === c.personnel_id);
+                        const personnelName = personnel ? `${personnel.nom} ${personnel.prenoms || ''}`.trim() : '-';
+                        const statusColor = c.statut === 'Valide' ? '#d1fae5' : c.statut === 'Expirée' ? '#fee2e2' : c.statut === 'En cours' ? '#dbeafe' : '#fef3c7';
+
+                        const row = document.createElement('tr');
+                        row.innerHTML = `
+                            <td><code style="font-size: 11px;">${c.id}</code></td>
+                            <td>${personnelName}</td>
+                            <td>${c.certification}</td>
+                            <td>${c.date_obtention || '-'}</td>
+                            <td>${c.date_expiration || '-'}</td>
+                            <td><span style="background: ${statusColor}; padding: 3px 8px; border-radius: 3px; font-size: 12px;">${c.statut}</span></td>
+                            <td>${c.organisme || '-'}</td>
+                            <td>
+                                <button class="action-btn action-edit" onclick="app.editCertifications('${c.id}')">✎</button>
+                                <button class="action-btn action-delete" onclick="app.deleteCertifications('${c.id}')">✕</button>
+                            </td>
+                        `;
+                        tbody.appendChild(row);
+                    });
+                }
+            },
+
+            resetCertificationsForm() {
+                document.getElementById('certifications-form').reset();
+                document.getElementById('certifications-id').value = '';
+                document.getElementById('certifications-personnel').value = '';
+                this.currentEditingId = null;
+            },
+
             // ==================== STORAGE ====================
             saveToStorage() {
                 localStorage.setItem('epillot_v21_db', JSON.stringify(this.db));
@@ -2581,6 +2795,7 @@
                     if (confirm('Dernière confirmation: Effacer TOUT?')) {
                         this.db = {
                             PERSONNEL_DATA: [],
+                            CERTIFICATIONS_DATA: [],
                             CLIENTS_DATA: [],
                             SITES_DATA: [],
                             ACHETEURS_DATA: [],
@@ -2593,6 +2808,7 @@
                         };
                         this.saveToStorage();
                         this.renderPersonnel();
+                        this.renderCertifications();
                         this.renderClients();
                         this.renderFournisseurs();
                         this.renderDepenses();
@@ -2600,6 +2816,7 @@
                         this.renderPapiers();
                         this.updateRequetesClientsSelect();
                         this.updatePapiersClientsSelect();
+                        this.updateCertificationsPersonnelSelect();
                         this.showAlert('settings', '⚠️ Toutes les données ont été effacées', 'error');
                     }
                 }
