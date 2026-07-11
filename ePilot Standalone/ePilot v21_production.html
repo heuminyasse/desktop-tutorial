@@ -1064,6 +1064,7 @@
                 }
             }
         };
+        window.STRUCTURE = STRUCTURE;
 
         // ============================================
         // APP STATE
@@ -1075,6 +1076,7 @@
             currentOnglet: null,
             currentSousOnglet: null
         };
+        window.app = app;
 
         // ============================================
         // TABLE TO PREFIX MAPPING
@@ -1227,8 +1229,9 @@
             app.currentSousOnglet = null;
 
             // Update pages nav
-            document.querySelectorAll('.page-btn').forEach(btn => btn.classList.remove('active'));
-            event.target?.classList.add('active');
+            document.querySelectorAll('.page-btn').forEach(btn => {
+                btn.classList.toggle('active', btn.textContent === STRUCTURE[pageKey]?.label);
+            });
 
             // Render onglets
             renderOnglets();
@@ -1239,9 +1242,15 @@
             container.innerHTML = '';
 
             const page = STRUCTURE[app.currentPage];
-            if (!page || !page.onglets) {
+            if (!page || Object.keys(page.onglets || {}).length === 0) {
                 document.getElementById('sous-onglets-container').innerHTML = '';
-                document.getElementById('page-content').innerHTML = '<div class="empty-state">Accueil</div>';
+
+                // For ACCUEIL, render dashboard instead of empty state
+                if (app.currentPage === 'ACCUEIL') {
+                    renderDashboard(document.getElementById('page-content'));
+                } else {
+                    document.getElementById('page-content').innerHTML = '<div class="empty-state">✓ ' + app.currentPage + '</div>';
+                }
                 return;
             }
 
