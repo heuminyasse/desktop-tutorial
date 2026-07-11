@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>Audit Complet V20</title>
+    <style>
+        body { font-family: 'Courier New'; margin: 0; padding: 20px; background: #1e1e1e; color: #0f0; }
+        .container { max-width: 1000px; margin: 0 auto; background: #0a0a0a; padding: 20px; border-radius: 4px; }
+        h1 { color: #0f0; border-bottom: 2px solid #0f0; padding-bottom: 10px; }
+        .section { margin: 20px 0; padding: 15px; background: #1a1a1a; border-left: 4px solid #0f0; }
+        .ok { color: #0f0; }
+        .warn { color: #ff0; }
+        .err { color: #f00; }
+        .info { color: #0ff; }
+        table { width: 100%; border-collapse: collapse; margin: 10px 0; }
+        th, td { padding: 8px; text-align: left; border-bottom: 1px solid #333; }
+        th { background: #222; }
+        .status-ok { background: #0a3a0a; }
+        .status-warn { background: #3a3a0a; }
+        .status-err { background: #3a0a0a; }
+        button { padding: 10px 20px; margin: 10px 0; background: #0f0; color: #000; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; }
+        button:hover { background: #0a0; }
+        pre { background: #222; padding: 10px; border-radius: 4px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔍 AUDIT COMPLET V20 - localStorage</h1>
+        
+        <button onclick="runAudit()">▶ Lancer Audit</button>
+        
+        <div id="results"></div>
+    </div>
+
+    <script>
+        async function runAudit() {
+            const results = document.getElementById('results');
+            results.innerHTML = '<div class="section info">⏳ Audit en cours...</div>';
+            
+            await new Promise(r => setTimeout(r, 500));
+            
+            let html = '';
+            
+            try {
+                // 1. Summary
+                const keys = Object.keys(localStorage);
+                html += `
+                    <div class="section">
+                        <h2>📊 RÉSUMÉ GÉNÉRAL</h2>
+                        <table>
+                            <tr>
+                                <td><strong>Total clés localStorage:</strong></td>
+                                <td class="ok">${keys.length} clés</td>
+                            </tr>
+                        </table>
+                    </div>
+                `;
+                
+                // 2. Check main data
+                const checks = {
+                    'ePilot_PERSONNEL_DATA': 'Personnel (31 attendus)',
+                    'ePilot_JIP_DATA': 'Chantiers JIP (189 attendus, 2025+)',
+                    'ePilot_ARTICLES': 'Articles (1882 attendus)',
+                    'ePilot_CLIENTS_DATA': 'Clients',
+                    'ePilot_DEPENSES': 'Dépenses',
+                    'ePilot_ORGANISATIONS': 'Organisations',
+                    'ePilot_PROJETS': 'Projets (avant 2025 - À VÉRIFIER)',
+                };
+                
+                html += '<div class="section"><h2>📋 DONNÉES CRITIQUES</h2><table><tr><th>Module</th><th>Statut</th><th>Détails</th></tr>';
+                
+                for (const [key, label] of Object.entries(checks)) {
+                    const data = localStorage.getItem(key);
+                    let status, detail, count = 0;
+                    
+                    if (!data) {
+                        status = `<span class="err">❌ MANQUANTE</span>`;
+                        detail = 'Données manquantes';
+                    } else {
+                        try {
+                            const parsed = JSON.parse(data);
+                            if (Array.isArray(parsed)) {
+                                count = parsed.length;
+                                status = `<span class="ok">✓ OK</span>`;
+                                detail = `${count} items`;
+                                
+                                // Check for old data in JIP
+                                if (key === 'ePilot_JIP_DATA') {
+                                    const old = parsed.filter(item => {
+                                        const year = new Date(item.Date).getFullYear();
+                                        return year < 2025;
+                                    }).length;
+                                    
+                                    if (old > 0) {
+                                        status = `<span class="warn">⚠️ DONNÉES ANCIENNES</span>`;
+                                        detail = `${count} total (${old} avant 2025)`;
+                                    }
+                                }
+                            } else if (typeof parsed === 'object') {
+                                count = Object.keys(parsed).length;
+                                status = `<span class="ok">✓ OK</span>`;
+                                detail = `${count} keys`;
+                            }
+                        } catch (e) {
+                            status = `<span class="err">❌ JSON invalide</span>`;
+                            detail = e.message;
+                        }
+                    }
+                    
+                    const rowClass = status.includes('❌') ? 'status-err' : status.includes('⚠️') ? 'status-warn' : 'status-ok';
+                    html += `<tr class="${rowClass}"><td>${label}</td><td>${status}</td><td>${detail}</td></tr>`;
+                }
+                
+                html += '</table></div>';
+                
+                // 3. Check for PI22600
+                html += '<div class="section"><h2>🎯 VÉRIFICATION PI22600 (VIEILLE DONNÉE)</h2>';
+                const jipStr = localStorage.getItem('ePilot_JIP_DATA');
+                const jip = jipStr ? JSON.parse(jipStr) : [];
+                const hasPI22600 = jip.some(item => item.Imputation === 'PI22600');
+                
+                if (hasPI22600) {
+                    html += `<div class="err">❌ PI22600 TROUVÉE! Les vieilles données sont toujours là!</div>`;
+                } else {
+                    html += `<div class="ok">✓ PI22600 NOT FOUND - Données propres!</div>`;
+                }
+                
+                html += '</div>';
+                
+                // 4. Data quality checks
+                html += '<div class="section"><h2>✓ VÉRIFICATIONS DE QUALITÉ</h2><table>';
+                
+                // Personnel
+                const personnel = localStorage.getItem('ePilot_PERSONNEL_DATA');
+                const persCount = personnel ? JSON.parse(personnel).length : 0;
+                html += `<tr class="${persCount === 31 ? 'status-ok' : 'status-warn'}">
+                    <td>Personnel</td>
+                    <td>${persCount} / 31</td>
+                    <td>${persCount === 31 ? '✓ Exact' : '⚠️ Différent'}</td>
+                </tr>`;
+                
+                // Articles
+                const articles = localStorage.getItem('ePilot_ARTICLES');
+                const artCount = articles ? JSON.parse(articles).length : 0;
+                html += `<tr class="${artCount > 0 ? 'status-ok' : 'status-err'}">
+                    <td>Articles</td>
+                    <td>${artCount} items</td>
+                    <td>${artCount > 0 ? '✓ Présent' : '❌ Vide'}</td>
+                </tr>`;
+                
+                // Chantiers 2025+
+                const jip2025 = jip.filter(item => {
+                    const year = new Date(item.Date).getFullYear();
+                    return year >= 2025;
+                }).length;
+                html += `<tr class="${jip2025 > 0 ? 'status-ok' : 'status-err'}">
+                    <td>Chantiers 2025+</td>
+                    <td>${jip2025} items</td>
+                    <td>${jip2025 > 100 ? '✓ Bon' : '❌ Trop peu'}</td>
+                </tr>`;
+                
+                html += '</table></div>';
+                
+                // 5. Final verdict
+                html += '<div class="section"><h2>📋 VERDICT FINAL</h2>';
+                
+                const issues = [];
+                if (persCount !== 31) issues.push(`Personnel: ${persCount}/31`);
+                if (artCount === 0) issues.push('Articles vides');
+                if (jip2025 === 0) issues.push('Aucun chantier 2025+');
+                if (hasPI22600) issues.push('PI22600 présent');
+                
+                if (issues.length === 0) {
+                    html += `<div class="ok"><strong>✓ TOUT CORRECT!</strong><br>Les bases de données sont en bon état.</div>`;
+                } else {
+                    html += `<div class="warn"><strong>⚠️ PROBLÈMES DÉTECTÉS:</strong><br>`;
+                    issues.forEach(issue => html += `• ${issue}<br>`);
+                    html += '</div>';
+                }
+                
+                html += '</div>';
+                
+            } catch (e) {
+                html += `<div class="section err"><strong>Erreur lors de l'audit:</strong><br>${e.message}</div>`;
+            }
+            
+            results.innerHTML = html;
+        }
+    </script>
+</body>
+</html>
