@@ -358,6 +358,7 @@
         <button class="top-nav-btn" data-page="projects">Projects</button>
         <button class="top-nav-btn" data-page="archives">Archives</button>
         <button class="top-nav-btn" data-page="quest">Quest</button>
+        <button class="top-nav-btn" data-page="settings">Settings</button>
     </div>
     <div class="top-right">
         <button class="settings-btn">⚙️</button>
@@ -520,6 +521,51 @@ function renderContent() {
     } else if (app.currentPage === 'archives') {
         title.textContent = 'Archives';
         renderTable('ARTICLES_DATA', 'Articles');
+    } else if (app.currentPage === 'settings') {
+        title.textContent = 'Settings';
+        content.innerHTML = `
+            <div style="max-width: 600px;">
+                <div style="margin-bottom: 30px;">
+                    <h3 style="margin-bottom: 16px; font-size: 16px; font-weight: 600;">Import V20 Data</h3>
+                    <p style="margin-bottom: 16px; color: #666; font-size: 13px;">
+                        Upload a V20 export JSON file to import all data into the V21 database structure.
+                    </p>
+                    <div style="border: 2px dashed #DDD; padding: 24px; border-radius: 4px; text-align: center;">
+                        <input type="file" id="v20-import-file" accept=".json" style="display: none;">
+                        <button onclick="document.getElementById('v20-import-file').click()" style="padding: 12px 24px; background: var(--primary-red); color: white; border: none; cursor: pointer; border-radius: 4px; font-weight: 600;">
+                            📁 Choose File
+                        </button>
+                        <p id="file-status" style="margin-top: 12px; font-size: 12px; color: #999;">No file selected</p>
+                    </div>
+                    <button onclick="importV20Data()" style="margin-top: 16px; padding: 12px 24px; background: var(--primary-red); color: white; border: none; cursor: pointer; border-radius: 4px; font-weight: 600; width: 100%;">
+                        ⬆️ Import Data
+                    </button>
+                </div>
+
+                <div style="margin-top: 30px; padding: 16px; background: #F9F9F9; border-radius: 4px; border: 1px solid #DDD;">
+                    <h4 style="margin-bottom: 12px; font-size: 14px; font-weight: 600;">Database Status</h4>
+                    <div style="font-size: 12px; color: #666; line-height: 1.8;">
+                        <div>📊 Articles: <strong>${app.db.ARTICLES_DATA?.length || 0}</strong></div>
+                        <div>👥 Clients: <strong>${app.db.CLIENTS_DATA?.length || 0}</strong></div>
+                        <div>🏗️ Projects: <strong>${app.db.CHANTIERS_DATA?.length || 0}</strong></div>
+                        <div>👤 Personnel: <strong>${app.db.PERSONNEL_DATA?.length || 0}</strong></div>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        // Setup file input handler
+        setTimeout(() => {
+            const fileInput = document.getElementById('v20-import-file');
+            if (fileInput) {
+                fileInput.addEventListener('change', (e) => {
+                    const file = e.target.files[0];
+                    if (file) {
+                        document.getElementById('file-status').textContent = `✓ ${file.name}`;
+                    }
+                });
+            }
+        }, 100);
     }
 }
 
@@ -548,6 +594,100 @@ function renderTable(dataKey, title) {
             </table>
         </div>
     `;
+}
+
+// ============================================
+// IMPORT V20 DATA
+// ============================================
+function importV20Data() {
+    const fileInput = document.getElementById('v20-import-file');
+    const file = fileInput?.files[0];
+
+    if (!file) {
+        alert('Please select a file first');
+        return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+        try {
+            const v20Data = JSON.parse(e.target.result);
+
+            // Map V20 data to V21 structure
+            if (v20Data.ARTICLES) {
+                app.db.ARTICLES_DATA = v20Data.ARTICLES.map((art, idx) => ({
+                    id: `ART_${String(idx + 1).padStart(3, '0')}`,
+                    reference: art.reference || art.id,
+                    description: art.description || '',
+                    prixAchat: art.prixAchat || 0,
+                    prixVente: art.prixVente || 0,
+                    marge: art.marge || 0,
+                    quantite: art.quantite || 0,
+                    fournisseurId: art.fournisseurId || '',
+                    categorie: art.categorie || 'General'
+                }));
+            }
+
+            if (v20Data.CLIENTS_DATA || v20Data.CLIENTS) {
+                const clients = v20Data.CLIENTS_DATA || v20Data.CLIENTS || [];
+                app.db.CLIENTS_DATA = clients.map((cli, idx) => ({
+                    id: `CLT_${String(idx + 1).padStart(3, '0')}`,
+                    nom: cli.nom || cli.name || '',
+                    codeClient: cli.codeClient || cli.code || '',
+                    type: cli.type || '',
+                    email: cli.email || '',
+                    telephone: cli.telephone || cli.phone || '',
+                    adresse: cli.adresse || cli.address || '',
+                    ville: cli.ville || cli.city || '',
+                    niu: cli.niu || ''
+                }));
+            }
+
+            if (v20Data.CHANTIERS_DATA || v20Data.PROJECTS) {
+                const projects = v20Data.CHANTIERS_DATA || v20Data.PROJECTS || [];
+                app.db.CHANTIERS_DATA = projects.map((proj, idx) => ({
+                    id: `CHT_${String(idx + 1).padStart(3, '0')}`,
+                    numero: proj.numero || proj.number || '',
+                    description: proj.description || proj.desc || '',
+                    status: proj.status || proj.statut || 'Active',
+                    dateDebut: proj.dateDebut || proj.startDate || '',
+                    dateFin: proj.dateFin || proj.endDate || '',
+                    budgetOA: proj.budgetOA || proj.budget || 0,
+                    budgetContractuel: proj.budgetContractuel || proj.contractBudget || 0,
+                    clientId: proj.clientId || ''
+                }));
+            }
+
+            if (v20Data.PERSONNEL_DATA || v20Data.EMPLOYEES) {
+                const personnel = v20Data.PERSONNEL_DATA || v20Data.EMPLOYEES || [];
+                app.db.PERSONNEL_DATA = personnel.map((emp, idx) => ({
+                    id: `EMP_${String(idx + 1).padStart(3, '0')}`,
+                    matricule: emp.matricule || emp.number || '',
+                    nom: emp.nom || emp.lastName || '',
+                    prenoms: emp.prenoms || emp.firstName || '',
+                    email: emp.email || '',
+                    telephone: emp.telephone || emp.phone || '',
+                    fonction: emp.fonction || emp.role || ''
+                }));
+            }
+
+            // Update counters
+            app.db.CONFIG_DATA.counters.ART = app.db.ARTICLES_DATA.length;
+            app.db.CONFIG_DATA.counters.CLT = app.db.CLIENTS_DATA.length;
+            app.db.CONFIG_DATA.counters.CHT = app.db.CHANTIERS_DATA.length;
+            app.db.CONFIG_DATA.counters.EMP = app.db.PERSONNEL_DATA.length;
+
+            saveDB();
+            alert(`✅ Import successful!\n\nArticles: ${app.db.ARTICLES_DATA.length}\nClients: ${app.db.CLIENTS_DATA.length}\nProjects: ${app.db.CHANTIERS_DATA.length}\nPersonnel: ${app.db.PERSONNEL_DATA.length}`);
+
+            // Refresh page
+            renderContent();
+        } catch (error) {
+            alert('❌ Error importing file: ' + error.message);
+            console.error(error);
+        }
+    };
+    reader.readAsText(file);
 }
 
 // ============================================
