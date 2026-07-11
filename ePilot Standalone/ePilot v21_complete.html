@@ -1366,15 +1366,16 @@
                     Object.keys(mappedData).forEach(key => {
                         if (Array.isArray(mappedData[key])) {
                             if (!app.db[key]) app.db[key] = [];
-                            // Add mapped items with new IDs
+
+                            // Add mapped items (keep existing IDs from v20)
                             mappedData[key].forEach(item => {
-                                const prefix = TABLE_PREFIXES[key] || 'REC';
-                                const newItem = {
-                                    ...item,
-                                    id: generateId(prefix)
-                                };
-                                app.db[key].push(newItem);
-                                console.log('Item ajouté:', newItem.id, key);
+                                // If item has no ID, generate one
+                                if (!item.id) {
+                                    const prefix = TABLE_PREFIXES[key] || 'REC';
+                                    item.id = generateId(prefix);
+                                }
+                                app.db[key].push(item);
+                                console.log('Item ajouté:', item.id, key, item);
                             });
                         }
                     });
