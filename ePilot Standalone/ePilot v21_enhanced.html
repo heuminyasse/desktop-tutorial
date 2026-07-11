@@ -1,0 +1,2027 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ePilot v21 - ERP Complet</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --primary: #B5000A;
+            --dark: #8B0007;
+            --light: #fff5f5;
+            --white: #ffffff;
+            --text: #2c3e50;
+            --text-secondary: #7f8c8d;
+            --border: #ecf0f1;
+            --bg: #f8f9fa;
+            --shadow-sm: 0 1px 3px rgba(0,0,0,0.08);
+            --shadow-md: 0 4px 12px rgba(0,0,0,0.12);
+            --shadow-lg: 0 12px 32px rgba(0,0,0,0.15);
+            --radius: 8px;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.5;
+        }
+
+        /* LOGIN */
+        .login-container {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--dark) 100%);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .login-container::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            right: -20%;
+            width: 500px;
+            height: 500px;
+            background: rgba(255,255,255,0.05);
+            border-radius: 50%;
+            pointer-events: none;
+        }
+
+        .login-box {
+            background: var(--white);
+            padding: 50px;
+            border-radius: var(--radius);
+            box-shadow: var(--shadow-lg);
+            max-width: 420px;
+            width: 100%;
+            position: relative;
+            z-index: 1;
+        }
+
+        .login-box h1 {
+            color: var(--primary);
+            margin-bottom: 35px;
+            text-align: center;
+            font-size: 32px;
+            font-weight: 700;
+            letter-spacing: -0.5px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: var(--text);
+            font-size: 13px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .form-group input {
+            width: 100%;
+            padding: 14px 16px;
+            border: 2px solid var(--border);
+            border-radius: 6px;
+            font-size: 15px;
+            transition: all 0.3s ease;
+            background: #fafbfc;
+        }
+
+        .form-group input:focus {
+            outline: none;
+            border-color: var(--primary);
+            background: var(--white);
+            box-shadow: 0 0 0 4px rgba(181, 0, 10, 0.1);
+        }
+
+        .btn {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--dark) 100%);
+            color: var(--white);
+            border: none;
+            padding: 14px 24px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 15px;
+            transition: all 0.3s ease;
+            width: 100%;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            box-shadow: var(--shadow-md);
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-lg);
+        }
+
+        .btn:active {
+            transform: translateY(0);
+        }
+
+        /* MAIN APP */
+        .app-container {
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+            background: var(--bg);
+        }
+
+        /* TOP BAR */
+        .top-bar {
+            background: var(--white);
+            padding: 16px 28px;
+            border-bottom: 3px solid var(--primary);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: var(--shadow-md);
+            z-index: 100;
+        }
+
+        .logo {
+            font-size: 22px;
+            font-weight: 800;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--dark) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            letter-spacing: -1px;
+        }
+
+        .pages-nav {
+            display: flex;
+            gap: 0;
+            flex: 1;
+            margin: 0 40px;
+            align-items: center;
+        }
+
+        .page-btn {
+            background: none;
+            border: none;
+            cursor: pointer;
+            padding: 18px 22px;
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--text-secondary);
+            border-bottom: 4px solid transparent;
+            transition: all 0.3s ease;
+            white-space: nowrap;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+        }
+
+        .page-btn:hover {
+            color: var(--primary);
+            border-bottom-color: var(--primary);
+        }
+
+        .page-btn.active {
+            color: var(--primary);
+            border-bottom-color: var(--primary);
+            background: rgba(181, 0, 10, 0.05);
+            font-weight: 700;
+        }
+
+        .user-section {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            padding-left: 20px;
+            border-left: 2px solid var(--border);
+        }
+
+        #current-user {
+            font-size: 13px;
+            color: var(--text);
+            font-weight: 600;
+        }
+
+        .logout-btn {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--dark) 100%);
+            color: var(--white);
+            border: none;
+            padding: 10px 20px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+            transition: all 0.3s ease;
+            box-shadow: var(--shadow-sm);
+        }
+
+        .logout-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-md);
+        }
+
+        /* MAIN CONTENT */
+        .content-wrapper {
+            display: flex;
+            flex: 1;
+            overflow: hidden;
+        }
+
+        /* ONGLETS VERTICAUX */
+        .onglets-vertical {
+            width: 200px;
+            background: var(--white);
+            border-right: 1px solid var(--border);
+            overflow-y: auto;
+            padding: 10px 0;
+        }
+
+        .onglet-btn {
+            width: 100%;
+            background: none;
+            border: none;
+            padding: 12px 15px;
+            text-align: left;
+            cursor: pointer;
+            font-size: 13px;
+            color: var(--text);
+            border-left: 4px solid transparent;
+            transition: all 0.3s;
+        }
+
+        .onglet-btn:hover {
+            background: var(--light);
+            border-left-color: var(--primary);
+        }
+
+        .onglet-btn.active {
+            background: var(--light);
+            color: var(--primary);
+            border-left-color: var(--primary);
+            font-weight: 600;
+        }
+
+        /* CONTENU */
+        .content-area {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        /* SOUS-ONGLETS HORIZONTAUX */
+        .sous-onglets-container {
+            background: var(--white);
+            border-bottom: 1px solid var(--border);
+            padding: 10px 20px;
+            display: flex;
+            gap: 15px;
+            overflow-x: auto;
+            flex-shrink: 0;
+        }
+
+        .sous-onglet-btn {
+            background: none;
+            border: none;
+            cursor: pointer;
+            padding: 10px 0;
+            font-size: 12px;
+            color: #999;
+            border-bottom: 2px solid transparent;
+            transition: all 0.3s;
+            white-space: nowrap;
+        }
+
+        .sous-onglet-btn:hover {
+            color: var(--text);
+        }
+
+        .sous-onglet-btn.active {
+            color: var(--primary);
+            border-bottom-color: var(--primary);
+            font-weight: 600;
+        }
+
+        /* PAGE CONTENT */
+        .page-content {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px;
+            background: var(--bg);
+        }
+
+        /* TABLES */
+        .section-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .section-header h3 {
+            font-size: 18px;
+            color: var(--text);
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--dark) 100%);
+            color: var(--white);
+            border: none;
+            padding: 12px 24px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+            transition: all 0.3s ease;
+            box-shadow: var(--shadow-sm);
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-md);
+        }
+
+        .table-container {
+            background: var(--white);
+            border-radius: var(--radius);
+            overflow: hidden;
+            box-shadow: var(--shadow-md);
+            border: 1px solid var(--border);
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        thead {
+            background: linear-gradient(135deg, #f8f9fa 0%, #f0f1f3 100%);
+            border-bottom: 2px solid var(--border);
+        }
+
+        th {
+            padding: 16px 14px;
+            text-align: left;
+            font-weight: 700;
+            font-size: 12px;
+            color: var(--text);
+            text-transform: uppercase;
+            letter-spacing: 0.4px;
+        }
+
+        td {
+            padding: 14px;
+            border-bottom: 1px solid var(--border);
+            font-size: 14px;
+            color: var(--text);
+        }
+
+        tbody tr {
+            transition: all 0.2s ease;
+        }
+
+        tbody tr:hover {
+            background: #f8f9fa;
+            box-shadow: inset 0 0 0 1px rgba(181, 0, 10, 0.1);
+        }
+
+        .action-btns {
+            display: flex;
+            gap: 6px;
+            align-items: center;
+        }
+
+        .btn-sm {
+            padding: 8px 12px;
+            font-size: 12px;
+            background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%);
+            color: #1976d2;
+            border: 1px solid #90caf9;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            font-weight: 500;
+        }
+
+        .btn-sm:hover {
+            background: linear-gradient(135deg, #bbdefb 0%, #90caf9 100%);
+            transform: translateY(-1px);
+            box-shadow: var(--shadow-sm);
+        }
+
+        .btn-delete {
+            background: linear-gradient(135deg, #ffebee 0%, #ffcdd2 100%) !important;
+            color: #d32f2f !important;
+            border: 1px solid #ef9a9a !important;
+        }
+
+        .btn-delete:hover {
+            background: linear-gradient(135deg, #ffcdd2 0%, #ef9a9a 100%) !important;
+            transform: translateY(-1px);
+        }
+
+        /* EMPTY STATE */
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: #999;
+        }
+
+        /* FORM MODAL */
+        .form-container {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.6);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+            backdrop-filter: blur(4px);
+            animation: fadeIn 0.2s ease;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                backdrop-filter: blur(0px);
+            }
+            to {
+                opacity: 1;
+                backdrop-filter: blur(4px);
+            }
+        }
+
+        .form-container.show {
+            display: flex;
+        }
+
+        .form-modal {
+            background: var(--white);
+            border-radius: var(--radius);
+            box-shadow: var(--shadow-lg);
+            max-width: 560px;
+            width: 90%;
+            max-height: 87vh;
+            overflow-y: auto;
+            padding: 40px;
+            border: 1px solid var(--border);
+            animation: slideUp 0.3s ease;
+        }
+
+        @keyframes slideUp {
+            from {
+                transform: translateY(30px);
+                opacity: 0;
+            }
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+
+        .form-modal h3 {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--dark) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 8px;
+            font-size: 22px;
+            font-weight: 700;
+            letter-spacing: -0.5px;
+        }
+
+        .form-modal > p {
+            margin-bottom: 25px;
+            border-bottom: 2px solid var(--border);
+            padding-bottom: 15px;
+            color: var(--text-secondary);
+            font-size: 13px;
+        }
+
+        .form-group {
+            margin-bottom: 22px;
+        }
+
+        .form-group label {
+            display: block;
+            font-weight: 700;
+            color: var(--text);
+            font-size: 12px;
+            margin-bottom: 10px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .form-modal .form-group input,
+        .form-modal .form-group select,
+        .form-modal .form-group textarea {
+            width: 100%;
+            padding: 13px 15px;
+            border: 2px solid var(--border);
+            border-radius: 6px;
+            font-family: inherit;
+            font-size: 14px;
+            transition: all 0.3s ease;
+            background: #fafbfc;
+            color: var(--text);
+        }
+
+        .form-modal .form-group input::placeholder,
+        .form-modal .form-group textarea::placeholder {
+            color: var(--text-secondary);
+        }
+
+        .form-modal .form-group input:focus,
+        .form-modal .form-group select:focus,
+        .form-modal .form-group textarea:focus {
+            outline: none;
+            border-color: var(--primary);
+            background: var(--white);
+            box-shadow: 0 0 0 4px rgba(181, 0, 10, 0.1);
+        }
+
+        .form-modal .form-group input[type="required"]:invalid {
+            border-color: #e74c3c;
+        }
+
+        .form-actions {
+            display: flex;
+            gap: 12px;
+            margin-top: 32px;
+            justify-content: flex-end;
+            border-top: 2px solid var(--border);
+            padding-top: 24px;
+        }
+
+        .btn-secondary {
+            background: #95a5a6;
+            color: var(--white);
+            border: none;
+            padding: 12px 28px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+            transition: all 0.3s ease;
+            box-shadow: var(--shadow-sm);
+        }
+
+        .btn-secondary:hover {
+            background: #7f8c8d;
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-md);
+        }
+
+        .action-btns {
+            display: flex;
+            gap: 6px;
+        }
+
+        .btn-sm {
+            background: #f5f5f5;
+            border: 1px solid #ddd;
+            padding: 6px 10px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.2s;
+        }
+
+        .btn-sm:hover {
+            background: #e8e8e8;
+            transform: scale(1.1);
+        }
+
+        .btn-sm.btn-delete:hover {
+            background: #ffebee;
+            border-color: #f44336;
+        }
+
+        /* ALERT */
+        .alert {
+            padding: 15px 20px;
+            border-radius: 4px;
+            margin-bottom: 20px;
+            font-size: 13px;
+        }
+
+        .alert.success {
+            background: #d1fae5;
+            color: #065f46;
+        }
+
+        .alert.error {
+            background: #fee2e2;
+            color: #7f1d1d;
+        }
+    </style>
+</head>
+<body>
+    <!-- LOGIN -->
+    <div id="login-screen" class="login-container">
+        <div class="login-box">
+            <h1>🔐 ePilot v21</h1>
+            <form id="login-form">
+                <div class="form-group">
+                    <label for="username">Utilisateur</label>
+                    <input type="text" id="username" name="username" value="admin" required>
+                </div>
+                <div class="form-group">
+                    <label for="password">Mot de passe</label>
+                    <input type="password" id="password" name="password" value="admin" required>
+                </div>
+                <button type="submit" class="btn">Se connecter</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- APP -->
+    <div id="app-screen" class="app-container" style="display: none;">
+        <!-- TOP BAR -->
+        <div class="top-bar">
+            <div class="logo">📊 ePilot v21</div>
+            <div class="pages-nav" id="pages-nav"></div>
+            <div class="user-section">
+                <span id="current-user" style="font-size: 12px; color: #666;"></span>
+                <button class="logout-btn" id="logout-btn">Déconnexion</button>
+            </div>
+        </div>
+
+        <!-- CONTENT AREA -->
+        <div class="content-wrapper">
+            <!-- ONGLETS VERTICAUX -->
+            <div class="onglets-vertical" id="onglets-container"></div>
+
+            <!-- MAIN CONTENT -->
+            <div class="content-area">
+                <!-- SOUS-ONGLETS -->
+                <div class="sous-onglets-container" id="sous-onglets-container"></div>
+
+                <!-- PAGE CONTENT -->
+                <div class="page-content" id="page-content"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ============================================
+        // FIELD SCHEMAS (From v20)
+        // ============================================
+        const FIELD_SCHEMAS = {
+            PERSONNEL_DATA: [
+                { name: 'matricule', label: 'Matricule', type: 'text', required: true },
+                { name: 'nom', label: 'Nom', type: 'text', required: true },
+                { name: 'prenoms', label: 'Prénoms', type: 'text' },
+                { name: 'email', label: 'Email', type: 'email' },
+                { name: 'telephone', label: 'Téléphone', type: 'text' },
+                { name: 'fonction', label: 'Fonction', type: 'text' }
+            ],
+            CLIENTS_DATA: [
+                { name: 'nom', label: 'Nom Entreprise', type: 'text', required: true },
+                { name: 'codeClient', label: 'Code Client', type: 'text' },
+                { name: 'type', label: 'Type', type: 'text' },
+                { name: 'email', label: 'Email', type: 'email' },
+                { name: 'telephone', label: 'Téléphone', type: 'text' },
+                { name: 'adresse', label: 'Adresse', type: 'text' },
+                { name: 'ville', label: 'Ville', type: 'text' },
+                { name: 'niu', label: 'NIU', type: 'text' }
+            ],
+            SITES_DATA: [
+                { name: 'clientId', label: 'Client', type: 'text', required: true },
+                { name: 'nom', label: 'Nom Site', type: 'text', required: true },
+                { name: 'adresse', label: 'Adresse', type: 'text' },
+                { name: 'ville', label: 'Ville', type: 'text' },
+                { name: 'codePostal', label: 'Code Postal', type: 'text' },
+                { name: 'telephone', label: 'Téléphone', type: 'text' },
+                { name: 'email', label: 'Email', type: 'email' },
+                { name: 'type', label: 'Type', type: 'text' }
+            ],
+            ACHETEURS_DATA: [
+                { name: 'clientId', label: 'Client', type: 'text', required: true },
+                { name: 'nom', label: 'Nom Acheteur', type: 'text', required: true },
+                { name: 'poste', label: 'Poste', type: 'text' },
+                { name: 'email', label: 'Email', type: 'email' },
+                { name: 'telephone', label: 'Téléphone', type: 'text' },
+                { name: 'adresse', label: 'Adresse', type: 'text' }
+            ],
+            DEVIS_DATA: [
+                { name: 'numero', label: 'N° Devis', type: 'text', required: true },
+                { name: 'date', label: 'Date', type: 'date', required: true },
+                { name: 'clientId', label: 'Client', type: 'text', required: true },
+                { name: 'montantTotal', label: 'Montant Total', type: 'number' },
+                { name: 'statut', label: 'Statut', type: 'text' },
+                { name: 'articles', label: 'Articles', type: 'text', readonly: true }
+            ],
+            FACTURES_DATA: [
+                { name: 'numero', label: 'N° Facture', type: 'text', required: true },
+                { name: 'date', label: 'Date', type: 'date', required: true },
+                { name: 'clientId', label: 'Client', type: 'text', required: true },
+                { name: 'montantTotal', label: 'Montant Total', type: 'number' },
+                { name: 'statut', label: 'Statut', type: 'text' },
+                { name: 'articles', label: 'Articles', type: 'text', readonly: true }
+            ],
+            ARTICLES_DATA: [
+                { name: 'reference', label: 'Référence', type: 'text', required: true },
+                { name: 'description', label: 'Description', type: 'textarea', required: true },
+                { name: 'prixAchat', label: 'Prix Achat', type: 'number', required: true },
+                { name: 'prixVente', label: 'Prix Vente', type: 'number', required: true },
+                { name: 'marge', label: 'Marge (%)', type: 'number', readonly: true },
+                { name: 'fournisseurId', label: 'Fournisseur', type: 'text' },
+                { name: 'quantite', label: 'Quantité Stock', type: 'number' },
+                { name: 'unite', label: 'Unité', type: 'text' },
+                { name: 'categorie', label: 'Catégorie', type: 'text' }
+            ],
+            CHANTIERS_DATA: [
+                { name: 'numero', label: 'N° Chantier', type: 'text', required: true },
+                { name: 'description', label: 'Description', type: 'textarea' },
+                { name: 'status', label: 'Statut', type: 'text' },
+                { name: 'dateDebut', label: 'Date Début', type: 'date' },
+                { name: 'dateFin', label: 'Date Fin', type: 'date' },
+                { name: 'budgetOA', label: 'Budget OA', type: 'number' },
+                { name: 'budgetContractuel', label: 'Budget Contractuel', type: 'number' },
+                { name: 'articles', label: 'Articles', type: 'text', readonly: true }
+            ],
+            FOURNISSEURS_DATA: [
+                { name: 'nom', label: 'Nom', type: 'text', required: true },
+                { name: 'type', label: 'Type', type: 'text' },
+                { name: 'contact', label: 'Contact', type: 'text' },
+                { name: 'tel', label: 'Téléphone', type: 'text' },
+                { name: 'email', label: 'Email', type: 'email' },
+                { name: 'adresse', label: 'Adresse', type: 'text' }
+            ],
+            USERS_DATA: [
+                { name: 'name', label: 'Nom Utilisateur', type: 'text', required: true },
+                { name: 'role', label: 'Rôle', type: 'text', required: true },
+                { name: 'password', label: 'Mot de passe', type: 'password', required: true }
+            ]
+        };
+
+        // ============================================
+        // DATABASE STRUCTURE
+        // ============================================
+        const STRUCTURE = {
+            ACCUEIL: { label: '📊 Accueil', onglets: {} },
+            PERSONNEL: {
+                label: '👥 Personnel',
+                onglets: {
+                    'Paie': { sous: ['📅 Pointage', '📄 Bulletins', '🗂 Paie', '💳 Crédits', '📋 Contrats'], data: 'PERSONNEL_DATA' },
+                    'Congés': { sous: ['Planning', 'Cartes'], data: 'PERSONNEL_DATA' },
+                    'Créateur de badges': { sous: [], data: 'PERSONNEL_DATA' },
+                    'PDE': { sous: [], data: 'PERSONNEL_DATA' },
+                    'RH': { sous: [], data: 'PERSONNEL_DATA' }
+                }
+            },
+            COMPETENCES: {
+                label: '🎓 Compétences',
+                onglets: {
+                    'Mes Certifications': { sous: [], data: 'CERTIFICATIONS_DATA' },
+                    'Mes Compétences': { sous: [], data: 'COMPETENCES_DATA' },
+                    'University': { sous: ['Class', 'Suivi'], data: 'UNIVERSITY_DATA' },
+                    'Mes Procedures': { sous: [], data: 'PROCEDURES_DATA' },
+                    'Rapports JSA': { sous: [], data: 'JSA_DATA' },
+                    'Exercices': { sous: [], data: 'EXERCICES_DATA' }
+                }
+            },
+            PROJETS: {
+                label: '🏗️ Projets',
+                onglets: {
+                    'Chantiers': { sous: ['Tableau de bord', 'En Cours', 'OA'], data: 'CHANTIERS_DATA' },
+                    'RFQ': { sous: ['Tableau de bord', 'Devis'], data: 'DEVIS_DATA' },
+                    'Finances': { sous: ['Factures', 'PO', 'Dépenses', 'Facturation'], data: 'FACTURES_DATA' },
+                    'Marketing': { sous: ['Pipeline', 'Projets', 'Meetings'], data: 'ARTICLES_DATA' },
+                    'FCR': { sous: [], data: 'ARTICLES_DATA' }
+                }
+            },
+            REFERENCES: {
+                label: '📋 Références',
+                onglets: {
+                    'Clients': { sous: [], data: 'CLIENTS_DATA' },
+                    'Sites': { sous: [], data: 'SITES_DATA' },
+                    'Acheteurs': { sous: [], data: 'ACHETEURS_DATA' },
+                    'Fournisseurs': { sous: [], data: 'FOURNISSEURS_DATA' },
+                    'Tous les Articles': { sous: ['En stock', 'Chiffré', 'Vendu', 'Acheté'], data: 'ARTICLES_DATA' }
+                }
+            },
+            ARCHIVES: {
+                label: '📚 Archives',
+                onglets: {
+                    'Boutique': { sous: [], data: 'ARTICLES_DATA' },
+                    'Papiers': { sous: [], data: 'ARTICLES_DATA' }
+                }
+            },
+            QUETES: {
+                label: '📋 Quêtes',
+                onglets: {
+                    'Tous': { sous: ['À traiter', 'Mes requêtes', 'Tableau de bord'], data: 'QUETES_TOUS_DATA' },
+                    'Travaux': { sous: ['À traiter', 'Mes requêtes', 'Tableau de bord'], data: 'QUETES_TRAVAUX_DATA' },
+                    'HSE': { sous: ['À traiter', 'Mes requêtes', 'Tableau de bord'], data: 'QUETES_HSE_DATA' },
+                    'Achats': { sous: ['À traiter', 'Mes requêtes', 'Tableau de bord'], data: 'QUETES_ACHATS_DATA' },
+                    'RH': { sous: ['À traiter', 'Mes requêtes', 'Tableau de bord'], data: 'QUETES_RH_DATA' },
+                    'IT': { sous: ['À traiter', 'Mes requêtes', 'Tableau de bord'], data: 'QUETES_IT_DATA' },
+                    'Social': { sous: ['À traiter', 'Mes requêtes', 'Tableau de bord'], data: 'QUETES_SOCIAL_DATA' },
+                    'Formation': { sous: ['À traiter', 'Mes requêtes', 'Tableau de bord'], data: 'QUETES_FORMATION_DATA' },
+                    'Dépenses': { sous: ['À traiter', 'Mes requêtes', 'Tableau de bord'], data: 'QUETES_DEPENSES_DATA' }
+                }
+            },
+            KPI: {
+                label: '📈 KPI',
+                onglets: {
+                    'Tableau de bord': { sous: [], data: 'KPI_TABLEAU_DATA' },
+                    'Évaluation': { sous: ['Chantiers terminés', 'Profils employés'], data: 'KPI_EVAL_DATA' }
+                }
+            },
+            PARAMETRES: {
+                label: '⚙️ Paramètres',
+                onglets: {
+                    'Utilisateurs': { sous: [], data: 'USERS_DATA' },
+                    'Configuration': { sous: [], data: 'CONFIG_DATA' },
+                    'Sauvegardes': { sous: ['Export', 'Import v20'], data: 'BACKUP_DATA' },
+                    'Notifications': { sous: [], data: 'NOTIFICATIONS_DATA' },
+                    'Préférences': { sous: [], data: 'PREFERENCES_DATA' }
+                }
+            }
+        };
+
+        // ============================================
+        // APP STATE
+        // ============================================
+        const app = {
+            db: {},
+            currentUser: null,
+            currentPage: 'ACCUEIL',
+            currentOnglet: null,
+            currentSousOnglet: null
+        };
+
+        // ============================================
+        // TABLE TO PREFIX MAPPING
+        // ============================================
+        const TABLE_PREFIXES = {
+            ARTICLES_DATA: 'ART',
+            DEVIS_DATA: 'DIV',
+            FACTURES_DATA: 'FAC',
+            PERSONNEL_DATA: 'EMP',
+            CLIENTS_DATA: 'CLT',
+            SITES_DATA: 'SIT',
+            ACHETEURS_DATA: 'ACH',
+            CHANTIERS_DATA: 'CHT',
+            FOURNISSEURS_DATA: 'FRN',
+            USERS_DATA: 'USR'
+        };
+
+        // ============================================
+        // INITIALIZATION
+        // ============================================
+        function initializeDatabase() {
+            app.db = {
+                USERS_DATA: [{ id: 'USR_001', name: 'Admin', role: 'Admin', password: 'admin', created_at: new Date().toISOString() }],
+                CONFIG_DATA: {
+                    idFormat: 'simple', // 'simple' (ART_001) or 'yearly' (ART_2025_001)
+                    counters: {
+                        ART: 0, DIV: 0, FAC: 0,
+                        EMP: 0, CLT: 0, CHT: 0, FRN: 0, SIT: 0, ACH: 0, USR: 0
+                    },
+                    lastReset: new Date().toISOString().split('T')[0]
+                }
+            };
+
+            // Initialize all data tables
+            Object.values(STRUCTURE).forEach(page => {
+                Object.values(page.onglets).forEach(onglet => {
+                    if (onglet.data) {
+                        if (!app.db[onglet.data]) {
+                            app.db[onglet.data] = [];
+                        }
+                    }
+                });
+            });
+        }
+
+        function generateId(prefix) {
+            if (!app.db.CONFIG_DATA) {
+                app.db.CONFIG_DATA = {
+                    idFormat: 'simple',
+                    counters: {
+                        ART_RFQ: 0, ART_FIN: 0, ART_MKT: 0, ART_FCR: 0, ART_BOT: 0, ART_PAP: 0,
+                        EMP: 0, CLT: 0, CHT: 0, FRN: 0, SIT: 0, ACH: 0, USR: 0
+                    },
+                    lastReset: new Date().toISOString().split('T')[0]
+                };
+            }
+
+            const config = app.db.CONFIG_DATA;
+            if (!config.counters) {
+                config.counters = {
+                    ART: 0, EMP: 0, CLT: 0, CHT: 0, FRN: 0, SIT: 0, USR: 0
+                };
+            }
+
+            if (!config.counters[prefix]) {
+                config.counters[prefix] = 0;
+            }
+
+            config.counters[prefix]++;
+            const num = String(config.counters[prefix]).padStart(3, '0');
+
+            if (config.idFormat === 'yearly') {
+                const year = new Date().getFullYear();
+                return `${prefix}_${year}_${num}`;
+            }
+            return `${prefix}_${num}`;
+        }
+
+        function saveToStorage() {
+            localStorage.setItem('epilot_v21_complete_db', JSON.stringify(app.db));
+        }
+
+        function loadFromStorage() {
+            const stored = localStorage.getItem('epilot_v21_complete_db');
+            if (stored) {
+                app.db = JSON.parse(stored);
+                return true;
+            }
+            return false;
+        }
+
+        // ============================================
+        // AUTHENTICATION
+        // ============================================
+        function handleLogin(e) {
+            e.preventDefault();
+            const username = document.getElementById('username').value.toLowerCase();
+            const password = document.getElementById('password').value;
+
+            const user = app.db.USERS_DATA.find(u =>
+                u.name.toLowerCase() === username && u.password === password
+            );
+
+            if (user) {
+                app.currentUser = user;
+                localStorage.setItem('currentUser', JSON.stringify(user));
+                showApp();
+                renderUI();
+            } else {
+                alert('Identifiants incorrects');
+            }
+        }
+
+        function handleLogout() {
+            app.currentUser = null;
+            localStorage.removeItem('currentUser');
+            location.reload();
+        }
+
+        function showApp() {
+            document.getElementById('login-screen').style.display = 'none';
+            document.getElementById('app-screen').style.display = 'flex';
+            document.getElementById('current-user').textContent = app.currentUser.name;
+        }
+
+        // ============================================
+        // UI RENDERING
+        // ============================================
+        function renderUI() {
+            renderPages();
+            loadPage('ACCUEIL');
+        }
+
+        function renderPages() {
+            const nav = document.getElementById('pages-nav');
+            nav.innerHTML = '';
+
+            Object.entries(STRUCTURE).forEach(([key, page]) => {
+                const btn = document.createElement('button');
+                btn.className = 'page-btn' + (key === app.currentPage ? ' active' : '');
+                btn.textContent = page.label;
+                btn.onclick = () => loadPage(key);
+                nav.appendChild(btn);
+            });
+        }
+
+        function loadPage(pageKey) {
+            app.currentPage = pageKey;
+            app.currentOnglet = null;
+            app.currentSousOnglet = null;
+
+            // Update pages nav
+            document.querySelectorAll('.page-btn').forEach(btn => btn.classList.remove('active'));
+            event.target?.classList.add('active');
+
+            // Render onglets
+            renderOnglets();
+        }
+
+        function renderOnglets() {
+            const container = document.getElementById('onglets-container');
+            container.innerHTML = '';
+
+            const page = STRUCTURE[app.currentPage];
+            if (!page || !page.onglets) {
+                document.getElementById('sous-onglets-container').innerHTML = '';
+                document.getElementById('page-content').innerHTML = '<div class="empty-state">Accueil</div>';
+                return;
+            }
+
+            Object.entries(page.onglets).forEach(([name, config], idx) => {
+                const btn = document.createElement('button');
+                btn.className = 'onglet-btn' + (idx === 0 ? ' active' : '');
+                btn.textContent = name;
+                btn.onclick = () => selectOnglet(name, config);
+                container.appendChild(btn);
+            });
+
+            // Load first onglet
+            const first = Object.entries(page.onglets)[0];
+            if (first) {
+                selectOnglet(first[0], first[1]);
+            }
+        }
+
+        function selectOnglet(name, config) {
+            app.currentOnglet = name;
+            app.currentSousOnglet = config.sous && config.sous.length > 0 ? config.sous[0] : null;
+
+            // Update active onglet
+            document.querySelectorAll('.onglet-btn').forEach(btn => btn.classList.remove('active'));
+            event.target?.classList.add('active');
+
+            renderSousOnglets(config.sous || []);
+            renderContent(config.data || '');
+        }
+
+        function renderSousOnglets(sousOnglets) {
+            const container = document.getElementById('sous-onglets-container');
+            container.innerHTML = '';
+
+            if (sousOnglets.length === 0) return;
+
+            sousOnglets.forEach((name, idx) => {
+                const btn = document.createElement('button');
+                btn.className = 'sous-onglet-btn' + (idx === 0 ? ' active' : '');
+                btn.textContent = name;
+                btn.onclick = () => selectSousOnglet(name);
+                container.appendChild(btn);
+
+                // Set first as active
+                if (idx === 0) {
+                    app.currentSousOnglet = name;
+                }
+            });
+        }
+
+        function selectSousOnglet(name) {
+            app.currentSousOnglet = name;
+
+            document.querySelectorAll('.sous-onglet-btn').forEach(btn => btn.classList.remove('active'));
+            event.target?.classList.add('active');
+
+            // Re-render content with new sous-onglet
+            const page = STRUCTURE[app.currentPage];
+            if (page) {
+                const onglet = page.onglets[app.currentOnglet];
+                if (onglet && onglet.data) {
+                    renderContent(onglet.data);
+                }
+            }
+        }
+
+        function renderContent(dataTable) {
+            const content = document.getElementById('page-content');
+
+            if (!dataTable) {
+                content.innerHTML = '<div class="empty-state">✓ Section ' + app.currentOnglet + '</div>';
+                return;
+            }
+
+            // Special handling for CONFIG_DATA
+            if (dataTable === 'CONFIG_DATA') {
+                renderConfigPage(content);
+                return;
+            }
+
+            // Special handling for BACKUP_DATA (Sauvegardes)
+            if (dataTable === 'BACKUP_DATA') {
+                renderSauvegardePage(content);
+                return;
+            }
+
+            const data = app.db[dataTable] || [];
+            const schema = FIELD_SCHEMAS[dataTable] || [];
+
+            let html = `
+                <div class="section-header">
+                    <div style="display: flex; gap: 10px; align-items: center; flex: 1;">
+                        <h3 style="margin: 0;">${app.currentOnglet}</h3>
+                        <input type="text" id="search-input" placeholder="🔍 Rechercher..." style="padding: 8px 12px; border: 1px solid #ddd; border-radius: 4px; font-size: 13px; flex: 1; max-width: 300px;" onkeyup="filterTable(this.value, '${dataTable}')">
+                    </div>
+                    <div style="display: flex; gap: 10px;">
+                        <button class="btn-primary" onclick="showAddForm('${dataTable}')">+ Ajouter</button>
+                        <button class="btn-secondary" onclick="exportData('${dataTable}', 'csv')" style="background: #666;">📥 CSV</button>
+                        <button class="btn-secondary" onclick="exportData('${dataTable}', 'json')" style="background: #666;">💾 JSON</button>
+                    </div>
+                </div>
+            `;
+
+            if (data.length === 0) {
+                html += '<div class="empty-state">Aucun enregistrement</div>';
+            } else {
+                html += '<div class="table-container"><table><thead><tr>';
+                html += '<th style="width: 100px; font-weight: 600; color: var(--primary);">ID</th>';
+
+                if (schema.length > 0) {
+                    schema.slice(0, 2).forEach(field => {
+                        html += `<th>${field.label}</th>`;
+                    });
+                } else {
+                    html += '<th>Données</th>';
+                }
+
+                // Special columns for ARTICLES_DATA
+                if (dataTable === 'ARTICLES_DATA') {
+                    html += '<th>Ventes</th><th>Achats</th><th>Boutique</th>';
+                }
+
+                html += '<th>Actions</th></tr></thead><tbody>';
+
+                data.forEach(row => {
+                    html += '<tr>';
+                    html += `<td style="font-weight: 600; color: var(--primary);">${row.id}</td>`;
+
+                    if (schema.length > 0) {
+                        schema.slice(0, 2).forEach(field => {
+                            html += `<td>${row[field.name] || '-'}</td>`;
+                        });
+                    } else {
+                        html += `<td>${JSON.stringify(row).substring(0, 50)}...</td>`;
+                    }
+
+                    if (dataTable === 'ARTICLES_DATA') {
+                        const ventes = (row.ventes || []).length;
+                        const achats = (row.achats || []).length;
+                        const boutique = row.boutique?.disponible ? '✓' : '✗';
+                        html += `<td>${ventes}</td><td>${achats}</td><td>${boutique}</td>`;
+                    }
+
+                    html += `<td>
+                        <div class="action-btns">
+                            ${(['CHANTIERS_DATA', 'DEVIS_DATA', 'FACTURES_DATA'].includes(dataTable)) ? `<button class="btn-sm" style="background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%); color: white; border: 1px solid #81C784;" onclick="showRecordDetails('${dataTable}', '${row.id}')">👁️</button>` : ''}
+                            <button class="btn-sm" onclick="showEditForm('${dataTable}', '${row.id}')">✏️</button>
+                            <button class="btn-sm btn-delete" onclick="deleteRecord('${dataTable}', '${row.id}')">🗑️</button>
+                            ${dataTable === 'ARTICLES_DATA' ? `<button class="btn-sm" onclick="showArticleDetails('${row.id}')">📊</button>` : ''}
+                        </div>
+                    </td></tr>`;
+                });
+                html += '</tbody></table></div>';
+            }
+
+            content.innerHTML = html;
+        }
+
+        function renderFormFields(schema, record = null, dataTable = null) {
+            return schema.map(field => {
+                if (field.readonly) return '';
+
+                let inputHtml = '';
+                const value = record ? (record[field.name] || '') : '';
+
+                if (field.type === 'textarea') {
+                    inputHtml = `<textarea name="${field.name}" ${field.required ? 'required' : ''} placeholder="${field.label}" rows="4">${value}</textarea>`;
+                } else if (field.type === 'select') {
+                    let options = '<option value="">-- Sélectionner --</option>';
+
+                    // Smart selectors based on field name
+                    if (field.name === 'clientId') {
+                        (app.db.CLIENTS_DATA || []).forEach(c => {
+                            options += `<option value="${c.id}" ${c.id === value ? 'selected' : ''}>${c.nom || c.id}</option>`;
+                        });
+                    } else if (field.name === 'fournisseurId') {
+                        (app.db.FOURNISSEURS_DATA || []).forEach(f => {
+                            options += `<option value="${f.id}" ${f.id === value ? 'selected' : ''}>${f.nom || f.id}</option>`;
+                        });
+                    } else if (field.name === 'siteId') {
+                        (app.db.SITES_DATA || []).forEach(s => {
+                            options += `<option value="${s.id}" ${s.id === value ? 'selected' : ''}>${s.nom || s.id}</option>`;
+                        });
+                    } else if (field.name === 'articleId') {
+                        (app.db.ARTICLES_DATA || []).forEach(a => {
+                            options += `<option value="${a.id}" ${a.id === value ? 'selected' : ''}>${a.reference} - ${a.description}</option>`;
+                        });
+                    }
+
+                    inputHtml = `<select name="${field.name}" ${field.required ? 'required' : ''}>${options}</select>`;
+                } else {
+                    inputHtml = `<input type="${field.type}" name="${field.name}" ${field.required ? 'required' : ''} placeholder="${field.label}" value="${value}">`;
+                }
+
+                return `
+                    <div class="form-group">
+                        <label>${field.label}${field.required ? ' <span style="color: red;">*</span>' : ''}</label>
+                        ${inputHtml}
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function showAddForm(dataTable) {
+            const schema = FIELD_SCHEMAS[dataTable];
+            if (!schema) {
+                alert('Schéma non trouvé');
+                return;
+            }
+
+            const formHtml = `
+                <div class="form-container show">
+                    <div class="form-modal">
+                        <h3>➕ Ajouter ${app.currentOnglet}</h3>
+                        <form id="add-form">
+                            ${renderFormFields(schema, null, dataTable)}
+                            <div class="form-actions">
+                                <button type="button" class="btn-secondary" onclick="this.closest('.form-container').remove()">✕ Annuler</button>
+                                <button type="submit" class="btn-primary">✓ Enregistrer</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            `;
+
+            const container = document.createElement('div');
+            container.innerHTML = formHtml;
+            document.body.appendChild(container);
+
+            container.querySelector('#add-form').addEventListener('submit', (e) => {
+                e.preventDefault();
+                const formData = new FormData(e.target);
+                const prefix = TABLE_PREFIXES[dataTable] || 'REC';
+                const record = {
+                    id: generateId(prefix),
+                    ...Object.fromEntries(formData),
+                    created_at: new Date().toISOString()
+                };
+
+                // Calculate marge for ARTICLES_DATA
+                if (dataTable === 'ARTICLES_DATA') {
+                    const prixVente = Number(record.prixVente) || 0;
+                    const prixAchat = Number(record.prixAchat) || 0;
+                    record.marge = prixVente > 0 ? ((prixVente - prixAchat) / prixVente * 100).toFixed(2) : 0;
+                }
+
+                // Calculate montantTotal for DEVIS_DATA & FACTURES_DATA
+                if (dataTable === 'DEVIS_DATA' || dataTable === 'FACTURES_DATA') {
+                    const articles = typeof record.articles === 'string' ? [] : (record.articles || []);
+                    record.montantTotal = articles.reduce((sum, art) => {
+                        const qty = Number(art.quantite) || 0;
+                        const price = Number(art.prixUnitaire) || 0;
+                        return sum + (qty * price);
+                    }, 0);
+                }
+
+                app.db[dataTable].push(record);
+                saveToStorage();
+                container.remove();
+                renderContent(dataTable);
+                alert(`✓ ${app.currentOnglet} ajouté(e) avec succès!`);
+            });
+
+            container.querySelector('.form-container').addEventListener('click', (e) => {
+                if (e.target === container.querySelector('.form-container')) {
+                    container.remove();
+                }
+            });
+        }
+
+        function showEditForm(dataTable, recordId) {
+            const schema = FIELD_SCHEMAS[dataTable];
+            const record = app.db[dataTable].find(r => r.id === recordId);
+
+            if (!schema || !record) {
+                alert('Enregistrement non trouvé');
+                return;
+            }
+
+            const formHtml = `
+                <div class="form-container show">
+                    <div class="form-modal">
+                        <h3>✏️ Modifier ${app.currentOnglet}</h3>
+                        <p style="color: #999; font-size: 12px; margin-bottom: 15px;">ID: ${record.id}</p>
+                        <form id="edit-form">
+                            ${renderFormFields(schema, record, dataTable)}
+                            <div class="form-actions">
+                                <button type="button" class="btn-secondary" onclick="this.closest('.form-container').remove()">✕ Annuler</button>
+                                <button type="submit" class="btn-primary">✓ Mettre à jour</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            `;
+
+            const container = document.createElement('div');
+            container.innerHTML = formHtml;
+            document.body.appendChild(container);
+
+            container.querySelector('#edit-form').addEventListener('submit', (e) => {
+                e.preventDefault();
+                const formData = new FormData(e.target);
+                const index = app.db[dataTable].findIndex(r => r.id === recordId);
+
+                if (index >= 0) {
+                    app.db[dataTable][index] = {
+                        ...record,
+                        ...Object.fromEntries(formData),
+                        updated_at: new Date().toISOString()
+                    };
+
+                    // Recalculate marge if ARTICLES_DATA
+                    if (dataTable === 'ARTICLES_DATA') {
+                        const prixVente = Number(app.db[dataTable][index].prixVente) || 0;
+                        const prixAchat = Number(app.db[dataTable][index].prixAchat) || 0;
+                        app.db[dataTable][index].marge = prixVente > 0 ? ((prixVente - prixAchat) / prixVente * 100).toFixed(2) : 0;
+                    }
+
+                    // Recalculate montantTotal if DEVIS_DATA or FACTURES_DATA
+                    if (dataTable === 'DEVIS_DATA' || dataTable === 'FACTURES_DATA') {
+                        const articles = typeof app.db[dataTable][index].articles === 'string' ? [] : (app.db[dataTable][index].articles || []);
+                        app.db[dataTable][index].montantTotal = articles.reduce((sum, art) => {
+                            const qty = Number(art.quantite) || 0;
+                            const price = Number(art.prixUnitaire) || 0;
+                            return sum + (qty * price);
+                        }, 0);
+                    }
+
+                    saveToStorage();
+                    container.remove();
+                    renderContent(dataTable);
+                    alert(`✓ ${app.currentOnglet} modifié(e) avec succès!`);
+                }
+            });
+
+            container.querySelector('.form-container').addEventListener('click', (e) => {
+                if (e.target === container.querySelector('.form-container')) {
+                    container.remove();
+                }
+            });
+        }
+
+        function deleteRecord(dataTable, recordId) {
+            if (!confirm('Êtes-vous sûr de vouloir supprimer cet enregistrement ?')) {
+                return;
+            }
+
+            const index = app.db[dataTable].findIndex(r => r.id === recordId);
+            if (index >= 0) {
+                app.db[dataTable].splice(index, 1);
+                saveToStorage();
+                renderContent(dataTable);
+                alert('✓ Enregistrement supprimé!');
+            }
+        }
+
+        function filterTable(searchTerm, dataTable) {
+            const rows = document.querySelectorAll('table tbody tr');
+            const term = searchTerm.toLowerCase();
+
+            rows.forEach(row => {
+                const text = row.textContent.toLowerCase();
+                row.style.display = text.includes(term) ? '' : 'none';
+            });
+        }
+
+        function exportData(dataTable, format) {
+            const data = app.db[dataTable] || [];
+            if (data.length === 0) {
+                alert('Aucune donnée à exporter');
+                return;
+            }
+
+            let content = '';
+            let filename = `${dataTable}_${new Date().toISOString().split('T')[0]}`;
+
+            if (format === 'json') {
+                content = JSON.stringify(data, null, 2);
+                filename += '.json';
+            } else if (format === 'csv') {
+                const headers = Object.keys(data[0]);
+                const csvHeaders = headers.join(',');
+                const csvRows = data.map(row => {
+                    return headers.map(h => {
+                        const val = row[h];
+                        if (typeof val === 'object') return JSON.stringify(val).replace(/"/g, '""');
+                        return String(val || '').replace(/"/g, '""');
+                    }).join(',');
+                });
+                content = [csvHeaders, ...csvRows].join('\n');
+                filename += '.csv';
+            }
+
+            const blob = new Blob([content], { type: 'text/plain' });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = filename;
+            link.click();
+            URL.revokeObjectURL(url);
+
+            alert(`✓ Export ${format.toUpperCase()} réussi!`);
+        }
+
+        function showRecordDetails(dataTable, recordId) {
+            const record = app.db[dataTable].find(r => r.id === recordId);
+            if (!record) return;
+
+            const schema = FIELD_SCHEMAS[dataTable] || [];
+            const getFieldLabel = (name) => {
+                const field = schema.find(f => f.name === name);
+                return field ? field.label : name;
+            };
+
+            const getRecordTitle = () => {
+                if (record.numero) return record.numero;
+                if (record.description) return record.description.substring(0, 50);
+                return record.id;
+            };
+
+            const getRecordIcon = () => {
+                if (dataTable === 'CHANTIERS_DATA') return '🏗️';
+                if (dataTable === 'DEVIS_DATA') return '📋';
+                if (dataTable === 'FACTURES_DATA') return '💰';
+                return '📄';
+            };
+
+            let detailsHtml = `<div style="margin-top: 15px;">`;
+            schema.forEach(field => {
+                if (!field.readonly && field.name !== 'articles') {
+                    const value = record[field.name] || '-';
+                    detailsHtml += `
+                        <div style="margin-bottom: 12px; padding-bottom: 12px; border-bottom: 1px solid var(--border);">
+                            <strong style="color: var(--primary); font-size: 12px; text-transform: uppercase; letter-spacing: 0.3px;">${field.label}</strong><br>
+                            <span style="color: var(--text); font-size: 14px;">${value}</span>
+                        </div>
+                    `;
+                }
+            });
+            detailsHtml += `</div>`;
+
+            const html = `
+                <div class="form-container show">
+                    <div class="form-modal" style="max-width: 650px;">
+                        <h3>${getRecordIcon()} ${dataTable.replace('_DATA', '')} - ${getRecordTitle()}</h3>
+                        <p style="color: var(--text-secondary); font-size: 13px;">ID: ${record.id}</p>
+
+                        ${detailsHtml}
+
+                        ${record.articles ? `
+                            <div style="margin-top: 20px; padding-top: 20px; border-top: 2px solid var(--border);">
+                                <h4 style="color: var(--primary); margin-bottom: 15px; font-weight: 700;">📦 Articles</h4>
+                                ${Array.isArray(record.articles) && record.articles.length > 0 ? `
+                                    <div style="background: #f8f9fa; border-radius: 6px; overflow: hidden;">
+                                        ${record.articles.map((art, idx) => `
+                                            <div style="padding: 12px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center;">
+                                                <div>
+                                                    <strong>${art.reference || art.articleId}</strong><br>
+                                                    <small style="color: var(--text-secondary);">${art.designation || 'Article'}</small>
+                                                </div>
+                                                <div style="text-align: right;">
+                                                    <div>Qté: ${art.quantite}</div>
+                                                    <div style="color: var(--primary); font-weight: 600;">Total: ${(art.quantite * art.prixUnitaire || 0).toLocaleString()}</div>
+                                                </div>
+                                            </div>
+                                        `).join('')}
+                                    </div>
+                                ` : `<p style="color: var(--text-secondary);">Aucun article</p>`}
+                            </div>
+                        ` : ''}
+
+                        <div class="form-actions" style="margin-top: 20px;">
+                            <button type="button" class="btn-primary" onclick="showEditForm('${dataTable}', '${record.id}')">✏️ Modifier</button>
+                            <button type="button" class="btn-secondary" onclick="this.closest('.form-container').remove()">Fermer</button>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            const container = document.createElement('div');
+            container.innerHTML = html;
+            document.body.appendChild(container);
+
+            container.querySelector('.form-container').addEventListener('click', (e) => {
+                if (e.target === container.querySelector('.form-container')) {
+                    container.remove();
+                }
+            });
+        }
+
+        function showArticleDetails(articleId) {
+            const article = app.db.ARTICLES_DATA.find(a => a.id === articleId);
+            if (!article) return;
+
+            const html = `
+                <div class="form-container show">
+                    <div class="form-modal" style="max-width: 700px;">
+                        <h3>📊 Détails Article: ${article.nom}</h3>
+
+                        <div style="margin-bottom: 20px;">
+                            <h4 style="color: var(--primary); margin-bottom: 10px;">Ventes (${article.ventes?.length || 0})</h4>
+                            ${(article.ventes || []).map((v, i) => `
+                                <div style="background: #f9f9f9; padding: 10px; border-radius: 4px; margin-bottom: 8px;">
+                                    Client: ${v.clientId} | Prix: ${v.prixVente} | Date: ${v.dateDebut}
+                                </div>
+                            `).join('')}
+                            <button type="button" class="btn-primary btn-sm" onclick="addVente('${articleId}')">+ Ajouter Vente</button>
+                        </div>
+
+                        <div style="margin-bottom: 20px;">
+                            <h4 style="color: var(--primary); margin-bottom: 10px;">Achats (${article.achats?.length || 0})</h4>
+                            ${(article.achats || []).map((a, i) => `
+                                <div style="background: #f9f9f9; padding: 10px; border-radius: 4px; margin-bottom: 8px;">
+                                    Fournisseur: ${a.fournisseurId} | Prix: ${a.prixAchat} | Date: ${a.dateDebut}
+                                </div>
+                            `).join('')}
+                            <button type="button" class="btn-primary btn-sm" onclick="addAchat('${articleId}')">+ Ajouter Achat</button>
+                        </div>
+
+                        <div style="margin-bottom: 20px;">
+                            <h4 style="color: var(--primary); margin-bottom: 10px;">Boutique</h4>
+                            <div style="background: #f9f9f9; padding: 10px; border-radius: 4px;">
+                                Disponible: ${article.boutique?.disponible ? '✓' : '✗'}<br>
+                                Stock: ${article.boutique?.quantiteStock || 0}<br>
+                                Prix: ${article.boutique?.prixBoutique || 0}
+                            </div>
+                            <button type="button" class="btn-primary btn-sm" style="margin-top: 10px;" onclick="editBoutique('${articleId}')">✏️ Éditer Boutique</button>
+                        </div>
+
+                        <div class="form-actions" style="margin-top: 20px;">
+                            <button type="button" class="btn-secondary" onclick="this.closest('.form-container').remove()">Fermer</button>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            const container = document.createElement('div');
+            container.innerHTML = html;
+            document.body.appendChild(container);
+
+            container.querySelector('.form-container').addEventListener('click', (e) => {
+                if (e.target === container.querySelector('.form-container')) {
+                    container.remove();
+                }
+            });
+        }
+
+        function addVente(articleId) {
+            const clientId = prompt('Client ID:');
+            const prixVente = prompt('Prix Vente:');
+            if (!clientId || !prixVente) return;
+
+            const article = app.db.ARTICLES_DATA.find(a => a.id === articleId);
+            if (article) {
+                if (!article.ventes) article.ventes = [];
+                article.ventes.push({
+                    clientId,
+                    prixVente: parseFloat(prixVente),
+                    dateDebut: new Date().toISOString().split('T')[0]
+                });
+                saveToStorage();
+                showArticleDetails(articleId);
+            }
+        }
+
+        function addAchat(articleId) {
+            const fournisseurId = prompt('Fournisseur ID:');
+            const prixAchat = prompt('Prix Achat:');
+            if (!fournisseurId || !prixAchat) return;
+
+            const article = app.db.ARTICLES_DATA.find(a => a.id === articleId);
+            if (article) {
+                if (!article.achats) article.achats = [];
+                article.achats.push({
+                    fournisseurId,
+                    prixAchat: parseFloat(prixAchat),
+                    dateDebut: new Date().toISOString().split('T')[0]
+                });
+                saveToStorage();
+                showArticleDetails(articleId);
+            }
+        }
+
+        function editBoutique(articleId) {
+            const article = app.db.ARTICLES_DATA.find(a => a.id === articleId);
+            if (!article) return;
+
+            const quantite = prompt('Quantité en stock:', article.boutique?.quantiteStock || 0);
+            const prix = prompt('Prix boutique:', article.boutique?.prixBoutique || 0);
+            const dispo = confirm('Article disponible?');
+
+            if (quantite !== null && prix !== null) {
+                article.boutique = {
+                    disponible: dispo,
+                    quantiteStock: parseInt(quantite),
+                    prixBoutique: parseFloat(prix),
+                    dateStock: new Date().toISOString().split('T')[0]
+                };
+                saveToStorage();
+                showArticleDetails(articleId);
+            }
+        }
+
+        function showEditForm(dataTable, id) {
+            const schema = FIELD_SCHEMAS[dataTable];
+            const record = app.db[dataTable].find(r => r.id === id);
+
+            if (!schema || !record) {
+                alert('Erreur');
+                return;
+            }
+
+            const formHtml = `
+                <div class="form-container show">
+                    <div class="form-modal">
+                        <h3>Éditer ${app.currentOnglet}</h3>
+                        <form id="edit-form">
+                            ${schema.map(field => `
+                                <div class="form-group">
+                                    <label>${field.label}</label>
+                                    <input type="${field.type}" name="${field.name}" value="${record[field.name] || ''}" ${field.required ? 'required' : ''}>
+                                </div>
+                            `).join('')}
+                            <div class="form-actions">
+                                <button type="button" class="btn-secondary" onclick="this.closest('.form-container').remove()">Annuler</button>
+                                <button type="submit" class="btn-primary">Modifier</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            `;
+
+            const container = document.createElement('div');
+            container.innerHTML = formHtml;
+            document.body.appendChild(container);
+
+            container.querySelector('#edit-form').addEventListener('submit', (e) => {
+                e.preventDefault();
+                const formData = new FormData(e.target);
+                const idx = app.db[dataTable].findIndex(r => r.id === id);
+                if (idx > -1) {
+                    app.db[dataTable][idx] = {
+                        ...app.db[dataTable][idx],
+                        ...Object.fromEntries(formData),
+                        updated_at: new Date().toISOString()
+                    };
+                    saveToStorage();
+                    container.remove();
+                    renderContent(dataTable);
+                }
+            });
+
+            container.querySelector('.form-container').addEventListener('click', (e) => {
+                if (e.target === container.querySelector('.form-container')) {
+                    container.remove();
+                }
+            });
+        }
+
+        function deleteRecord(dataTable, id) {
+            if (!confirm('Êtes-vous sûr?')) return;
+
+            const idx = app.db[dataTable].findIndex(r => r.id === id);
+            if (idx > -1) {
+                app.db[dataTable].splice(idx, 1);
+                saveToStorage();
+                renderContent(dataTable);
+            }
+        }
+
+        function renderConfigPage(container) {
+            const config = app.db.CONFIG_DATA;
+
+            let html = `
+                <div class="section-header">
+                    <h3>⚙️ Configuration - Numérotation des IDs</h3>
+                </div>
+
+                <div style="background: white; padding: 20px; border-radius: 6px; margin-bottom: 20px;">
+                    <h4 style="color: var(--primary); margin-bottom: 15px;">📋 Format des IDs</h4>
+
+                    <div style="margin-bottom: 15px;">
+                        <label style="display: flex; align-items: center; gap: 10px; cursor: pointer;">
+                            <input type="radio" name="format" value="simple" ${config.idFormat === 'simple' ? 'checked' : ''} onchange="changeIdFormat('simple')">
+                            <span>Simple: <code>ART_001, ART_002</code></span>
+                        </label>
+                    </div>
+
+                    <div>
+                        <label style="display: flex; align-items: center; gap: 10px; cursor: pointer;">
+                            <input type="radio" name="format" value="yearly" ${config.idFormat === 'yearly' ? 'checked' : ''} onchange="changeIdFormat('yearly')">
+                            <span>Annuel: <code>ART_2025_001, ART_2025_002</code></span>
+                        </label>
+                    </div>
+                </div>
+
+                <div style="background: white; padding: 20px; border-radius: 6px; margin-bottom: 20px;">
+                    <h4 style="color: var(--primary); margin-bottom: 15px;">📊 Compteurs actuels</h4>
+
+                    <table style="width: 100%; border-collapse: collapse;">
+                        <thead>
+                            <tr style="background: #f9f9f9; border-bottom: 2px solid var(--border);">
+                                <th style="padding: 10px; text-align: left;">Type</th>
+                                <th style="padding: 10px; text-align: left;">Compteur</th>
+                                <th style="padding: 10px; text-align: left;">Prochain ID</th>
+                                <th style="padding: 10px; text-align: left;">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${Object.entries(config.counters).map(([prefix, count]) => {
+                                const nextId = config.idFormat === 'yearly'
+                                    ? `${prefix}_${new Date().getFullYear()}_${String(count + 1).padStart(3, '0')}`
+                                    : `${prefix}_${String(count + 1).padStart(3, '0')}`;
+                                return `
+                                    <tr style="border-bottom: 1px solid var(--border);">
+                                        <td style="padding: 10px;">${prefix}</td>
+                                        <td style="padding: 10px;"><strong>${count}</strong></td>
+                                        <td style="padding: 10px;"><code>${nextId}</code></td>
+                                        <td style="padding: 10px;">
+                                            <button class="btn-sm" onclick="resetCounter('${prefix}')">Réinitialiser</button>
+                                        </td>
+                                    </tr>
+                                `;
+                            }).join('')}
+                        </tbody>
+                    </table>
+                </div>
+
+                <div style="background: white; padding: 20px; border-radius: 6px;">
+                    <h4 style="color: var(--primary); margin-bottom: 15px;">🔄 Réinitialisation annuelle</h4>
+                    <p style="color: #666; font-size: 13px; margin-bottom: 15px;">Dernière réinitialisation: ${config.lastReset}</p>
+                    <button class="btn-primary" onclick="resetAllCounters()">Réinitialiser tous les compteurs</button>
+                </div>
+            `;
+
+            container.innerHTML = html;
+        }
+
+        function changeIdFormat(format) {
+            app.db.CONFIG_DATA.idFormat = format;
+            saveToStorage();
+            renderContent('CONFIG_DATA');
+        }
+
+        function resetCounter(prefix) {
+            if (confirm(`Réinitialiser le compteur ${prefix}?`)) {
+                app.db.CONFIG_DATA.counters[prefix] = 0;
+                saveToStorage();
+                renderContent('CONFIG_DATA');
+            }
+        }
+
+        function resetAllCounters() {
+            if (confirm('Êtes-vous sûr? Cela réinitialisera tous les compteurs à 0.')) {
+                Object.keys(app.db.CONFIG_DATA.counters).forEach(prefix => {
+                    app.db.CONFIG_DATA.counters[prefix] = 0;
+                });
+                app.db.CONFIG_DATA.lastReset = new Date().toISOString().split('T')[0];
+                saveToStorage();
+                renderContent('CONFIG_DATA');
+            }
+        }
+
+        function renderSauvegardePage(container) {
+            if (app.currentSousOnglet === 'Import v20') {
+                renderImportV20Page(container);
+            } else {
+                renderExportPage(container);
+            }
+        }
+
+        function renderExportPage(container) {
+            const html = `
+                <div class="section-header">
+                    <h3>📥 Export des données</h3>
+                </div>
+
+                <div style="background: white; padding: 20px; border-radius: 6px;">
+                    <p style="color: #666; margin-bottom: 15px;">Téléchargez une sauvegarde complète de votre base de données.</p>
+                    <button class="btn-primary" onclick="exportData()">📥 Télécharger Backup</button>
+                </div>
+            `;
+            container.innerHTML = html;
+        }
+
+        function renderImportV20Page(container) {
+            const html = `
+                <div class="section-header">
+                    <h3>📤 Importer données v20</h3>
+                </div>
+
+                <div style="background: white; padding: 20px; border-radius: 6px;">
+                    <p style="color: #666; margin-bottom: 15px;">Importez les données depuis votre fichier v20-import-data.json</p>
+                    <input type="file" id="import-file" accept=".json" style="margin-bottom: 15px;">
+                    <button class="btn-primary" onclick="importV20Data()">📤 Importer données v20</button>
+                </div>
+            `;
+            container.innerHTML = html;
+        }
+
+        function exportData() {
+            const data = JSON.stringify(app.db, null, 2);
+            const blob = new Blob([data], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `epilot_backup_${new Date().toISOString().split('T')[0]}.json`;
+            a.click();
+            URL.revokeObjectURL(url);
+            alert('✓ Backup téléchargé');
+        }
+
+        function importV20Data() {
+            const fileInput = document.getElementById('import-file');
+            if (!fileInput.files[0]) {
+                alert('Sélectionnez un fichier');
+                return;
+            }
+
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                try {
+                    console.log('Fichier chargé');
+                    const v20Data = JSON.parse(e.target.result);
+                    console.log('JSON parsé:', v20Data);
+
+                    // Mapping v20 to v21
+                    const mappedData = {
+                        PERSONNEL_DATA: v20Data.PERSONNEL_DATA || [],
+                        CLIENTS_DATA: v20Data.ORGANISATIONS || [],
+                        SITES_DATA: v20Data.SITES || [],
+                        ACHETEURS_DATA: v20Data.ACHETEURS_DATA || [],
+                        ARTICLES_DATA: mapArticles(v20Data),
+                        DEVIS_DATA: v20Data.QUOTE_DATA || [],
+                        FACTURES_DATA: v20Data.BOUTIQUE_COMMANDES_DATA || [],
+                        FOURNISSEURS_DATA: v20Data.FOURNISSEURS || [],
+                        CHANTIERS_DATA: v20Data.PROJETS || []
+                    };
+
+                    console.log('Données mappées:', mappedData);
+
+                    // Merge with existing data
+                    Object.keys(mappedData).forEach(key => {
+                        if (Array.isArray(mappedData[key])) {
+                            if (!app.db[key]) app.db[key] = [];
+
+                            // Add mapped items (keep existing IDs from v20)
+                            mappedData[key].forEach(item => {
+                                // If item has no ID, generate one
+                                if (!item.id) {
+                                    const prefix = TABLE_PREFIXES[key] || 'REC';
+                                    item.id = generateId(prefix);
+                                }
+                                app.db[key].push(item);
+                                console.log('Item ajouté:', item.id, key, item);
+                            });
+                        }
+                    });
+
+                    console.log('Before saveToStorage - app.db state:', Object.entries(app.db).filter(([k, v]) => Array.isArray(v)).map(([k, v]) => `${k}: ${v.length}`));
+                    saveToStorage();
+                    console.log('After saveToStorage - checking localStorage...');
+                    const storedData = JSON.parse(localStorage.getItem('epilot_v21_complete_db') || '{}');
+                    console.log('localStorage state:', Object.entries(storedData).filter(([k, v]) => Array.isArray(v)).map(([k, v]) => `${k}: ${v.length}`));
+
+                    const summary = Object.entries(app.db).filter(([k, v]) => Array.isArray(v) && v.length > 0).map(([k, v]) => `${k}: ${v.length}`).join('\n');
+                    console.log('Final summary for alert:', summary);
+                    alert(`✓ Import réussi!\n${summary}`);
+                    renderContent('BACKUP_DATA');
+                } catch (err) {
+                    console.error('Erreur:', err);
+                    alert('✗ Erreur import: ' + err.message + '\nVoir console (F12)');
+                }
+            };
+            reader.readAsText(fileInput.files[0]);
+        }
+
+        function mapArticles(v20Data) {
+            // Map all articles from v20 to unified ARTICLES_DATA
+            const articles = [];
+            const seenIds = new Set();
+            const articleMap = {}; // Map ID to article data
+
+            // Process ARTICLES_VENTE_DATA
+            (v20Data.ARTICLES_VENTE_DATA || []).forEach(art => {
+                if (!seenIds.has(art.id)) {
+                    articleMap[art.id] = {
+                        id: art.id,
+                        reference: art.reference || art.id,
+                        description: art.description || '',
+                        prixVente: art.prixVente || 0,
+                        prixAchat: art.prixAchat || 0,
+                        fournisseurId: art.fournisseurId || '',
+                        quantite: art.quantite || 0,
+                        unite: art.unite || 'Unité',
+                        categorie: 'Vente'
+                    };
+                    seenIds.add(art.id);
+                }
+            });
+
+            // Process ARTICLES_ACHAT_DATA
+            (v20Data.ARTICLES_ACHAT_DATA || []).forEach(art => {
+                if (!seenIds.has(art.id)) {
+                    articleMap[art.id] = {
+                        id: art.id,
+                        reference: art.reference || art.id,
+                        description: art.description || '',
+                        prixAchat: art.prixAchat || 0,
+                        prixVente: art.prixVente || 0,
+                        fournisseurId: art.fournisseurId || '',
+                        quantite: art.quantite || 0,
+                        unite: art.unite || 'Unité',
+                        categorie: 'Achat'
+                    };
+                    seenIds.add(art.id);
+                } else {
+                    // Merge with existing
+                    const existing = articleMap[art.id];
+                    if (!existing.prixAchat) existing.prixAchat = art.prixAchat || 0;
+                    if (!existing.fournisseurId) existing.fournisseurId = art.fournisseurId || '';
+                }
+            });
+
+            // Process BOUTIQUE_PRODUITS_DATA
+            (v20Data.BOUTIQUE_PRODUITS_DATA || []).forEach(art => {
+                if (!seenIds.has(art.id)) {
+                    articleMap[art.id] = {
+                        id: art.id,
+                        reference: art.reference || art.id,
+                        description: art.description || '',
+                        prixVente: art.prix || 0,
+                        prixAchat: 0,
+                        fournisseurId: '',
+                        quantite: art.quantite || 0,
+                        unite: art.unite || 'Unité',
+                        categorie: 'Boutique'
+                    };
+                    seenIds.add(art.id);
+                } else {
+                    const existing = articleMap[art.id];
+                    if (!existing.prixVente) existing.prixVente = art.prix || 0;
+                    if (!existing.quantite) existing.quantite = art.quantite || 0;
+                }
+            });
+
+            // Convert to array and calculate marge
+            Object.values(articleMap).forEach(art => {
+                art.marge = art.prixVente > 0 ? ((art.prixVente - art.prixAchat) / art.prixVente * 100).toFixed(2) : 0;
+                articles.push(art);
+            });
+
+            console.log('mapArticles result:', articles);
+            return articles;
+        }
+
+        // ============================================
+        // INIT
+        // ============================================
+        document.addEventListener('DOMContentLoaded', () => {
+            initializeDatabase();
+            if (!loadFromStorage()) {
+                saveToStorage();
+            }
+
+            // Ensure admin user exists
+            if (!app.db.USERS_DATA || app.db.USERS_DATA.length === 0) {
+                app.db.USERS_DATA = [{ id: 'USR_001', name: 'Admin', role: 'Admin', password: 'admin', created_at: new Date().toISOString() }];
+                saveToStorage();
+            }
+
+            // Check login
+            const savedUser = localStorage.getItem('currentUser');
+            if (savedUser) {
+                app.currentUser = JSON.parse(savedUser);
+                showApp();
+                renderUI();
+            }
+
+            document.getElementById('login-form').addEventListener('submit', handleLogin);
+            document.getElementById('logout-btn').addEventListener('click', handleLogout);
+        });
+    </script>
+</body>
+</html>
