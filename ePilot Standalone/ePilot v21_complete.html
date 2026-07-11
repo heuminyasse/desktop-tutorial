@@ -617,7 +617,7 @@
                 onglets: {
                     'Utilisateurs': { sous: [], data: 'USERS_DATA' },
                     'Configuration': { sous: [], data: 'CONFIG_DATA' },
-                    'Sauvegardes': { sous: [], data: 'BACKUP_DATA' },
+                    'Sauvegardes': { sous: ['Export', 'Import v20'], data: 'BACKUP_DATA' },
                     'Notifications': { sous: [], data: 'NOTIFICATIONS_DATA' },
                     'Préférences': { sous: [], data: 'PREFERENCES_DATA' }
                 }
@@ -865,6 +865,12 @@
             // Special handling for CONFIG_DATA
             if (dataTable === 'CONFIG_DATA') {
                 renderConfigPage(content);
+                return;
+            }
+
+            // Special handling for BACKUP_DATA (Sauvegardes)
+            if (dataTable === 'BACKUP_DATA') {
+                renderSauvegardePage(content);
                 return;
             }
 
@@ -1265,6 +1271,167 @@
                 saveToStorage();
                 renderContent('CONFIG_DATA');
             }
+        }
+
+        function renderSauvegardePage(container) {
+            if (app.currentSousOnglet === 'Import v20') {
+                renderImportV20Page(container);
+            } else {
+                renderExportPage(container);
+            }
+        }
+
+        function renderExportPage(container) {
+            const html = `
+                <div class="section-header">
+                    <h3>📥 Export des données</h3>
+                </div>
+
+                <div style="background: white; padding: 20px; border-radius: 6px;">
+                    <p style="color: #666; margin-bottom: 15px;">Téléchargez une sauvegarde complète de votre base de données.</p>
+                    <button class="btn-primary" onclick="exportData()">📥 Télécharger Backup</button>
+                </div>
+            `;
+            container.innerHTML = html;
+        }
+
+        function renderImportV20Page(container) {
+            const html = `
+                <div class="section-header">
+                    <h3>📤 Importer données v20</h3>
+                </div>
+
+                <div style="background: white; padding: 20px; border-radius: 6px;">
+                    <p style="color: #666; margin-bottom: 15px;">Importez les données depuis votre fichier v20-import-data.json</p>
+                    <input type="file" id="import-file" accept=".json" style="margin-bottom: 15px;">
+                    <button class="btn-primary" onclick="importV20Data()">📤 Importer données v20</button>
+                </div>
+            `;
+            container.innerHTML = html;
+        }
+
+        function exportData() {
+            const data = JSON.stringify(app.db, null, 2);
+            const blob = new Blob([data], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `epilot_backup_${new Date().toISOString().split('T')[0]}.json`;
+            a.click();
+            URL.revokeObjectURL(url);
+            alert('✓ Backup téléchargé');
+        }
+
+        function importV20Data() {
+            const fileInput = document.getElementById('import-file');
+            if (!fileInput.files[0]) {
+                alert('Sélectionnez un fichier');
+                return;
+            }
+
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                try {
+                    const v20Data = JSON.parse(e.target.result);
+
+                    // Mapping v20 to v21
+                    const mappedData = {
+                        PERSONNEL_DATA: v20Data.PERSONNEL_DATA || [],
+                        CLIENTS_DATA: v20Data.ORGANISATIONS || [],
+                        SITES_DATA: v20Data.SITES || [],
+                        ARTICLES_DATA: mapArticles(v20Data),
+                        FOURNISSEURS_DATA: v20Data.FOURNISSEURS || [],
+                        CHANTIERS_DATA: v20Data.PROJETS || []
+                    };
+
+                    // Merge with existing data
+                    Object.keys(mappedData).forEach(key => {
+                        if (Array.isArray(mappedData[key])) {
+                            if (!app.db[key]) app.db[key] = [];
+                            // Add mapped items with new IDs
+                            mappedData[key].forEach(item => {
+                                const prefix = TABLE_PREFIXES[key] || 'REC';
+                                const newItem = {
+                                    ...item,
+                                    id: generateId(prefix)
+                                };
+                                app.db[key].push(newItem);
+                            });
+                        }
+                    });
+
+                    saveToStorage();
+                    alert(`✓ Import réussi!\n${Object.entries(mappedData).map(([k, v]) => `${k}: ${v.length}`).join('\n')}`);
+                    renderContent('BACKUP_DATA');
+                } catch (err) {
+                    alert('✗ Erreur import: ' + err.message);
+                }
+            };
+            reader.readAsText(fileInput.files[0]);
+        }
+
+        function mapArticles(v20Data) {
+            // Combine ARTICLES_VENTE, ARTICLES_ACHAT, and BOUTIQUE into unified ARTICLES_DATA
+            const articles = [];
+            const seenIds = new Set();
+
+            // Start with vente articles
+            (v20Data.ARTICLES_VENTE_DATA || []).forEach(art => {
+                if (!seenIds.has(art.id)) {
+                    articles.push({
+                        ...art,
+                        ventes: [{ clientId: art.clientId, prixVente: art.prixVente, dateDebut: new Date().toISOString().split('T')[0] }],
+                        achats: [],
+                        chiffrage: [],
+                        boutique: { disponible: false, quantiteStock: 0, prixBoutique: 0 }
+                    });
+                    seenIds.add(art.id);
+                }
+            });
+
+            // Add achat articles
+            (v20Data.ARTICLES_ACHAT_DATA || []).forEach(art => {
+                const existing = articles.find(a => a.id === art.id);
+                if (existing) {
+                    existing.achats.push({ fournisseurId: art.fournisseurId, prixAchat: art.prixAchat, dateDebut: new Date().toISOString().split('T')[0] });
+                } else if (!seenIds.has(art.id)) {
+                    articles.push({
+                        ...art,
+                        ventes: [],
+                        achats: [{ fournisseurId: art.fournisseurId, prixAchat: art.prixAchat, dateDebut: new Date().toISOString().split('T')[0] }],
+                        chiffrage: [],
+                        boutique: { disponible: false, quantiteStock: 0, prixBoutique: 0 }
+                    });
+                    seenIds.add(art.id);
+                }
+            });
+
+            // Add boutique articles
+            (v20Data.BOUTIQUE_PRODUITS_DATA || []).forEach(art => {
+                const existing = articles.find(a => a.id === art.id);
+                if (existing) {
+                    existing.boutique = {
+                        disponible: true,
+                        quantiteStock: art.quantite || 0,
+                        prixBoutique: art.prix || 0
+                    };
+                } else if (!seenIds.has(art.id)) {
+                    articles.push({
+                        ...art,
+                        ventes: [],
+                        achats: [],
+                        chiffrage: [],
+                        boutique: {
+                            disponible: true,
+                            quantiteStock: art.quantite || 0,
+                            prixBoutique: art.prix || 0
+                        }
+                    });
+                    seenIds.add(art.id);
+                }
+            });
+
+            return articles;
         }
 
         // ============================================
