@@ -11,61 +11,98 @@
         .loading { background: #e3f2fd; border-left: 4px solid #2196f3; color: #1565c0; }
         .success { background: #e8f5e9; border-left: 4px solid #4caf50; color: #2e7d32; }
         .warning { background: #fff3e0; border-left: 4px solid #ff9800; color: #e65100; }
+        .error { background: #ffebee; border-left: 4px solid #f44336; color: #c62828; }
+        input[type="file"] { padding: 10px; margin: 10px 0; border: 1px solid #ddd; border-radius: 4px; width: 100%; box-sizing: border-box; }
+        button { background: #c41e3a; color: white; border: none; padding: 12px; border-radius: 4px; cursor: pointer; width: 100%; font-size: 16px; }
+        button:hover { background: #a01729; }
         ul { line-height: 1.8; }
     </style>
 </head>
 <body>
     <div class="container">
         <h1>⚠️ Reset Complet V20</h1>
-        <div id="status" class="status loading">
+        
+        <div class="status loading">
+            📂 <strong>Étape 1: Sélectionnez le fichier backup</strong>
+        </div>
+        
+        <p>Sélectionnez le fichier <code>ePilot_Complete_Backup.json</code>:</p>
+        <input type="file" id="fileInput" accept=".json" />
+        
+        <button onclick="startReset()">✓ Démarrer le Reset</button>
+        
+        <div id="status" style="display: none;" class="status loading">
             ⏳ Nettoyage en cours...
         </div>
-        <ul id="steps">
+        <ul id="steps" style="display: none;">
             <li id="s1">Suppression localStorage...</li>
             <li id="s2">Suppression sessionStorage...</li>
-            <li id="s3">Injection du backup...</li>
-            <li id="s4">Redirection...</li>
+            <li id="s3">Lecture du fichier...</li>
+            <li id="s4">Injection du backup...</li>
+            <li id="s5">Redirection...</li>
         </ul>
     </div>
 
     <script>
-        async function reset() {
-            try {
-                localStorage.clear();
-                document.getElementById('s1').innerHTML = '✓ localStorage vidé';
-                
-                sessionStorage.clear();
-                document.getElementById('s2').innerHTML = '✓ sessionStorage vidé';
-                
-                // Load backup
-                const response = await fetch('ePilot_Complete_Backup.json');
-                const backup = await response.json();
-                
-                // Inject ONLY the backup (clean slate)
-                Object.entries(backup.localStorage || {}).forEach(([key, val]) => {
-                    try {
-                        localStorage.setItem(key, val);
-                    } catch (e) {}
-                });
-                document.getElementById('s3').innerHTML = '✓ Backup injecté (189 JIP + 31 Personnel + 1882 Articles)';
-                
-                await new Promise(r => setTimeout(r, 1000));
-                
-                document.getElementById('status').className = 'status success';
-                document.getElementById('status').innerHTML = `
-                    ✅ Reset complété!<br><br>
-                    <strong>IMPORTANT:</strong> Fermez COMPLÈTEMENT le navigateur<br>
-                    Puis réouvrez pour charger V20<br><br>
-                    <a href="ePilot v20_standalone.html" style="color: #c41e3a; text-decoration: underline;">Ou cliquez ici pour ouvrir V20 maintenant</a>
-                `;
-                document.getElementById('s4').innerHTML = '✓ Prêt!';
-                
-            } catch (error) {
-                document.getElementById('status').className = 'status warning';
-                document.getElementById('status').innerHTML = '❌ Erreur: ' + error.message;
+        function startReset() {
+            const fileInput = document.getElementById('fileInput');
+            if (!fileInput.files.length) {
+                alert('Veuillez sélectionner le fichier backup JSON');
+                return;
             }
+            
+            const file = fileInput.files[0];
+            const reader = new FileReader();
+            
+            reader.onload = async (e) => {
+                try {
+                    document.getElementById('status').style.display = 'block';
+                    document.getElementById('steps').style.display = 'block';
+                    fileInput.style.display = 'none';
+                    document.querySelector('button').style.display = 'none';
+                    
+                    localStorage.clear();
+                    document.getElementById('s1').innerHTML = '✓ localStorage vidé';
+                    await wait(300);
+                    
+                    sessionStorage.clear();
+                    document.getElementById('s2').innerHTML = '✓ sessionStorage vidé';
+                    await wait(300);
+                    
+                    const backup = JSON.parse(e.target.result);
+                    document.getElementById('s3').innerHTML = '✓ Fichier lu (' + (file.size / 1024 / 1024).toFixed(2) + ' MB)';
+                    await wait(300);
+                    
+                    Object.entries(backup.localStorage || {}).forEach(([key, val]) => {
+                        try {
+                            localStorage.setItem(key, val);
+                        } catch (err) {}
+                    });
+                    document.getElementById('s4').innerHTML = '✓ Backup injecté (189 JIP + 31 Personnel + 1882 Articles)';
+                    await wait(1000);
+                    
+                    document.getElementById('status').className = 'status success';
+                    document.getElementById('status').innerHTML = `
+                        ✅ <strong>Reset complété!</strong><br><br>
+                        <strong>⚠️ IMPORTANT:</strong><br>
+                        1. Fermez COMPLÈTEMENT le navigateur<br>
+                        2. Rouvrez et allez sur: <code>ePilot v20_standalone.html</code><br><br>
+                        <a href="ePilot v20_standalone.html" style="color: #c41e3a; text-decoration: underline;">Ou cliquez ici pour ouvrir V20</a>
+                    `;
+                    document.getElementById('s5').innerHTML = '✓ Prêt!';
+                    
+                } catch (error) {
+                    document.getElementById('status').className = 'status error';
+                    document.getElementById('status').innerHTML = '❌ Erreur: ' + error.message;
+                }
+            };
+            
+            reader.readAsText(file);
         }
-        window.onload = reset;
+        
+        function wait(ms) {
+            return new Promise(r => setTimeout(r, ms));
+        }
     </script>
 </body>
 </html>
