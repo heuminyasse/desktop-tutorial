@@ -517,12 +517,9 @@
                 { name: 'type', label: 'Type', type: 'text' }
             ],
             ARTICLES_DATA: [
-                { name: 'designation', label: 'Désignation', type: 'text', required: true },
+                { name: 'nom', label: 'Nom Article', type: 'text', required: true },
                 { name: 'description', label: 'Description', type: 'textarea' },
-                { name: 'quantite', label: 'Quantité', type: 'number' },
-                { name: 'unite', label: 'Unité', type: 'text' },
-                { name: 'prixUnitaire', label: 'Prix Unitaire', type: 'number' },
-                { name: 'montantTotal', label: 'Montant Total', type: 'number' }
+                { name: 'unite', label: 'Unité (pcs, kg, m, etc.)', type: 'text' }
             ],
             CHANTIERS_DATA: [
                 { name: 'numero', label: 'N° Chantier', type: 'text', required: true },
@@ -828,6 +825,12 @@
                 } else {
                     html += '<th>Données</th>';
                 }
+
+                // Special columns for ARTICLES_DATA
+                if (dataTable === 'ARTICLES_DATA') {
+                    html += '<th>Ventes</th><th>Achats</th><th>Boutique</th>';
+                }
+
                 html += '<th>Actions</th></tr></thead><tbody>';
 
                 data.forEach(row => {
@@ -839,10 +842,19 @@
                     } else {
                         html += `<td>${JSON.stringify(row).substring(0, 50)}...</td>`;
                     }
+
+                    if (dataTable === 'ARTICLES_DATA') {
+                        const ventes = (row.ventes || []).length;
+                        const achats = (row.achats || []).length;
+                        const boutique = row.boutique?.disponible ? '✓' : '✗';
+                        html += `<td>${ventes}</td><td>${achats}</td><td>${boutique}</td>`;
+                    }
+
                     html += `<td>
                         <div class="action-btns">
                             <button class="btn-sm" onclick="showEditForm('${dataTable}', '${row.id}')">✏️</button>
                             <button class="btn-sm btn-delete" onclick="deleteRecord('${dataTable}', '${row.id}')">🗑️</button>
+                            ${dataTable === 'ARTICLES_DATA' ? `<button class="btn-sm" onclick="showArticleDetails('${row.id}')">📊</button>` : ''}
                         </div>
                     </td></tr>`;
                 });
@@ -891,6 +903,15 @@
                     ...Object.fromEntries(formData),
                     created_at: new Date().toISOString()
                 };
+
+                // Initialize special structures for ARTICLES
+                if (dataTable === 'ARTICLES_DATA') {
+                    record.ventes = [];
+                    record.achats = [];
+                    record.chiffrage = [];
+                    record.boutique = { disponible: false, quantiteStock: 0, prixBoutique: 0 };
+                }
+
                 app.db[dataTable].push(record);
                 saveToStorage();
                 container.remove();
@@ -902,6 +923,119 @@
                     container.remove();
                 }
             });
+        }
+
+        function showArticleDetails(articleId) {
+            const article = app.db.ARTICLES_DATA.find(a => a.id === articleId);
+            if (!article) return;
+
+            const html = `
+                <div class="form-container show">
+                    <div class="form-modal" style="max-width: 700px;">
+                        <h3>📊 Détails Article: ${article.nom}</h3>
+
+                        <div style="margin-bottom: 20px;">
+                            <h4 style="color: var(--primary); margin-bottom: 10px;">Ventes (${article.ventes?.length || 0})</h4>
+                            ${(article.ventes || []).map((v, i) => `
+                                <div style="background: #f9f9f9; padding: 10px; border-radius: 4px; margin-bottom: 8px;">
+                                    Client: ${v.clientId} | Prix: ${v.prixVente} | Date: ${v.dateDebut}
+                                </div>
+                            `).join('')}
+                            <button type="button" class="btn-primary btn-sm" onclick="addVente('${articleId}')">+ Ajouter Vente</button>
+                        </div>
+
+                        <div style="margin-bottom: 20px;">
+                            <h4 style="color: var(--primary); margin-bottom: 10px;">Achats (${article.achats?.length || 0})</h4>
+                            ${(article.achats || []).map((a, i) => `
+                                <div style="background: #f9f9f9; padding: 10px; border-radius: 4px; margin-bottom: 8px;">
+                                    Fournisseur: ${a.fournisseurId} | Prix: ${a.prixAchat} | Date: ${a.dateDebut}
+                                </div>
+                            `).join('')}
+                            <button type="button" class="btn-primary btn-sm" onclick="addAchat('${articleId}')">+ Ajouter Achat</button>
+                        </div>
+
+                        <div style="margin-bottom: 20px;">
+                            <h4 style="color: var(--primary); margin-bottom: 10px;">Boutique</h4>
+                            <div style="background: #f9f9f9; padding: 10px; border-radius: 4px;">
+                                Disponible: ${article.boutique?.disponible ? '✓' : '✗'}<br>
+                                Stock: ${article.boutique?.quantiteStock || 0}<br>
+                                Prix: ${article.boutique?.prixBoutique || 0}
+                            </div>
+                            <button type="button" class="btn-primary btn-sm" style="margin-top: 10px;" onclick="editBoutique('${articleId}')">✏️ Éditer Boutique</button>
+                        </div>
+
+                        <div class="form-actions" style="margin-top: 20px;">
+                            <button type="button" class="btn-secondary" onclick="this.closest('.form-container').remove()">Fermer</button>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            const container = document.createElement('div');
+            container.innerHTML = html;
+            document.body.appendChild(container);
+
+            container.querySelector('.form-container').addEventListener('click', (e) => {
+                if (e.target === container.querySelector('.form-container')) {
+                    container.remove();
+                }
+            });
+        }
+
+        function addVente(articleId) {
+            const clientId = prompt('Client ID:');
+            const prixVente = prompt('Prix Vente:');
+            if (!clientId || !prixVente) return;
+
+            const article = app.db.ARTICLES_DATA.find(a => a.id === articleId);
+            if (article) {
+                if (!article.ventes) article.ventes = [];
+                article.ventes.push({
+                    clientId,
+                    prixVente: parseFloat(prixVente),
+                    dateDebut: new Date().toISOString().split('T')[0]
+                });
+                saveToStorage();
+                showArticleDetails(articleId);
+            }
+        }
+
+        function addAchat(articleId) {
+            const fournisseurId = prompt('Fournisseur ID:');
+            const prixAchat = prompt('Prix Achat:');
+            if (!fournisseurId || !prixAchat) return;
+
+            const article = app.db.ARTICLES_DATA.find(a => a.id === articleId);
+            if (article) {
+                if (!article.achats) article.achats = [];
+                article.achats.push({
+                    fournisseurId,
+                    prixAchat: parseFloat(prixAchat),
+                    dateDebut: new Date().toISOString().split('T')[0]
+                });
+                saveToStorage();
+                showArticleDetails(articleId);
+            }
+        }
+
+        function editBoutique(articleId) {
+            const article = app.db.ARTICLES_DATA.find(a => a.id === articleId);
+            if (!article) return;
+
+            const quantite = prompt('Quantité en stock:', article.boutique?.quantiteStock || 0);
+            const prix = prompt('Prix boutique:', article.boutique?.prixBoutique || 0);
+            const dispo = confirm('Article disponible?');
+
+            if (quantite !== null && prix !== null) {
+                article.boutique = {
+                    disponible: dispo,
+                    quantiteStock: parseInt(quantite),
+                    prixBoutique: parseFloat(prix),
+                    dateStock: new Date().toISOString().split('T')[0]
+                };
+                saveToStorage();
+                showArticleDetails(articleId);
+            }
         }
 
         function showEditForm(dataTable, id) {
