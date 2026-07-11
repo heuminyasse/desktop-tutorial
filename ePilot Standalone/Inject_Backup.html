@@ -91,10 +91,12 @@
         
         <div id="status" class="status loading">
             ⏳ Prêt à injecter le backup...<br>
-            <small>Cliquez sur "Injecter" pour charger les données</small>
+            <small>Sélectionnez le fichier "ePilot_Complete_Backup.json"</small>
         </div>
 
-        <button onclick="injectBackup()">✓ Injecter le Backup</button>
+        <input type="file" id="fileInput" accept=".json" onchange="handleFileSelect(event)" style="width: 100%; padding: 10px; margin: 10px 0; border: 1px solid #ddd; border-radius: 4px;">
+
+        <button onclick="injectBackup()" id="injectBtn" disabled style="opacity: 0.5; cursor: not-allowed;">✓ Injecter le Backup</button>
 
         <div id="summary" class="summary" style="display: none;">
             <div class="summary-item">
