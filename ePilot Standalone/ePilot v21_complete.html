@@ -1381,7 +1381,9 @@
                     });
 
                     saveToStorage();
-                    const summary = Object.entries(mappedData).map(([k, v]) => `${k}: ${v.length}`).join('\n');
+                    // Ensure app.db is reloaded from storage after import
+                    loadFromStorage();
+                    const summary = Object.entries(app.db).filter(([k, v]) => Array.isArray(v) && v.length > 0).map(([k, v]) => `${k}: ${v.length}`).join('\n');
                     console.log('Summary:', summary);
                     alert(`✓ Import réussi!\n${summary}`);
                     renderContent('BACKUP_DATA');
@@ -1397,6 +1399,11 @@
             // Combine ARTICLES_VENTE, ARTICLES_ACHAT, and BOUTIQUE into unified ARTICLES_DATA
             const articles = [];
             const seenIds = new Set();
+
+            console.log('mapArticles - v20Data keys:', Object.keys(v20Data));
+            console.log('ARTICLES_VENTE_DATA:', v20Data.ARTICLES_VENTE_DATA);
+            console.log('ARTICLES_ACHAT_DATA:', v20Data.ARTICLES_ACHAT_DATA);
+            console.log('BOUTIQUE_PRODUITS_DATA:', v20Data.BOUTIQUE_PRODUITS_DATA);
 
             // Start with vente articles
             (v20Data.ARTICLES_VENTE_DATA || []).forEach(art => {
@@ -1454,6 +1461,7 @@
                 }
             });
 
+            console.log('mapArticles result:', articles);
             return articles;
         }
 
