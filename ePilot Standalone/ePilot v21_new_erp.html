@@ -846,10 +846,12 @@
         // ============================================
         function handleLogin(e) {
             e.preventDefault();
-            const username = document.getElementById('username').value;
+            const username = document.getElementById('username').value.toLowerCase();
             const password = document.getElementById('password').value;
 
-            const user = app.db.USERS_DATA.find(u => u.name === username && u.password === password);
+            const user = app.db.USERS_DATA.find(u =>
+                u.name.toLowerCase() === username && u.password === password
+            );
 
             if (user) {
                 app.currentUser = user;
@@ -1241,6 +1243,19 @@
 
             // Try to load from storage
             if (!loadFromStorage()) {
+                saveToStorage();
+            }
+
+            // Ensure admin user exists
+            if (!app.db.USERS_DATA || app.db.USERS_DATA.length === 0) {
+                app.db.USERS_DATA = [{
+                    id: 'USR_001',
+                    name: 'Admin',
+                    role: 'Admin',
+                    password: 'admin',
+                    created_at: new Date().toISOString(),
+                    updated_at: new Date().toISOString()
+                }];
                 saveToStorage();
             }
 
