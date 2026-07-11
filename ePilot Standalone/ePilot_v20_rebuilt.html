@@ -1,0 +1,602 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ePilot v20 - Rebuilt with v21 Database</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --primary-red: #A71930;
+            --light-gray: #F0F0F0;
+            --dark-text: #333;
+            --border-gray: #DDD;
+            --sidebar-text: #666;
+            --selected-red: #C41E3A;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: #FFF;
+            color: var(--dark-text);
+        }
+
+        /* ============ TOP BAR ============ */
+        .top-bar {
+            background: var(--primary-red);
+            color: white;
+            padding: 0;
+            display: flex;
+            align-items: center;
+            height: 48px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .logo {
+            padding: 0 20px;
+            font-weight: 700;
+            font-size: 16px;
+            border-right: 1px solid rgba(255,255,255,0.2);
+            min-width: 190px;
+            height: 100%;
+            display: flex;
+            align-items: center;
+        }
+
+        .top-nav {
+            display: flex;
+            gap: 0;
+            flex: 1;
+            margin-left: 20px;
+        }
+
+        .top-nav button {
+            background: none;
+            border: none;
+            color: white;
+            padding: 0 16px;
+            height: 48px;
+            cursor: pointer;
+            font-size: 13px;
+            transition: all 0.2s;
+            border-bottom: 3px solid transparent;
+        }
+
+        .top-nav button:hover {
+            background: rgba(255,255,255,0.1);
+            border-bottom-color: white;
+        }
+
+        .top-nav button.active {
+            border-bottom-color: white;
+            font-weight: 600;
+        }
+
+        .top-right {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            margin-left: auto;
+            margin-right: 20px;
+        }
+
+        .settings-btn {
+            background: none;
+            border: none;
+            color: white;
+            cursor: pointer;
+            font-size: 20px;
+        }
+
+        .connect-btn {
+            background: #FFC107;
+            color: #333;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 12px;
+        }
+
+        /* ============ CONTAINER ============ */
+        .container {
+            display: flex;
+            height: calc(100vh - 48px);
+        }
+
+        /* ============ SIDEBAR ============ */
+        .sidebar {
+            width: 190px;
+            background: var(--light-gray);
+            border-right: 1px solid var(--border-gray);
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .sidebar-nav {
+            flex: 1;
+            padding: 12px 0;
+        }
+
+        .nav-header {
+            padding: 12px 16px;
+            font-size: 11px;
+            font-weight: 700;
+            color: #999;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .nav-item {
+            padding: 12px 16px;
+            font-size: 13px;
+            color: var(--sidebar-text);
+            cursor: pointer;
+            transition: all 0.2s;
+            border-left: 3px solid transparent;
+        }
+
+        .nav-item:hover {
+            background: rgba(0,0,0,0.05);
+            color: var(--dark-text);
+        }
+
+        .nav-item.active {
+            background: rgba(167, 25, 48, 0.1);
+            color: var(--selected-red);
+            border-left-color: var(--selected-red);
+            font-weight: 600;
+        }
+
+        .sidebar-footer {
+            padding: 16px;
+            border-top: 1px solid var(--border-gray);
+            font-weight: 700;
+            font-size: 14px;
+            color: var(--primary-red);
+            text-align: center;
+        }
+
+        /* ============ MAIN CONTENT ============ */
+        .main-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .content-header {
+            padding: 20px;
+            border-bottom: 1px solid var(--border-gray);
+            background: #FFF;
+        }
+
+        .content-header h1 {
+            font-size: 24px;
+            font-weight: 600;
+            color: var(--dark-text);
+        }
+
+        .content-area {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px;
+            background: #FFF;
+        }
+
+        /* ============ DATA TABLES ============ */
+        .table-section {
+            margin-bottom: 30px;
+            background: #FFF;
+            border: 1px solid var(--border-gray);
+            border-radius: 4px;
+            overflow: hidden;
+        }
+
+        .table-title {
+            padding: 12px 16px;
+            background: var(--light-gray);
+            font-weight: 600;
+            font-size: 13px;
+            color: var(--dark-text);
+            border-bottom: 1px solid var(--border-gray);
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+        }
+
+        th {
+            background: var(--light-gray);
+            padding: 10px 12px;
+            text-align: left;
+            font-weight: 600;
+            border-bottom: 1px solid var(--border-gray);
+            color: var(--dark-text);
+        }
+
+        td {
+            padding: 10px 12px;
+            border-bottom: 1px solid var(--border-gray);
+        }
+
+        tr:hover {
+            background: rgba(0,0,0,0.02);
+        }
+
+        /* ============ FORMS ============ */
+        .form-group {
+            margin-bottom: 16px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 6px;
+            font-weight: 500;
+            font-size: 12px;
+            color: var(--dark-text);
+        }
+
+        input, select, textarea {
+            width: 100%;
+            padding: 8px 12px;
+            border: 1px solid var(--border-gray);
+            border-radius: 4px;
+            font-size: 13px;
+            font-family: inherit;
+        }
+
+        input:focus, select:focus, textarea:focus {
+            outline: none;
+            border-color: var(--primary-red);
+            box-shadow: 0 0 0 3px rgba(167, 25, 48, 0.1);
+        }
+
+        /* ============ BUTTONS ============ */
+        button {
+            padding: 8px 16px;
+            border: 1px solid var(--border-gray);
+            border-radius: 4px;
+            font-size: 12px;
+            cursor: pointer;
+            transition: all 0.2s;
+            background: white;
+            color: var(--dark-text);
+        }
+
+        button:hover {
+            background: var(--light-gray);
+            border-color: #999;
+        }
+
+        .btn-primary {
+            background: var(--primary-red);
+            color: white;
+            border: none;
+        }
+
+        .btn-primary:hover {
+            background: var(--selected-red);
+        }
+
+        /* ============ MODAL ============ */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.5);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal.active {
+            display: flex;
+        }
+
+        .modal-content {
+            background: white;
+            border-radius: 8px;
+            padding: 30px;
+            max-width: 500px;
+            width: 90%;
+            max-height: 80vh;
+            overflow-y: auto;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+        }
+
+        .modal-header {
+            margin-bottom: 20px;
+            font-size: 18px;
+            font-weight: 600;
+        }
+
+        .modal-footer {
+            margin-top: 20px;
+            display: flex;
+            gap: 12px;
+            justify-content: flex-end;
+        }
+
+        /* ============ EMPTY STATE ============ */
+        .empty-state {
+            text-align: center;
+            padding: 40px 20px;
+            color: #999;
+        }
+
+        .empty-state svg {
+            width: 48px;
+            height: 48px;
+            margin-bottom: 16px;
+            opacity: 0.5;
+        }
+
+    </style>
+</head>
+<body>
+
+<!-- TOP BAR -->
+<div class="top-bar">
+    <div class="logo">HBO</div>
+    <div class="top-nav">
+        <button class="top-nav-btn active" data-page="accueil">Accueil</button>
+        <button class="top-nav-btn" data-page="people">People</button>
+        <button class="top-nav-btn" data-page="hse">HSE & PDE</button>
+        <button class="top-nav-btn" data-page="projects">Projects</button>
+        <button class="top-nav-btn" data-page="archives">Archives</button>
+        <button class="top-nav-btn" data-page="quest">Quest</button>
+    </div>
+    <div class="top-right">
+        <button class="settings-btn">⚙️</button>
+        <button class="connect-btn">Connect to ePilot</button>
+    </div>
+</div>
+
+<!-- CONTAINER -->
+<div class="container">
+    <!-- SIDEBAR -->
+    <div class="sidebar">
+        <div class="sidebar-nav">
+            <div class="nav-header">NAVIGATION</div>
+            <div class="nav-item active" data-section="timesheet">Timesheet</div>
+            <div class="nav-item" data-section="salary">Salary</div>
+            <div class="nav-item" data-section="vacation">Vacation</div>
+            <div class="nav-item" data-section="badge">Badge Maker</div>
+            <div class="nav-item" data-section="pde">PDE</div>
+            <div class="nav-item" data-section="hr">HR</div>
+        </div>
+        <div class="sidebar-footer">HBO</div>
+    </div>
+
+    <!-- MAIN CONTENT -->
+    <div class="main-content">
+        <div class="content-header">
+            <h1 id="page-title">Timesheet</h1>
+        </div>
+        <div class="content-area" id="content">
+            <div class="empty-state">
+                <p>Loading...</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL -->
+<div class="modal" id="modal">
+    <div class="modal-content">
+        <div class="modal-header" id="modal-title">Add Item</div>
+        <div id="modal-body"></div>
+        <div class="modal-footer">
+            <button onclick="closeModal()">Cancel</button>
+            <button class="btn-primary" onclick="saveItem()">Save</button>
+        </div>
+    </div>
+</div>
+
+<script>
+// ============================================
+// DATABASE - V21 STRUCTURE
+// ============================================
+const DB_KEY = 'epilot_v20_rebuilt_db';
+
+const defaultDB = {
+    ARTICLES_DATA: [
+        { id: 'ART_001', reference: 'ART-2024-001', description: 'Article 1', prixAchat: 100, prixVente: 150, marge: 33.33, quantite: 10 },
+        { id: 'ART_002', reference: 'ART-2024-002', description: 'Article 2', prixAchat: 200, prixVente: 300, marge: 33.33, quantite: 20 }
+    ],
+    CHANTIERS_DATA: [
+        { id: 'CHT_001', numero: 'CHT-2024-001', description: 'Project 1', status: 'Active', dateDebut: '2024-01-01', dateFin: '2024-06-30', budgetOA: 50000, budgetContractuel: 55000 },
+        { id: 'CHT_002', numero: 'CHT-2024-002', description: 'Project 2', status: 'Pending', dateDebut: '2024-02-01', dateFin: '2024-08-31', budgetOA: 75000, budgetContractuel: 80000 }
+    ],
+    CLIENTS_DATA: [
+        { id: 'CLT_001', nom: 'Client 1', codeClient: 'C001', email: 'client1@example.com', telephone: '+1234567890' },
+        { id: 'CLT_002', nom: 'Client 2', codeClient: 'C002', email: 'client2@example.com', telephone: '+0987654321' }
+    ],
+    PERSONNEL_DATA: [
+        { id: 'EMP_001', matricule: 'EMP001', nom: 'John Doe', prenoms: 'John', email: 'john@example.com', fonction: 'Manager' },
+        { id: 'EMP_002', matricule: 'EMP002', nom: 'Jane Smith', prenoms: 'Jane', email: 'jane@example.com', fonction: 'Developer' }
+    ],
+    DEVIS_DATA: [],
+    FACTURES_DATA: [],
+    USERS_DATA: [
+        { id: 'USR_001', name: 'Admin', role: 'Administrator', password: 'admin' }
+    ],
+    CONFIG_DATA: {
+        idFormat: 'simple',
+        counters: {
+            ART: 2,
+            CHT: 2,
+            CLT: 2,
+            EMP: 2,
+            DIV: 0,
+            FAC: 0
+        }
+    }
+};
+
+let app = {
+    db: {},
+    currentPage: 'accueil',
+    currentSection: 'timesheet'
+};
+
+// Initialize database
+function initDB() {
+    const stored = localStorage.getItem(DB_KEY);
+    if (stored) {
+        app.db = JSON.parse(stored);
+    } else {
+        app.db = JSON.parse(JSON.stringify(defaultDB));
+        saveDB();
+    }
+}
+
+function saveDB() {
+    localStorage.setItem(DB_KEY, JSON.stringify(app.db));
+}
+
+// ============================================
+// UI - PAGES
+// ============================================
+function renderContent() {
+    const content = document.getElementById('content');
+    const title = document.getElementById('page-title');
+
+    if (app.currentPage === 'accueil') {
+        title.textContent = 'Dashboard';
+        content.innerHTML = `
+            <div style="max-width: 1200px;">
+                <h2 style="margin-bottom: 20px; font-size: 18px;">Welcome to ePilot v20 Rebuilt</h2>
+                <p>Database: V21 Clean Architecture</p>
+                <p>Design: V20 Original</p>
+
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin-top: 30px;">
+                    <div style="border: 1px solid #DDD; padding: 20px; border-radius: 4px;">
+                        <div style="font-size: 28px; font-weight: 600; color: ${app.db.ARTICLES_DATA?.length || 0 > 0 ? 'var(--primary-red)' : '#999'}">
+                            ${app.db.ARTICLES_DATA?.length || 0}
+                        </div>
+                        <div style="font-size: 12px; color: #999; margin-top: 8px;">Articles</div>
+                    </div>
+                    <div style="border: 1px solid #DDD; padding: 20px; border-radius: 4px;">
+                        <div style="font-size: 28px; font-weight: 600; color: var(--primary-red)">
+                            ${app.db.CLIENTS_DATA?.length || 0}
+                        </div>
+                        <div style="font-size: 12px; color: #999; margin-top: 8px;">Clients</div>
+                    </div>
+                    <div style="border: 1px solid #DDD; padding: 20px; border-radius: 4px;">
+                        <div style="font-size: 28px; font-weight: 600; color: var(--primary-red)">
+                            ${app.db.CHANTIERS_DATA?.length || 0}
+                        </div>
+                        <div style="font-size: 12px; color: #999; margin-top: 8px;">Projects</div>
+                    </div>
+                    <div style="border: 1px solid #DDD; padding: 20px; border-radius: 4px;">
+                        <div style="font-size: 28px; font-weight: 600; color: var(--primary-red)">
+                            ${app.db.PERSONNEL_DATA?.length || 0}
+                        </div>
+                        <div style="font-size: 12px; color: #999; margin-top: 8px;">Personnel</div>
+                    </div>
+                </div>
+            </div>
+        `;
+    } else if (app.currentPage === 'people') {
+        title.textContent = 'People';
+        renderTable('PERSONNEL_DATA', 'Personnel List');
+    } else if (app.currentPage === 'projects') {
+        title.textContent = 'Projects';
+        renderTable('CHANTIERS_DATA', 'Projects List');
+    } else if (app.currentPage === 'archives') {
+        title.textContent = 'Archives';
+        renderTable('ARTICLES_DATA', 'Articles');
+    }
+}
+
+function renderTable(dataKey, title) {
+    const data = app.db[dataKey] || [];
+    const content = document.getElementById('content');
+
+    if (data.length === 0) {
+        content.innerHTML = '<div class="empty-state"><p>No data available</p></div>';
+        return;
+    }
+
+    const keys = Object.keys(data[0]).slice(0, 5);
+    const headers = keys.map(k => `<th>${k}</th>`).join('');
+    const rows = data.map(row => {
+        const cells = keys.map(k => `<td>${row[k] || '-'}</td>`).join('');
+        return `<tr>${cells}</tr>`;
+    }).join('');
+
+    content.innerHTML = `
+        <div class="table-section">
+            <div class="table-title">${title}</div>
+            <table>
+                <thead><tr>${headers}</tr></thead>
+                <tbody>${rows}</tbody>
+            </table>
+        </div>
+    `;
+}
+
+// ============================================
+// EVENT LISTENERS
+// ============================================
+document.querySelectorAll('.top-nav-btn').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+        document.querySelectorAll('.top-nav-btn').forEach(b => b.classList.remove('active'));
+        e.target.classList.add('active');
+        app.currentPage = e.target.dataset.page;
+        renderContent();
+    });
+});
+
+document.querySelectorAll('.nav-item').forEach(item => {
+    item.addEventListener('click', (e) => {
+        document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
+        e.target.classList.add('active');
+        app.currentSection = e.target.dataset.section;
+        const sectionTitles = {
+            timesheet: 'Timesheet',
+            salary: 'Salary',
+            vacation: 'Vacation',
+            badge: 'Badge Maker',
+            pde: 'PDE',
+            hr: 'HR'
+        };
+        document.getElementById('page-title').textContent = sectionTitles[app.currentSection] || 'Section';
+        renderContent();
+    });
+});
+
+function closeModal() {
+    document.getElementById('modal').classList.remove('active');
+}
+
+function saveItem() {
+    console.log('Save item');
+    closeModal();
+}
+
+// ============================================
+// INIT
+// ============================================
+document.addEventListener('DOMContentLoaded', () => {
+    initDB();
+    renderContent();
+});
+</script>
+
+</body>
+</html>
