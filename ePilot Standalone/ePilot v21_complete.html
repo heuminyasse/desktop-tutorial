@@ -370,52 +370,119 @@
 
         .form-modal {
             background: var(--white);
-            border-radius: 8px;
-            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
-            max-width: 500px;
+            border-radius: 12px;
+            box-shadow: 0 25px 75px rgba(0,0,0,0.25);
+            max-width: 550px;
             width: 90%;
-            max-height: 80vh;
+            max-height: 85vh;
             overflow-y: auto;
-            padding: 30px;
+            padding: 35px;
+            border: 1px solid #f0f0f0;
         }
 
         .form-modal h3 {
             color: var(--primary);
+            margin-bottom: 5px;
+            font-size: 20px;
+            font-weight: 600;
+        }
+
+        .form-modal > p {
             margin-bottom: 20px;
-            font-size: 18px;
+            border-bottom: 1px solid #eee;
+            padding-bottom: 15px;
+        }
+
+        .form-group {
+            margin-bottom: 18px;
+        }
+
+        .form-group label {
+            display: block;
+            font-weight: 500;
+            color: #333;
+            font-size: 13px;
+            margin-bottom: 8px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
         }
 
         .form-modal .form-group input,
         .form-modal .form-group select,
         .form-modal .form-group textarea {
             width: 100%;
-            padding: 10px;
-            border: 1px solid var(--border);
-            border-radius: 4px;
+            padding: 12px;
+            border: 1.5px solid #ddd;
+            border-radius: 6px;
             font-family: inherit;
-            font-size: 13px;
-            margin-top: 5px;
+            font-size: 14px;
+            transition: all 0.2s;
+            background: #f9f9f9;
+        }
+
+        .form-modal .form-group input:focus,
+        .form-modal .form-group select:focus,
+        .form-modal .form-group textarea:focus {
+            outline: none;
+            border-color: var(--primary);
+            background: white;
+            box-shadow: 0 0 0 3px rgba(181, 0, 10, 0.1);
+        }
+
+        .form-modal .form-group input[type="required"]:invalid {
+            border-color: #f44336;
         }
 
         .form-actions {
             display: flex;
-            gap: 10px;
-            margin-top: 20px;
+            gap: 12px;
+            margin-top: 28px;
             justify-content: flex-end;
+            border-top: 1px solid #eee;
+            padding-top: 20px;
         }
 
         .btn-secondary {
             background: #666;
             color: var(--white);
             border: none;
-            padding: 10px 20px;
-            border-radius: 4px;
+            padding: 11px 24px;
+            border-radius: 6px;
             cursor: pointer;
             font-size: 13px;
+            font-weight: 500;
+            transition: all 0.2s;
         }
 
         .btn-secondary:hover {
             background: #555;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        }
+
+        .action-btns {
+            display: flex;
+            gap: 6px;
+        }
+
+        .btn-sm {
+            background: #f5f5f5;
+            border: 1px solid #ddd;
+            padding: 6px 10px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.2s;
+        }
+
+        .btn-sm:hover {
+            background: #e8e8e8;
+            transform: scale(1.1);
+        }
+
+        .btn-sm.btn-delete:hover {
+            background: #ffebee;
+            border-color: #f44336;
         }
 
         /* ALERT */
@@ -990,6 +1057,30 @@
             content.innerHTML = html;
         }
 
+        function renderFormFields(schema, record = null) {
+            return schema.map(field => {
+                if (field.readonly) return '';
+
+                let inputHtml = '';
+                const value = record ? (record[field.name] || '') : '';
+
+                if (field.type === 'textarea') {
+                    inputHtml = `<textarea name="${field.name}" ${field.required ? 'required' : ''} placeholder="${field.label}" rows="4">${value}</textarea>`;
+                } else if (field.type === 'select') {
+                    inputHtml = `<select name="${field.name}" ${field.required ? 'required' : ''}><option value="">-- Sélectionner --</option></select>`;
+                } else {
+                    inputHtml = `<input type="${field.type}" name="${field.name}" ${field.required ? 'required' : ''} placeholder="${field.label}" value="${value}">`;
+                }
+
+                return `
+                    <div class="form-group">
+                        <label>${field.label}${field.required ? ' <span style="color: red;">*</span>' : ''}</label>
+                        ${inputHtml}
+                    </div>
+                `;
+            }).join('');
+        }
+
         function showAddForm(dataTable) {
             const schema = FIELD_SCHEMAS[dataTable];
             if (!schema) {
@@ -1002,27 +1093,9 @@
                     <div class="form-modal">
                         <h3>➕ Ajouter ${app.currentOnglet}</h3>
                         <form id="add-form">
-                            ${schema.map(field => {
-                                if (field.readonly) return '';
-
-                                let inputHtml = '';
-                                if (field.type === 'textarea') {
-                                    inputHtml = `<textarea name="${field.name}" ${field.required ? 'required' : ''} placeholder="${field.label}" rows="4"></textarea>`;
-                                } else if (field.type === 'select') {
-                                    inputHtml = `<select name="${field.name}" ${field.required ? 'required' : ''}><option value="">-- Sélectionner --</option></select>`;
-                                } else {
-                                    inputHtml = `<input type="${field.type}" name="${field.name}" ${field.required ? 'required' : ''} placeholder="${field.label}">`;
-                                }
-
-                                return `
-                                    <div class="form-group">
-                                        <label>${field.label}${field.required ? ' *' : ''}</label>
-                                        ${inputHtml}
-                                    </div>
-                                `;
-                            }).join('')}
+                            ${renderFormFields(schema)}
                             <div class="form-actions">
-                                <button type="button" class="btn-secondary" onclick="this.closest('.form-container').remove()">Annuler</button>
+                                <button type="button" class="btn-secondary" onclick="this.closest('.form-container').remove()">✕ Annuler</button>
                                 <button type="submit" class="btn-primary">✓ Enregistrer</button>
                             </div>
                         </form>
@@ -1063,6 +1136,82 @@
                     container.remove();
                 }
             });
+        }
+
+        function showEditForm(dataTable, recordId) {
+            const schema = FIELD_SCHEMAS[dataTable];
+            const record = app.db[dataTable].find(r => r.id === recordId);
+
+            if (!schema || !record) {
+                alert('Enregistrement non trouvé');
+                return;
+            }
+
+            const formHtml = `
+                <div class="form-container show">
+                    <div class="form-modal">
+                        <h3>✏️ Modifier ${app.currentOnglet}</h3>
+                        <p style="color: #999; font-size: 12px; margin-bottom: 15px;">ID: ${record.id}</p>
+                        <form id="edit-form">
+                            ${renderFormFields(schema, record)}
+                            <div class="form-actions">
+                                <button type="button" class="btn-secondary" onclick="this.closest('.form-container').remove()">✕ Annuler</button>
+                                <button type="submit" class="btn-primary">✓ Mettre à jour</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            `;
+
+            const container = document.createElement('div');
+            container.innerHTML = formHtml;
+            document.body.appendChild(container);
+
+            container.querySelector('#edit-form').addEventListener('submit', (e) => {
+                e.preventDefault();
+                const formData = new FormData(e.target);
+                const index = app.db[dataTable].findIndex(r => r.id === recordId);
+
+                if (index >= 0) {
+                    app.db[dataTable][index] = {
+                        ...record,
+                        ...Object.fromEntries(formData),
+                        updated_at: new Date().toISOString()
+                    };
+
+                    // Recalculate marge if ARTICLES_DATA
+                    if (dataTable === 'ARTICLES_DATA') {
+                        const prixVente = Number(app.db[dataTable][index].prixVente) || 0;
+                        const prixAchat = Number(app.db[dataTable][index].prixAchat) || 0;
+                        app.db[dataTable][index].marge = prixVente > 0 ? ((prixVente - prixAchat) / prixVente * 100).toFixed(2) : 0;
+                    }
+
+                    saveToStorage();
+                    container.remove();
+                    renderContent(dataTable);
+                    alert(`✓ ${app.currentOnglet} modifié(e) avec succès!`);
+                }
+            });
+
+            container.querySelector('.form-container').addEventListener('click', (e) => {
+                if (e.target === container.querySelector('.form-container')) {
+                    container.remove();
+                }
+            });
+        }
+
+        function deleteRecord(dataTable, recordId) {
+            if (!confirm('Êtes-vous sûr de vouloir supprimer cet enregistrement ?')) {
+                return;
+            }
+
+            const index = app.db[dataTable].findIndex(r => r.id === recordId);
+            if (index >= 0) {
+                app.db[dataTable].splice(index, 1);
+                saveToStorage();
+                renderContent(dataTable);
+                alert('✓ Enregistrement supprimé!');
+            }
         }
 
         function showArticleDetails(articleId) {
