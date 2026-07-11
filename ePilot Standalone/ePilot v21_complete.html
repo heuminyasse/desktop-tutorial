@@ -559,6 +559,17 @@
                 { name: 'description', label: 'Description', type: 'textarea' },
                 { name: 'type', label: 'Type Papier', type: 'text' }
             ],
+            ARTICLES_DATA: [
+                { name: 'reference', label: 'Référence', type: 'text', required: true },
+                { name: 'description', label: 'Description', type: 'textarea', required: true },
+                { name: 'prixAchat', label: 'Prix Achat', type: 'number', required: true },
+                { name: 'prixVente', label: 'Prix Vente', type: 'number', required: true },
+                { name: 'marge', label: 'Marge (%)', type: 'number', readonly: true },
+                { name: 'fournisseurId', label: 'Fournisseur', type: 'text' },
+                { name: 'quantite', label: 'Quantité Stock', type: 'number' },
+                { name: 'unite', label: 'Unité', type: 'text' },
+                { name: 'categorie', label: 'Catégorie', type: 'text' }
+            ],
             CHANTIERS_DATA: [
                 { name: 'numero', label: 'N° Chantier', type: 'text', required: true },
                 { name: 'description', label: 'Description', type: 'textarea' },
@@ -613,10 +624,10 @@
                 label: '🏗️ Projets',
                 onglets: {
                     'Chantiers': { sous: ['Tableau de bord', 'En Cours', 'OA'], data: 'CHANTIERS_DATA' },
-                    'RFQ': { sous: ['Tableau de bord', 'RFQ', 'Devis'], data: 'ARTICLES_RFQ' },
-                    'Finances': { sous: ['Dépenses', 'Dettes', 'PO', 'Colis / In-transit', 'Facturation'], data: 'ARTICLES_FINANCES' },
-                    'Marketing': { sous: ['Pipeline marketing', 'Projet & Stage', 'Meeting'], data: 'ARTICLES_MARKETING' },
-                    'FCR': { sous: [], data: 'ARTICLES_FCR' }
+                    'RFQ': { sous: ['Tableau de bord', 'RFQ', 'Devis'], data: 'ARTICLES_DATA' },
+                    'Finances': { sous: ['Dépenses', 'Dettes', 'PO', 'Colis / In-transit', 'Facturation'], data: 'ARTICLES_DATA' },
+                    'Marketing': { sous: ['Pipeline marketing', 'Projet & Stage', 'Meeting'], data: 'ARTICLES_DATA' },
+                    'FCR': { sous: [], data: 'ARTICLES_DATA' }
                 }
             },
             REFERENCES: {
@@ -631,8 +642,8 @@
             ARCHIVES: {
                 label: '📚 Archives',
                 onglets: {
-                    'Boutique': { sous: [], data: 'ARTICLES_BOUTIQUE' },
-                    'Papiers': { sous: [], data: 'ARTICLES_PAPIERS' }
+                    'Boutique': { sous: [], data: 'ARTICLES_DATA' },
+                    'Papiers': { sous: [], data: 'ARTICLES_DATA' }
                 }
             },
             QUETES: {
@@ -683,12 +694,7 @@
         // TABLE TO PREFIX MAPPING
         // ============================================
         const TABLE_PREFIXES = {
-            ARTICLES_RFQ: 'ART_RFQ',
-            ARTICLES_FINANCES: 'ART_FIN',
-            ARTICLES_MARKETING: 'ART_MKT',
-            ARTICLES_FCR: 'ART_FCR',
-            ARTICLES_BOUTIQUE: 'ART_BOT',
-            ARTICLES_PAPIERS: 'ART_PAP',
+            ARTICLES_DATA: 'ART',
             PERSONNEL_DATA: 'EMP',
             CLIENTS_DATA: 'CLT',
             SITES_DATA: 'SIT',
@@ -707,7 +713,7 @@
                 CONFIG_DATA: {
                     idFormat: 'simple', // 'simple' (ART_001) or 'yearly' (ART_2025_001)
                     counters: {
-                        ART_RFQ: 0, ART_FIN: 0, ART_MKT: 0, ART_FCR: 0, ART_BOT: 0, ART_PAP: 0,
+                        ART: 0,
                         EMP: 0, CLT: 0, CHT: 0, FRN: 0, SIT: 0, ACH: 0, USR: 0
                     },
                     lastReset: new Date().toISOString().split('T')[0]
@@ -1402,12 +1408,7 @@
                         CLIENTS_DATA: v20Data.ORGANISATIONS || [],
                         SITES_DATA: v20Data.SITES || [],
                         ACHETEURS_DATA: [],
-                        ARTICLES_BOUTIQUE: mapArticles(v20Data),
-                        ARTICLES_RFQ: [],
-                        ARTICLES_FINANCES: [],
-                        ARTICLES_MARKETING: [],
-                        ARTICLES_FCR: [],
-                        ARTICLES_PAPIERS: [],
+                        ARTICLES_DATA: mapArticles(v20Data),
                         FOURNISSEURS_DATA: v20Data.FOURNISSEURS || [],
                         CHANTIERS_DATA: v20Data.PROJETS || []
                     };
@@ -1451,69 +1452,78 @@
         }
 
         function mapArticles(v20Data) {
-            // Combine ARTICLES_VENTE, ARTICLES_ACHAT, and BOUTIQUE into unified ARTICLES_DATA
+            // Map all articles from v20 to unified ARTICLES_DATA
             const articles = [];
             const seenIds = new Set();
+            const articleMap = {}; // Map ID to article data
 
-            console.log('mapArticles - v20Data keys:', Object.keys(v20Data));
-            console.log('ARTICLES_VENTE_DATA:', v20Data.ARTICLES_VENTE_DATA);
-            console.log('ARTICLES_ACHAT_DATA:', v20Data.ARTICLES_ACHAT_DATA);
-            console.log('BOUTIQUE_PRODUITS_DATA:', v20Data.BOUTIQUE_PRODUITS_DATA);
-
-            // Start with vente articles
+            // Process ARTICLES_VENTE_DATA
             (v20Data.ARTICLES_VENTE_DATA || []).forEach(art => {
                 if (!seenIds.has(art.id)) {
-                    articles.push({
-                        ...art,
-                        ventes: [{ clientId: art.clientId, prixVente: art.prixVente, dateDebut: new Date().toISOString().split('T')[0] }],
-                        achats: [],
-                        chiffrage: [],
-                        boutique: { disponible: false, quantiteStock: 0, prixBoutique: 0 }
-                    });
-                    seenIds.add(art.id);
-                }
-            });
-
-            // Add achat articles
-            (v20Data.ARTICLES_ACHAT_DATA || []).forEach(art => {
-                const existing = articles.find(a => a.id === art.id);
-                if (existing) {
-                    existing.achats.push({ fournisseurId: art.fournisseurId, prixAchat: art.prixAchat, dateDebut: new Date().toISOString().split('T')[0] });
-                } else if (!seenIds.has(art.id)) {
-                    articles.push({
-                        ...art,
-                        ventes: [],
-                        achats: [{ fournisseurId: art.fournisseurId, prixAchat: art.prixAchat, dateDebut: new Date().toISOString().split('T')[0] }],
-                        chiffrage: [],
-                        boutique: { disponible: false, quantiteStock: 0, prixBoutique: 0 }
-                    });
-                    seenIds.add(art.id);
-                }
-            });
-
-            // Add boutique articles
-            (v20Data.BOUTIQUE_PRODUITS_DATA || []).forEach(art => {
-                const existing = articles.find(a => a.id === art.id);
-                if (existing) {
-                    existing.boutique = {
-                        disponible: true,
-                        quantiteStock: art.quantite || 0,
-                        prixBoutique: art.prix || 0
+                    articleMap[art.id] = {
+                        id: art.id,
+                        reference: art.reference || art.id,
+                        description: art.description || '',
+                        prixVente: art.prixVente || 0,
+                        prixAchat: art.prixAchat || 0,
+                        fournisseurId: art.fournisseurId || '',
+                        quantite: art.quantite || 0,
+                        unite: art.unite || 'Unité',
+                        categorie: 'Vente'
                     };
-                } else if (!seenIds.has(art.id)) {
-                    articles.push({
-                        ...art,
-                        ventes: [],
-                        achats: [],
-                        chiffrage: [],
-                        boutique: {
-                            disponible: true,
-                            quantiteStock: art.quantite || 0,
-                            prixBoutique: art.prix || 0
-                        }
-                    });
                     seenIds.add(art.id);
                 }
+            });
+
+            // Process ARTICLES_ACHAT_DATA
+            (v20Data.ARTICLES_ACHAT_DATA || []).forEach(art => {
+                if (!seenIds.has(art.id)) {
+                    articleMap[art.id] = {
+                        id: art.id,
+                        reference: art.reference || art.id,
+                        description: art.description || '',
+                        prixAchat: art.prixAchat || 0,
+                        prixVente: art.prixVente || 0,
+                        fournisseurId: art.fournisseurId || '',
+                        quantite: art.quantite || 0,
+                        unite: art.unite || 'Unité',
+                        categorie: 'Achat'
+                    };
+                    seenIds.add(art.id);
+                } else {
+                    // Merge with existing
+                    const existing = articleMap[art.id];
+                    if (!existing.prixAchat) existing.prixAchat = art.prixAchat || 0;
+                    if (!existing.fournisseurId) existing.fournisseurId = art.fournisseurId || '';
+                }
+            });
+
+            // Process BOUTIQUE_PRODUITS_DATA
+            (v20Data.BOUTIQUE_PRODUITS_DATA || []).forEach(art => {
+                if (!seenIds.has(art.id)) {
+                    articleMap[art.id] = {
+                        id: art.id,
+                        reference: art.reference || art.id,
+                        description: art.description || '',
+                        prixVente: art.prix || 0,
+                        prixAchat: 0,
+                        fournisseurId: '',
+                        quantite: art.quantite || 0,
+                        unite: art.unite || 'Unité',
+                        categorie: 'Boutique'
+                    };
+                    seenIds.add(art.id);
+                } else {
+                    const existing = articleMap[art.id];
+                    if (!existing.prixVente) existing.prixVente = art.prix || 0;
+                    if (!existing.quantite) existing.quantite = art.quantite || 0;
+                }
+            });
+
+            // Convert to array and calculate marge
+            Object.values(articleMap).forEach(art => {
+                art.marge = art.prixVente > 0 ? ((art.prixVente - art.prixAchat) / art.prixVente * 100).toFixed(2) : 0;
+                articles.push(art);
             });
 
             console.log('mapArticles result:', articles);
