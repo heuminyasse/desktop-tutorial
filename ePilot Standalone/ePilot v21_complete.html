@@ -682,10 +682,27 @@
         }
 
         function generateId(prefix) {
+            if (!app.db.CONFIG_DATA) {
+                app.db.CONFIG_DATA = {
+                    idFormat: 'simple',
+                    counters: {
+                        ART: 0, EMP: 0, CLT: 0, CHT: 0, FRN: 0, SIT: 0, USR: 0
+                    },
+                    lastReset: new Date().toISOString().split('T')[0]
+                };
+            }
+
             const config = app.db.CONFIG_DATA;
+            if (!config.counters) {
+                config.counters = {
+                    ART: 0, EMP: 0, CLT: 0, CHT: 0, FRN: 0, SIT: 0, USR: 0
+                };
+            }
+
             if (!config.counters[prefix]) {
                 config.counters[prefix] = 0;
             }
+
             config.counters[prefix]++;
             const num = String(config.counters[prefix]).padStart(3, '0');
 
