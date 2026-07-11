@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>Reset Complet</title>
+    <style>
+        body { font-family: Arial; max-width: 600px; margin: 50px auto; padding: 20px; background: #f5f5f5; }
+        .container { background: white; padding: 30px; border-radius: 8px; }
+        h1 { color: #c41e3a; }
+        .status { padding: 15px; margin: 20px 0; border-radius: 4px; }
+        .loading { background: #e3f2fd; border-left: 4px solid #2196f3; color: #1565c0; }
+        .success { background: #e8f5e9; border-left: 4px solid #4caf50; color: #2e7d32; }
+        .warning { background: #fff3e0; border-left: 4px solid #ff9800; color: #e65100; }
+        ul { line-height: 1.8; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>⚠️ Reset Complet V20</h1>
+        <div id="status" class="status loading">
+            ⏳ Nettoyage en cours...
+        </div>
+        <ul id="steps">
+            <li id="s1">Suppression localStorage...</li>
+            <li id="s2">Suppression sessionStorage...</li>
+            <li id="s3">Injection du backup...</li>
+            <li id="s4">Redirection...</li>
+        </ul>
+    </div>
+
+    <script>
+        async function reset() {
+            try {
+                localStorage.clear();
+                document.getElementById('s1').innerHTML = '✓ localStorage vidé';
+                
+                sessionStorage.clear();
+                document.getElementById('s2').innerHTML = '✓ sessionStorage vidé';
+                
+                // Load backup
+                const response = await fetch('ePilot_Complete_Backup.json');
+                const backup = await response.json();
+                
+                // Inject ONLY the backup (clean slate)
+                Object.entries(backup.localStorage || {}).forEach(([key, val]) => {
+                    try {
+                        localStorage.setItem(key, val);
+                    } catch (e) {}
+                });
+                document.getElementById('s3').innerHTML = '✓ Backup injecté (189 JIP + 31 Personnel + 1882 Articles)';
+                
+                await new Promise(r => setTimeout(r, 1000));
+                
+                document.getElementById('status').className = 'status success';
+                document.getElementById('status').innerHTML = `
+                    ✅ Reset complété!<br><br>
+                    <strong>IMPORTANT:</strong> Fermez COMPLÈTEMENT le navigateur<br>
+                    Puis réouvrez pour charger V20<br><br>
+                    <a href="ePilot v20_standalone.html" style="color: #c41e3a; text-decoration: underline;">Ou cliquez ici pour ouvrir V20 maintenant</a>
+                `;
+                document.getElementById('s4').innerHTML = '✓ Prêt!';
+                
+            } catch (error) {
+                document.getElementById('status').className = 'status warning';
+                document.getElementById('status').innerHTML = '❌ Erreur: ' + error.message;
+            }
+        }
+        window.onload = reset;
+    </script>
+</body>
+</html>
