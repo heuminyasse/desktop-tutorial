@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>V20 - Clean Start</title>
+    <style>
+        body { font-family: Arial; text-align: center; margin-top: 50px; }
+        .loading { font-size: 20px; color: #c41e3a; }
+    </style>
+</head>
+<body>
+    <div class="loading">⏳ Initialisation de V20 (nettoyage des données)...</div>
+    
+    <script>
+        // Clean localStorage - keep ONLY the backup data
+        const keysToKeep = [
+            'ePilot_PERSONNEL_DATA',
+            'ePilot_JIP_DATA', 
+            'ePilot_ARTICLES',
+            'ePilot_CLIENTS_DATA',
+            'ePilot_DEPENSES',
+            'ePilot_ROLES_HR',
+            'ePilot_ROLES_CLIENTS',
+            'ePilot_PERSONNES_HR',
+            'ePilot_PERSONNES_CLIENTS',
+            'ePilot_ORGANISATIONS',
+            'ePilot_SITES',
+            'epilot_rbac_session',
+            'epilot_rbac'
+        ];
+        
+        const toDelete = [];
+        Object.keys(localStorage).forEach(key => {
+            if (!keysToKeep.includes(key)) {
+                toDelete.push(key);
+            }
+        });
+        
+        toDelete.forEach(key => {
+            localStorage.removeItem(key);
+        });
+        
+        console.log(`Deleted ${toDelete.length} problematic keys:`, toDelete);
+        console.log(`Kept ${keysToKeep.length} safe keys`);
+        
+        // Now load V20
+        window.location.href = 'ePilot v20_standalone.html?v=' + Date.now();
+    </script>
+</body>
+</html>
