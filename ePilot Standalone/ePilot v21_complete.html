@@ -525,39 +525,21 @@
                 { name: 'telephone', label: 'Téléphone', type: 'text' },
                 { name: 'adresse', label: 'Adresse', type: 'text' }
             ],
-            ARTICLES_RFQ: [
-                { name: 'designation', label: 'Désignation', type: 'text', required: true },
-                { name: 'description', label: 'Description', type: 'textarea' },
-                { name: 'quantite', label: 'Quantité', type: 'number' },
-                { name: 'unite', label: 'Unité', type: 'text' },
-                { name: 'prixUnitaire', label: 'Prix Unitaire', type: 'number' }
+            DEVIS_DATA: [
+                { name: 'numero', label: 'N° Devis', type: 'text', required: true },
+                { name: 'date', label: 'Date', type: 'date', required: true },
+                { name: 'clientId', label: 'Client', type: 'text', required: true },
+                { name: 'montantTotal', label: 'Montant Total', type: 'number' },
+                { name: 'statut', label: 'Statut', type: 'text' },
+                { name: 'articles', label: 'Articles', type: 'text', readonly: true }
             ],
-            ARTICLES_FINANCES: [
-                { name: 'designation', label: 'Désignation', type: 'text', required: true },
-                { name: 'description', label: 'Description', type: 'textarea' },
-                { name: 'quantite', label: 'Quantité', type: 'number' },
-                { name: 'montant', label: 'Montant', type: 'number' }
-            ],
-            ARTICLES_MARKETING: [
-                { name: 'designation', label: 'Désignation', type: 'text', required: true },
-                { name: 'description', label: 'Description', type: 'textarea' },
-                { name: 'statut', label: 'Statut', type: 'text' }
-            ],
-            ARTICLES_FCR: [
-                { name: 'designation', label: 'Désignation', type: 'text', required: true },
-                { name: 'description', label: 'Description', type: 'textarea' },
-                { name: 'statut', label: 'Statut', type: 'text' }
-            ],
-            ARTICLES_BOUTIQUE: [
-                { name: 'designation', label: 'Désignation', type: 'text', required: true },
-                { name: 'description', label: 'Description', type: 'textarea' },
-                { name: 'quantite', label: 'Quantité Stock', type: 'number' },
-                { name: 'prix', label: 'Prix', type: 'number' }
-            ],
-            ARTICLES_PAPIERS: [
-                { name: 'designation', label: 'Désignation', type: 'text', required: true },
-                { name: 'description', label: 'Description', type: 'textarea' },
-                { name: 'type', label: 'Type Papier', type: 'text' }
+            FACTURES_DATA: [
+                { name: 'numero', label: 'N° Facture', type: 'text', required: true },
+                { name: 'date', label: 'Date', type: 'date', required: true },
+                { name: 'clientId', label: 'Client', type: 'text', required: true },
+                { name: 'montantTotal', label: 'Montant Total', type: 'number' },
+                { name: 'statut', label: 'Statut', type: 'text' },
+                { name: 'articles', label: 'Articles', type: 'text', readonly: true }
             ],
             ARTICLES_DATA: [
                 { name: 'reference', label: 'Référence', type: 'text', required: true },
@@ -577,7 +559,8 @@
                 { name: 'dateDebut', label: 'Date Début', type: 'date' },
                 { name: 'dateFin', label: 'Date Fin', type: 'date' },
                 { name: 'budgetOA', label: 'Budget OA', type: 'number' },
-                { name: 'budgetContractuel', label: 'Budget Contractuel', type: 'number' }
+                { name: 'budgetContractuel', label: 'Budget Contractuel', type: 'number' },
+                { name: 'articles', label: 'Articles', type: 'text', readonly: true }
             ],
             FOURNISSEURS_DATA: [
                 { name: 'nom', label: 'Nom', type: 'text', required: true },
@@ -624,9 +607,9 @@
                 label: '🏗️ Projets',
                 onglets: {
                     'Chantiers': { sous: ['Tableau de bord', 'En Cours', 'OA'], data: 'CHANTIERS_DATA' },
-                    'RFQ': { sous: ['Tableau de bord', 'RFQ', 'Devis'], data: 'ARTICLES_DATA' },
-                    'Finances': { sous: ['Dépenses', 'Dettes', 'PO', 'Colis / In-transit', 'Facturation'], data: 'ARTICLES_DATA' },
-                    'Marketing': { sous: ['Pipeline marketing', 'Projet & Stage', 'Meeting'], data: 'ARTICLES_DATA' },
+                    'RFQ': { sous: ['Tableau de bord', 'Devis'], data: 'DEVIS_DATA' },
+                    'Finances': { sous: ['Factures', 'PO', 'Dépenses', 'Facturation'], data: 'FACTURES_DATA' },
+                    'Marketing': { sous: ['Pipeline', 'Projets', 'Meetings'], data: 'ARTICLES_DATA' },
                     'FCR': { sous: [], data: 'ARTICLES_DATA' }
                 }
             },
@@ -636,7 +619,8 @@
                     'Clients': { sous: [], data: 'CLIENTS_DATA' },
                     'Sites': { sous: [], data: 'SITES_DATA' },
                     'Acheteurs': { sous: [], data: 'ACHETEURS_DATA' },
-                    'Fournisseurs': { sous: [], data: 'FOURNISSEURS_DATA' }
+                    'Fournisseurs': { sous: [], data: 'FOURNISSEURS_DATA' },
+                    'Tous les Articles': { sous: ['En stock', 'Chiffré', 'Vendu', 'Acheté'], data: 'ARTICLES_DATA' }
                 }
             },
             ARCHIVES: {
@@ -695,6 +679,8 @@
         // ============================================
         const TABLE_PREFIXES = {
             ARTICLES_DATA: 'ART',
+            DEVIS_DATA: 'DIV',
+            FACTURES_DATA: 'FAC',
             PERSONNEL_DATA: 'EMP',
             CLIENTS_DATA: 'CLT',
             SITES_DATA: 'SIT',
@@ -713,7 +699,7 @@
                 CONFIG_DATA: {
                     idFormat: 'simple', // 'simple' (ART_001) or 'yearly' (ART_2025_001)
                     counters: {
-                        ART: 0,
+                        ART: 0, DIV: 0, FAC: 0,
                         EMP: 0, CLT: 0, CHT: 0, FRN: 0, SIT: 0, ACH: 0, USR: 0
                     },
                     lastReset: new Date().toISOString().split('T')[0]
@@ -1407,8 +1393,10 @@
                         PERSONNEL_DATA: v20Data.PERSONNEL_DATA || [],
                         CLIENTS_DATA: v20Data.ORGANISATIONS || [],
                         SITES_DATA: v20Data.SITES || [],
-                        ACHETEURS_DATA: [],
+                        ACHETEURS_DATA: v20Data.ACHETEURS_DATA || [],
                         ARTICLES_DATA: mapArticles(v20Data),
+                        DEVIS_DATA: v20Data.QUOTE_DATA || [],
+                        FACTURES_DATA: v20Data.BOUTIQUE_COMMANDES_DATA || [],
                         FOURNISSEURS_DATA: v20Data.FOURNISSEURS || [],
                         CHANTIERS_DATA: v20Data.PROJETS || []
                     };
