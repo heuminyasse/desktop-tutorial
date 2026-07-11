@@ -882,8 +882,10 @@
                 html += '<div class="empty-state">Aucun enregistrement</div>';
             } else {
                 html += '<div class="table-container"><table><thead><tr>';
+                html += '<th style="width: 100px; font-weight: 600; color: var(--primary);">ID</th>';
+
                 if (schema.length > 0) {
-                    schema.slice(0, 3).forEach(field => {
+                    schema.slice(0, 2).forEach(field => {
                         html += `<th>${field.label}</th>`;
                     });
                 } else {
@@ -899,8 +901,10 @@
 
                 data.forEach(row => {
                     html += '<tr>';
+                    html += `<td style="font-weight: 600; color: var(--primary);">${row.id}</td>`;
+
                     if (schema.length > 0) {
-                        schema.slice(0, 3).forEach(field => {
+                        schema.slice(0, 2).forEach(field => {
                             html += `<td>${row[field.name] || '-'}</td>`;
                         });
                     } else {
