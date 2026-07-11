@@ -486,6 +486,69 @@
 
     <script>
         // ============================================
+        // FIELD SCHEMAS (From v20)
+        // ============================================
+        const FIELD_SCHEMAS = {
+            PERSONNEL_DATA: [
+                { name: 'matricule', label: 'Matricule', type: 'text', required: true },
+                { name: 'nom', label: 'Nom', type: 'text', required: true },
+                { name: 'prenoms', label: 'Prénoms', type: 'text' },
+                { name: 'email', label: 'Email', type: 'email' },
+                { name: 'telephone', label: 'Téléphone', type: 'text' },
+                { name: 'fonction', label: 'Fonction', type: 'text' }
+            ],
+            CLIENTS_DATA: [
+                { name: 'nom', label: 'Nom Entreprise', type: 'text', required: true },
+                { name: 'codeClient', label: 'Code Client', type: 'text' },
+                { name: 'type', label: 'Type', type: 'text' },
+                { name: 'email', label: 'Email', type: 'email' },
+                { name: 'telephone', label: 'Téléphone', type: 'text' },
+                { name: 'adresse', label: 'Adresse', type: 'text' },
+                { name: 'ville', label: 'Ville', type: 'text' },
+                { name: 'niu', label: 'NIU', type: 'text' }
+            ],
+            SITES_DATA: [
+                { name: 'nom', label: 'Nom Site', type: 'text', required: true },
+                { name: 'adresse', label: 'Adresse', type: 'text' },
+                { name: 'ville', label: 'Ville', type: 'text' },
+                { name: 'codePostal', label: 'Code Postal', type: 'text' },
+                { name: 'telephone', label: 'Téléphone', type: 'text' },
+                { name: 'email', label: 'Email', type: 'email' },
+                { name: 'type', label: 'Type', type: 'text' }
+            ],
+            ARTICLES_DATA: [
+                { name: 'designation', label: 'Désignation', type: 'text', required: true },
+                { name: 'description', label: 'Description', type: 'textarea' },
+                { name: 'quantite', label: 'Quantité', type: 'number' },
+                { name: 'unite', label: 'Unité', type: 'text' },
+                { name: 'prixUnitaire', label: 'Prix Unitaire', type: 'number' },
+                { name: 'montantTotal', label: 'Montant Total', type: 'number' }
+            ],
+            CHANTIERS_DATA: [
+                { name: 'numero', label: 'N° Chantier', type: 'text', required: true },
+                { name: 'description', label: 'Description', type: 'textarea' },
+                { name: 'status', label: 'Statut', type: 'text' },
+                { name: 'dateDebut', label: 'Date Début', type: 'date' },
+                { name: 'dateFin', label: 'Date Fin', type: 'date' },
+                { name: 'budgetOA', label: 'Budget OA', type: 'number' },
+                { name: 'budgetContractuel', label: 'Budget Contractuel', type: 'number' }
+            ],
+            FOURNISSEURS_DATA: [
+                { name: 'nom', label: 'Nom', type: 'text', required: true },
+                { name: 'type', label: 'Type', type: 'text' },
+                { name: 'contact', label: 'Contact', type: 'text' },
+                { name: 'tel', label: 'Téléphone', type: 'text' },
+                { name: 'email', label: 'Email', type: 'email' },
+                { name: 'adresse', label: 'Adresse', type: 'text' }
+            ],
+            USERS_DATA: [
+                { name: 'name', label: 'Nom Utilisateur', type: 'text', required: true },
+                { name: 'role', label: 'Rôle', type: 'text', required: true },
+                { name: 'password', label: 'Mot de passe', type: 'password', required: true }
+            ]
+        };
+
+        // ============================================
         // DATABASE STRUCTURE
         // ============================================
         const STRUCTURE = {
@@ -493,11 +556,11 @@
             PERSONNEL: {
                 label: '👥 Personnel',
                 onglets: {
-                    'Paie': { sous: ['📅 Pointage', '📄 Bulletins', '🗂 Paie', '💳 Crédits', '📋 Contrats'], data: 'PAIE_DATA' },
-                    'Congés': { sous: ['Planning', 'Cartes'], data: 'CONGES_DATA' },
-                    'Créateur de badges': { sous: [], data: 'BADGES_DATA' },
-                    'PDE': { sous: [], data: 'PDE_DATA' },
-                    'RH': { sous: [], data: 'RH_DATA' }
+                    'Paie': { sous: ['📅 Pointage', '📄 Bulletins', '🗂 Paie', '💳 Crédits', '📋 Contrats'], data: 'PERSONNEL_DATA' },
+                    'Congés': { sous: ['Planning', 'Cartes'], data: 'PERSONNEL_DATA' },
+                    'Créateur de badges': { sous: [], data: 'PERSONNEL_DATA' },
+                    'PDE': { sous: [], data: 'PERSONNEL_DATA' },
+                    'RH': { sous: [], data: 'PERSONNEL_DATA' }
                 }
             },
             COMPETENCES: {
@@ -515,10 +578,10 @@
                 label: '🏗️ Projets',
                 onglets: {
                     'Chantiers': { sous: ['Tableau de bord', 'En Cours', 'OA'], data: 'CHANTIERS_DATA' },
-                    'RFQ': { sous: ['Tableau de bord', 'RFQ', 'Devis'], data: 'RFQ_DATA' },
-                    'Finances': { sous: ['Dépenses', 'Dettes', 'PO', 'Colis / In-transit', 'Facturation'], data: 'FINANCES_DATA' },
-                    'Marketing': { sous: ['Pipeline marketing', 'Projet & Stage', 'Meeting'], data: 'MARKETING_DATA' },
-                    'FCR': { sous: [], data: 'FCR_DATA' }
+                    'RFQ': { sous: ['Tableau de bord', 'RFQ', 'Devis'], data: 'ARTICLES_DATA' },
+                    'Finances': { sous: ['Dépenses', 'Dettes', 'PO', 'Colis / In-transit', 'Facturation'], data: 'ARTICLES_DATA' },
+                    'Marketing': { sous: ['Pipeline marketing', 'Projet & Stage', 'Meeting'], data: 'ARTICLES_DATA' },
+                    'FCR': { sous: [], data: 'ARTICLES_DATA' }
                 }
             },
             ARCHIVES: {
@@ -527,8 +590,8 @@
                     'Clients': { sous: ['Clients', 'Sites', 'Acheteurs'], data: 'CLIENTS_DATA' },
                     'Articles': { sous: [], data: 'ARTICLES_DATA' },
                     'Fournisseurs': { sous: [], data: 'FOURNISSEURS_DATA' },
-                    'Boutique': { sous: [], data: 'BOUTIQUE_DATA' },
-                    'Papiers': { sous: [], data: 'PAPIERS_DATA' }
+                    'Boutique': { sous: [], data: 'ARTICLES_DATA' },
+                    'Papiers': { sous: [], data: 'ARTICLES_DATA' }
                 }
             },
             QUETES: {
@@ -745,6 +808,7 @@
             }
 
             const data = app.db[dataTable] || [];
+            const schema = FIELD_SCHEMAS[dataTable] || [];
 
             let html = `
                 <div class="section-header">
@@ -756,18 +820,31 @@
             if (data.length === 0) {
                 html += '<div class="empty-state">Aucun enregistrement</div>';
             } else {
-                html += '<div class="table-container"><table><thead><tr><th>ID</th><th>Données</th><th>Actions</th></tr></thead><tbody>';
+                html += '<div class="table-container"><table><thead><tr>';
+                if (schema.length > 0) {
+                    schema.slice(0, 3).forEach(field => {
+                        html += `<th>${field.label}</th>`;
+                    });
+                } else {
+                    html += '<th>Données</th>';
+                }
+                html += '<th>Actions</th></tr></thead><tbody>';
+
                 data.forEach(row => {
-                    html += `<tr>
-                        <td>${row.id}</td>
-                        <td>${JSON.stringify(row).substring(0, 50)}...</td>
-                        <td>
-                            <div class="action-btns">
-                                <button class="btn-sm" onclick="editRecord('${dataTable}', '${row.id}')">✏️</button>
-                                <button class="btn-sm btn-delete" onclick="deleteRecord('${dataTable}', '${row.id}')">🗑️</button>
-                            </div>
-                        </td>
-                    </tr>`;
+                    html += '<tr>';
+                    if (schema.length > 0) {
+                        schema.slice(0, 3).forEach(field => {
+                            html += `<td>${row[field.name] || '-'}</td>`;
+                        });
+                    } else {
+                        html += `<td>${JSON.stringify(row).substring(0, 50)}...</td>`;
+                    }
+                    html += `<td>
+                        <div class="action-btns">
+                            <button class="btn-sm" onclick="showEditForm('${dataTable}', '${row.id}')">✏️</button>
+                            <button class="btn-sm btn-delete" onclick="deleteRecord('${dataTable}', '${row.id}')">🗑️</button>
+                        </div>
+                    </td></tr>`;
                 });
                 html += '</tbody></table></div>';
             }
@@ -776,13 +853,111 @@
         }
 
         function showAddForm(dataTable) {
-            const name = prompt('Nom:');
-            if (!name) return;
+            const schema = FIELD_SCHEMAS[dataTable];
+            if (!schema) {
+                alert('Schéma non trouvé');
+                return;
+            }
 
-            const id = 'REC_' + Math.random().toString(36).substring(7).toUpperCase();
-            app.db[dataTable].push({ id, name, created_at: new Date().toISOString() });
-            saveToStorage();
-            renderContent(dataTable);
+            const formHtml = `
+                <div class="form-container show">
+                    <div class="form-modal">
+                        <h3>Ajouter ${app.currentOnglet}</h3>
+                        <form id="add-form">
+                            ${schema.map(field => `
+                                <div class="form-group">
+                                    <label>${field.label}</label>
+                                    <input type="${field.type}" name="${field.name}" ${field.required ? 'required' : ''} placeholder="${field.label}">
+                                </div>
+                            `).join('')}
+                            <div class="form-actions">
+                                <button type="button" class="btn-secondary" onclick="this.closest('.form-container').remove()">Annuler</button>
+                                <button type="submit" class="btn-primary">Enregistrer</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            `;
+
+            const container = document.createElement('div');
+            container.innerHTML = formHtml;
+            document.body.appendChild(container);
+
+            container.querySelector('#add-form').addEventListener('submit', (e) => {
+                e.preventDefault();
+                const formData = new FormData(e.target);
+                const record = {
+                    id: 'REC_' + Math.random().toString(36).substring(7).toUpperCase(),
+                    ...Object.fromEntries(formData),
+                    created_at: new Date().toISOString()
+                };
+                app.db[dataTable].push(record);
+                saveToStorage();
+                container.remove();
+                renderContent(dataTable);
+            });
+
+            container.querySelector('.form-container').addEventListener('click', (e) => {
+                if (e.target === container.querySelector('.form-container')) {
+                    container.remove();
+                }
+            });
+        }
+
+        function showEditForm(dataTable, id) {
+            const schema = FIELD_SCHEMAS[dataTable];
+            const record = app.db[dataTable].find(r => r.id === id);
+
+            if (!schema || !record) {
+                alert('Erreur');
+                return;
+            }
+
+            const formHtml = `
+                <div class="form-container show">
+                    <div class="form-modal">
+                        <h3>Éditer ${app.currentOnglet}</h3>
+                        <form id="edit-form">
+                            ${schema.map(field => `
+                                <div class="form-group">
+                                    <label>${field.label}</label>
+                                    <input type="${field.type}" name="${field.name}" value="${record[field.name] || ''}" ${field.required ? 'required' : ''}>
+                                </div>
+                            `).join('')}
+                            <div class="form-actions">
+                                <button type="button" class="btn-secondary" onclick="this.closest('.form-container').remove()">Annuler</button>
+                                <button type="submit" class="btn-primary">Modifier</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            `;
+
+            const container = document.createElement('div');
+            container.innerHTML = formHtml;
+            document.body.appendChild(container);
+
+            container.querySelector('#edit-form').addEventListener('submit', (e) => {
+                e.preventDefault();
+                const formData = new FormData(e.target);
+                const idx = app.db[dataTable].findIndex(r => r.id === id);
+                if (idx > -1) {
+                    app.db[dataTable][idx] = {
+                        ...app.db[dataTable][idx],
+                        ...Object.fromEntries(formData),
+                        updated_at: new Date().toISOString()
+                    };
+                    saveToStorage();
+                    container.remove();
+                    renderContent(dataTable);
+                }
+            });
+
+            container.querySelector('.form-container').addEventListener('click', (e) => {
+                if (e.target === container.querySelector('.form-container')) {
+                    container.remove();
+                }
+            });
         }
 
         function deleteRecord(dataTable, id) {
@@ -794,10 +969,6 @@
                 saveToStorage();
                 renderContent(dataTable);
             }
-        }
-
-        function editRecord(dataTable, id) {
-            alert('Édition en développement');
         }
 
         // ============================================
