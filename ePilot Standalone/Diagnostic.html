@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>Diagnostic V20</title>
+    <style>
+        body { font-family: monospace; margin: 20px; background: #f5f5f5; }
+        .section { background: white; padding: 15px; margin: 10px 0; border-radius: 4px; }
+        h2 { color: #c41e3a; }
+        .key { color: #666; }
+        .value { color: #333; word-break: break-all; }
+        pre { background: #f0f0f0; padding: 10px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>🔍 Diagnostic V20 localStorage</h1>
+
+    <div class="section">
+        <h2>1. Contenu de localStorage</h2>
+        <div id="localStorage"></div>
+    </div>
+
+    <div class="section">
+        <h2>2. Données spécifiques</h2>
+        <div id="specific"></div>
+    </div>
+
+    <div class="section">
+        <h2>3. Recherche de PI22600</h2>
+        <div id="search"></div>
+    </div>
+
+    <script>
+        // Display localStorage
+        const lsDiv = document.getElementById('localStorage');
+        const keys = Object.keys(localStorage);
+        lsDiv.innerHTML = `<p>Total clés: ${keys.length}</p>`;
+        keys.forEach(key => {
+            const val = localStorage.getItem(key);
+            const preview = val.substring(0, 100) + (val.length > 100 ? '...' : '');
+            lsDiv.innerHTML += `<p><span class="key">${key}:</span><br><span class="value">${preview}</span></p>`;
+        });
+
+        // Check specific keys
+        const specDiv = document.getElementById('specific');
+        const keysToCheck = ['ePilot_PERSONNEL_DATA', 'ePilot_JIP_DATA', 'ePilot_ARTICLES', 'V21.DEVIS_DATA', 'epilot_v21_complete_db'];
+        specDiv.innerHTML = '';
+        keysToCheck.forEach(key => {
+            const val = localStorage.getItem(key);
+            if (val) {
+                try {
+                    const parsed = JSON.parse(val);
+                    const count = Array.isArray(parsed) ? parsed.length : Object.keys(parsed).length;
+                    specDiv.innerHTML += `<p>✓ <strong>${key}:</strong> ${count} items</p>`;
+                } catch (e) {
+                    specDiv.innerHTML += `<p>❌ <strong>${key}:</strong> Invalid JSON</p>`;
+                }
+            } else {
+                specDiv.innerHTML += `<p>❌ <strong>${key}:</strong> Not found</p>`;
+            }
+        });
+
+        // Search for PI22600
+        const searchDiv = document.getElementById('search');
+        const fullText = JSON.stringify(localStorage);
+        if (fullText.includes('PI22600')) {
+            searchDiv.innerHTML = `<p>❌ <strong>PI22600 found!</strong></p><p>C'est un problème - les vieilles données sont toujours là!</p>`;
+        } else {
+            searchDiv.innerHTML = `<p>✓ PI22600 NOT found</p><p>Les données devraient être les nouvelles.</p>`;
+        }
+    </script>
+</body>
+</html>
