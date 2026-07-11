@@ -616,7 +616,7 @@
                 label: '⚙️ Paramètres',
                 onglets: {
                     'Utilisateurs': { sous: [], data: 'USERS_DATA' },
-                    'Entreprise': { sous: [], data: 'COMPANY_DATA' },
+                    'Configuration': { sous: [], data: 'CONFIG_DATA' },
                     'Sauvegardes': { sous: [], data: 'BACKUP_DATA' },
                     'Notifications': { sous: [], data: 'NOTIFICATIONS_DATA' },
                     'Préférences': { sous: [], data: 'PREFERENCES_DATA' }
@@ -636,11 +636,37 @@
         };
 
         // ============================================
+        // TABLE TO PREFIX MAPPING
+        // ============================================
+        const TABLE_PREFIXES = {
+            ARTICLES_DATA: 'ART',
+            PERSONNEL_DATA: 'EMP',
+            CLIENTS_DATA: 'CLT',
+            CHANTIERS_DATA: 'CHT',
+            FOURNISSEURS_DATA: 'FRN',
+            SITES_DATA: 'SIT',
+            USERS_DATA: 'USR'
+        };
+
+        // ============================================
         // INITIALIZATION
         // ============================================
         function initializeDatabase() {
             app.db = {
-                USERS_DATA: [{ id: 'USR_001', name: 'Admin', role: 'Admin', password: 'admin', created_at: new Date().toISOString() }]
+                USERS_DATA: [{ id: 'USR_001', name: 'Admin', role: 'Admin', password: 'admin', created_at: new Date().toISOString() }],
+                CONFIG_DATA: {
+                    idFormat: 'simple', // 'simple' (ART_001) or 'yearly' (ART_2025_001)
+                    counters: {
+                        ART: 0,
+                        EMP: 0,
+                        CLT: 0,
+                        CHT: 0,
+                        FRN: 0,
+                        SIT: 0,
+                        USR: 0
+                    },
+                    lastReset: new Date().toISOString().split('T')[0]
+                }
             };
 
             // Initialize all data tables
@@ -653,6 +679,21 @@
                     }
                 });
             });
+        }
+
+        function generateId(prefix) {
+            const config = app.db.CONFIG_DATA;
+            if (!config.counters[prefix]) {
+                config.counters[prefix] = 0;
+            }
+            config.counters[prefix]++;
+            const num = String(config.counters[prefix]).padStart(3, '0');
+
+            if (config.idFormat === 'yearly') {
+                const year = new Date().getFullYear();
+                return `${prefix}_${year}_${num}`;
+            }
+            return `${prefix}_${num}`;
         }
 
         function saveToStorage() {
@@ -804,6 +845,12 @@
                 return;
             }
 
+            // Special handling for CONFIG_DATA
+            if (dataTable === 'CONFIG_DATA') {
+                renderConfigPage(content);
+                return;
+            }
+
             const data = app.db[dataTable] || [];
             const schema = FIELD_SCHEMAS[dataTable] || [];
 
@@ -898,8 +945,9 @@
             container.querySelector('#add-form').addEventListener('submit', (e) => {
                 e.preventDefault();
                 const formData = new FormData(e.target);
+                const prefix = TABLE_PREFIXES[dataTable] || 'REC';
                 const record = {
-                    id: 'REC_' + Math.random().toString(36).substring(7).toUpperCase(),
+                    id: generateId(prefix),
                     ...Object.fromEntries(formData),
                     created_at: new Date().toISOString()
                 };
@@ -1102,6 +1150,99 @@
                 app.db[dataTable].splice(idx, 1);
                 saveToStorage();
                 renderContent(dataTable);
+            }
+        }
+
+        function renderConfigPage(container) {
+            const config = app.db.CONFIG_DATA;
+
+            let html = `
+                <div class="section-header">
+                    <h3>⚙️ Configuration - Numérotation des IDs</h3>
+                </div>
+
+                <div style="background: white; padding: 20px; border-radius: 6px; margin-bottom: 20px;">
+                    <h4 style="color: var(--primary); margin-bottom: 15px;">📋 Format des IDs</h4>
+
+                    <div style="margin-bottom: 15px;">
+                        <label style="display: flex; align-items: center; gap: 10px; cursor: pointer;">
+                            <input type="radio" name="format" value="simple" ${config.idFormat === 'simple' ? 'checked' : ''} onchange="changeIdFormat('simple')">
+                            <span>Simple: <code>ART_001, ART_002</code></span>
+                        </label>
+                    </div>
+
+                    <div>
+                        <label style="display: flex; align-items: center; gap: 10px; cursor: pointer;">
+                            <input type="radio" name="format" value="yearly" ${config.idFormat === 'yearly' ? 'checked' : ''} onchange="changeIdFormat('yearly')">
+                            <span>Annuel: <code>ART_2025_001, ART_2025_002</code></span>
+                        </label>
+                    </div>
+                </div>
+
+                <div style="background: white; padding: 20px; border-radius: 6px; margin-bottom: 20px;">
+                    <h4 style="color: var(--primary); margin-bottom: 15px;">📊 Compteurs actuels</h4>
+
+                    <table style="width: 100%; border-collapse: collapse;">
+                        <thead>
+                            <tr style="background: #f9f9f9; border-bottom: 2px solid var(--border);">
+                                <th style="padding: 10px; text-align: left;">Type</th>
+                                <th style="padding: 10px; text-align: left;">Compteur</th>
+                                <th style="padding: 10px; text-align: left;">Prochain ID</th>
+                                <th style="padding: 10px; text-align: left;">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${Object.entries(config.counters).map(([prefix, count]) => {
+                                const nextId = config.idFormat === 'yearly'
+                                    ? `${prefix}_${new Date().getFullYear()}_${String(count + 1).padStart(3, '0')}`
+                                    : `${prefix}_${String(count + 1).padStart(3, '0')}`;
+                                return `
+                                    <tr style="border-bottom: 1px solid var(--border);">
+                                        <td style="padding: 10px;">${prefix}</td>
+                                        <td style="padding: 10px;"><strong>${count}</strong></td>
+                                        <td style="padding: 10px;"><code>${nextId}</code></td>
+                                        <td style="padding: 10px;">
+                                            <button class="btn-sm" onclick="resetCounter('${prefix}')">Réinitialiser</button>
+                                        </td>
+                                    </tr>
+                                `;
+                            }).join('')}
+                        </tbody>
+                    </table>
+                </div>
+
+                <div style="background: white; padding: 20px; border-radius: 6px;">
+                    <h4 style="color: var(--primary); margin-bottom: 15px;">🔄 Réinitialisation annuelle</h4>
+                    <p style="color: #666; font-size: 13px; margin-bottom: 15px;">Dernière réinitialisation: ${config.lastReset}</p>
+                    <button class="btn-primary" onclick="resetAllCounters()">Réinitialiser tous les compteurs</button>
+                </div>
+            `;
+
+            container.innerHTML = html;
+        }
+
+        function changeIdFormat(format) {
+            app.db.CONFIG_DATA.idFormat = format;
+            saveToStorage();
+            renderContent('CONFIG_DATA');
+        }
+
+        function resetCounter(prefix) {
+            if (confirm(`Réinitialiser le compteur ${prefix}?`)) {
+                app.db.CONFIG_DATA.counters[prefix] = 0;
+                saveToStorage();
+                renderContent('CONFIG_DATA');
+            }
+        }
+
+        function resetAllCounters() {
+            if (confirm('Êtes-vous sûr? Cela réinitialisera tous les compteurs à 0.')) {
+                Object.keys(app.db.CONFIG_DATA.counters).forEach(prefix => {
+                    app.db.CONFIG_DATA.counters[prefix] = 0;
+                });
+                app.db.CONFIG_DATA.lastReset = new Date().toISOString().split('T')[0];
+                saveToStorage();
+                renderContent('CONFIG_DATA');
             }
         }
 
