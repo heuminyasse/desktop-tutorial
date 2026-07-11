@@ -1,6 +1,252 @@
 <!DOCTYPE html>
 <html>
-<head><script>window.__epKeepApplying=window.__epKeepApplying||function(fn,o){o=o||{};var i=o.interval||400,tr=(o.tries!=null)?o.tries:400,t=0,busy=false,sched=0;function run(){if(busy)return;busy=true;try{fn();}catch(e){}busy=false;}(function p(){run();if(t++>tr)return;setTimeout(p,i);})();try{new MutationObserver(function(){if(busy||sched)return;sched=setTimeout(function(){sched=0;run();},60);}).observe(document.documentElement||document,{childList:true,subtree:true});}catch(e){}};window.__epOnBodyMut=window.__epOnBodyMut||(function(){var cbs=[],sched=0,started=false;function flush(){sched=0;for(var i=0;i<cbs.length;i++){try{cbs[i]();}catch(e){}}}function start(){if(started)return;var root=document.body||document.documentElement;if(!root)return;started=true;try{new MutationObserver(function(){if(sched)return;sched=setTimeout(flush,80);}).observe(root,{childList:true,subtree:true});}catch(e){}}return function(cb){if(typeof cb!=='function')return;cbs.push(cb);if(document.body){start();}else{try{document.addEventListener('DOMContentLoaded',start);}catch(e){}}};})();</script>
+<head>
+<script id="__ep_data_adapter">
+/**
+ * v20 ↔ v21 Data Adapter
+ *
+ * This adapter intercepts localStorage to map v20's distributed data format
+ * to v21's centralized database structure, all transparently.
+ *
+ * v20 format: Multiple localStorage keys (epilot_chantier_data_v1, ePilot_QUOTE_DATA, etc.)
+ * v21 format: Single localStorage key (epilot_v21_complete_db) with nested tables
+ */
+
+(function() {
+  // Prevent double initialization
+  if (window.__epDataAdapterV20V21) return;
+  window.__epDataAdapterV20V21 = true;
+
+  // V21 database structure
+  const V21_DB_KEY = 'epilot_v21_complete_db';
+
+  // Map of v20 localStorage keys to v21 table names
+  const V20_TO_V21_MAP = {
+    'epilot_chantier_data_v1': 'CHANTIERS_DATA',
+    'epilot_activity_reports': 'RAPPORTS_DATA',
+    'ePilot_QUOTE_DATA': 'DEVIS_DATA',
+    'epilot_paie_payslips': 'PAIE_BULLETINS',
+    'epilot_paie_complements': 'PAIE_COMPLEMENTS',
+    'epilot_paie_credits': 'PAIE_CREDITS',
+    'epilot_paie_primes': 'PAIE_PRIMES',
+    'epilot_paie_employees': 'PAIE_EMPLOYEES',
+    'epilot_paie_timesheet': 'PAIE_TIMESHEET',
+    'epilot_pde_paliers_v1': 'PDE_PALIERS',
+    'epilot_university_v1': 'COMPETENCES',
+    'hbo_int_projects_v1': 'PROJETS_INTERNES',
+    'hbo_mkt_projects_v3': 'PROJETS_MARKETING',
+    'hbo_meet_v1': 'REUNIONS',
+    'epilot_settings_v1': 'CONFIG_DATA',
+    'fcr_articles_cleared_v1': 'ARTICLES_CLEARED',
+    'epilot_pending_wipe': 'PENDING_OPS'
+  };
+
+  // Initialize v21 database if not exists
+  function initializeV21DB() {
+    try {
+      const existing = localStorage.getItem(V21_DB_KEY);
+      if (existing) {
+        return JSON.parse(existing);
+      }
+    } catch (e) {}
+
+    const db = {
+      ARTICLES_DATA: [],
+      CHANTIERS_DATA: {},
+      RAPPORTS_DATA: [],
+      DEVIS_DATA: [],
+      CLIENTS_DATA: [],
+      PERSONNEL_DATA: [],
+      SITES_DATA: [],
+      ACHETEURS_DATA: [],
+      FOURNISSEURS_DATA: [],
+      FACTURES_DATA: [],
+      USERS_DATA: [],
+      CONFIG_DATA: {},
+      PREFERENCES_DATA: {},
+      PAIE_BULLETINS: [],
+      PAIE_COMPLEMENTS: [],
+      PAIE_CREDITS: [],
+      PAIE_PRIMES: [],
+      PAIE_EMPLOYEES: [],
+      PAIE_TIMESHEET: [],
+      PDE_PALIERS: [],
+      COMPETENCES: [],
+      PROJETS_INTERNES: [],
+      PROJETS_MARKETING: [],
+      REUNIONS: [],
+      ARTICLES_CLEARED: [],
+      PENDING_OPS: []
+    };
+
+    try {
+      localStorage.setItem(V21_DB_KEY, JSON.stringify(db));
+    } catch (e) {
+      console.warn('[Adapter] Could not initialize V21 DB:', e);
+    }
+
+    return db;
+  }
+
+  // Get v21 database
+  function getV21DB() {
+    try {
+      const db = localStorage.getItem(V21_DB_KEY);
+      return db ? JSON.parse(db) : initializeV21DB();
+    } catch (e) {
+      console.warn('[Adapter] Could not load V21 DB, reinitializing:', e);
+      return initializeV21DB();
+    }
+  }
+
+  // Save v21 database
+  function saveV21DB(db) {
+    try {
+      localStorage.setItem(V21_DB_KEY, JSON.stringify(db));
+      return true;
+    } catch (e) {
+      console.warn('[Adapter] Could not save V21 DB:', e);
+      return false;
+    }
+  }
+
+  // Migrate v20 data to v21 format (lazy migration on first read)
+  function migrateV20Data(v20Key, v21Table) {
+    try {
+      const v20Data = localStorage.getItem(v20Key);
+      if (!v20Data) return null;
+
+      const db = getV21DB();
+
+      // If already migrated, return
+      if (db[v21Table] && Object.keys(db[v21Table]).length > 0) {
+        return db[v21Table];
+      }
+
+      // Parse v20 data
+      let parsed;
+      try {
+        parsed = JSON.parse(v20Data);
+      } catch (e) {
+        console.warn(`[Adapter] Invalid JSON in ${v20Key}:`, e);
+        return null;
+      }
+
+      // Store in v21 format
+      db[v21Table] = parsed;
+      saveV21DB(db);
+
+      console.log(`[Adapter] Migrated ${v20Key} → ${v21Table}`);
+      return parsed;
+
+    } catch (e) {
+      console.warn(`[Adapter] Migration error for ${v20Key}:`, e);
+      return null;
+    }
+  }
+
+  // Monkey-patch localStorage methods
+  const originalGetItem = localStorage.getItem.bind(localStorage);
+  const originalSetItem = localStorage.setItem.bind(localStorage);
+  const originalRemoveItem = localStorage.removeItem.bind(localStorage);
+
+  // Override getItem
+  localStorage.getItem = function(key) {
+    try {
+      // Handle v21 database key directly
+      if (key === V21_DB_KEY) {
+        return originalGetItem(key);
+      }
+
+      // Check if this is a v20 key that maps to v21
+      const v21Table = V20_TO_V21_MAP[key];
+      if (v21Table) {
+        // Try to migrate if needed
+        const migrated = originalGetItem(key);
+        if (migrated !== null) {
+          // Data still in v20 format, migrate it
+          try {
+            const data = JSON.parse(migrated);
+            const db = getV21DB();
+            db[v21Table] = data;
+            saveV21DB(db);
+            console.log(`[Adapter] Migrated ${key} → ${v21Table}`);
+            return migrated;
+          } catch (e) {}
+        }
+
+        // Get from v21 DB
+        const db = getV21DB();
+        if (db[v21Table]) {
+          return JSON.stringify(db[v21Table]);
+        }
+      }
+
+      // Fallback to original
+      return originalGetItem(key);
+    } catch (e) {
+      console.warn('[Adapter] Error in getItem:', e);
+      return originalGetItem(key);
+    }
+  };
+
+  // Override setItem
+  localStorage.setItem = function(key, value) {
+    try {
+      // Handle v21 database key directly
+      if (key === V21_DB_KEY) {
+        return originalSetItem(key, value);
+      }
+
+      // Check if this is a v20 key
+      const v21Table = V20_TO_V21_MAP[key];
+      if (v21Table) {
+        try {
+          const parsed = JSON.parse(value);
+          const db = getV21DB();
+          db[v21Table] = parsed;
+          saveV21DB(db);
+          console.log(`[Adapter] Stored ${key} → ${v21Table}`);
+          return;
+        } catch (e) {
+          console.warn(`[Adapter] Could not parse/store ${key}:`, e);
+        }
+      }
+
+      // Fallback to original for unmapped keys
+      return originalSetItem(key, value);
+    } catch (e) {
+      console.warn('[Adapter] Error in setItem:', e);
+      return originalSetItem(key, value);
+    }
+  };
+
+  // Override removeItem
+  localStorage.removeItem = function(key) {
+    try {
+      const v21Table = V20_TO_V21_MAP[key];
+      if (v21Table) {
+        const db = getV21DB();
+        db[v21Table] = (Array.isArray(db[v21Table]) ? [] : {});
+        saveV21DB(db);
+        return;
+      }
+      return originalRemoveItem(key);
+    } catch (e) {
+      console.warn('[Adapter] Error in removeItem:', e);
+      return originalRemoveItem(key);
+    }
+  };
+
+  // Initialize v21 database on startup
+  console.log('[Adapter] Initializing v20↔v21 data adapter');
+  initializeV21DB();
+  console.log('[Adapter] Ready');
+
+})();
+
+</script>
+<script>window.__epKeepApplying=window.__epKeepApplying||function(fn,o){o=o||{};var i=o.interval||400,tr=(o.tries!=null)?o.tries:400,t=0,busy=false,sched=0;function run(){if(busy)return;busy=true;try{fn();}catch(e){}busy=false;}(function p(){run();if(t++>tr)return;setTimeout(p,i);})();try{new MutationObserver(function(){if(busy||sched)return;sched=setTimeout(function(){sched=0;run();},60);}).observe(document.documentElement||document,{childList:true,subtree:true});}catch(e){}};window.__epOnBodyMut=window.__epOnBodyMut||(function(){var cbs=[],sched=0,started=false;function flush(){sched=0;for(var i=0;i<cbs.length;i++){try{cbs[i]();}catch(e){}}}function start(){if(started)return;var root=document.body||document.documentElement;if(!root)return;started=true;try{new MutationObserver(function(){if(sched)return;sched=setTimeout(flush,80);}).observe(root,{childList:true,subtree:true});}catch(e){}}return function(cb){if(typeof cb!=='function')return;cbs.push(cb);if(document.body){start();}else{try{document.addEventListener('DOMContentLoaded',start);}catch(e){}}};})();</script>
   <meta charset="utf-8">
   <title>HBO — Hub</title>
   <style>
