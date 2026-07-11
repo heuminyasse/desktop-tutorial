@@ -844,6 +844,11 @@
                 btn.textContent = name;
                 btn.onclick = () => selectSousOnglet(name);
                 container.appendChild(btn);
+
+                // Set first as active
+                if (idx === 0) {
+                    app.currentSousOnglet = name;
+                }
             });
         }
 
@@ -852,6 +857,15 @@
 
             document.querySelectorAll('.sous-onglet-btn').forEach(btn => btn.classList.remove('active'));
             event.target?.classList.add('active');
+
+            // Re-render content with new sous-onglet
+            const page = STRUCTURE[app.currentPage];
+            if (page) {
+                const onglet = page.onglets[app.currentOnglet];
+                if (onglet && onglet.data) {
+                    renderContent(onglet.data);
+                }
+            }
         }
 
         function renderContent(dataTable) {
