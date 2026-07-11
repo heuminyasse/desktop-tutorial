@@ -508,6 +508,7 @@
                 { name: 'niu', label: 'NIU', type: 'text' }
             ],
             SITES_DATA: [
+                { name: 'clientId', label: 'Client', type: 'text', required: true },
                 { name: 'nom', label: 'Nom Site', type: 'text', required: true },
                 { name: 'adresse', label: 'Adresse', type: 'text' },
                 { name: 'ville', label: 'Ville', type: 'text' },
@@ -516,10 +517,47 @@
                 { name: 'email', label: 'Email', type: 'email' },
                 { name: 'type', label: 'Type', type: 'text' }
             ],
-            ARTICLES_DATA: [
-                { name: 'nom', label: 'Nom Article', type: 'text', required: true },
+            ACHETEURS_DATA: [
+                { name: 'clientId', label: 'Client', type: 'text', required: true },
+                { name: 'nom', label: 'Nom Acheteur', type: 'text', required: true },
+                { name: 'poste', label: 'Poste', type: 'text' },
+                { name: 'email', label: 'Email', type: 'email' },
+                { name: 'telephone', label: 'Téléphone', type: 'text' },
+                { name: 'adresse', label: 'Adresse', type: 'text' }
+            ],
+            ARTICLES_RFQ: [
+                { name: 'designation', label: 'Désignation', type: 'text', required: true },
                 { name: 'description', label: 'Description', type: 'textarea' },
-                { name: 'unite', label: 'Unité (pcs, kg, m, etc.)', type: 'text' }
+                { name: 'quantite', label: 'Quantité', type: 'number' },
+                { name: 'unite', label: 'Unité', type: 'text' },
+                { name: 'prixUnitaire', label: 'Prix Unitaire', type: 'number' }
+            ],
+            ARTICLES_FINANCES: [
+                { name: 'designation', label: 'Désignation', type: 'text', required: true },
+                { name: 'description', label: 'Description', type: 'textarea' },
+                { name: 'quantite', label: 'Quantité', type: 'number' },
+                { name: 'montant', label: 'Montant', type: 'number' }
+            ],
+            ARTICLES_MARKETING: [
+                { name: 'designation', label: 'Désignation', type: 'text', required: true },
+                { name: 'description', label: 'Description', type: 'textarea' },
+                { name: 'statut', label: 'Statut', type: 'text' }
+            ],
+            ARTICLES_FCR: [
+                { name: 'designation', label: 'Désignation', type: 'text', required: true },
+                { name: 'description', label: 'Description', type: 'textarea' },
+                { name: 'statut', label: 'Statut', type: 'text' }
+            ],
+            ARTICLES_BOUTIQUE: [
+                { name: 'designation', label: 'Désignation', type: 'text', required: true },
+                { name: 'description', label: 'Description', type: 'textarea' },
+                { name: 'quantite', label: 'Quantité Stock', type: 'number' },
+                { name: 'prix', label: 'Prix', type: 'number' }
+            ],
+            ARTICLES_PAPIERS: [
+                { name: 'designation', label: 'Désignation', type: 'text', required: true },
+                { name: 'description', label: 'Description', type: 'textarea' },
+                { name: 'type', label: 'Type Papier', type: 'text' }
             ],
             CHANTIERS_DATA: [
                 { name: 'numero', label: 'N° Chantier', type: 'text', required: true },
@@ -575,20 +613,26 @@
                 label: '🏗️ Projets',
                 onglets: {
                     'Chantiers': { sous: ['Tableau de bord', 'En Cours', 'OA'], data: 'CHANTIERS_DATA' },
-                    'RFQ': { sous: ['Tableau de bord', 'RFQ', 'Devis'], data: 'ARTICLES_DATA' },
-                    'Finances': { sous: ['Dépenses', 'Dettes', 'PO', 'Colis / In-transit', 'Facturation'], data: 'ARTICLES_DATA' },
-                    'Marketing': { sous: ['Pipeline marketing', 'Projet & Stage', 'Meeting'], data: 'ARTICLES_DATA' },
-                    'FCR': { sous: [], data: 'ARTICLES_DATA' }
+                    'RFQ': { sous: ['Tableau de bord', 'RFQ', 'Devis'], data: 'ARTICLES_RFQ' },
+                    'Finances': { sous: ['Dépenses', 'Dettes', 'PO', 'Colis / In-transit', 'Facturation'], data: 'ARTICLES_FINANCES' },
+                    'Marketing': { sous: ['Pipeline marketing', 'Projet & Stage', 'Meeting'], data: 'ARTICLES_MARKETING' },
+                    'FCR': { sous: [], data: 'ARTICLES_FCR' }
+                }
+            },
+            REFERENCES: {
+                label: '📋 Références',
+                onglets: {
+                    'Clients': { sous: [], data: 'CLIENTS_DATA' },
+                    'Sites': { sous: [], data: 'SITES_DATA' },
+                    'Acheteurs': { sous: [], data: 'ACHETEURS_DATA' },
+                    'Fournisseurs': { sous: [], data: 'FOURNISSEURS_DATA' }
                 }
             },
             ARCHIVES: {
                 label: '📚 Archives',
                 onglets: {
-                    'Clients': { sous: ['Clients', 'Sites', 'Acheteurs'], data: 'CLIENTS_DATA' },
-                    'Articles': { sous: [], data: 'ARTICLES_DATA' },
-                    'Fournisseurs': { sous: [], data: 'FOURNISSEURS_DATA' },
-                    'Boutique': { sous: [], data: 'ARTICLES_DATA' },
-                    'Papiers': { sous: [], data: 'ARTICLES_DATA' }
+                    'Boutique': { sous: [], data: 'ARTICLES_BOUTIQUE' },
+                    'Papiers': { sous: [], data: 'ARTICLES_PAPIERS' }
                 }
             },
             QUETES: {
@@ -639,12 +683,18 @@
         // TABLE TO PREFIX MAPPING
         // ============================================
         const TABLE_PREFIXES = {
-            ARTICLES_DATA: 'ART',
+            ARTICLES_RFQ: 'ART_RFQ',
+            ARTICLES_FINANCES: 'ART_FIN',
+            ARTICLES_MARKETING: 'ART_MKT',
+            ARTICLES_FCR: 'ART_FCR',
+            ARTICLES_BOUTIQUE: 'ART_BOT',
+            ARTICLES_PAPIERS: 'ART_PAP',
             PERSONNEL_DATA: 'EMP',
             CLIENTS_DATA: 'CLT',
+            SITES_DATA: 'SIT',
+            ACHETEURS_DATA: 'ACH',
             CHANTIERS_DATA: 'CHT',
             FOURNISSEURS_DATA: 'FRN',
-            SITES_DATA: 'SIT',
             USERS_DATA: 'USR'
         };
 
@@ -657,13 +707,8 @@
                 CONFIG_DATA: {
                     idFormat: 'simple', // 'simple' (ART_001) or 'yearly' (ART_2025_001)
                     counters: {
-                        ART: 0,
-                        EMP: 0,
-                        CLT: 0,
-                        CHT: 0,
-                        FRN: 0,
-                        SIT: 0,
-                        USR: 0
+                        ART_RFQ: 0, ART_FIN: 0, ART_MKT: 0, ART_FCR: 0, ART_BOT: 0, ART_PAP: 0,
+                        EMP: 0, CLT: 0, CHT: 0, FRN: 0, SIT: 0, ACH: 0, USR: 0
                     },
                     lastReset: new Date().toISOString().split('T')[0]
                 }
@@ -686,7 +731,8 @@
                 app.db.CONFIG_DATA = {
                     idFormat: 'simple',
                     counters: {
-                        ART: 0, EMP: 0, CLT: 0, CHT: 0, FRN: 0, SIT: 0, USR: 0
+                        ART_RFQ: 0, ART_FIN: 0, ART_MKT: 0, ART_FCR: 0, ART_BOT: 0, ART_PAP: 0,
+                        EMP: 0, CLT: 0, CHT: 0, FRN: 0, SIT: 0, ACH: 0, USR: 0
                     },
                     lastReset: new Date().toISOString().split('T')[0]
                 };
@@ -1355,7 +1401,13 @@
                         PERSONNEL_DATA: v20Data.PERSONNEL_DATA || [],
                         CLIENTS_DATA: v20Data.ORGANISATIONS || [],
                         SITES_DATA: v20Data.SITES || [],
-                        ARTICLES_DATA: mapArticles(v20Data),
+                        ACHETEURS_DATA: [],
+                        ARTICLES_BOUTIQUE: mapArticles(v20Data),
+                        ARTICLES_RFQ: [],
+                        ARTICLES_FINANCES: [],
+                        ARTICLES_MARKETING: [],
+                        ARTICLES_FCR: [],
+                        ARTICLES_PAPIERS: [],
                         FOURNISSEURS_DATA: v20Data.FOURNISSEURS || [],
                         CHANTIERS_DATA: v20Data.PROJETS || []
                     };
