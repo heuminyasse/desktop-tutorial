@@ -3434,9 +3434,10 @@
         // Initialize when DOM is ready
         document.addEventListener('DOMContentLoaded', () => {
             app.init();
+            app.loadFromStorage();
 
             // Auto-import v20 data if available
-            const v20ImportKey = 'v20_import_done';
+            const v20ImportKey = 'v20_import_done_v2';
             if (!sessionStorage.getItem(v20ImportKey)) {
                 fetch('v20-import-data.json')
                     .then(r => r.json())
@@ -3444,6 +3445,7 @@
                         // Merge v20 data into app.db
                         Object.assign(app.db, v20Data);
                         app.saveToStorage();
+                        app.renderPersonnel?.();
                         sessionStorage.setItem(v20ImportKey, 'true');
 
                         const total = (v20Data.QUOTE_DATA?.length || 0) +
@@ -3451,7 +3453,20 @@
                                     (v20Data.PDE_DATA?.length || 0);
                         console.log(`✓ Auto-imported ${total} v20 records`);
                     })
-                    .catch(e => console.log('No v20 import data available'));
+                    .catch(e => {
+                        // Check if we have local data
+                        const stored = localStorage.getItem('epillot_v21_db');
+                        if (stored) {
+                            try {
+                                app.db = JSON.parse(stored);
+                                app.renderPersonnel?.();
+                                const count = app.db.PERSONNEL_DATA?.length || 0;
+                                console.log(`✓ Loaded ${count} personnel from storage`);
+                            } catch (e2) {
+                                console.log('Storage load error:', e2.message);
+                            }
+                        }
+                    });
             }
         });
     </script>
