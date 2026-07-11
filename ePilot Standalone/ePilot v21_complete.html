@@ -998,8 +998,15 @@
 
             let html = `
                 <div class="section-header">
-                    <h3>${app.currentOnglet}</h3>
-                    <button class="btn-primary" onclick="showAddForm('${dataTable}')">+ Ajouter</button>
+                    <div style="display: flex; gap: 10px; align-items: center; flex: 1;">
+                        <h3 style="margin: 0;">${app.currentOnglet}</h3>
+                        <input type="text" id="search-input" placeholder="🔍 Rechercher..." style="padding: 8px 12px; border: 1px solid #ddd; border-radius: 4px; font-size: 13px; flex: 1; max-width: 300px;" onkeyup="filterTable(this.value, '${dataTable}')">
+                    </div>
+                    <div style="display: flex; gap: 10px;">
+                        <button class="btn-primary" onclick="showAddForm('${dataTable}')">+ Ajouter</button>
+                        <button class="btn-secondary" onclick="exportData('${dataTable}', 'csv')" style="background: #666;">📥 CSV</button>
+                        <button class="btn-secondary" onclick="exportData('${dataTable}', 'json')" style="background: #666;">💾 JSON</button>
+                    </div>
                 </div>
             `;
 
@@ -1057,7 +1064,7 @@
             content.innerHTML = html;
         }
 
-        function renderFormFields(schema, record = null) {
+        function renderFormFields(schema, record = null, dataTable = null) {
             return schema.map(field => {
                 if (field.readonly) return '';
 
@@ -1067,7 +1074,28 @@
                 if (field.type === 'textarea') {
                     inputHtml = `<textarea name="${field.name}" ${field.required ? 'required' : ''} placeholder="${field.label}" rows="4">${value}</textarea>`;
                 } else if (field.type === 'select') {
-                    inputHtml = `<select name="${field.name}" ${field.required ? 'required' : ''}><option value="">-- Sélectionner --</option></select>`;
+                    let options = '<option value="">-- Sélectionner --</option>';
+
+                    // Smart selectors based on field name
+                    if (field.name === 'clientId') {
+                        (app.db.CLIENTS_DATA || []).forEach(c => {
+                            options += `<option value="${c.id}" ${c.id === value ? 'selected' : ''}>${c.nom || c.id}</option>`;
+                        });
+                    } else if (field.name === 'fournisseurId') {
+                        (app.db.FOURNISSEURS_DATA || []).forEach(f => {
+                            options += `<option value="${f.id}" ${f.id === value ? 'selected' : ''}>${f.nom || f.id}</option>`;
+                        });
+                    } else if (field.name === 'siteId') {
+                        (app.db.SITES_DATA || []).forEach(s => {
+                            options += `<option value="${s.id}" ${s.id === value ? 'selected' : ''}>${s.nom || s.id}</option>`;
+                        });
+                    } else if (field.name === 'articleId') {
+                        (app.db.ARTICLES_DATA || []).forEach(a => {
+                            options += `<option value="${a.id}" ${a.id === value ? 'selected' : ''}>${a.reference} - ${a.description}</option>`;
+                        });
+                    }
+
+                    inputHtml = `<select name="${field.name}" ${field.required ? 'required' : ''}>${options}</select>`;
                 } else {
                     inputHtml = `<input type="${field.type}" name="${field.name}" ${field.required ? 'required' : ''} placeholder="${field.label}" value="${value}">`;
                 }
@@ -1093,7 +1121,7 @@
                     <div class="form-modal">
                         <h3>➕ Ajouter ${app.currentOnglet}</h3>
                         <form id="add-form">
-                            ${renderFormFields(schema)}
+                            ${renderFormFields(schema, null, dataTable)}
                             <div class="form-actions">
                                 <button type="button" class="btn-secondary" onclick="this.closest('.form-container').remove()">✕ Annuler</button>
                                 <button type="submit" class="btn-primary">✓ Enregistrer</button>
@@ -1153,7 +1181,7 @@
                         <h3>✏️ Modifier ${app.currentOnglet}</h3>
                         <p style="color: #999; font-size: 12px; margin-bottom: 15px;">ID: ${record.id}</p>
                         <form id="edit-form">
-                            ${renderFormFields(schema, record)}
+                            ${renderFormFields(schema, record, dataTable)}
                             <div class="form-actions">
                                 <button type="button" class="btn-secondary" onclick="this.closest('.form-container').remove()">✕ Annuler</button>
                                 <button type="submit" class="btn-primary">✓ Mettre à jour</button>
@@ -1212,6 +1240,54 @@
                 renderContent(dataTable);
                 alert('✓ Enregistrement supprimé!');
             }
+        }
+
+        function filterTable(searchTerm, dataTable) {
+            const rows = document.querySelectorAll('table tbody tr');
+            const term = searchTerm.toLowerCase();
+
+            rows.forEach(row => {
+                const text = row.textContent.toLowerCase();
+                row.style.display = text.includes(term) ? '' : 'none';
+            });
+        }
+
+        function exportData(dataTable, format) {
+            const data = app.db[dataTable] || [];
+            if (data.length === 0) {
+                alert('Aucune donnée à exporter');
+                return;
+            }
+
+            let content = '';
+            let filename = `${dataTable}_${new Date().toISOString().split('T')[0]}`;
+
+            if (format === 'json') {
+                content = JSON.stringify(data, null, 2);
+                filename += '.json';
+            } else if (format === 'csv') {
+                const headers = Object.keys(data[0]);
+                const csvHeaders = headers.join(',');
+                const csvRows = data.map(row => {
+                    return headers.map(h => {
+                        const val = row[h];
+                        if (typeof val === 'object') return JSON.stringify(val).replace(/"/g, '""');
+                        return String(val || '').replace(/"/g, '""');
+                    }).join(',');
+                });
+                content = [csvHeaders, ...csvRows].join('\n');
+                filename += '.csv';
+            }
+
+            const blob = new Blob([content], { type: 'text/plain' });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = filename;
+            link.click();
+            URL.revokeObjectURL(url);
+
+            alert(`✓ Export ${format.toUpperCase()} réussi!`);
         }
 
         function showArticleDetails(articleId) {
