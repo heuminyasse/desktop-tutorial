@@ -849,6 +849,9 @@
             const username = document.getElementById('username').value.toLowerCase();
             const password = document.getElementById('password').value;
 
+            console.log('Tentative de login:', username, password);
+            console.log('Utilisateurs disponibles:', app.db.USERS_DATA);
+
             const user = app.db.USERS_DATA.find(u =>
                 u.name.toLowerCase() === username && u.password === password
             );
@@ -859,7 +862,8 @@
                 showLoginScreen(false);
                 loadPage('accueil');
             } else {
-                alert('Identifiants incorrects');
+                const availableUsers = app.db.USERS_DATA.map(u => `${u.name}/${u.password}`).join(', ');
+                alert(`Identifiants incorrects.\n\nUtilisateurs disponibles: ${availableUsers || 'AUCUN'}`);
             }
         }
 
