@@ -1152,6 +1152,16 @@
                     record.marge = prixVente > 0 ? ((prixVente - prixAchat) / prixVente * 100).toFixed(2) : 0;
                 }
 
+                // Calculate montantTotal for DEVIS_DATA & FACTURES_DATA
+                if (dataTable === 'DEVIS_DATA' || dataTable === 'FACTURES_DATA') {
+                    const articles = typeof record.articles === 'string' ? [] : (record.articles || []);
+                    record.montantTotal = articles.reduce((sum, art) => {
+                        const qty = Number(art.quantite) || 0;
+                        const price = Number(art.prixUnitaire) || 0;
+                        return sum + (qty * price);
+                    }, 0);
+                }
+
                 app.db[dataTable].push(record);
                 saveToStorage();
                 container.remove();
@@ -1212,6 +1222,16 @@
                         const prixVente = Number(app.db[dataTable][index].prixVente) || 0;
                         const prixAchat = Number(app.db[dataTable][index].prixAchat) || 0;
                         app.db[dataTable][index].marge = prixVente > 0 ? ((prixVente - prixAchat) / prixVente * 100).toFixed(2) : 0;
+                    }
+
+                    // Recalculate montantTotal if DEVIS_DATA or FACTURES_DATA
+                    if (dataTable === 'DEVIS_DATA' || dataTable === 'FACTURES_DATA') {
+                        const articles = typeof app.db[dataTable][index].articles === 'string' ? [] : (app.db[dataTable][index].articles || []);
+                        app.db[dataTable][index].montantTotal = articles.reduce((sum, art) => {
+                            const qty = Number(art.quantite) || 0;
+                            const price = Number(art.prixUnitaire) || 0;
+                            return sum + (qty * price);
+                        }, 0);
                     }
 
                     saveToStorage();
