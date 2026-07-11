@@ -787,7 +787,6 @@
         }
 
         function showForm(title, fields, onSubmit) {
-            console.log('showForm called with:', title);
             const formContainer = document.createElement('div');
             formContainer.className = 'form-container show';
 
@@ -850,9 +849,6 @@
             const username = document.getElementById('username').value.toLowerCase();
             const password = document.getElementById('password').value;
 
-            console.log('Tentative de login:', username, password);
-            console.log('Utilisateurs disponibles:', app.db.USERS_DATA);
-
             const user = app.db.USERS_DATA.find(u =>
                 u.name.toLowerCase() === username && u.password === password
             );
@@ -863,8 +859,7 @@
                 showLoginScreen(false);
                 loadPage('accueil');
             } else {
-                const availableUsers = app.db.USERS_DATA.map(u => `${u.name}/${u.password}`).join(', ');
-                alert(`Identifiants incorrects.\n\nUtilisateurs disponibles: ${availableUsers || 'AUCUN'}`);
+                alert('Identifiants incorrects');
             }
         }
 
@@ -992,7 +987,6 @@
         // PAGE CONTENT RENDERING
         // ============================================
         function renderPageContent(page) {
-            console.log('renderPageContent called with page:', page, 'currentTab:', app.currentTab);
             const contentArea = document.getElementById('content-area');
             contentArea.innerHTML = '';
 
@@ -1075,11 +1069,8 @@
         }
 
         function renderReferentiels(container) {
-            console.log('renderReferentiels called, currentTab:', app.currentTab);
             if (app.currentTab === 'clients') {
-                console.log('Rendering clients tab');
                 const clients = getAllRecords('CLIENTS_DATA');
-                console.log('Clients data:', clients);
                 renderTable(container, 'CLIENTS_DATA', clients, ['id', 'nom', 'email', 'tel'], () => {
                     showForm('Nouveau Client', [
                         { name: 'nom', label: 'Nom', type: 'text', required: true },
@@ -1200,14 +1191,12 @@
         }
 
         function renderTable(container, tableId, data, columns, onAdd) {
-            console.log('renderTable called:', tableId, 'data length:', data.length);
             const header = `<div class="section-header">
                 <h3>${tableId.replace('_DATA', '')}</h3>
                 <div class="btn-group">
                     <button class="btn-primary btn-sm" id="add-btn-${tableId}">+ Ajouter</button>
                 </div>
             </div>`;
-            console.log('Button ID will be: add-btn-' + tableId);
 
             if (data.length === 0) {
                 container.innerHTML = header + '<div class="empty-state">Aucun enregistrement. Commencez par en ajouter un!</div>';
@@ -1243,7 +1232,6 @@
                     const addBtn = container.querySelector(`#add-btn-${tableId}`);
                     if (addBtn) {
                         addBtn.addEventListener('click', onAdd);
-                        console.log('Add button listener attached for', tableId);
                     }
                 }, 0);
 
