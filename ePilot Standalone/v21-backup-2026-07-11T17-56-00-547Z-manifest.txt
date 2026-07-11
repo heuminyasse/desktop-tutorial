@@ -1,0 +1,27 @@
+BACKUP MANIFEST
+================
+Date: 2026-07-11T17:56:00.552Z
+Timestamp: 2026-07-11T17-56-00-547Z
+
+RÉSUMÉ:
+-------
+Total items: 537
+Tables complètes: 3
+
+DÉTAILS PAR TABLE:
+------------------
+DEVIS_DATA: 529 items
+PDE_PALIERS: 6 items
+COMPETENCES: 2 items
+
+FICHIERS DE SAUVEGARDE:
+-----------------------
+- v21-backup-2026-07-11T17-56-00-547Z.json (données complètes en JSON)
+- v21-backup-2026-07-11T17-56-00-547Z-manifest.txt (ce fichier)
+
+RESTAURATION:
+-------------
+Pour restaurer, charger le contenu de v21-backup-2026-07-11T17-56-00-547Z.json dans:
+localStorage['epilot_v21_complete_db']
+
+ou utiliser le script de restore fourni.
