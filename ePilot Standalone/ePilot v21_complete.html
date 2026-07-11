@@ -1000,17 +1000,30 @@
             const formHtml = `
                 <div class="form-container show">
                     <div class="form-modal">
-                        <h3>Ajouter ${app.currentOnglet}</h3>
+                        <h3>➕ Ajouter ${app.currentOnglet}</h3>
                         <form id="add-form">
-                            ${schema.map(field => `
-                                <div class="form-group">
-                                    <label>${field.label}</label>
-                                    <input type="${field.type}" name="${field.name}" ${field.required ? 'required' : ''} placeholder="${field.label}">
-                                </div>
-                            `).join('')}
+                            ${schema.map(field => {
+                                if (field.readonly) return '';
+
+                                let inputHtml = '';
+                                if (field.type === 'textarea') {
+                                    inputHtml = `<textarea name="${field.name}" ${field.required ? 'required' : ''} placeholder="${field.label}" rows="4"></textarea>`;
+                                } else if (field.type === 'select') {
+                                    inputHtml = `<select name="${field.name}" ${field.required ? 'required' : ''}><option value="">-- Sélectionner --</option></select>`;
+                                } else {
+                                    inputHtml = `<input type="${field.type}" name="${field.name}" ${field.required ? 'required' : ''} placeholder="${field.label}">`;
+                                }
+
+                                return `
+                                    <div class="form-group">
+                                        <label>${field.label}${field.required ? ' *' : ''}</label>
+                                        ${inputHtml}
+                                    </div>
+                                `;
+                            }).join('')}
                             <div class="form-actions">
                                 <button type="button" class="btn-secondary" onclick="this.closest('.form-container').remove()">Annuler</button>
-                                <button type="submit" class="btn-primary">Enregistrer</button>
+                                <button type="submit" class="btn-primary">✓ Enregistrer</button>
                             </div>
                         </form>
                     </div>
@@ -1031,18 +1044,18 @@
                     created_at: new Date().toISOString()
                 };
 
-                // Initialize special structures for ARTICLES
+                // Calculate marge for ARTICLES_DATA
                 if (dataTable === 'ARTICLES_DATA') {
-                    record.ventes = [];
-                    record.achats = [];
-                    record.chiffrage = [];
-                    record.boutique = { disponible: false, quantiteStock: 0, prixBoutique: 0 };
+                    const prixVente = Number(record.prixVente) || 0;
+                    const prixAchat = Number(record.prixAchat) || 0;
+                    record.marge = prixVente > 0 ? ((prixVente - prixAchat) / prixVente * 100).toFixed(2) : 0;
                 }
 
                 app.db[dataTable].push(record);
                 saveToStorage();
                 container.remove();
                 renderContent(dataTable);
+                alert(`✓ ${app.currentOnglet} ajouté(e) avec succès!`);
             });
 
             container.querySelector('.form-container').addEventListener('click', (e) => {
