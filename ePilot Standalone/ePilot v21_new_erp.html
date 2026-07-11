@@ -787,6 +787,7 @@
         }
 
         function showForm(title, fields, onSubmit) {
+            console.log('showForm called with:', title);
             const formContainer = document.createElement('div');
             formContainer.className = 'form-container show';
 
@@ -1198,12 +1199,18 @@
             const header = `<div class="section-header">
                 <h3>${tableId.replace('_DATA', '')}</h3>
                 <div class="btn-group">
-                    <button class="btn-primary btn-sm" id="add-btn">+ Ajouter</button>
+                    <button class="btn-primary btn-sm" id="add-btn-${tableId}">+ Ajouter</button>
                 </div>
             </div>`;
 
             if (data.length === 0) {
                 container.innerHTML = header + '<div class="empty-state">Aucun enregistrement. Commencez par en ajouter un!</div>';
+                setTimeout(() => {
+                    const addBtn = container.querySelector(`#add-btn-${tableId}`);
+                    if (addBtn) {
+                        addBtn.addEventListener('click', onAdd);
+                    }
+                }, 0);
             } else {
                 let tableHTML = header + '<div class="table-container"><table>';
                 tableHTML += '<thead><tr>';
@@ -1226,7 +1233,13 @@
                 tableHTML += '</tbody></table></div>';
                 container.innerHTML = tableHTML;
 
-                container.querySelector('#add-btn').addEventListener('click', onAdd);
+                setTimeout(() => {
+                    const addBtn = container.querySelector(`#add-btn-${tableId}`);
+                    if (addBtn) {
+                        addBtn.addEventListener('click', onAdd);
+                        console.log('Add button listener attached for', tableId);
+                    }
+                }, 0);
 
                 container.querySelectorAll('.btn-delete').forEach(btn => {
                     btn.addEventListener('click', () => {
