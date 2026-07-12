@@ -14018,17 +14018,39 @@ console.log('[PI Import 2026] Done:',D.length,'rows upserted');
 })();
 </script>
 
-<!-- JIP.html - Navigation forcée vers Projets/JIP -->
+<!-- JIP.html - Suppression Accueil + Navigation Projets -->
 <script>
 (function() {
   window._jipStartup = function() {
-    console.log('[JIP] Démarrage - Cherche la page Projets...');
+    console.log('[JIP] Démarrage - SUPPRESSION complète Accueil + Navigation vers Projets...');
+
+    // SUPPRIMER (ne pas juste cacher) tous les éléments "Accueil" / "Home"
+    var allElements = document.querySelectorAll('*');
+    var toRemove = [];
+
+    allElements.forEach(function(elem) {
+      var text = (elem.textContent || '').toLowerCase().trim();
+
+      // Si c'est exactement "accueil" ou "home" (label/button/link)
+      if ((text === 'accueil' || text === 'home') &&
+          (elem.tagName === 'A' || elem.tagName === 'BUTTON' || elem.getAttribute('role') === 'tab')) {
+        console.log('[JIP] ❌ SUPPRESSION élément Accueil:', elem.textContent);
+        toRemove.push(elem);
+      }
+    });
+
+    // Supprimer du DOM
+    toRemove.forEach(function(elem) {
+      try {
+        elem.remove();
+      } catch(e) {}
+    });
 
     var attempts = 0;
     var timer = setInterval(function() {
       attempts++;
 
-      // Vérifier si l'app est chargée (look for Redux/Vue/React state)
+      // Vérifier si l'app est chargée
       var isReady = document.querySelectorAll('button, a, [role="tab"]').length > 5;
 
       if (!isReady) {
@@ -14042,34 +14064,34 @@ console.log('[PI Import 2026] Done:',D.length,'rows upserted');
         return;
       }
 
-      console.log('[JIP] App prête, recherche navigation...');
+      console.log('[JIP] App prête, recherche page Projets...');
 
-      // Stratégie 1: Chercher par texte visible
+      // Chercher et cliquer sur "Projets"
       var found = false;
       var allElements = document.querySelectorAll('*');
+
       for (var i = 0; i < allElements.length && !found; i++) {
         var elem = allElements[i];
         var text = (elem.textContent || '').trim();
+        var isHidden = elem.style.display === 'none' || elem.offsetParent === null;
 
-        // Chercher exactement "Projets" ou "Projects" comme label
-        if (text === 'Projets' || text === 'Projects' || text === 'JIP' || text === 'Chantiers') {
-          // C'est le lien/tab que nous cherchons
+        // Chercher "Projets" ou "Projects" ou "JIP" ou "Chantiers"
+        if (!isHidden && (text === 'Projets' || text === 'Projects' || text === 'JIP' || text === 'Chantiers')) {
           if (elem.tagName === 'A' || elem.getAttribute('role') === 'tab' || elem.getAttribute('role') === 'button') {
-            console.log('[JIP] ✓ Élément trouvé:', text);
-            setTimeout(function() { elem.click(); }, 100);
+            console.log('[JIP] ✓ Trouvé et clic sur:', text);
+            elem.click();
             found = true;
           } else if (elem.parentElement) {
-            // Essayer le parent
             var parent = elem.parentElement;
             if (parent.tagName === 'A' || parent.getAttribute('role') === 'tab' || parent.getAttribute('role') === 'button') {
-              console.log('[JIP] ✓ Parent cliquable trouvé:', text);
-              setTimeout(function() { parent.click(); }, 100);
+              console.log('[JIP] ✓ Parent cliquable:', text);
+              parent.click();
               found = true;
             } else if (parent.parentElement) {
               var gparent = parent.parentElement;
               if (gparent.tagName === 'A' || gparent.getAttribute('role') === 'tab' || gparent.getAttribute('role') === 'button') {
-                console.log('[JIP] ✓ Grand-parent cliquable trouvé:', text);
-                setTimeout(function() { gparent.click(); }, 100);
+                console.log('[JIP] ✓ Grand-parent cliquable:', text);
+                gparent.click();
                 found = true;
               }
             }
@@ -14078,25 +14100,24 @@ console.log('[PI Import 2026] Done:',D.length,'rows upserted');
       }
 
       if (found) {
-        console.log('[JIP] ✅ Navigation vers Projets lancée');
-        setTimeout(function() { clearInterval(timer); }, 500);
+        console.log('[JIP] ✅ Navigation vers Projets réussie!');
+        clearInterval(timer);
       } else {
-        console.log('[JIP] Pas trouvé, nouvelle tentative...');
         if (attempts > 40) {
-          console.log('[JIP] ❌ Impossible de trouver le lien Projets');
+          console.log('[JIP] ❌ Page Projets introuvable');
           clearInterval(timer);
         }
       }
     }, 250);
   };
 
-  // Démarrer après le chargement complet
+  // Démarrer après le chargement
   window.addEventListener('load', function() {
-    console.log('[JIP] Load event - démarrage dans 2s...');
+    console.log('[JIP] Load event...');
     setTimeout(_jipStartup, 2000);
   });
 
-  // Fallback si load ne se déclenche pas
+  // Fallback
   setTimeout(_jipStartup, 5000);
 })();
 </script>
