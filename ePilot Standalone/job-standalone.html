@@ -25,44 +25,58 @@
   .header {
     background: linear-gradient(135deg, #B5000A 0%, #8b000a 100%);
     color: white;
-    padding: 30px;
-    display: flex;
-    justify-content: space-between;
+    padding: 40px 30px;
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 30px;
     align-items: center;
   }
 
-  .header h1 {
-    font-size: 28px;
+  .header-title h1 {
+    font-size: 32px;
     font-weight: bold;
+    margin-bottom: 5px;
+  }
+
+  .header-title p {
+    opacity: 0.9;
+    font-size: 14px;
   }
 
   .header-stats {
-    display: flex;
-    gap: 20px;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+    gap: 15px;
   }
 
   .stat {
     text-align: center;
-    padding: 10px 20px;
-    background: rgba(255,255,255,0.2);
+    padding: 15px;
+    background: rgba(255,255,255,0.15);
     border-radius: 8px;
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255,255,255,0.2);
   }
 
   .stat-number {
-    font-size: 24px;
+    font-size: 26px;
     font-weight: bold;
+    display: block;
   }
 
   .stat-label {
-    font-size: 12px;
+    font-size: 11px;
     opacity: 0.9;
+    margin-top: 5px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
   }
 
   .controls {
-    padding: 20px;
-    background: #f8f9fa;
+    padding: 20px 30px;
+    background: #fafbfc;
     display: flex;
-    gap: 10px;
+    gap: 15px;
     flex-wrap: wrap;
     align-items: center;
     border-bottom: 1px solid #e0e0e0;
@@ -124,7 +138,22 @@
   }
 
   .content {
-    padding: 20px;
+    padding: 30px;
+  }
+
+  .empty-state {
+    text-align: center;
+    padding: 60px 20px;
+    color: #666;
+  }
+
+  .empty-state-icon {
+    font-size: 48px;
+    margin-bottom: 15px;
+  }
+
+  .table-container {
+    overflow-x: auto;
   }
 
   table {
@@ -134,21 +163,27 @@
   }
 
   th {
-    background: #f0f0f0;
-    padding: 15px;
+    background: #B5000A;
+    color: white;
+    padding: 16px 15px;
     text-align: left;
     font-weight: bold;
-    border-bottom: 2px solid #B5000A;
-    color: #333;
+    text-transform: uppercase;
+    font-size: 12px;
+    letter-spacing: 0.5px;
   }
 
   td {
-    padding: 12px 15px;
+    padding: 14px 15px;
     border-bottom: 1px solid #e0e0e0;
   }
 
-  tr:hover {
-    background: #f9f9f9;
+  tbody tr:hover {
+    background: #f0f7ff;
+  }
+
+  tbody tr {
+    transition: background-color 0.2s;
   }
 
   .job-id {
@@ -358,21 +393,33 @@
 
   @media (max-width: 768px) {
     .header {
-      flex-direction: column;
+      grid-template-columns: 1fr;
       gap: 20px;
     }
 
+    .header-title h1 {
+      font-size: 24px;
+    }
+
     .header-stats {
-      width: 100%;
-      justify-content: space-around;
+      grid-template-columns: repeat(2, 1fr);
     }
 
     .controls {
       flex-direction: column;
     }
 
+    .search-box {
+      width: 100%;
+    }
+
     .search-box input {
       width: 100%;
+    }
+
+    .filter-buttons {
+      width: 100%;
+      flex-wrap: wrap;
     }
 
     table {
@@ -382,6 +429,10 @@
     th, td {
       padding: 10px;
     }
+
+    .detail-grid {
+      grid-template-columns: 1fr;
+    }
   }
 </style>
 </head>
@@ -389,25 +440,25 @@
 <div class="container">
   <!-- Header -->
   <div class="header">
-    <div>
+    <div class="header-title">
       <h1>📋 ePilot JOB</h1>
       <p>Gestion des Devis & Projets</p>
     </div>
     <div class="header-stats">
       <div class="stat">
-        <div class="stat-number" id="totalCount">0</div>
+        <span class="stat-number" id="totalCount">0</span>
         <div class="stat-label">Total</div>
       </div>
       <div class="stat">
-        <div class="stat-number" id="devisCount">0</div>
+        <span class="stat-number" id="devisCount">0</span>
         <div class="stat-label">Devis</div>
       </div>
       <div class="stat">
-        <div class="stat-number" id="valideCount">0</div>
+        <span class="stat-number" id="valideCount">0</span>
         <div class="stat-label">Validés</div>
       </div>
       <div class="stat">
-        <div class="stat-number" id="factureCount">0</div>
+        <span class="stat-number" id="factureCount">0</span>
         <div class="stat-label">Facturés</div>
       </div>
     </div>
@@ -2417,19 +2468,20 @@ function renderTable() {
   }
 
   let html = `
-    <table>
-      <thead>
-        <tr>
-          <th>ID Projet</th>
-          <th>Client</th>
-          <th>Statut</th>
-          <th>Type</th>
-          <th>Budget</th>
-          <th>Date</th>
-          <th>Action</th>
-        </tr>
-      </thead>
-      <tbody>
+    <div class="table-container">
+      <table>
+        <thead>
+          <tr>
+            <th>ID Projet</th>
+            <th>Client</th>
+            <th>Statut</th>
+            <th>Type</th>
+            <th>Budget</th>
+            <th>Date</th>
+            <th>Action</th>
+          </tr>
+        </thead>
+        <tbody>
   `;
 
   filteredData.forEach(project => {
@@ -2449,7 +2501,7 @@ function renderTable() {
     `;
   });
 
-  html += '</tbody></table>';
+  html += '</tbody></table></div>';
   container.innerHTML = html;
 }
 
