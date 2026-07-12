@@ -13670,5 +13670,155 @@ console.log('[PI Import 2026] Done:',D.length,'rows upserted');
   mo.observe(document.documentElement||document.body,{childList:true,subtree:true,characterData:true});
 })();
 </script>
+
+<!-- ═══════════════════════════════════════════════════════════════
+     PROJETS ENHANCEMENT v2 — Monitor and enhance Projets display
+     ═══════════════════════════════════════════════════════════════ -->
+<script id="__PROJETS_ENHANCEMENT_v2__">
+(function(){
+  var isEnhanced = false;
+
+  function enhanceProjectsTable(){
+    if(isEnhanced) return;
+
+    // Look for the main table with project/chantier data
+    var tables = document.querySelectorAll('table tbody tr');
+    if(tables.length === 0) return;
+
+    // Check if this looks like a Projets page
+    var bodyText = document.body.textContent;
+    if(!bodyText.includes('Chantiers') && !bodyText.includes('En Cours') && !bodyText.includes('Projets')){
+      return;
+    }
+
+    try {
+      // Get JIP data from localStorage
+      var jipStr = localStorage.getItem('ePilot_JIP_DATA');
+      if(!jipStr) return;
+
+      var jipData = JSON.parse(jipStr);
+      if(!Array.isArray(jipData) || jipData.length === 0) return;
+
+      // If we have multiple tables, find the one showing projects
+      var tables = document.querySelectorAll('table');
+      var targetTable = null;
+
+      for(var i=0; i<tables.length; i++){
+        var tbody = tables[i].querySelector('tbody');
+        if(tbody && tbody.querySelectorAll('tr').length > 10){
+          targetTable = tables[i];
+          break;
+        }
+      }
+
+      if(targetTable){
+        // Add a control panel above the table
+        addControlPanel(targetTable, jipData);
+        isEnhanced = true;
+      }
+    } catch(e){
+      console.error('Enhancement error:', e);
+    }
+  }
+
+  function addControlPanel(table, jipData){
+    // Check if already added
+    if(document.getElementById('ep-jip-controls')) return;
+
+    var panel = document.createElement('div');
+    panel.id = 'ep-jip-controls';
+    panel.style.cssText = 'background:#f9f9f9;padding:15px;margin-bottom:15px;border-radius:8px;border-left:4px solid #c41e3a;';
+    panel.innerHTML = '<div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">' +
+      '<strong style="color:#333;">Gestion des Chantiers JIP:</strong>' +
+      '<button id="ep-refresh-jip" style="padding:8px 16px;background:#2196f3;color:white;border:none;border-radius:4px;cursor:pointer;">🔄 Recharger données</button>' +
+      '<button id="ep-sync-jip" style="padding:8px 16px;background:#4caf50;color:white;border:none;border-radius:4px;cursor:pointer;">✓ Synchroniser l\'affichage</button>' +
+      '<span id="ep-jip-count" style="color:#666;font-size:14px;">Chantiers: ' + jipData.length + '</span>' +
+      '</div>';
+
+    table.parentNode.insertBefore(panel, table);
+
+    // Wire up buttons
+    document.getElementById('ep-refresh-jip').onclick = function(){
+      location.reload();
+    };
+
+    document.getElementById('ep-sync-jip').onclick = function(){
+      syncJIPDisplay(table, jipData);
+    };
+  }
+
+  function syncJIPDisplay(table, jipData){
+    var tbody = table.querySelector('tbody');
+    if(!tbody) return;
+
+    // Analyze current table structure to see what columns it has
+    var firstRow = tbody.querySelector('tr');
+    if(!firstRow) return;
+
+    var cellCount = firstRow.querySelectorAll('td').length;
+
+    // Clear and rebuild
+    tbody.innerHTML = '';
+
+    if(jipData.length === 0){
+      tbody.innerHTML = '<tr><td colspan="' + cellCount + '" style="text-align:center;padding:20px;color:#999;">Aucun chantier</td></tr>';
+      return;
+    }
+
+    // Add rows for each chantier
+    jipData.forEach(function(item, idx){
+      var date = new Date(item.Date || '');
+      var year = isNaN(date) ? 'N/A' : date.getFullYear();
+      var dateStr = isNaN(date) ? (item.Date || '-') : date.toLocaleDateString('fr-FR');
+
+      var row = document.createElement('tr');
+      row.style.background = (year < 2025) ? '#fff3e0' : 'white';
+
+      // Build cells matching the expected structure
+      var cells = [
+        '<td style="padding:8px;">' + (item.Imputation || '-') + '</td>',
+        '<td style="padding:8px;">' + dateStr + '</td>',
+        '<td style="padding:8px;"><strong>' + year + '</strong></td>',
+        '<td style="padding:8px;">' + (item.Unite || '-') + '</td>',
+        '<td style="padding:8px;">' + (item.Type || '-') + '</td>',
+        '<td style="padding:8px;">' + (item.Statut || '-') + '</td>'
+      ];
+
+      // Pad or trim cells to match table structure
+      while(cells.length < cellCount){
+        cells.push('<td style="padding:8px;">-</td>');
+      }
+      cells = cells.slice(0, cellCount);
+
+      row.innerHTML = cells.join('');
+      tbody.appendChild(row);
+    });
+
+    alert('✓ Affichage synchronisé: ' + jipData.length + ' chantiers affichés');
+  }
+
+  // Use MutationObserver to detect when Projets page is shown
+  var observer = new MutationObserver(function(){
+    enhanceProjectsTable();
+  });
+
+  // Start observing
+  observer.observe(document.body, {
+    childList: true,
+    subtree: true,
+    attributes: true,
+    characterData: false
+  });
+
+  // Also try to enhance periodically
+  var enhanceInterval = setInterval(function(){
+    enhanceProjectsTable();
+    if(isEnhanced) clearInterval(enhanceInterval);
+  }, 1000);
+
+  // Try immediately
+  setTimeout(enhanceProjectsTable, 500);
+})();
+</script>
 </body>
 </html>
