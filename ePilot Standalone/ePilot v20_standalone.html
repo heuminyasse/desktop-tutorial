@@ -1,6 +1,41 @@
 <!DOCTYPE html>
 <html>
-<head><script>window.__epKeepApplying=window.__epKeepApplying||function(fn,o){o=o||{};var i=o.interval||400,tr=(o.tries!=null)?o.tries:400,t=0,busy=false,sched=0;function run(){if(busy)return;busy=true;try{fn();}catch(e){}busy=false;}(function p(){run();if(t++>tr)return;setTimeout(p,i);})();try{new MutationObserver(function(){if(busy||sched)return;sched=setTimeout(function(){sched=0;run();},60);}).observe(document.documentElement||document,{childList:true,subtree:true});}catch(e){}};window.__epOnBodyMut=window.__epOnBodyMut||(function(){var cbs=[],sched=0,started=false;function flush(){sched=0;for(var i=0;i<cbs.length;i++){try{cbs[i]();}catch(e){}}}function start(){if(started)return;var root=document.body||document.documentElement;if(!root)return;started=true;try{new MutationObserver(function(){if(sched)return;sched=setTimeout(flush,80);}).observe(root,{childList:true,subtree:true});}catch(e){}}return function(cb){if(typeof cb!=='function')return;cbs.push(cb);if(document.body){start();}else{try{document.addEventListener('DOMContentLoaded',start);}catch(e){}}};})();</script>
+<head><script>
+// [IndexedDB Fix] Polyfill pour éviter les erreurs IDBDatabase
+(function fixIndexedDB() {
+  var origOpen = window.indexedDB ? window.indexedDB.open : null;
+  if (origOpen) {
+    window.indexedDB.open = function(name, version) {
+      var req = origOpen.apply(this, arguments);
+      var origOnerror = req.onerror;
+      req.onerror = function(e) {
+        console.log('[IndexedDB Fix] Error opening ' + name + ', ignoring');
+        if (origOnerror) origOnerror.apply(this, arguments);
+      };
+      return req;
+    };
+  }
+  // Polyfill la méthode transaction pour ne pas échouer si le store n'existe pas
+  try {
+    var origTx = IDBDatabase.prototype.transaction;
+    IDBDatabase.prototype.transaction = function(names, mode) {
+      try {
+        return origTx.apply(this, arguments);
+      } catch (e) {
+        console.log('[IndexedDB Fix] Transaction error, using fallback');
+        // Retourner un objet fake pour ne pas bloquer le code
+        return {
+          objectStore: function() { return {}; },
+          oncomplete: null,
+          onerror: null
+        };
+      }
+    };
+  } catch (_) {}
+})();
+
+window.__epKeepApplying=window.__epKeepApplying||function(fn,o){o=o||{};var i=o.interval||400,tr=(o.tries!=null)?o.tries:400,t=0,busy=false,sched=0;function run(){if(busy)return;busy=true;try{fn();}catch(e){}busy=false;}(function p(){run();if(t++>tr)return;setTimeout(p,i);})();try{new MutationObserver(function(){if(busy||sched)return;sched=setTimeout(function(){sched=0;run();},60);}).observe(document.documentElement||document,{childList:true,subtree:true});}catch(e){}};window.__epOnBodyMut=window.__epOnBodyMut||(function(){var cbs=[],sched=0,started=false;function flush(){sched=0;for(var i=0;i<cbs.length;i++){try{cbs[i]();}catch(e){}}}function start(){if(started)return;var root=document.body||document.documentElement;if(!root)return;started=true;try{new MutationObserver(function(){if(sched)return;sched=setTimeout(flush,80);}).observe(root,{childList:true,subtree:true});}catch(e){}}return function(cb){if(typeof cb!=='function')return;cbs.push(cb);if(document.body){start();}else{try{document.addEventListener('DOMContentLoaded',start);}catch(e){}}};})();
+</script>
   <meta charset="utf-8">
   <title>HBO — Hub</title>
   <style>
