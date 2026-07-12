@@ -14196,10 +14196,55 @@ console.log('[PI Import 2026] Done:',D.length,'rows upserted');
 
     html += '</div>';
 
-    var container = document.querySelector('[role="tabpanel"], .tabpanel, [class*="content"], [data-view]');
+    // Chercher le conteneur avec plusieurs sélecteurs
+    var container = null;
+    var selectors = [
+      '[role="tabpanel"]',
+      '[data-view-mode]',
+      'main',
+      '[data-testid*="content"]',
+      '[class*="MuiBox"]',
+      '[class*="TabPanel"]'
+    ];
+
+    for (var i = 0; i < selectors.length; i++) {
+      var el = document.querySelector(selectors[i]);
+      if (el && el.offsetHeight > 0) {
+        container = el;
+        break;
+      }
+    }
+
+    // Fallback: chercher le conteneur le plus grand après les tabs
+    if (!container) {
+      var tabsContainer = document.querySelector('[role="tablist"]');
+      if (tabsContainer && tabsContainer.parentElement) {
+        var siblings = tabsContainer.parentElement.children;
+        for (var j = 0; j < siblings.length; j++) {
+          if (siblings[j].offsetHeight > 100) {
+            container = siblings[j];
+            break;
+          }
+        }
+      }
+    }
+
     if (container) {
       container.innerHTML = html;
       console.log('[RFQ-SUIVI] ✓ Détail chantier affiché');
+    } else {
+      console.log('[RFQ-SUIVI] ⚠️ Conteneur non trouvé - création overlay');
+      var existingWrapper = document.getElementById('_suivi_overlay_wrapper');
+      if (existingWrapper) existingWrapper.remove();
+
+      var wrapper = document.createElement('div');
+      wrapper.id = '_suivi_overlay_wrapper';
+      wrapper.style.cssText = 'position:fixed;top:80px;left:200px;right:20px;bottom:20px;background:white;border:2px solid #B5000A;border-radius:8px;overflow-y:auto;z-index:10000;box-shadow:0 4px 12px rgba(0,0,0,0.15)';
+
+      var closeBtn = '<button onclick="var w=document.getElementById(\'_suivi_overlay_wrapper\'); if(w) w.remove();" style="position:absolute;top:10px;right:10px;background:#B5000A;color:white;border:none;width:32px;height:32px;border-radius:50%;cursor:pointer;font-size:16px;font-weight:bold;z-index:10001">×</button>';
+      wrapper.innerHTML = closeBtn + html;
+      document.body.appendChild(wrapper);
+      console.log('[RFQ-SUIVI] ✓ Détail affiché en overlay');
     }
   };
 
