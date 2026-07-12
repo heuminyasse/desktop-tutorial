@@ -13841,6 +13841,97 @@ console.log('[PI Import 2026] Done:',D.length,'rows upserted');
   // Try immediately
   setTimeout(enhanceProjectsTable, 500);
 })();
+
+<!-- AUTO-SYNC: Display JIP data when navigating to Chantiers -->
+<script>
+(function autoSyncChantiers(){
+  // Hook into HubViews to auto-display JIP data
+  if(!window.HubViews || !window.HubViews.showView) return;
+
+  var originalShowView = window.HubViews.showView;
+  window.HubViews.showView = function(viewName, opts){
+    var result = originalShowView.apply(this, arguments);
+
+    // Auto-sync when navigating to Chantiers or Projets
+    if(viewName === 'chantiers' || viewName === 'projets'){
+      setTimeout(function(){
+        autoDisplayJIPData();
+      }, 800);
+    }
+
+    return result;
+  };
+
+  // Function to auto-display JIP data in tables
+  function autoDisplayJIPData(){
+    try {
+      var tables = document.querySelectorAll('table');
+      if(!tables || tables.length === 0) return;
+
+      var jipData = window.JIP_DATA || [];
+      if(jipData.length === 0) return;
+
+      // Find the main data table (usually the first one with tbody)
+      var targetTable = null;
+      for(var i = 0; i < tables.length; i++){
+        if(tables[i].querySelector('tbody')){
+          targetTable = tables[i];
+          break;
+        }
+      }
+
+      if(!targetTable) return;
+
+      // Populate table with JIP data
+      var tbody = targetTable.querySelector('tbody');
+      if(!tbody) return;
+
+      tbody.innerHTML = ''; // Clear
+
+      if(jipData.length === 0){
+        tbody.innerHTML = '<tr><td colspan="10" style="text-align:center;padding:20px;color:#999;">Aucun chantier</td></tr>';
+        return;
+      }
+
+      // Field mapping function
+      function getFieldValue(item, idx){
+        var fields = [
+          item.Imputation || '-',
+          item.Client || '-',
+          item.Unite || '-',
+          item.Type || '-',
+          item.Date || '-',
+          item.DateDebut || item['Date \nde debut'] || '-',
+          item.DateFin || item['Date \nde fin'] || '-',
+          item.Budget || '-',
+          (item.Avancement ? item.Avancement + '%' : '-'),
+          item.Status || item.Etat || '-'
+        ];
+        return fields[idx] || '-';
+      }
+
+      // Add rows
+      var maxRows = Math.min(100, jipData.length);
+      for(var i = 0; i < maxRows; i++){
+        var item = jipData[i];
+        var row = document.createElement('tr');
+        if(i % 2 === 0) row.style.background = '#f5f5f5';
+
+        for(var j = 0; j < 10; j++){
+          var cell = document.createElement('td');
+          cell.style.padding = '8px';
+          cell.textContent = getFieldValue(item, j);
+          row.appendChild(cell);
+        }
+
+        tbody.appendChild(row);
+      }
+    } catch(e) {
+      console.log('[AutoSync] Error:', e.message);
+    }
+  }
+})();
+</script>
 </script>
 </body>
 </html>
