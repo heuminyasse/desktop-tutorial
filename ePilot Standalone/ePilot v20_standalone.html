@@ -2795,28 +2795,31 @@ document.addEventListener('DOMContentLoaded', async function() {
               console.log('[FixClosedChantier] Chantier ouvert, using native path');
               return orig(key);
             }
-            // chantier clôturé/terminé → reconstruire le JIP complet et l'injecter
-            console.log('[FixClosedChantier] Chantier fermé, rebuilding...');
+            // chantier clôturé/terminé → injection directe avec données disponibles
+            console.log('[FixClosedChantier] Chantier fermé, injectant avec données disponibles...');
+            // Essayer d'abord avec EpilotConnector si disponible
             if (window.EpilotConnector && window.EpilotConnector.buildData) {
               window.EpilotConnector.buildData({ all: true }).then(function (d) {
                 console.log('[FixClosedChantier] Rebuilt data:', d);
                 var jip = (d.jips || []).find(function (j) { return String(j.id) === key; });
-                console.log('[FixClosedChantier] Found JIP:', jip);
-                if (!jip) {
-                  console.log('[FixClosedChantier] JIP not found, using native');
-                  orig(key);
+                if (jip) {
+                  console.log('[FixClosedChantier] Found JIP in rebuilt data, injecting');
+                  var client = (d.clients || []).find(function (c) { return c.id === jip.clientId; }) || null;
+                  orig({ jip: jip, client: client });
                   return;
                 }
-                var client = (d.clients || []).find(function (c) { return c.id === jip.clientId; }) || null;
-                console.log('[FixClosedChantier] Injecting with:', { jip: jip, client: client });
-                orig({ jip: jip, client: client });
-              }).catch(function (err) {
-                console.log('[FixClosedChantier] Error rebuilding:', err);
+                // Fallback: utiliser les données disponibles
+                console.log('[FixClosedChantier] JIP not in rebuilt data, using fallback');
                 orig(key);
+              }).catch(function (err) {
+                console.log('[FixClosedChantier] Error rebuilding, fallback:', err);
+                // Même si ça échoue, envoyer le chantier qu'on a
+                orig({ jip: row, client: null });
               });
             } else {
-              console.log('[FixClosedChantier] No EpilotConnector, using native');
-              orig(key);
+              // Pas de EpilotConnector, injecter directement ce qu'on a
+              console.log('[FixClosedChantier] No EpilotConnector, injecting row directly');
+              orig({ jip: row, client: null });
             }
           } catch (e) {
             console.log('[FixClosedChantier] Exception:', e);
