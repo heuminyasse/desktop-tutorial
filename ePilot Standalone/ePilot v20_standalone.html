@@ -674,14 +674,19 @@ document.addEventListener('DOMContentLoaded', async function() {
          localStorage et on n_applique JAMAIS la graine embarquee (evite tout re-semis). */
       var _epOwned=false; try{ _epOwned = localStorage.getItem("epilot_user_owned")==="1"; }catch(_e){}
       /* Fallback: si localStorage a des données mais flag n'est pas set, utiliser localStorage */
-      if(!_epOwned){ try{ if(localStorage.getItem("ePilot_PROJECTS_DATA")){ _epOwned=true; localStorage.setItem("epilot_user_owned","1"); } }catch(_e){} }
+      if(!_epOwned){ try{ if(localStorage.getItem("ePilot_PROJECTS_DATA") || localStorage.getItem("ePilot_JIP_DATA")){ _epOwned=true; localStorage.setItem("epilot_user_owned","1"); } }catch(_e){} }
       if(_epOwned){
         try{
           var _gor=function(k,def){ try{ var s=localStorage.getItem(k); return s!=null?JSON.parse(s):def; }catch(_e){ return def; } };
           var _set=function(k,g){ var s=localStorage.getItem(k); if(s!=null){ try{ window[g]=JSON.parse(s); }catch(_e){} } };
           var projectsLS=_gor("ePilot_PROJECTS_DATA",null);
+          var jipLS=_gor("ePilot_JIP_DATA",[]);
           window.SOURCING_DATA=_gor("ePilot_SOURCING_DATA",[]);
           /* Crée la base unifiée PROJECTS_DATA depuis localStorage */
+          /* Si PROJECTS_DATA est vide mais JIP_DATA existe, utiliser JIP_DATA */
+          if(!Array.isArray(projectsLS) || projectsLS.length===0){
+            projectsLS = jipLS.map(function(item){ return Object.assign({}, item, {_type:'JIP', _id:item.Imputation||item.imputation||''}); });
+          }
           window.PROJECTS_DATA=Array.isArray(projectsLS)?projectsLS:[];
           _rebuildLegacyFromProjects();
           _set("ePilot_CLIENTS_DATA","CLIENTS_DATA"); _set("ePilot_PERSONNEL_DATA","PERSONNEL_DATA"); _set("ePilot_ACHETEURS_DATA","ACHETEURS_DATA");
