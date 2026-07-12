@@ -202,24 +202,29 @@ function processQuote(workbook) {
     });
 
     const dossier = obj.Dossier;
-    if (dossier && !excelData.CHANTIERS_DATA[dossier]) {
-      excelData.CHANTIERS_DATA[dossier] = {
-        _id: dossier,
-        Imputation: dossier,
-        Dossier: dossier,
-        _type: 'DEVIS',
-        _source: 'DEVIS'
-      };
-    }
-
-    if (dossier) {
-      Object.assign(excelData.CHANTIERS_DATA[dossier], {
-        Acheteur: obj.Acheteur,
-        RFQ: obj.RFQ,
-        DateRFQ: obj.DateRFQ,
-        EtatPI: obj.EtatPI,
-        Client: excelData.CHANTIERS_DATA[dossier].Client || obj.Client
-      });
+    if (dossier && typeof dossier === 'string' && dossier.startsWith('PI')) {
+      if (!excelData.CHANTIERS_DATA[dossier]) {
+        excelData.CHANTIERS_DATA[dossier] = {
+          _id: dossier,
+          Imputation: dossier,
+          Dossier: dossier,
+          _type: 'DEVIS',
+          _source: 'DEVIS',
+          Acheteur: obj.Acheteur,
+          RFQ: obj.RFQ,
+          DateRFQ: obj.DateRFQ,
+          EtatPI: obj.EtatPI,
+          Unite: obj.Unite,
+          Type: obj.Type,
+          Client: obj.Client
+        };
+      } else {
+        // Enrich existing chantier
+        if (obj.Acheteur) excelData.CHANTIERS_DATA[dossier].Acheteur = obj.Acheteur;
+        if (obj.RFQ) excelData.CHANTIERS_DATA[dossier].RFQ = obj.RFQ;
+        if (obj.DateRFQ) excelData.CHANTIERS_DATA[dossier].DateRFQ = obj.DateRFQ;
+        if (obj.EtatPI) excelData.CHANTIERS_DATA[dossier].EtatPI = obj.EtatPI;
+      }
     }
   }
 }
@@ -241,21 +246,30 @@ function processJIP(workbook) {
     });
 
     const id = obj.Imputation;
-    if (id) {
-      excelData.CHANTIERS_DATA[id] = {
+    if (id && typeof id === 'string' && id.startsWith('PI')) {
+      const newData = {
         _id: id,
         Imputation: id,
-        Unite: obj.Unite,
+        Unite: obj.Unite || obj['Unite'],
         Type: obj.Type,
         Date: obj.Date,
-        Status: obj.Status || obj.Etat,
-        NumeroOA: obj.NumeroOA,
+        Status: obj.Status || obj.Etat || obj['Status'],
+        NumeroOA: obj.NumeroOA || obj['Numero OA'],
         Client: obj.Client,
         Budget: obj.Budget,
         _source: 'JIP',
-        _type: obj.NumeroOA ? 'CHANTIER' : 'DEVIS',
-        ...excelData.CHANTIERS_DATA[id]
+        _type: (obj.NumeroOA || obj['Numero OA']) ? 'CHANTIER' : 'DEVIS'
       };
+
+      // Preserve existing Quote data, merge with JIP data
+      if (excelData.CHANTIERS_DATA[id]) {
+        excelData.CHANTIERS_DATA[id] = {
+          ...excelData.CHANTIERS_DATA[id],
+          ...newData
+        };
+      } else {
+        excelData.CHANTIERS_DATA[id] = newData;
+      }
     }
   }
 }
@@ -276,14 +290,23 @@ function processSourcing(workbook) {
       if (h) obj[h.toString().trim()] = row[idx] || null;
     });
 
-    if (obj.Imputation) {
+    const imputation = obj.Imputation;
+    const position = obj.Position || obj.Rank || obj['Rank'] || i;
+
+    if (imputation && typeof imputation === 'string' && imputation.startsWith('PI')) {
       excelData.SOURCING_DATA.push({
-        _id: `${obj.Imputation}_${obj.Position || obj.Rank}`,
-        Imputation: obj.Imputation,
-        Description: obj['Description of Equip'],
-        Qty: obj.Qty,
-        CoutAcqXAF: obj.CoutAcqXAF,
-        OA: obj.OA
+        _id: `${imputation}_${position}`,
+        Imputation: imputation,
+        Position: position,
+        Rank: obj.Rank || obj['Rank'],
+        Description: obj['Description of Equip'] || obj.Description,
+        Qty: obj.Qty || obj['Qty'],
+        Unit: obj.Unit || obj['Unit'],
+        CoutAcqXAF: obj.CoutAcqXAF || obj['Cout Acq XAF'],
+        Partnumber: obj.Partnumber || obj['Partner Number'],
+        OA: obj.OA || obj['OA'],
+        Statut: obj.Statut || obj.Status,
+        Vendeur: obj.Vendeur || obj.Vendor
       });
     }
   }
@@ -294,9 +317,21 @@ function processBill(workbook) {
   if (!ws) return;
 
   const data = XLSX.utils.sheet_to_json(ws, { header: 1 });
-  const headers = data[7]; // Row 8
 
-  for (let i = 8; i < data.length; i++) {
+  // For Bill sheet, structure varies - try to find header row
+  let headerRowIdx = 0;
+  for (let i = 0; i < Math.min(15, data.length); i++) {
+    const row = data[i];
+    if (row && row.some(c => typeof c === 'string' && (c.includes('Bill') || c.includes('Dossier') || c.includes('Invoice')))) {
+      headerRowIdx = i;
+      break;
+    }
+  }
+
+  const headers = data[headerRowIdx];
+  if (!headers) return;
+
+  for (let i = headerRowIdx + 1; i < data.length; i++) {
     const row = data[i];
     if (!row || row.every(c => !c)) continue;
 
@@ -305,13 +340,21 @@ function processBill(workbook) {
       if (h) obj[h.toString().trim()] = row[idx] || null;
     });
 
-    if (obj.Dossier) {
+    // Bill data might be in different column structure
+    const dossier = obj.Dossier || obj.PI || obj['PI'];
+    const numero = obj.NumeroFacture || obj['Numero Facture'] || obj['Bill Number'];
+    const montant = obj.Montant || obj.Amount || obj['Montant'];
+
+    if (dossier && typeof dossier === 'string' && dossier.startsWith('PI')) {
       excelData.FACTURES_DATA.push({
-        _id: `${obj.Dossier}_${obj.NumeroFacture}`,
-        Dossier: obj.Dossier,
-        NumeroFacture: obj.NumeroFacture,
-        Montant: obj.Montant,
-        Statut: obj.Statut
+        _id: `${dossier}_${numero || i}`,
+        Dossier: dossier,
+        NumeroFacture: numero,
+        Montant: montant,
+        Statut: obj.Statut || obj.Status,
+        OA: obj.OA,
+        Ordre: obj.Ordre || obj.Order,
+        Credit: obj.Credit
       });
     }
   }
