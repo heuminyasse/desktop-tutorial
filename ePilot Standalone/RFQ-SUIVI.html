@@ -14054,22 +14054,36 @@ console.log('[PI Import 2026] Done:',D.length,'rows upserted');
     suiviTab.textContent = 'Suivi';
     suiviTab.setAttribute('data-suivi-tab', 'true');
     suiviTab.setAttribute('aria-selected', 'false');
+    suiviTab.removeAttribute('aria-controls');
     suiviTab.style.cursor = 'pointer';
     suiviTab.style.fontWeight = 'normal';
 
+    // Supprimer tous les anciens event listeners en clonant
+    var newSuiviTab = suiviTab.cloneNode(true);
+
     // Insérer après Devis
     if (devisTab.parentElement) {
-      devisTab.parentElement.insertBefore(suiviTab, devisTab.nextSibling);
+      devisTab.parentElement.insertBefore(newSuiviTab, devisTab.nextSibling);
+      suiviTab = newSuiviTab;
       console.log('[RFQ-SUIVI] ✓ Onglet "Suivi" créé');
     }
 
-    // Event listener
+    // Event listener robuste
     suiviTab.onclick = function(e) {
       e.preventDefault();
       e.stopPropagation();
+      console.log('[RFQ-SUIVI] Clic sur onglet Suivi détecté');
       window._showSuiviContent();
       return false;
     };
+
+    // Alternative: addEventListener avec capture
+    suiviTab.addEventListener('click', function(e) {
+      e.preventDefault();
+      e.stopPropagation();
+      console.log('[RFQ-SUIVI] Clic Suivi via addEventListener');
+      window._showSuiviContent();
+    }, true);
 
     window._RFQ_SUIVI_ADDED = true;
     console.log('[RFQ-SUIVI] ✅ Onglet "Suivi" actif et cliquable');
@@ -14243,21 +14257,57 @@ console.log('[PI Import 2026] Done:',D.length,'rows upserted');
     }
     html += '</div>';
 
-    // Chercher où mettre le contenu
-    var container = document.querySelector('[role="tabpanel"], .tabpanel, [class*="content"], [data-view]');
-    if (container && container.parentElement) {
-      // Désélectionner les autres onglets
-      var allTabs = document.querySelectorAll('[role="tab"]');
-      allTabs.forEach(function(t) { t.setAttribute('aria-selected', 'false'); });
+    // Désélectionner les autres onglets et marquer Suivi comme actif
+    var allTabs = document.querySelectorAll('[role="tab"]');
+    allTabs.forEach(function(t) { t.setAttribute('aria-selected', 'false'); });
+    var suiviTab = document.querySelector('[data-suivi-tab]');
+    if (suiviTab) suiviTab.setAttribute('aria-selected', 'true');
 
-      // Sélectionner Suivi
-      var suiviTab = document.querySelector('[data-suivi-tab]');
-      if (suiviTab) suiviTab.setAttribute('aria-selected', 'true');
+    // Chercher le conteneur - essayer plusieurs sélecteurs
+    var container = null;
+    var selectors = [
+      '[role="tabpanel"]',
+      '[data-view-mode]',
+      'main',
+      '[data-testid*="content"]',
+      '[class*="MuiBox"]',
+      '[class*="TabPanel"]'
+    ];
 
+    for (var i = 0; i < selectors.length; i++) {
+      var el = document.querySelector(selectors[i]);
+      if (el && el.offsetHeight > 0) {
+        console.log('[RFQ-SUIVI] Container trouvé via:', selectors[i]);
+        container = el;
+        break;
+      }
+    }
+
+    // Fallback: chercher le conteneur le plus grand après les tabs
+    if (!container) {
+      var tabsContainer = document.querySelector('[role="tablist"]');
+      if (tabsContainer && tabsContainer.parentElement) {
+        var siblings = tabsContainer.parentElement.children;
+        for (var j = 0; j < siblings.length; j++) {
+          if (siblings[j].offsetHeight > 100) {
+            console.log('[RFQ-SUIVI] Container trouvé via fallback');
+            container = siblings[j];
+            break;
+          }
+        }
+      }
+    }
+
+    if (container) {
       container.innerHTML = html;
-      console.log('[RFQ-SUIVI] ✓ Contenu affiché');
+      console.log('[RFQ-SUIVI] ✓ Contenu Suivi affiché');
     } else {
-      console.log('[RFQ-SUIVI] ⚠️ Conteneur non trouvé');
+      console.log('[RFQ-SUIVI] ⚠️ Conteneur non trouvé - tentative via body');
+      // Last resort: create a container if nothing found
+      var wrapper = document.createElement('div');
+      wrapper.style.cssText = 'position:fixed;top:100px;left:300px;right:20px;bottom:20px;background:white;border:2px solid #B5000A;border-radius:8px;overflow-y:auto;z-index:10000';
+      wrapper.innerHTML = html;
+      document.body.appendChild(wrapper);
     }
   };
 
