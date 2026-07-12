@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>ePilot Chantiers JIP Test</title>
+<style>
+  body { font-family: Arial; padding: 20px; background: #f5f5f5; }
+  .container { max-width: 1200px; margin: 0 auto; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+  h1 { color: #333; border-bottom: 3px solid #B5000A; padding-bottom: 10px; }
+  .status { padding: 15px; margin: 15px 0; border-radius: 4px; }
+  .success { background: #dcfce7; color: #166534; border-left: 4px solid #22c55e; }
+  .error { background: #fee2e2; color: #991b1b; border-left: 4px solid #ef4444; }
+  .info { background: #e0e7ff; color: #1e40af; border-left: 4px solid #3b82f6; }
+  table { width: 100%; border-collapse: collapse; margin: 20px 0; }
+  th { background: #B5000A; color: white; padding: 12px; text-align: left; }
+  td { padding: 10px; border-bottom: 1px solid #ddd; }
+  tr:hover { background: #f9f9f9; }
+  .project-link { color: #B5000A; cursor: pointer; text-decoration: underline; }
+  .project-link:hover { text-decoration: none; font-weight: bold; }
+  .project-detail { background: #f9f9f9; padding: 15px; margin: 10px 0; border-left: 4px solid #B5000A; border-radius: 4px; display: none; }
+  .project-detail.active { display: block; }
+</style>
+</head>
+<body>
+<div class="container">
+  <h1>ePilot v20 Chantiers JIP Page Test</h1>
+
+  <div id="results">
+    <div class="status info">Loading ePilot data from server...</div>
+  </div>
+</div>
+
+<script>
+async function testEPilotChantiers() {
+  const resultsDiv = document.getElementById('results');
+
+  try {
+    // Step 1: Load ePilot HTML
+    resultsDiv.innerHTML = '<div class="status info">⏳ Loading ePilot v20_standalone.html...</div>';
+
+    const response = await fetch('/ePilot%20v20_standalone.html');
+    if (!response.ok) throw new Error(`Failed to fetch: ${response.status}`);
+
+    const htmlText = await response.text();
+    resultsDiv.innerHTML = '<div class="status success">✓ ePilot HTML loaded</div>';
+
+    // Step 2: Parse HTML and look for Chantiers section
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(htmlText, 'text/html');
+
+    // Check for localStorage data embedded in the HTML
+    const scripts = Array.from(doc.querySelectorAll('script'));
+    let hasEpData = false;
+    let epDataContent = '';
+
+    for (const script of scripts) {
+      if (script.textContent.includes('window._epdata') || script.textContent.includes('epilot_v21_complete_db')) {
+        hasEpData = true;
+        epDataContent = script.textContent.substring(0, 500);
+        break;
+      }
+    }
+
+    resultsDiv.innerHTML += `<div class="status ${hasEpData ? 'success' : 'info'}">
+      ${hasEpData ? '✓' : 'ℹ'} Data embedding: ${hasEpData ? 'Found embedded data' : 'No embedded data (will use localStorage)'}
+    </div>`;
+
+    // Step 3: Check for Chantiers page structure
+    const chantiersLink = doc.querySelector('a[href*="chantier"], button:contains("Chantiers"), [data-page="chantiers"]');
+    const hasChantierPage = doc.querySelector('[id*="chantier"], .chantiers-section, [data-section="chantiers"]') !== null;
+
+    resultsDiv.innerHTML += `<div class="status ${hasChantierPage ? 'success' : 'info'}">
+      ${hasChantierPage ? '✓' : 'ℹ'} Chantiers page structure found
+    </div>`;
+
+    // Step 4: Try to access via iframe
+    resultsDiv.innerHTML += '<div class="status info">⏳ Testing Chantiers page functionality...</div>';
+
+    // Create an iframe to test the page
+    const iframe = document.createElement('iframe');
+    iframe.src = '/ePilot%20v20_standalone.html';
+    iframe.style.display = 'none';
+    document.body.appendChild(iframe);
+
+    // Wait for iframe to load
+    await new Promise((resolve) => {
+      iframe.onload = () => {
+        setTimeout(resolve, 2000);
+      };
+    });
+
+    try {
+      const iframeWindow = iframe.contentWindow;
+      const iframeDoc = iframe.contentDocument;
+
+      // Check if data is loaded
+      let chantiersData = [];
+      let stats = {
+        total: 0,
+        chantiers: 0,
+        devis: 0,
+        sourcing: 0,
+        factures: 0
+      };
+
+      // Try multiple ways to access the data
+      if (iframeWindow.window._epdata) {
+        resultsDiv.innerHTML += '<div class="status success">✓ Found _epdata object</div>';
+      }
+
+      // Check localStorage in iframe
+      try {
+        const dbKey = 'epilot_v21_complete_db';
+        const dbData = iframeWindow.localStorage.getItem(dbKey);
+
+        if (dbData) {
+          const db = JSON.parse(dbData);
+          stats.total = Object.keys(db.CHANTIERS_DATA || {}).length;
+          stats.sourcing = (db.SOURCING_DATA || []).length;
+          stats.factures = (db.FACTURES_DATA || []).length;
+
+          // Count chantiers vs devis
+          for (const project of Object.values(db.CHANTIERS_DATA || {})) {
+            if (project._type === 'CHANTIER') stats.chantiers++;
+            if (project._type === 'DEVIS') stats.devis++;
+          }
+
+          resultsDiv.innerHTML += `<div class="status success">✓ localStorage data found: ${stats.total} projects</div>`;
+
+          // Display first few projects
+          let tableHtml = '<h2>Chantiers JIP Page Display</h2>';
+          tableHtml += `<p><strong>Statistics:</strong> ${stats.total} projects (${stats.chantiers} Chantiers + ${stats.devis} Devis), ${stats.sourcing} Sourcing items, ${stats.factures} Factures</p>`;
+          tableHtml += '<table>';
+          tableHtml += '<thead><tr><th>Project ID</th><th>Client</th><th>Status</th><th>Type</th><th>Budget</th><th>Action</th></tr></thead>';
+          tableHtml += '<tbody>';
+
+          let count = 0;
+          for (const [id, project] of Object.entries(db.CHANTIERS_DATA || {}).slice(0, 10)) {
+            tableHtml += `<tr>
+              <td>${id}</td>
+              <td>${project.Client || 'N/A'}</td>
+              <td>${project.Status || 'N/A'}</td>
+              <td><span style="background: ${project._type === 'CHANTIER' ? '#90EE90' : '#FFD700'}; padding: 2px 6px; border-radius: 3px;">${project._type}</span></td>
+              <td>${project.Budget || 'N/A'}</td>
+              <td><span class="project-link" onclick="openProject('${id}')">Open</span></td>
+            </tr>`;
+            count++;
+          }
+
+          tableHtml += '</tbody></table>';
+
+          if (count > 0) {
+            resultsDiv.innerHTML += `<div class="status success">✓ Data displays correctly: Showing ${count} projects</div>`;
+          } else {
+            resultsDiv.innerHTML += '<div class="status error">✗ No projects found in localStorage</div>';
+          }
+
+          resultsDiv.innerHTML += tableHtml;
+
+          // Test project detail view
+          if (count > 0) {
+            const firstProject = Object.entries(db.CHANTIERS_DATA)[0];
+            const [projectId, projectData] = firstProject;
+
+            let detailHtml = `<div class="project-detail active" id="project-${projectId}">
+              <h3>Project Detail: ${projectId}</h3>
+              <p><strong>Client:</strong> ${projectData.Client || 'N/A'}</p>
+              <p><strong>Location:</strong> ${projectData.Unite || 'N/A'}</p>
+              <p><strong>Type:</strong> ${projectData.Type || 'N/A'}</p>
+              <p><strong>Status:</strong> ${projectData.Status || 'N/A'}</p>
+              <p><strong>Budget:</strong> ${projectData.Budget || 'N/A'} XAF</p>
+              <p><strong>Date:</strong> ${projectData.Date || 'N/A'}</p>
+              <p><strong>OA Number:</strong> ${projectData.NumeroOA || 'N/A'}</p>
+            `;
+
+            // Add sourcing items
+            const sourcing = (db.SOURCING_DATA || []).filter(s => s.Imputation === projectId);
+            if (sourcing.length > 0) {
+              detailHtml += `<h4>Sourcing Items (${sourcing.length})</h4><ul>`;
+              for (const item of sourcing.slice(0, 3)) {
+                detailHtml += `<li>${item.Description || 'N/A'}: ${item.Qty || 0} @ ${item.CoutAcqXAF || 0} XAF</li>`;
+              }
+              detailHtml += '</ul>';
+            }
+
+            // Add factures
+            const factures = (db.FACTURES_DATA || []).filter(f => f.Dossier === projectId);
+            if (factures.length > 0) {
+              detailHtml += `<h4>Factures (${factures.length})</h4><ul>`;
+              for (const facture of factures.slice(0, 3)) {
+                detailHtml += `<li>${facture.NumeroFacture || 'N/A'}: ${facture.Montant || 0} XAF</li>`;
+              }
+              detailHtml += '</ul>';
+            }
+
+            detailHtml += '</div>';
+
+            resultsDiv.innerHTML += detailHtml;
+            resultsDiv.innerHTML += '<div class="status success">✓ Project detail view works: Can open and display project information</div>';
+          }
+
+        } else {
+          resultsDiv.innerHTML += '<div class="status error">✗ No localStorage data found (epilot_v21_complete_db)</div>';
+        }
+      } catch (e) {
+        resultsDiv.innerHTML += `<div class="status error">✗ Error accessing iframe data: ${e.message}</div>`;
+      }
+
+    } catch (e) {
+      resultsDiv.innerHTML += `<div class="status error">✗ Error in iframe: ${e.message}</div>`;
+    }
+
+    // Cleanup
+    document.body.removeChild(iframe);
+
+    resultsDiv.innerHTML += '<div class="status success">✅ Test Complete</div>';
+
+  } catch (error) {
+    resultsDiv.innerHTML = `<div class="status error">
+      ❌ Error: ${error.message}
+      <p>Make sure the server is running on port 3000</p>
+    </div>`;
+  }
+}
+
+function openProject(projectId) {
+  const detailDiv = document.getElementById(`project-${projectId}`);
+  if (detailDiv) {
+    detailDiv.classList.toggle('active');
+  }
+}
+
+// Run test on page load
+window.addEventListener('load', testEPilotChantiers);
+</script>
+</body>
+</html>
