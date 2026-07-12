@@ -14207,72 +14207,73 @@ console.log('[PI Import 2026] Done:',D.length,'rows upserted');
     console.log('[RFQ-SUIVI] Affichage contenu Chantiers...');
 
     var chantiers = [];
+    var debugInfo = '';
     try {
       var projects = JSON.parse(localStorage.getItem('ePilot_PROJECTS_DATA') || '[]');
       console.log('[RFQ-SUIVI] Total projects:', projects.length);
+      debugInfo += 'Total: ' + projects.length + ' projets\n\n';
 
       // Déboguer les noms de champs
       if (projects.length > 0) {
-        console.log('[RFQ-SUIVI] Sample project keys:', Object.keys(projects[0]));
-        console.log('[RFQ-SUIVI] Sample project:', JSON.stringify(projects[0]).substring(0, 200));
+        var sampleKeys = Object.keys(projects[0]);
+        console.log('[RFQ-SUIVI] Sample project keys:', sampleKeys);
+        console.log('[RFQ-SUIVI] Sample project:', JSON.stringify(projects[0]).substring(0, 500));
+        debugInfo += 'Champs disponibles:\n' + sampleKeys.join(', ') + '\n\n';
+        debugInfo += 'Premier projet:\n' + JSON.stringify(projects[0], null, 2).substring(0, 500) + '\n';
       }
 
-      // Filter avec plusieurs champs possibles pour N° OA
-      chantiers = projects.filter(function(p) {
-        var oa = p['Numéro_OA'] || p.Numero_OA || p.NumeroOA || p.N_OA || p.OA ||
-                 p['N° OA'] || p['numero_oa'] || p.numeroOA || p.oaNumber;
-        var hasOA = oa && String(oa).trim().length > 0 && String(oa).toLowerCase() !== '-';
-        if (hasOA) {
-          console.log('[RFQ-SUIVI] Found chantier with OA:', oa);
-        }
-        return hasOA;
-      });
-      console.log('[RFQ-SUIVI] Chantiers avec OA:', chantiers.length);
+      // AFFICHER TOUS les projets directement (sans filtre pour déboguer)
+      chantiers = projects.slice(0, 50);
+      console.log('[RFQ-SUIVI] Affichage:', chantiers.length, 'projets (sans filtre OA)');
+      debugInfo += '\n\nAFFICHAGE: ' + chantiers.length + ' projets (filtre OA désactivé pour déboguer)';
 
-      if (chantiers.length === 0) {
-        console.log('[RFQ-SUIVI] ⚠️ Aucun chantier trouvé - affichage TOUS les projets');
-        chantiers = projects.slice(0, 100);
-      }
     } catch(e) {
       console.error('[RFQ-SUIVI] Erreur:', e);
+      debugInfo += '\n\nERREUR: ' + e.message;
     }
 
     window._SUIVI_SELECTED_CHANTIER = null;
     var html = '<div style="padding:25px;background:white;border-radius:8px">';
-    html += '<h3 style="color:#B5000A;margin:0 0 20px 0;font-size:16px;font-weight:600">📋 Suivi Chantiers (avec N° OA)</h3>';
+    html += '<h3 style="color:#B5000A;margin:0 0 20px 0;font-size:16px;font-weight:600">📋 Suivi Chantiers</h3>';
+
+    // Afficher le debug info
+    html += '<div style="background:#f5f5f5;border:1px solid #ddd;border-radius:4px;padding:12px;margin-bottom:20px;font-size:11px;font-family:monospace;color:#333;max-height:150px;overflow-y:auto;white-space:pre-wrap">';
+    html += debugInfo;
+    html += '</div>';
 
     if (chantiers.length === 0) {
-      html += '<div style="text-align:center;padding:40px;color:#999;font-style:italic">Aucun chantier avec numéro OA</div>';
+      html += '<div style="text-align:center;padding:40px;color:#999;font-style:italic">Aucun projet trouvé</div>';
     } else {
       html += '<div style="overflow-x:auto;border:1px solid #eee;border-radius:6px">';
-      html += '<table style="width:100%;border-collapse:collapse;font-size:12px">';
+      html += '<table style="width:100%;border-collapse:collapse;font-size:11px">';
       html += '<thead><tr style="background:#f5f5f5;border-bottom:2px solid #B5000A;font-weight:600">';
-      html += '<th style="padding:12px;text-align:left;border-right:1px solid #eee">Devis ID</th>';
-      html += '<th style="padding:12px;text-align:left;border-right:1px solid #eee">N° OA</th>';
-      html += '<th style="padding:12px;text-align:left;border-right:1px solid #eee">Client</th>';
-      html += '<th style="padding:12px;text-align:left;border-right:1px solid #eee">Type</th>';
-      html += '<th style="padding:12px;text-align:right;border-right:1px solid #eee">Budget</th>';
-      html += '<th style="padding:12px;text-align:center">Statut</th>';
+      html += '<th style="padding:8px;text-align:left;border-right:1px solid #eee">ID</th>';
+      html += '<th style="padding:8px;text-align:left;border-right:1px solid #eee">Libellé/Nom</th>';
+      html += '<th style="padding:8px;text-align:left;border-right:1px solid #eee">Client</th>';
+      html += '<th style="padding:8px;text-align:left;border-right:1px solid #eee">Montant</th>';
+      html += '<th style="padding:8px;text-align:center">Statut</th>';
       html += '</tr></thead>';
       html += '<tbody>';
 
-      chantiers.slice(0, 100).forEach(function(p, idx) {
+      chantiers.forEach(function(p, idx) {
         var bgColor = idx % 2 === 0 ? '#fff' : '#fafafa';
-        var statusColor = p.Statut === 'Terminé' ? '#dcfce7' : (p.Statut === 'En cours' ? '#dbeafe' : '#fee2e2');
-        var statusText = p.Statut === 'Terminé' ? '#166534' : (p.Statut === 'En cours' ? '#1e40af' : '#991b1b');
+        var id = p.Devis_ID || p._id || p.ID || p.id || '-';
+        var libelle = p.Libelle || p.Description || p.Name || p.Designation || p.Title || '-';
+        var client = p.Client || p.Entreprise || p.Customer || '-';
+        var montant = p.Montant_HT || p.Budget || p.Amount || p.Total || '0';
+        var statut = p.Statut || p.Status || p.State || '-';
 
-        html += '<tr style="background:' + bgColor + ';border-bottom:1px solid #eee;height:40px;cursor:pointer" onmouseover="this.style.background=\'#f0f0f0\';this.style.fontWeight=\'600\'" onmouseout="this.style.background=\'' + bgColor + '\';this.style.fontWeight=\'normal\'" onclick="window._showChantierDetail(' + idx + ')">';
-        html += '<td style="padding:10px;border-right:1px solid #eee"><strong style="color:#B5000A;font-family:monospace">' + (p.Devis_ID || p._id || '-') + '</strong></td>';
-        html += '<td style="padding:10px;border-right:1px solid #eee;font-weight:600;color:#333">' + (p['Numéro_OA'] || p.Numero_OA || '-') + '</td>';
-        html += '<td style="padding:10px;border-right:1px solid #eee;color:#666">' + (p.Client || '-') + '</td>';
-        html += '<td style="padding:10px;border-right:1px solid #eee;color:#666;font-size:11px">' + (p.Type_Travail || p.Type || '-') + '</td>';
-        html += '<td style="padding:10px;border-right:1px solid #eee;text-align:right;color:#333;font-weight:500">' + (p.Montant_HT || p.Budget || '0') + '</td>';
-        html += '<td style="padding:10px;text-align:center"><span style="background:' + statusColor + ';color:' + statusText + ';padding:4px 8px;border-radius:4px;font-size:11px;font-weight:500">' + (p.Statut || '-') + '</span></td>';
+        html += '<tr style="background:' + bgColor + ';border-bottom:1px solid #eee;height:35px;cursor:pointer" onmouseover="this.style.background=\'#f0f0f0\'" onmouseout="this.style.background=\'' + bgColor + '\'" onclick="window._showChantierDetail(' + idx + ')">';
+        html += '<td style="padding:6px;border-right:1px solid #eee"><code style="color:#B5000A">' + id + '</code></td>';
+        html += '<td style="padding:6px;border-right:1px solid #eee">' + libelle + '</td>';
+        html += '<td style="padding:6px;border-right:1px solid #eee">' + client + '</td>';
+        html += '<td style="padding:6px;border-right:1px solid #eee;text-align:right">' + montant + '</td>';
+        html += '<td style="padding:6px;text-align:center"><span style="background:#fee2e2;color:#991b1b;padding:3px 6px;border-radius:3px;font-size:10px">' + statut + '</span></td>';
         html += '</tr>';
       });
 
       html += '</tbody></table></div>';
-      html += '<div style="margin-top:15px;font-size:11px;color:#999;text-align:right">Affichés: ' + Math.min(100, chantiers.length) + ' / ' + chantiers.length + ' chantiers</div>';
+      html += '<div style="margin-top:12px;font-size:10px;color:#999;text-align:right">Affichés: ' + chantiers.length + ' projets</div>';
     }
     html += '</div>';
 
