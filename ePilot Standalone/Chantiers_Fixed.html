@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chantiers - Management</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif; background: #f5f5f5; }
+        
+        .header {
+            background: #c41e3a;
+            color: white;
+            padding: 20px;
+            text-align: center;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 20px auto;
+            padding: 0 20px;
+        }
+        
+        .controls {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+        
+        button {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: bold;
+        }
+        
+        .btn-primary { background: #c41e3a; color: white; }
+        .btn-primary:hover { background: #a01729; }
+        
+        .btn-danger { background: #f44336; color: white; }
+        .btn-danger:hover { background: #d32f2f; }
+        
+        .btn-info { background: #2196f3; color: white; }
+        .btn-info:hover { background: #1976d2; }
+        
+        .stats {
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+        }
+        
+        .stat-box {
+            background: #f9f9f9;
+            padding: 15px;
+            border-radius: 4px;
+            border-left: 4px solid #c41e3a;
+        }
+        
+        .stat-number { font-size: 24px; font-weight: bold; color: #c41e3a; }
+        .stat-label { font-size: 12px; color: #666; margin-top: 5px; }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background: white;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        
+        th {
+            background: #f5f5f5;
+            padding: 12px;
+            text-align: left;
+            font-weight: 600;
+            border-bottom: 2px solid #ddd;
+        }
+        
+        td {
+            padding: 12px;
+            border-bottom: 1px solid #eee;
+        }
+        
+        tr:hover {
+            background: #f9f9f9;
+        }
+        
+        .imputation {
+            font-weight: 600;
+            color: #c41e3a;
+        }
+        
+        .action-btn {
+            padding: 6px 12px;
+            font-size: 12px;
+            margin-right: 5px;
+        }
+        
+        .checkbox {
+            width: 20px;
+            height: 20px;
+            cursor: pointer;
+        }
+        
+        .info-box {
+            background: #e3f2fd;
+            border-left: 4px solid #2196f3;
+            padding: 15px;
+            border-radius: 4px;
+            margin-bottom: 20px;
+        }
+        
+        .empty-state {
+            text-align: center;
+            padding: 40px;
+            color: #999;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>📊 Gestion des Chantiers</h1>
+    </div>
+    
+    <div class="container">
+        <div class="info-box">
+            ℹ️ <strong>Chantiers JIP Management:</strong> Affichage, suppression et gestion des chantiers
+        </div>
+        
+        <div class="stats" id="stats">
+            <div class="stat-box">
+                <div class="stat-number" id="total">0</div>
+                <div class="stat-label">Total</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-number" id="selected">0</div>
+                <div class="stat-label">Sélectionnés</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-number" id="anciens">0</div>
+                <div class="stat-label">Avant 2025</div>
+            </div>
+        </div>
+        
+        <div class="controls">
+            <button class="btn-primary" onclick="loadChantiers()">🔄 Charger</button>
+            <button class="btn-info" onclick="selectAll()">✓ Tout cocher</button>
+            <button class="btn-info" onclick="deselectAll()">✗ Tout décocher</button>
+            <button class="btn-danger" onclick="deleteSelected()">🗑️ Supprimer sélectionnés</button>
+        </div>
+        
+        <table id="chantiersTable">
+            <thead>
+                <tr>
+                    <th><input type="checkbox" id="selectAllCb" onchange="toggleSelectAll()"></th>
+                    <th>Imputation</th>
+                    <th>Date</th>
+                    <th>Année</th>
+                    <th>Unité</th>
+                    <th>Type</th>
+                    <th>Statut</th>
+                </tr>
+            </thead>
+            <tbody id="tableBody">
+                <tr><td colspan="7" class="empty-state">Chargement...</td></tr>
+            </tbody>
+        </table>
+    </div>
+
+    <script>
+        let allChantiers = [];
+        
+        function loadChantiers() {
+            try {
+                const jipStr = localStorage.getItem('ePilot_JIP_DATA');
+                if (!jipStr) {
+                    document.getElementById('tableBody').innerHTML = '<tr><td colspan="7" class="empty-state">❌ Aucune donnée trouvée</td></tr>';
+                    return;
+                }
+                
+                allChantiers = JSON.parse(jipStr);
+                displayTable();
+                updateStats();
+            } catch (e) {
+                document.getElementById('tableBody').innerHTML = `<tr><td colspan="7" class="empty-state">❌ Erreur: ${e.message}</td></tr>`;
+            }
+        }
+        
+        function displayTable() {
+            const tbody = document.getElementById('tableBody');
+            tbody.innerHTML = '';
+            
+            if (allChantiers.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="7" class="empty-state">Aucun chantier</td></tr>';
+                return;
+            }
+            
+            allChantiers.forEach((item, idx) => {
+                const date = new Date(item.Date);
+                const year = isNaN(date) ? 'N/A' : date.getFullYear();
+                const isOld = year < 2025;
+                const dateStr = isNaN(date) ? item.Date : date.toLocaleDateString('fr-FR');
+                
+                const bgColor = isOld ? '#fff3e0' : 'white';
+                
+                const row = `
+                    <tr style="background: ${bgColor};">
+                        <td><input type="checkbox" class="checkbox row-check" data-index="${idx}"></td>
+                        <td class="imputation">${item.Imputation || '-'}</td>
+                        <td>${dateStr}</td>
+                        <td><strong>${year}</strong></td>
+                        <td>${item.Unite || '-'}</td>
+                        <td>${item.Type || '-'}</td>
+                        <td>${item.Statut || item.statut || '-'}</td>
+                    </tr>
+                `;
+                tbody.innerHTML += row;
+            });
+        }
+        
+        function updateStats() {
+            const total = allChantiers.length;
+            const selected = document.querySelectorAll('.row-check:checked').length;
+            const anciens = allChantiers.filter(item => {
+                const year = new Date(item.Date).getFullYear();
+                return year < 2025;
+            }).length;
+            
+            document.getElementById('total').textContent = total;
+            document.getElementById('selected').textContent = selected;
+            document.getElementById('anciens').textContent = anciens;
+        }
+        
+        function selectAll() {
+            document.querySelectorAll('.row-check').forEach(cb => cb.checked = true);
+            updateStats();
+        }
+        
+        function deselectAll() {
+            document.querySelectorAll('.row-check').forEach(cb => cb.checked = false);
+            updateStats();
+        }
+        
+        function toggleSelectAll() {
+            const checked = document.getElementById('selectAllCb').checked;
+            document.querySelectorAll('.row-check').forEach(cb => cb.checked = checked);
+            updateStats();
+        }
+        
+        function deleteSelected() {
+            const checkboxes = document.querySelectorAll('.row-check:checked');
+            if (!checkboxes.length) {
+                alert('Sélectionnez au moins un chantier');
+                return;
+            }
+            
+            if (!confirm(`Supprimer ${checkboxes.length} chantier(s)? Cette action est irréversible!`)) {
+                return;
+            }
+            
+            const indices = Array.from(checkboxes).map(cb => parseInt(cb.dataset.index)).sort((a, b) => b - a);
+            indices.forEach(idx => {
+                allChantiers.splice(idx, 1);
+            });
+            
+            localStorage.setItem('ePilot_JIP_DATA', JSON.stringify(allChantiers));
+            alert(`✓ ${indices.length} chantier(s) supprimé(s)!`);
+            
+            displayTable();
+            updateStats();
+        }
+        
+        // Charger au démarrage
+        window.onload = loadChantiers;
+        
+        // Mettre à jour stats quand on coche/décoche
+        document.addEventListener('change', function(e) {
+            if (e.target.classList.contains('row-check')) {
+                updateStats();
+            }
+        });
+    </script>
+</body>
+</html>
