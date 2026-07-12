@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Diagnostic ePilot</title>
+<style>
+  body { font-family: monospace; padding: 20px; background: #1e1e1e; color: #00ff00; }
+  .section { margin: 20px 0; padding: 15px; border: 1px solid #00ff00; border-radius: 5px; }
+  .error { color: #ff0000; }
+  .success { color: #00ff00; }
+  .warning { color: #ffff00; }
+  h2 { color: #00ffff; margin-top: 0; }
+  pre { background: #000; padding: 10px; overflow-x: auto; }
+</style>
+</head>
+<body>
+<h1>🔧 DIAGNOSTIC ePilot v20</h1>
+
+<div class="section">
+  <h2>1. Vérification Système</h2>
+  <div id="system"></div>
+</div>
+
+<div class="section">
+  <h2>2. localStorage</h2>
+  <div id="storage"></div>
+</div>
+
+<div class="section">
+  <h2>3. DOM & Éléments</h2>
+  <div id="dom"></div>
+</div>
+
+<div class="section">
+  <h2>4. Données JavaScript</h2>
+  <div id="data"></div>
+</div>
+
+<div class="section">
+  <h2>5. Erreurs Console</h2>
+  <div id="errors"></div>
+</div>
+
+<script>
+// Capture les erreurs
+const errorLog = [];
+window.addEventListener('error', (e) => {
+  errorLog.push(`❌ ${e.message} (${e.filename}:${e.lineno})`);
+});
+
+setTimeout(() => {
+  // 1. Système
+  const sys = `
+JavaScript: ${typeof window.Object}
+localStorage: ${typeof localStorage}
+sessionStorage: ${typeof sessionStorage}
+Navigateur: ${navigator.userAgent.substring(0, 50)}...
+`;
+  document.getElementById('system').innerHTML = `<pre>${sys}</pre>`;
+
+  // 2. localStorage
+  let storageTxt = '';
+  storageTxt += `Total clés: ${Object.keys(localStorage).length}\n\n`;
+  
+  const keys = Object.keys(localStorage).slice(0, 10);
+  for (const key of keys) {
+    const val = localStorage.getItem(key);
+    const size = val ? val.length : 0;
+    storageTxt += `✓ "${key}": ${size} bytes\n`;
+  }
+  
+  if (Object.keys(localStorage).length === 0) {
+    storageTxt = '<span class="error">❌ localStorage VIDE!</span>';
+  }
+  
+  document.getElementById('storage').innerHTML = `<pre>${storageTxt}</pre>`;
+
+  // 3. DOM
+  let domTxt = '';
+  const tables = document.querySelectorAll('table');
+  domTxt += `Tables trouvées: ${tables.length}\n`;
+  
+  const buttons = document.querySelectorAll('button');
+  domTxt += `Boutons trouvés: ${buttons.length}\n`;
+  
+  const inputs = document.querySelectorAll('input');
+  domTxt += `Input trouvés: ${inputs.length}\n`;
+  
+  const chantierLinks = document.querySelectorAll('[href*="chantier"], [data-view="chantiers"], button:contains("Chantiers")');
+  domTxt += `Liens Chantiers trouvés: ${chantierLinks.length}\n`;
+  
+  domTxt += `\nPremiers boutons:\n`;
+  Array.from(buttons).slice(0, 5).forEach((btn, i) => {
+    domTxt += `  ${i+1}. ${btn.textContent.substring(0, 30)}\n`;
+  });
+  
+  document.getElementById('dom').innerHTML = `<pre>${domTxt}</pre>`;
+
+  // 4. Données
+  let dataTxt = '';
+  
+  if (window._epdata) {
+    dataTxt += '✓ window._epdata trouvé\n';
+    dataTxt += `  Type: ${typeof window._epdata}\n`;
+    if (window._epdata.q) {
+      dataTxt += `  Données gzip: ${window._epdata.q.substring(0, 50)}...\n`;
+    }
+  } else {
+    dataTxt += '<span class="error">❌ window._epdata MANQUANT</span>\n';
+  }
+  
+  if (window.HubViews) {
+    dataTxt += '✓ window.HubViews trouvé\n';
+  } else {
+    dataTxt += '<span class="error">❌ window.HubViews MANQUANT</span>\n';
+  }
+  
+  if (window.ePilot) {
+    dataTxt += '✓ window.ePilot trouvé\n';
+  } else {
+    dataTxt += '<span class="error">❌ window.ePilot MANQUANT</span>\n';
+  }
+  
+  document.getElementById('data').innerHTML = `<pre>${dataTxt}</pre>`;
+
+  // 5. Erreurs
+  let errorTxt = '';
+  if (errorLog.length === 0) {
+    errorTxt = '<span class="success">✓ Aucune erreur détectée</span>';
+  } else {
+    errorTxt = errorLog.join('\n');
+  }
+  document.getElementById('errors').innerHTML = `<pre>${errorTxt}</pre>`;
+  
+  // Résumé
+  const summary = `
+RÉSUMÉ:
+${Object.keys(localStorage).length > 0 ? '✓ localStorage contient des données' : '❌ localStorage VIDE'}
+${tables.length > 0 ? `✓ ${tables.length} tables HTML` : '❌ Pas de tables'}
+${window._epdata ? '✓ Données compressées présentes' : '❌ Pas de données compressées'}
+${errorLog.length === 0 ? '✓ Pas d\'erreurs' : `❌ ${errorLog.length} erreurs`}
+`;
+  
+  console.log(summary);
+  
+}, 1000);
+</script>
+</body>
+</html>
