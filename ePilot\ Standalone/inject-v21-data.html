@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>ePilot - Injection données V21</title>
+<style>
+  body { font-family: Arial; padding: 20px; background: #f5f5f5; }
+  .container { max-width: 800px; margin: 0 auto; background: white; padding: 20px; border-radius: 8px; }
+  h1 { color: #B5000A; }
+  .success { background: #dcfce7; padding: 15px; border-radius: 6px; color: #166534; margin: 15px 0; }
+  .error { background: #fee2e2; padding: 15px; border-radius: 6px; color: #991b1b; margin: 15px 0; }
+  .info { background: #e0e7ff; padding: 15px; border-radius: 6px; color: #1e40af; margin: 15px 0; }
+  button { background: #B5000A; color: white; padding: 10px 20px; border: none; border-radius: 4px; cursor: pointer; font-size: 14px; }
+  button:hover { background: #8b000a; }
+  .stats { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 15px; margin: 20px 0; }
+  .stat-box { background: #f9f9f9; padding: 15px; border-left: 4px solid #B5000A; }
+  .stat-number { font-size: 24px; font-weight: bold; color: #B5000A; }
+  .stat-label { font-size: 12px; color: #666; margin-top: 5px; }
+</style>
+</head>
+<body>
+<div class="container">
+  <h1>📊 Injection des données V21</h1>
+
+  <p>Cliquez sur le bouton ci-dessous pour injector les données d'import Excel dans la base locale ePilot.</p>
+
+  <button onclick="injectData()">✓ INJECTER LES DONNÉES</button>
+
+  <div id="status"></div>
+  <div id="stats"></div>
+  <div id="actions" style="display:none; margin-top: 20px;">
+    <a href="ePilot%20v20_standalone.html" style="display: inline-block; padding: 10px 20px; background: #B5000A; color: white; text-decoration: none; border-radius: 4px;">
+      → Ouvrir ePilot
+    </a>
+  </div>
+</div>
+
+<script>
+async function injectData() {
+  const status = document.getElementById('status');
+  const statsDiv = document.getElementById('stats');
+
+  try {
+    status.innerHTML = '<div class="info">⏳ Récupération des données du serveur...</div>';
+
+    // Fetch import data from server
+    const response = await fetch('/api/import/preview');
+    if (!response.ok) throw new Error('Impossible de récupérer les données');
+
+    const result = await response.json();
+    const preview = result.preview;
+
+    // Get full data
+    const executeResp = await fetch('/api/import/execute', {
+      method: 'POST',
+      body: new FormData(document.querySelector('form') || new FormData())
+    }).catch(() => null);
+
+    if (!executeResp || !executeResp.ok) {
+      throw new Error('Import data not available - using preview only');
+    }
+
+    const fullData = await executeResp.json();
+    const v21Data = fullData.data;
+
+    // Load or create V21 database
+    const v21DbKey = 'epilot_v21_complete_db';
+    let db = JSON.parse(localStorage.getItem(v21DbKey) || '{}');
+
+    // Initialize tables if missing
+    if (!db.CHANTIERS_DATA) db.CHANTIERS_DATA = {};
+    if (!db.SOURCING_DATA) db.SOURCING_DATA = [];
+    if (!db.FACTURES_DATA) db.FACTURES_DATA = [];
+
+    // Merge data
+    const oldChantiersCount = Object.keys(db.CHANTIERS_DATA).length;
+    const oldSourcingCount = db.SOURCING_DATA.length;
+    const oldFacturesCount = db.FACTURES_DATA.length;
+
+    db.CHANTIERS_DATA = { ...db.CHANTIERS_DATA, ...v21Data.CHANTIERS_DATA };
+    db.SOURCING_DATA = [...db.SOURCING_DATA, ...v21Data.SOURCING_DATA];
+    db.FACTURES_DATA = [...db.FACTURES_DATA, ...v21Data.FACTURES_DATA];
+
+    // Save to localStorage
+    localStorage.setItem(v21DbKey, JSON.stringify(db));
+
+    // Show success
+    status.innerHTML = '<div class="success">✅ Données injectées avec succès!</div>';
+
+    // Show statistics
+    const newStats = `
+      <h3>Statistiques:</h3>
+      <div class="stats">
+        <div class="stat-box">
+          <div class="stat-number">${Object.keys(db.CHANTIERS_DATA).length}</div>
+          <div class="stat-label">Chantiers total</div>
+          <div style="font-size: 11px; color: #999; margin-top: 5px;">
+            +${Object.keys(v21Data.CHANTIERS_DATA).length} importés
+          </div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-number">${db.SOURCING_DATA.length}</div>
+          <div class="stat-label">Articles Sourcing</div>
+          <div style="font-size: 11px; color: #999; margin-top: 5px;">
+            +${v21Data.SOURCING_DATA.length} importés
+          </div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-number">${db.FACTURES_DATA.length}</div>
+          <div class="stat-label">Factures</div>
+          <div style="font-size: 11px; color: #999; margin-top: 5px;">
+            +${v21Data.FACTURES_DATA.length} importées
+          </div>
+        </div>
+      </div>
+
+      <h3>Détails:</h3>
+      <ul style="line-height: 1.8;">
+        <li><strong>CHANTIERS_DATA:</strong> ${Object.keys(v21Data.CHANTIERS_DATA).length} chantiers/devis</li>
+        <li><strong>SOURCING_DATA:</strong> ${v21Data.SOURCING_DATA.length} lignes de commande</li>
+        <li><strong>FACTURES_DATA:</strong> ${v21Data.FACTURES_DATA.length} factures</li>
+      </ul>
+    `;
+
+    statsDiv.innerHTML = newStats;
+
+    // Show action button
+    document.getElementById('actions').style.display = 'block';
+
+  } catch (error) {
+    status.innerHTML = `<div class="error">❌ Erreur: ${error.message}</div>
+      <p style="font-size: 12px; color: #666;">
+        Le serveur d'import n'est peut-être pas accessible.<br>
+        Assurez-vous que <code>npm start</code> est en cours d'exécution sur le port 3000.
+      </p>`;
+  }
+}
+
+// Try to auto-inject on load
+window.addEventListener('load', () => {
+  // Check if we can reach the server
+  fetch('/api/health')
+    .then(() => {
+      // Server is running, show option to auto-inject
+    })
+    .catch(() => {
+      document.getElementById('status').innerHTML =
+        '<div class="error">⚠️ Serveur d\'import non accessible sur http://localhost:3000</div>';
+    });
+});
+</script>
+</body>
+</html>
