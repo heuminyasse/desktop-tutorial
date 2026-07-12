@@ -1,0 +1,663 @@
+<!-- ePilot Excel Import Interface v1.0 -->
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ePilot — Import Excel</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+      background: #f5f5f5;
+      color: #333;
+    }
+
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+
+    header {
+      background: white;
+      padding: 20px;
+      border-bottom: 2px solid #B5000A;
+      margin-bottom: 30px;
+      border-radius: 8px;
+    }
+
+    h1 {
+      color: #B5000A;
+      font-size: 28px;
+      margin-bottom: 8px;
+    }
+
+    .subtitle {
+      color: #666;
+      font-size: 14px;
+    }
+
+    .section {
+      background: white;
+      padding: 20px;
+      margin-bottom: 20px;
+      border-radius: 8px;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    }
+
+    .section h2 {
+      color: #1a1a1a;
+      font-size: 18px;
+      margin-bottom: 15px;
+      border-bottom: 1px solid #eee;
+      padding-bottom: 10px;
+    }
+
+    .step-number {
+      display: inline-block;
+      background: #B5000A;
+      color: white;
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      text-align: center;
+      line-height: 32px;
+      font-weight: bold;
+      margin-right: 10px;
+    }
+
+    .file-input-wrapper {
+      margin: 15px 0;
+    }
+
+    input[type="file"],
+    input[type="date"],
+    input[type="text"],
+    input[type="number"],
+    select {
+      display: block;
+      width: 100%;
+      max-width: 400px;
+      padding: 10px;
+      margin: 8px 0;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      font-size: 14px;
+    }
+
+    input[type="file"]:focus,
+    input[type="date"]:focus,
+    select:focus {
+      outline: none;
+      border-color: #B5000A;
+      box-shadow: 0 0 4px rgba(181, 0, 10, 0.2);
+    }
+
+    input[type="checkbox"] {
+      margin-right: 8px;
+      cursor: pointer;
+    }
+
+    .checkbox-wrapper {
+      display: flex;
+      align-items: center;
+      margin: 10px 0;
+    }
+
+    label {
+      display: block;
+      font-size: 12px;
+      color: #666;
+      margin-bottom: 5px;
+      font-weight: 500;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 15px;
+      margin: 15px 0;
+    }
+
+    .stat-card {
+      padding: 15px;
+      background: #f9f9f9;
+      border-radius: 6px;
+      border-left: 4px solid #B5000A;
+    }
+
+    .stat-value {
+      font-size: 24px;
+      font-weight: bold;
+      color: #B5000A;
+    }
+
+    .stat-label {
+      font-size: 12px;
+      color: #666;
+      margin-top: 5px;
+    }
+
+    .button-group {
+      display: flex;
+      gap: 10px;
+      margin-top: 20px;
+    }
+
+    button {
+      padding: 10px 20px;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: 500;
+      transition: all 0.3s ease;
+    }
+
+    .btn-primary {
+      background: #B5000A;
+      color: white;
+    }
+
+    .btn-primary:hover:not(:disabled) {
+      background: #8b000a;
+      transform: translateY(-1px);
+      box-shadow: 0 2px 8px rgba(181, 0, 10, 0.3);
+    }
+
+    .btn-primary:disabled {
+      background: #ccc;
+      cursor: not-allowed;
+      opacity: 0.6;
+    }
+
+    .btn-secondary {
+      background: #f0f0f0;
+      color: #333;
+    }
+
+    .btn-secondary:hover {
+      background: #ddd;
+    }
+
+    .message {
+      padding: 15px;
+      margin: 15px 0;
+      border-radius: 4px;
+      display: none;
+      animation: slideIn 0.3s ease;
+    }
+
+    .message.show {
+      display: block;
+    }
+
+    .message.success {
+      background: #dcfce7;
+      color: #166534;
+      border: 1px solid #bbf7d0;
+    }
+
+    .message.error {
+      background: #fee2e2;
+      color: #991b1b;
+      border: 1px solid #fecaca;
+    }
+
+    .message.info {
+      background: #e0e7ff;
+      color: #1e40af;
+      border: 1px solid #c7d2fe;
+    }
+
+    .message.warning {
+      background: #fef3c7;
+      color: #92400e;
+      border: 1px solid #fde68a;
+    }
+
+    @keyframes slideIn {
+      from {
+        opacity: 0;
+        transform: translateY(-10px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .hidden {
+      display: none;
+    }
+
+    .loading {
+      display: inline-block;
+      width: 16px;
+      height: 16px;
+      border: 2px solid #f3f3f3;
+      border-top: 2px solid #B5000A;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      margin-right: 8px;
+      vertical-align: middle;
+    }
+
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+
+    .sample-table {
+      margin-top: 15px;
+      overflow-x: auto;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+    }
+
+    th, td {
+      padding: 8px;
+      text-align: left;
+      border-bottom: 1px solid #eee;
+    }
+
+    th {
+      background: #f9f9f9;
+      font-weight: 600;
+      color: #333;
+    }
+
+    tr:hover {
+      background: #f9f9f9;
+    }
+
+    .code {
+      font-family: 'Courier New', monospace;
+      background: #f5f5f5;
+      padding: 2px 6px;
+      border-radius: 3px;
+      font-size: 12px;
+    }
+
+    .info-box {
+      background: #f0f8ff;
+      border-left: 4px solid #2563eb;
+      padding: 12px;
+      margin: 15px 0;
+      border-radius: 4px;
+      font-size: 13px;
+      color: #1e40af;
+    }
+
+    .error-box {
+      background: #fef2f2;
+      border-left: 4px solid #dc2626;
+      padding: 12px;
+      margin: 15px 0;
+      border-radius: 4px;
+      font-size: 13px;
+      color: #7f1d1d;
+    }
+
+    .progress-bar {
+      width: 100%;
+      height: 4px;
+      background: #eee;
+      border-radius: 2px;
+      overflow: hidden;
+      margin: 10px 0;
+    }
+
+    .progress-fill {
+      height: 100%;
+      background: linear-gradient(90deg, #B5000A, #ff6b6b);
+      width: 0%;
+      transition: width 0.3s ease;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>📊 Import Excel ePilot</h1>
+      <p class="subtitle">Importer données Chantiers, Commandes et Factures depuis Excel</p>
+    </header>
+
+    <!-- Step 1: Upload -->
+    <div class="section" id="step-1">
+      <h2><span class="step-number">1</span>Sélectionner fichier Excel</h2>
+
+      <div class="file-input-wrapper">
+        <label for="excelFile">Fichier Excel (format: .xlsx ou .xlsm)</label>
+        <input type="file" id="excelFile" accept=".xlsx,.xlsm" />
+        <div class="info-box">
+          ℹ️ Format attendu: Excel avec feuilles Quote, JIP, Sourcing, Bill
+        </div>
+      </div>
+
+      <div class="button-group">
+        <button class="btn-primary" id="btnPreview">📖 Lire et prévisualiser</button>
+        <button class="btn-secondary" id="btnCancel" class="hidden">Annuler</button>
+      </div>
+    </div>
+
+    <!-- Status Message -->
+    <div id="messageBox" class="message"></div>
+
+    <!-- Step 2: Preview -->
+    <div class="section hidden" id="step-2">
+      <h2><span class="step-number">2</span>Aperçu des données</h2>
+
+      <div class="grid">
+        <div class="stat-card">
+          <div class="stat-value" id="statChantiers">0</div>
+          <div class="stat-label">Chantiers</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value" id="statDevis">0</div>
+          <div class="stat-label">Devis</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value" id="statCommandes">0</div>
+          <div class="stat-label">Commandes</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value" id="statFactures">0</div>
+          <div class="stat-label">Factures</div>
+        </div>
+      </div>
+
+      <div style="margin-top: 20px;">
+        <h3 style="font-size: 14px; margin-bottom: 10px;">Filtres (optionnel)</h3>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; max-width: 600px;">
+          <div>
+            <label for="dateFrom">Date début</label>
+            <input type="date" id="dateFrom" />
+          </div>
+          <div>
+            <label for="dateTo">Date fin</label>
+            <input type="date" id="dateTo" />
+          </div>
+        </div>
+      </div>
+
+      <div id="sampleData" class="sample-table"></div>
+
+      <div class="button-group">
+        <button class="btn-primary" id="btnApplyFilters">🔄 Appliquer filtres</button>
+        <button class="btn-secondary" id="btnContinue">Continuer →</button>
+      </div>
+    </div>
+
+    <!-- Step 3: Confirm & Import -->
+    <div class="section hidden" id="step-3">
+      <h2><span class="step-number">3</span>Confirmer et importer</h2>
+
+      <div class="info-box">
+        ⚠️ Cette opération va importer les données dans la base de données V21.
+        Les données existantes avec le même ID seront remplacées.
+      </div>
+
+      <div class="checkbox-wrapper">
+        <input type="checkbox" id="confirmImport" />
+        <label for="confirmImport" style="margin: 0;">
+          ✓ Je confirme l'import des données dans CHANTIERS_DATA, SOURCING_DATA et FACTURES_DATA
+        </label>
+      </div>
+
+      <div id="importSummary" style="margin: 20px 0; padding: 15px; background: #f9f9f9; border-radius: 6px; font-size: 13px;"></div>
+
+      <div class="button-group">
+        <button class="btn-primary" id="btnExecuteImport" disabled>
+          ✓ IMPORTER MAINTENANT
+        </button>
+        <button class="btn-secondary" id="btnBackToPreview">← Retour</button>
+      </div>
+    </div>
+
+    <!-- Results -->
+    <div class="section hidden" id="step-4">
+      <h2><span class="step-number">✓</span>Import terminé</h2>
+
+      <div id="resultsSummary" style="margin: 20px 0;"></div>
+
+      <div class="button-group">
+        <button class="btn-primary" id="btnResetForm">
+          ↻ Importer un autre fichier
+        </button>
+        <button class="btn-secondary" id="btnCloseModal">
+          Fermer
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const API_URL = '';
+
+    const state = {
+      file: null,
+      preview: null,
+      dateFrom: null,
+      dateTo: null
+    };
+
+    function showMessage(text, type = 'info') {
+      const box = document.getElementById('messageBox');
+      box.textContent = text;
+      box.className = `message show ${type}`;
+    }
+
+    function hideMessage() {
+      const box = document.getElementById('messageBox');
+      box.className = 'message';
+    }
+
+    function showStep(stepNum) {
+      document.querySelectorAll('.section').forEach((s, i) => {
+        if (s.id === `step-${stepNum}`) {
+          s.classList.remove('hidden');
+        } else {
+          s.classList.add('hidden');
+        }
+      });
+    }
+
+    // Step 1: Upload
+    document.getElementById('btnPreview').addEventListener('click', async () => {
+      const fileInput = document.getElementById('excelFile');
+      if (!fileInput.files.length) {
+        showMessage('Veuillez sélectionner un fichier Excel', 'warning');
+        return;
+      }
+
+      const file = fileInput.files[0];
+      if (!file.name.match(/\.(xlsx|xlsm)$/i)) {
+        showMessage('Le fichier doit être au format .xlsx ou .xlsm', 'error');
+        return;
+      }
+
+      state.file = file;
+
+      try {
+        showMessage('⏳ Lecture du fichier...', 'info');
+
+        const formData = new FormData();
+        formData.append('excel', file);
+
+        const response = await fetch(`${API_URL}/api/import/preview`, {
+          method: 'POST',
+          body: formData
+        });
+
+        if (!response.ok) {
+          const error = await response.json();
+          throw new Error(error.error || 'Erreur lors de la lecture');
+        }
+
+        const data = await response.json();
+        state.preview = data.preview;
+
+        // Update stats
+        document.getElementById('statChantiers').textContent = data.preview.chantiers.validated;
+        document.getElementById('statDevis').textContent = data.preview.chantiers.devis;
+        document.getElementById('statCommandes').textContent = data.preview.sourcing.total;
+        document.getElementById('statFactures').textContent = data.preview.factures.total;
+
+        // Show sample data
+        const sampleHtml = buildSampleTable(data.preview);
+        document.getElementById('sampleData').innerHTML = sampleHtml;
+
+        showStep(2);
+        showMessage('✓ Fichier chargé avec succès!', 'success');
+      } catch (error) {
+        showMessage(`❌ Erreur: ${error.message}`, 'error');
+      }
+    });
+
+    function buildSampleTable(preview) {
+      let html = '<h3 style="font-size: 13px; margin: 20px 0 10px 0;">Exemples de données</h3>';
+
+      if (preview.chantiers.sample.length > 0) {
+        html += '<h4 style="font-size: 12px; margin: 10px 0 5px 0; color: #666;">Chantiers</h4>';
+        html += '<table><tr><th>ID</th><th>Client</th><th>Type</th><th>Status</th></tr>';
+        preview.chantiers.sample.forEach(ch => {
+          html += `<tr>
+            <td><span class="code">${ch._id}</span></td>
+            <td>${ch.Client || '—'}</td>
+            <td>${ch.Type || '—'}</td>
+            <td>${ch.Status || '—'}</td>
+          </tr>`;
+        });
+        html += '</table>';
+      }
+
+      if (preview.sourcing.sample.length > 0) {
+        html += '<h4 style="font-size: 12px; margin: 10px 0 5px 0; color: #666;">Commandes</h4>';
+        html += '<table><tr><th>Imputation</th><th>Description</th><th>Qty</th><th>Coût</th></tr>';
+        preview.sourcing.sample.forEach(s => {
+          html += `<tr>
+            <td><span class="code">${s.Imputation}</span></td>
+            <td>${s.Description || '—'}</td>
+            <td>${s.Qty || '—'}</td>
+            <td>${s.CoutAcqXAF || '—'}</td>
+          </tr>`;
+        });
+        html += '</table>';
+      }
+
+      if (preview.factures.sample.length > 0) {
+        html += '<h4 style="font-size: 12px; margin: 10px 0 5px 0; color: #666;">Factures</h4>';
+        html += '<table><tr><th>Dossier</th><th>N° Facture</th><th>Montant</th></tr>';
+        preview.factures.sample.forEach(f => {
+          html += `<tr>
+            <td><span class="code">${f.Dossier}</span></td>
+            <td>${f.NumeroFacture || '—'}</td>
+            <td>${f.Montant || '—'}</td>
+          </tr>`;
+        });
+        html += '</table>';
+      }
+
+      return html;
+    }
+
+    document.getElementById('btnApplyFilters').addEventListener('click', () => {
+      state.dateFrom = document.getElementById('dateFrom').value;
+      state.dateTo = document.getElementById('dateTo').value;
+      showMessage('✓ Filtres appliqués', 'success');
+    });
+
+    document.getElementById('btnContinue').addEventListener('click', () => {
+      const summary = `
+        <div style="font-size: 13px;">
+          <p><strong>Chantiers validés:</strong> ${state.preview.chantiers.validated}</p>
+          <p><strong>Devis:</strong> ${state.preview.chantiers.devis}</p>
+          <p><strong>Commandes:</strong> ${state.preview.sourcing.total}</p>
+          <p><strong>Factures:</strong> ${state.preview.factures.total}</p>
+          ${state.dateFrom || state.dateTo ? `<p><strong>Filtres:</strong> ${state.dateFrom ? 'Du ' + state.dateFrom : ''} ${state.dateTo ? 'au ' + state.dateTo : ''}</p>` : ''}
+        </div>
+      `;
+      document.getElementById('importSummary').innerHTML = summary;
+      showStep(3);
+      hideMessage();
+    });
+
+    document.getElementById('confirmImport').addEventListener('change', (e) => {
+      document.getElementById('btnExecuteImport').disabled = !e.target.checked;
+    });
+
+    document.getElementById('btnExecuteImport').addEventListener('click', async () => {
+      try {
+        showMessage('⏳ Import en cours...', 'info');
+
+        const formData = new FormData();
+        formData.append('excel', state.file);
+        if (state.dateFrom) formData.append('dateFrom', state.dateFrom);
+        if (state.dateTo) formData.append('dateTo', state.dateTo);
+
+        const response = await fetch(`${API_URL}/api/import/execute`, {
+          method: 'POST',
+          body: formData
+        });
+
+        if (!response.ok) {
+          const error = await response.json();
+          throw new Error(error.error || 'Erreur lors de l\'import');
+        }
+
+        const data = await response.json();
+
+        const summary = `
+          <div style="font-size: 14px; padding: 15px; background: #dcfce7; border: 1px solid #bbf7d0; border-radius: 6px;">
+            <h3 style="color: #166534; margin-bottom: 10px;">✓ Import réussi!</h3>
+            <p><strong>${data.stats.chantiers}</strong> Chantiers importés</p>
+            <p><strong>${data.stats.sourcing}</strong> Articles de commande importés</p>
+            <p><strong>${data.stats.factures}</strong> Factures importées</p>
+          </div>
+        `;
+        document.getElementById('resultsSummary').innerHTML = summary;
+
+        showStep(4);
+        showMessage('✓ Import terminé avec succès!', 'success');
+      } catch (error) {
+        showMessage(`❌ Erreur d'import: ${error.message}`, 'error');
+      }
+    });
+
+    document.getElementById('btnBackToPreview').addEventListener('click', () => {
+      showStep(2);
+    });
+
+    document.getElementById('btnResetForm').addEventListener('click', () => {
+      state.file = null;
+      state.preview = null;
+      document.getElementById('excelFile').value = '';
+      document.getElementById('dateFrom').value = '';
+      document.getElementById('dateTo').value = '';
+      document.getElementById('confirmImport').checked = false;
+      showStep(1);
+      hideMessage();
+    });
+
+    document.getElementById('btnCancel').addEventListener('click', () => {
+      document.getElementById('btnResetForm').click();
+    });
+
+    document.getElementById('btnCloseModal').addEventListener('click', () => {
+      // In a real app, this would close a modal or navigate away
+      location.reload();
+    });
+  </script>
+</body>
+</html>
