@@ -467,17 +467,52 @@ window.addEventListener('load', () => {
 // Charger les données
 function loadData() {
   try {
-    const stored = localStorage.getItem('epilot_v21_complete_db');
-    if (stored) {
-      allData = JSON.parse(stored);
-      console.log('✓ Données chargées:', Object.keys(allData.CHANTIERS_DATA || {}).length, 'projets');
-    } else {
-      console.log('⚠️ Aucune donnée stockée');
-      allData = {
-        CHANTIERS_DATA: {},
-        SOURCING_DATA: [],
-        FACTURES_DATA: []
-      };
+    // Try new format first (from job-data-loader)
+    let jobData = localStorage.getItem('epilot_job_data');
+    if (jobData) {
+      const parsed = JSON.parse(jobData);
+      if (parsed.projects && Array.isArray(parsed.projects)) {
+        // Convert from new format to V21 format
+        allData = {
+          CHANTIERS_DATA: {},
+          SOURCING_DATA: [],
+          FACTURES_DATA: []
+        };
+
+        parsed.projects.forEach(project => {
+          allData.CHANTIERS_DATA[project.id] = {
+            _id: project.id,
+            _type: project.statut === 'Devis' ? 'DEVIS' : 'CHANTIER',
+            Client: project.client,
+            Status: project.statut,
+            Budget: project.montantTotal || project.montant,
+            NumeroOA: project.numeroOA,
+            Type: project.type,
+            Unite: project.unite,
+            Date: project.dateRFQ,
+            Description: project.description,
+            Acheteur: project.acheteur
+          };
+        });
+
+        console.log('✓ Données chargées (format job):', Object.keys(allData.CHANTIERS_DATA).length, 'projets');
+      }
+    }
+
+    // Try old format if new format not found
+    if (!jobData) {
+      const stored = localStorage.getItem('epilot_v21_complete_db');
+      if (stored) {
+        allData = JSON.parse(stored);
+        console.log('✓ Données chargées (format V21):', Object.keys(allData.CHANTIERS_DATA || {}).length, 'projets');
+      } else {
+        console.log('⚠️ Aucune donnée stockée');
+        allData = {
+          CHANTIERS_DATA: {},
+          SOURCING_DATA: [],
+          FACTURES_DATA: []
+        };
+      }
     }
   } catch (e) {
     console.error('❌ Erreur chargement:', e);

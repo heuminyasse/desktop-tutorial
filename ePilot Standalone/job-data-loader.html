@@ -1,0 +1,443 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>ePilot JOB - Data Loader</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    min-height: 100vh;
+    padding: 20px;
+  }
+
+  .container {
+    max-width: 1200px;
+    margin: 0 auto;
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+    overflow: hidden;
+  }
+
+  .header {
+    background: linear-gradient(135deg, #B5000A 0%, #8b000a 100%);
+    color: white;
+    padding: 30px;
+  }
+
+  .header h1 {
+    font-size: 28px;
+    font-weight: bold;
+    margin-bottom: 10px;
+  }
+
+  .header p {
+    opacity: 0.9;
+  }
+
+  .content {
+    padding: 30px;
+  }
+
+  .section {
+    margin-bottom: 30px;
+  }
+
+  .section h2 {
+    font-size: 20px;
+    color: #333;
+    margin-bottom: 15px;
+    border-bottom: 2px solid #B5000A;
+    padding-bottom: 10px;
+  }
+
+  textarea {
+    width: 100%;
+    height: 300px;
+    padding: 15px;
+    border: 2px solid #ddd;
+    border-radius: 6px;
+    font-family: monospace;
+    font-size: 12px;
+    resize: vertical;
+  }
+
+  textarea:focus {
+    outline: none;
+    border-color: #B5000A;
+    box-shadow: 0 0 8px rgba(181, 0, 10, 0.3);
+  }
+
+  .controls {
+    display: flex;
+    gap: 10px;
+    margin-top: 15px;
+    flex-wrap: wrap;
+  }
+
+  button {
+    background: #B5000A;
+    color: white;
+    border: none;
+    padding: 12px 24px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: bold;
+    transition: background 0.3s;
+  }
+
+  button:hover {
+    background: #8b000a;
+  }
+
+  button:disabled {
+    background: #ccc;
+    cursor: not-allowed;
+  }
+
+  .secondary {
+    background: #666;
+  }
+
+  .secondary:hover {
+    background: #555;
+  }
+
+  .results {
+    background: #f8f9fa;
+    padding: 20px;
+    border-radius: 6px;
+    border-left: 4px solid #B5000A;
+    margin-top: 20px;
+  }
+
+  .status {
+    padding: 15px;
+    border-radius: 6px;
+    margin-top: 15px;
+    display: none;
+  }
+
+  .status.show { display: block; }
+  .status.success { background: #dcfce7; color: #166534; border-left: 4px solid #22c55e; }
+  .status.error { background: #fee2e2; color: #991b1b; border-left: 4px solid #ef4444; }
+  .status.info { background: #dbeafe; color: #0c4a6e; border-left: 4px solid #0ea5e9; }
+
+  .preview-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 15px;
+    font-size: 12px;
+  }
+
+  .preview-table th {
+    background: #B5000A;
+    color: white;
+    padding: 10px;
+    text-align: left;
+    font-weight: bold;
+  }
+
+  .preview-table td {
+    padding: 8px 10px;
+    border-bottom: 1px solid #ddd;
+  }
+
+  .preview-table tr:hover {
+    background: #f5f5f5;
+  }
+
+  .stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 15px;
+    margin-top: 15px;
+  }
+
+  .stat-box {
+    background: white;
+    padding: 15px;
+    border-left: 4px solid #B5000A;
+    border-radius: 4px;
+    text-align: center;
+  }
+
+  .stat-number {
+    font-size: 28px;
+    font-weight: bold;
+    color: #B5000A;
+  }
+
+  .stat-label {
+    font-size: 12px;
+    color: #666;
+    margin-top: 5px;
+  }
+
+  .button-group {
+    display: flex;
+    gap: 10px;
+    margin-top: 20px;
+  }
+
+  .link-button {
+    background: #667eea;
+    text-decoration: none;
+    display: inline-block;
+  }
+
+  .link-button:hover {
+    background: #5568d3;
+  }
+</style>
+</head>
+<body>
+<div class="container">
+  <div class="header">
+    <h1>📊 ePilot JOB - Data Loader</h1>
+    <p>Import your devis and projects data into the Job management system</p>
+  </div>
+
+  <div class="content">
+    <div class="section">
+      <h2>Step 1: Paste Your Data</h2>
+      <p style="margin-bottom: 15px; color: #666;">
+        Paste your tab-separated devis data below. Expected columns: Devis_ID, Unité, Client, Type_Travail, Montant_HT, Coefficient, Numéro_OA, Count_OA, Statut, État, Description, Date_RFQ, Acheteur
+      </p>
+      <textarea id="dataInput" placeholder="Paste your tab-separated devis data here..."></textarea>
+      <div class="controls">
+        <button onclick="parseData()">▶ Parse Data</button>
+        <button class="secondary" onclick="clearInput()">Clear</button>
+        <button class="secondary" onclick="loadSampleData()">Load Sample Data</button>
+      </div>
+    </div>
+
+    <div id="resultsSection" style="display: none;">
+      <div class="section">
+        <h2>Step 2: Preview</h2>
+        <div id="stats" class="stats"></div>
+        <div id="preview" class="results">
+          <table class="preview-table" id="previewTable">
+            <thead>
+              <tr>
+                <th>Devis_ID</th>
+                <th>Client</th>
+                <th>Type</th>
+                <th>Montant</th>
+                <th>Statut</th>
+              </tr>
+            </thead>
+            <tbody id="previewBody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>Step 3: Import</h2>
+        <div class="controls">
+          <button onclick="importToLocalStorage()">✓ Import to Job</button>
+          <button class="secondary" onclick="exportAsJson()">⬇ Export as JSON</button>
+        </div>
+        <div id="statusMessage" class="status"></div>
+      </div>
+
+      <div class="section">
+        <h2>Navigation</h2>
+        <div class="button-group">
+          <a href="job.html" class="link-button" style="padding: 12px 24px; border-radius: 6px; color: white; text-decoration: none; font-weight: bold;">→ Go to Job Dashboard</a>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+let parsedData = [];
+
+function parseData() {
+  const input = document.getElementById('dataInput').value.trim();
+  if (!input) {
+    showStatus('error', 'Please paste data first');
+    return;
+  }
+
+  const lines = input.split('\n').filter(line => line.trim());
+  if (lines.length < 2) {
+    showStatus('error', 'Need at least a header row and one data row');
+    return;
+  }
+
+  // Parse header
+  const headers = lines[0].split('\t').map(h => h.trim());
+
+  // Parse data rows
+  parsedData = [];
+  const errors = [];
+
+  for (let i = 1; i < lines.length; i++) {
+    try {
+      const values = lines[i].split('\t').map(v => v.trim());
+      if (values.length === 0 || (values.length === 1 && values[0] === '')) continue;
+
+      const row = {};
+      for (let j = 0; j < headers.length && j < values.length; j++) {
+        row[headers[j]] = values[j];
+      }
+
+      if (row.Devis_ID) {
+        parsedData.push(row);
+      }
+    } catch (e) {
+      errors.push(`Row ${i + 1}: ${e.message}`);
+    }
+  }
+
+  if (parsedData.length === 0) {
+    showStatus('error', `Failed to parse any rows. ${errors.length > 0 ? errors[0] : ''}`);
+    return;
+  }
+
+  showPreview();
+  showStatus('success', `Successfully parsed ${parsedData.length} projects`);
+}
+
+function showPreview() {
+  const statsDiv = document.getElementById('stats');
+  const previewBody = document.getElementById('previewBody');
+
+  // Clear previous
+  statsDiv.innerHTML = '';
+  previewBody.innerHTML = '';
+
+  // Calculate stats
+  const statuses = {};
+  parsedData.forEach(row => {
+    const status = row.Statut || 'Unknown';
+    statuses[status] = (statuses[status] || 0) + 1;
+  });
+
+  // Show stats
+  statsDiv.innerHTML = `
+    <div class="stat-box">
+      <div class="stat-number">${parsedData.length}</div>
+      <div class="stat-label">Total Projects</div>
+    </div>
+    ${Object.entries(statuses).map(([status, count]) => `
+      <div class="stat-box">
+        <div class="stat-number">${count}</div>
+        <div class="stat-label">${status}</div>
+      </div>
+    `).join('')}
+  `;
+
+  // Show preview (first 10 rows)
+  previewBody.innerHTML = parsedData.slice(0, 10).map(row => `
+    <tr>
+      <td>${row.Devis_ID || 'N/A'}</td>
+      <td>${row.Client || 'N/A'}</td>
+      <td>${row.Type_Travail || 'N/A'}</td>
+      <td>${row.Montant_HT || 'N/A'}</td>
+      <td>${row.Statut || 'N/A'}</td>
+    </tr>
+  `).join('');
+
+  if (parsedData.length > 10) {
+    previewBody.innerHTML += `<tr><td colspan="5" style="text-align: center; font-weight: bold; color: #666;">... and ${parsedData.length - 10} more</td></tr>`;
+  }
+
+  document.getElementById('resultsSection').style.display = 'block';
+  window.scrollTo(0, document.getElementById('resultsSection').offsetTop);
+}
+
+function importToLocalStorage() {
+  if (parsedData.length === 0) {
+    showStatus('error', 'No data to import');
+    return;
+  }
+
+  try {
+    // Transform data to job.html format
+    const jobData = {
+      projects: parsedData.map((row, idx) => ({
+        id: row.Devis_ID,
+        client: row.Client,
+        type: row.Type_Travail,
+        montant: row.Montant_HT,
+        montantTotal: parseFloat(row.Montant_HT || 0) * parseFloat(row.Coefficient || 1),
+        coefficient: row.Coefficient,
+        numeroOA: row.Numéro_OA,
+        countOA: row.Count_OA,
+        statut: row.Statut,
+        etat: row.État,
+        description: row.Description,
+        dateRFQ: row.Date_RFQ,
+        acheteur: row.Acheteur,
+        _id: row.Devis_ID,
+        _timestamp: Date.now()
+      }))
+    };
+
+    // Store in localStorage
+    localStorage.setItem('epilot_job_data', JSON.stringify(jobData));
+    localStorage.setItem('epilot_job_last_import', new Date().toISOString());
+
+    showStatus('success', `✓ Successfully imported ${parsedData.length} projects to localStorage. <a href="job.html" style="color: inherit; font-weight: bold;">Open Job Dashboard →</a>`);
+  } catch (e) {
+    showStatus('error', `Import failed: ${e.message}`);
+  }
+}
+
+function exportAsJson() {
+  if (parsedData.length === 0) {
+    showStatus('error', 'No data to export');
+    return;
+  }
+
+  const jobData = {
+    projects: parsedData,
+    exportDate: new Date().toISOString(),
+    count: parsedData.length
+  };
+
+  const dataStr = JSON.stringify(jobData, null, 2);
+  const dataBlob = new Blob([dataStr], { type: 'application/json' });
+  const url = URL.createObjectURL(dataBlob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = `job-data-${Date.now()}.json`;
+  link.click();
+  URL.revokeObjectURL(url);
+
+  showStatus('info', 'JSON file downloaded');
+}
+
+function showStatus(type, message) {
+  const statusDiv = document.getElementById('statusMessage');
+  statusDiv.className = `status show ${type}`;
+  statusDiv.innerHTML = message;
+}
+
+function clearInput() {
+  document.getElementById('dataInput').value = '';
+  document.getElementById('resultsSection').style.display = 'none';
+  document.getElementById('statusMessage').className = 'status';
+}
+
+function loadSampleData() {
+  const sampleData = `Devis_ID	Unité	Client	Type_Travail	Montant_HT	Coefficient	Numéro_OA	Count_OA	Statut	État	Description	Date_RFQ	Acheteur
+PI26059	SABC_Douala	SABC Douala	Installation	5000000	1.1	OA001	1	Validé	Actif	Installation tuyauterie et robinetterie	2026-01-15	John Doe
+PI26060	GUINNESS_Douala	GUINNESS Cameroon	Fourniture	8500000	1.15	OA002	1	Validé	Actif	Fourniture équipements de production	2026-02-01	Jane Smith
+PI26061	DANGOTE_Douala	DANGOTE CEMENT	Maintenance	3200000	1.0	OA003	1	Devis	Attente	Maintenance préventive équipements	2026-03-01	Mike Johnson
+PI26062	BOISSONS_Douala	Boissons du Cameroun	Formation	2500000	1.05	OA004	1	Facturé	Payé	Formation équipes techniques	2026-03-15	Sarah Williams
+PI26063	GICAM_Douala	GICAM	Installation	4800000	1.2	OA005	1	Validé	Actif	Installation système électrique	2026-04-01	Robert Brown`;
+
+  document.getElementById('dataInput').value = sampleData;
+  document.getElementById('resultsSection').style.display = 'none';
+}
+</script>
+</body>
+</html>
