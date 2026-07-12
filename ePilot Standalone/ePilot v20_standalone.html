@@ -2784,24 +2784,42 @@ document.addEventListener('DOMContentLoaded', async function() {
       function makePatched(orig) {
         function patched(ref) {
           try {
+            console.log('[FixClosedChantier] Called with:', ref);
             // payload synthétisé (RFQ-only) → passthrough direct
             if (ref && typeof ref === 'object') return orig(ref);
             var key = String(ref);
             var row = (window.JIP_DATA || []).find(function (j) { return String(j.Imputation) === key; });
+            console.log('[FixClosedChantier] Found row:', row);
             // chantier inconnu OU ouvert → chemin natif rapide
-            if (!row || !isClosed(row)) return orig(key);
+            if (!row || !isClosed(row)) {
+              console.log('[FixClosedChantier] Chantier ouvert, using native path');
+              return orig(key);
+            }
             // chantier clôturé/terminé → reconstruire le JIP complet et l'injecter
+            console.log('[FixClosedChantier] Chantier fermé, rebuilding...');
             if (window.EpilotConnector && window.EpilotConnector.buildData) {
               window.EpilotConnector.buildData({ all: true }).then(function (d) {
+                console.log('[FixClosedChantier] Rebuilt data:', d);
                 var jip = (d.jips || []).find(function (j) { return String(j.id) === key; });
-                if (!jip) { orig(key); return; }
+                console.log('[FixClosedChantier] Found JIP:', jip);
+                if (!jip) {
+                  console.log('[FixClosedChantier] JIP not found, using native');
+                  orig(key);
+                  return;
+                }
                 var client = (d.clients || []).find(function (c) { return c.id === jip.clientId; }) || null;
+                console.log('[FixClosedChantier] Injecting with:', { jip: jip, client: client });
                 orig({ jip: jip, client: client });
-              }).catch(function () { orig(key); });
+              }).catch(function (err) {
+                console.log('[FixClosedChantier] Error rebuilding:', err);
+                orig(key);
+              });
             } else {
+              console.log('[FixClosedChantier] No EpilotConnector, using native');
               orig(key);
             }
           } catch (e) {
+            console.log('[FixClosedChantier] Exception:', e);
             try { orig(ref); } catch (_) {}
           }
         }
