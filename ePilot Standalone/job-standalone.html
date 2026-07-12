@@ -72,6 +72,22 @@
     letter-spacing: 0.5px;
   }
 
+  input[type="checkbox"] {
+    width: 18px;
+    height: 18px;
+    cursor: pointer;
+    accent-color: #B5000A;
+  }
+
+  .row-check {
+    margin: 0;
+  }
+
+  th input[type="checkbox"] {
+    width: 16px;
+    height: 16px;
+  }
+
   .controls {
     padding: 20px 30px;
     background: #fafbfc;
@@ -461,6 +477,10 @@
         <span class="stat-number" id="factureCount">0</span>
         <div class="stat-label">Facturés</div>
       </div>
+      <div class="stat">
+        <span class="stat-number" id="selectedCount">0</span>
+        <div class="stat-label">Sélectionnés</div>
+      </div>
     </div>
   </div>
 
@@ -469,11 +489,16 @@
     <div class="search-box">
       <input type="text" id="searchBox" placeholder="🔍 Rechercher (PI, client, statut...)">
     </div>
-    <div class="filter-buttons">
+    <div class="filter-buttons" style="margin-right: auto;">
       <button class="filter-btn active" onclick="filterByStatus('all')">Tous</button>
       <button class="filter-btn" onclick="filterByStatus('DEVIS')">Devis</button>
       <button class="filter-btn" onclick="filterByStatus('CHANTIER')">Validés</button>
       <button class="filter-btn" onclick="filterByStatus('Facturé')">Facturés</button>
+    </div>
+    <div style="display: flex; gap: 10px;">
+      <button class="filter-btn" onclick="selectAll()" style="background: #4CAF50; color: white; border: none;">✓ Tout cocher</button>
+      <button class="filter-btn" onclick="deselectAll()" style="background: #ff9800; color: white; border: none;">✗ Décocher</button>
+      <button class="filter-btn" onclick="deleteSelected()" style="background: #f44336; color: white; border: none;">🗑️ Supprimer</button>
     </div>
     <button onclick="exportData()">📥 Exporter</button>
     <button onclick="importData()">📤 Importer</button>
@@ -2472,6 +2497,7 @@ function renderTable() {
       <table>
         <thead>
           <tr>
+            <th><input type="checkbox" id="selectAllCb" onchange="toggleSelectAll()" title="Sélectionner tout"></th>
             <th>ID Projet</th>
             <th>Client</th>
             <th>Statut</th>
@@ -2484,12 +2510,13 @@ function renderTable() {
         <tbody>
   `;
 
-  filteredData.forEach(project => {
+  filteredData.forEach((project, idx) => {
     const statusClass = `status-${project._type?.toLowerCase() || 'devis'}`;
     const statusText = project._type === 'CHANTIER' ? 'Validé' : 'Devis';
 
     html += `
       <tr>
+        <td><input type="checkbox" class="row-check" data-id="${project.id}" onchange="updateSelectedCount()"></td>
         <td><span class="job-id" onclick="showDetail('${project.id}')">${project.id}</span></td>
         <td>${project.Client || '-'}</td>
         <td><span class="status-badge ${statusClass}">${statusText}</span></td>
@@ -2651,6 +2678,71 @@ function confirmImport() {
   } catch (e) {
     alert('❌ Erreur JSON: ' + e.message);
   }
+}
+
+// Sélection et suppression (inspiré de Chantiers)
+function selectAll() {
+  document.querySelectorAll('.row-check').forEach(cb => cb.checked = true);
+  updateSelectedCount();
+}
+
+function deselectAll() {
+  document.querySelectorAll('.row-check').forEach(cb => cb.checked = false);
+  updateSelectedCount();
+}
+
+function toggleSelectAll() {
+  const checked = document.getElementById('selectAllCb').checked;
+  document.querySelectorAll('.row-check').forEach(cb => cb.checked = checked);
+  updateSelectedCount();
+}
+
+function updateSelectedCount() {
+  const selected = document.querySelectorAll('.row-check:checked').length;
+  const selectAllCb = document.getElementById('selectAllCb');
+  const allCbs = document.querySelectorAll('.row-check');
+
+  selectAllCb.checked = selected > 0 && selected === allCbs.length;
+  document.getElementById('selectedCount').textContent = selected;
+}
+
+function deleteSelected() {
+  const checkboxes = document.querySelectorAll('.row-check:checked');
+  if (!checkboxes.length) {
+    alert('Sélectionnez au moins un projet');
+    return;
+  }
+
+  if (!confirm(`Supprimer ${checkboxes.length} projet(s)? Cette action est irréversible!`)) {
+    return;
+  }
+
+  const idsToDelete = Array.from(checkboxes).map(cb => cb.dataset.id);
+
+  // Remove from allData
+  idsToDelete.forEach(id => {
+    delete allData.CHANTIERS_DATA[id];
+  });
+
+  // Update localStorage
+  localStorage.setItem('epilot_job_data', JSON.stringify({
+    projects: Object.values(allData.CHANTIERS_DATA).map(p => ({
+      id: p._id,
+      client: p.Client,
+      type: p.Type,
+      montant: p.Budget,
+      montantTotal: p.Budget,
+      statut: p.Status,
+      etat: '',
+      dateRFQ: p.Date,
+      acheteur: p.Acheteur
+    }))
+  }));
+
+  alert(`✓ ${idsToDelete.length} projet(s) supprimé(s)!`);
+  loadData();
+  renderTable();
+  updateStats();
 }
 
 // Utilitaires
