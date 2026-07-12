@@ -263,13 +263,12 @@ document.addEventListener('DOMContentLoaded', async function() {
         });
         /* Ré-invalide le cache EpilotConnector pour que buildData recharche */
         try{if(window.EpilotConnector&&window.EpilotConnector._clearCache)window.EpilotConnector._clearCache();}catch(_){}
-        /* Les scripts du template peuvent ajouter des enregistrements APRÈS
+        /* REMOVED: Les scripts du template peuvent ajouter des enregistrements APRÈS
            la résolution de la promesse (via SOURCING_DATA.unshift etc.).
-           On refiltre à nouveau 600 ms plus tard pour ne garder que PI25+PI26. */
+           Affichage de TOUS les chantiers, y compris PI22, PI23, PI24 (ancien filter: PI25+PI26 seulement) */
         setTimeout(function(){
-          function isPI2526(imp){ return /^PI2[56]/.test(imp||''); }
-          window.PROJECTS_DATA = (window.PROJECTS_DATA||[]).filter(function(r){return isPI2526(r._id);});
-          if(window.SOURCING_DATA) window.SOURCING_DATA = window.SOURCING_DATA.filter(function(r){return isPI2526(r.Imputation);});
+          /* Filter REMOVED: Show ALL projects regardless of year */
+          /* All PROJECTS_DATA and SOURCING_DATA are kept */
           /* Réindexe sourcing */
           window._sourcingIdx={};
           (window.SOURCING_DATA||[]).forEach(function(r){var i=r.Imputation;if(!i)return;window._sourcingIdx[i]=window._sourcingIdx[i]||[];window._sourcingIdx[i].push(r);});
@@ -2847,6 +2846,66 @@ document.addEventListener('DOMContentLoaded', async function() {
       } catch (e) {
         try { console.warn('[FixClosedChantier v1] defineProperty KO', e); } catch (_) {}
       }
+    })();
+
+    // ─────────────────────────────────────────────────────────────
+    // [ForceShowAllChantiers v2] Force l'affichage de TOUS les chantiers
+    // dans ChantiersEmbed, incluant les terminés et anciens
+    // ─────────────────────────────────────────────────────────────
+    (function forceShowAllChantiers() {
+      // Observer qui force l'affichage de toutes les lignes cachées dans les tableaux
+      function showAllRows() {
+        document.querySelectorAll('tbody tr').forEach(function(tr) {
+          tr.style.display = '';
+          tr.classList.remove('hidden', 'disabled', 'filtered-out');
+        });
+      }
+
+      // Observer MutationObserver pour intercepter les changements du DOM
+      var observer = new MutationObserver(function(mutations) {
+        // Vérifier si des lignes ont été cachées
+        var hiddenRows = document.querySelectorAll('tbody tr[style*="display: none"], tbody tr.hidden, tbody tr.disabled');
+        if (hiddenRows.length > 0) {
+          console.log('[ForceShowAllChantiers] Showing', hiddenRows.length, 'hidden rows');
+          showAllRows();
+        }
+      });
+
+      // Observer toute modification dans le document
+      observer.observe(document.documentElement, {
+        childList: true,
+        subtree: true,
+        attributes: true,
+        attributeFilter: ['style', 'class'],
+        characterData: false
+      });
+
+      // Forcer l'affichage initial après 1 seconde (React rendering)
+      setTimeout(function() {
+        console.log('[ForceShowAllChantiers] Initial show all');
+        showAllRows();
+      }, 1000);
+
+      // Vérifier et forcer périodiquement
+      setInterval(function() {
+        var hidden = document.querySelectorAll('tbody tr[style*="display: none"]');
+        if (hidden.length > 0) {
+          showAllRows();
+        }
+      }, 500);
+
+      // Aussi supprimer les classes CSS qui cachent les éléments
+      var style = document.createElement('style');
+      style.textContent = `
+        tbody tr[style*="display: none"] { display: table-row !important; }
+        tbody tr.hidden { display: table-row !important; }
+        tbody tr.disabled { display: table-row !important; }
+        tbody tr.filtered-out { display: table-row !important; }
+        [class*="hidden"] { display: initial !important; }
+      `;
+      document.head.appendChild(style);
+
+      console.log('[ForceShowAllChantiers] Initialized - forcing all chantiers to display');
     })();
 
     // ─────────────────────────────────────────────────────────────
