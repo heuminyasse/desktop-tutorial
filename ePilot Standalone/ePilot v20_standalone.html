@@ -725,11 +725,11 @@ document.addEventListener('DOMContentLoaded', async function() {
         try{if(window.EpilotConnector&&window.EpilotConnector._clearCache)window.EpilotConnector._clearCache();}catch(_){}
         /* Les scripts du template peuvent ajouter des enregistrements APRÈS
            la résolution de la promesse (via SOURCING_DATA.unshift etc.).
-           On refiltre à nouveau 600 ms plus tard pour ne garder que PI25+PI26. */
+           On refiltre à nouveau 600 ms plus tard pour ne garder que PI24+PI25+PI26. */
         setTimeout(function(){
-          function isPI2526(imp){ return /^PI2[56]/.test(imp||''); }
-          window.PROJECTS_DATA = (window.PROJECTS_DATA||[]).filter(function(r){return isPI2526(r._id);});
-          if(window.SOURCING_DATA) window.SOURCING_DATA = window.SOURCING_DATA.filter(function(r){return isPI2526(r.Imputation);});
+          function isPI2456(imp){ return /^PI2[456]/.test(imp||''); }
+          window.PROJECTS_DATA = (window.PROJECTS_DATA||[]).filter(function(r){return isPI2456(r._id);});
+          if(window.SOURCING_DATA) window.SOURCING_DATA = window.SOURCING_DATA.filter(function(r){return isPI2456(r.Imputation);});
           /* Réindexe sourcing */
           window._sourcingIdx={};
           (window.SOURCING_DATA||[]).forEach(function(r){var i=r.Imputation;if(!i)return;window._sourcingIdx[i]=window._sourcingIdx[i]||[];window._sourcingIdx[i].push(r);});
