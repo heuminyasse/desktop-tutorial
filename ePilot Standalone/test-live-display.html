@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Test Affichage Live - ePilot Chantiers JIP</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: Arial, sans-serif; padding: 20px; background: #f5f5f5; }
+  .container { max-width: 1400px; margin: 0 auto; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+  h1 { color: #B5000A; border-bottom: 3px solid #B5000A; padding-bottom: 10px; margin-bottom: 20px; }
+  .status { padding: 15px; margin: 15px 0; border-radius: 4px; border-left: 4px solid; }
+  .loading { background: #e0e7ff; color: #1e40af; border-left-color: #3b82f6; }
+  .success { background: #dcfce7; color: #166534; border-left-color: #22c55e; }
+  .error { background: #fee2e2; color: #991b1b; border-left-color: #ef4444; }
+  table { width: 100%; border-collapse: collapse; margin: 20px 0; font-size: 12px; }
+  th { background: #B5000A; color: white; padding: 10px; text-align: left; }
+  td { padding: 8px; border-bottom: 1px solid #ddd; }
+  tr:hover { background: #f9f9f9; }
+  .spinner { display: inline-block; width: 20px; height: 20px; border: 3px solid #ccc; border-top: 3px solid #B5000A; border-radius: 50%; animation: spin 1s linear infinite; }
+  @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+</style>
+</head>
+<body>
+<div class="container">
+  <h1>🔍 Test Affichage Live - ePilot Chantiers JIP</h1>
+  <div id="status"></div>
+  <div id="content"></div>
+</div>
+
+<script>
+const status = document.getElementById('status');
+const content = document.getElementById('content');
+
+function updateStatus(msg, type = 'loading') {
+  status.innerHTML = `<div class="status ${type}"><span class="spinner" style="${type === 'loading' ? '' : 'display:none'}"></span> ${msg}</div>`;
+}
+
+function log(msg) {
+  console.log(msg);
+}
+
+async function test() {
+  try {
+    updateStatus('⏳ Chargement de la page ePilot...', 'loading');
+    
+    // Charge la page ePilot
+    const resp = await fetch('/ePilot%20v20_standalone.html');
+    const html = await resp.text();
+    
+    log(`HTML reçu: ${(html.length / 1024).toFixed(2)} KB`);
+    updateStatus('✓ Page chargée', 'success');
+    
+    // Cherche les données compressées
+    const dataMatch = html.match(/window\._epdata\s*=\s*\{[^}]*q:"([^"]+)"/);
+    if (!dataMatch) {
+      throw new Error('Données _epdata non trouvées');
+    }
+    
+    log(`Données compressées trouvées: ${dataMatch[1].substring(0, 50)}...`);
+    updateStatus('✓ Données trouvées (compressées)', 'success');
+    
+    // Cherche les références PI
+    const piRegex = /\bPI\d{5}\b/g;
+    const piMatches = html.match(piRegex) || [];
+    const uniquePIs = new Set(piMatches);
+    
+    log(`Projets trouvés: ${uniquePIs.size}`);
+    updateStatus(`✓ ${uniquePIs.size} projets détectés dans le HTML`, 'success');
+    
+    // Affiche les premiers projets
+    let tableHTML = `
+      <h2>Projets Détectés (${uniquePIs.size})</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Numéro Projet</th>
+            <th>Occurences</th>
+          </tr>
+        </thead>
+        <tbody>
+    `;
+    
+    Array.from(uniquePIs).slice(0, 20).forEach((pi, idx) => {
+      const count = (html.match(new RegExp(pi, 'g')) || []).length;
+      tableHTML += `<tr><td>${idx+1}</td><td><strong>${pi}</strong></td><td>${count}</td></tr>`;
+    });
+    
+    tableHTML += '</tbody></table>';
+    content.innerHTML = tableHTML;
+    
+    // Cherche d'autres informations
+    updateStatus('✓ Test complet - Voir les résultats ci-dessous', 'success');
+    
+    // Ajoute des stats
+    const stats = `
+      <h2>Analyse de la Page</h2>
+      <div class="status success">
+        <p><strong>✓ Page chargée avec succès</strong></p>
+        <ul style="margin-left: 20px; margin-top: 10px;">
+          <li>Taille: ${(html.length / 1024 / 1024).toFixed(2)} MB</li>
+          <li>Projets PI détectés: ${uniquePIs.size}</li>
+          <li>Tables HTML: ${(html.match(/<table/gi) || []).length}</li>
+          <li>Boutons: ${(html.match(/<button/gi) || []).length}</li>
+          <li>Mot-clé "Chantiers": ${html.includes('Chantiers') ? '✓ Oui' : '✗ Non'}</li>
+          <li>Mot-clé "JIP": ${html.includes('JIP') ? '✓ Oui' : '✗ Non'}</li>
+          <li>Données _epdata: ${dataMatch ? '✓ Oui' : '✗ Non'}</li>
+        </ul>
+        <p style="margin-top: 15px;"><strong>👉 Ouvre la page complète ici:</strong></p>
+        <a href="/ePilot%20v20_standalone.html" target="_blank" style="
+          display: inline-block;
+          background: #B5000A;
+          color: white;
+          padding: 12px 24px;
+          border-radius: 4px;
+          text-decoration: none;
+          font-weight: bold;
+          margin-top: 10px;
+        ">🚀 Ouvrir ePilot v20 Complet</a>
+      </div>
+    `;
+    
+    content.innerHTML += stats;
+    
+  } catch (error) {
+    updateStatus(`❌ Erreur: ${error.message}`, 'error');
+    content.innerHTML = `<p>Erreur détaillée: ${error.message}</p>`;
+  }
+}
+
+window.addEventListener('load', () => {
+  setTimeout(test, 500);
+});
+</script>
+</body>
+</html>
