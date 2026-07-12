@@ -13751,11 +13751,17 @@ console.log('[PI Import 2026] Done:',D.length,'rows upserted');
     var tbody = table.querySelector('tbody');
     if(!tbody) return;
 
-    // Analyze current table structure to see what columns it has
-    var firstRow = tbody.querySelector('tr');
-    if(!firstRow) return;
+    // Get column headers from table
+    var thead = table.querySelector('thead');
+    var columnHeaders = [];
+    if(thead){
+      var headerCells = thead.querySelectorAll('th');
+      headerCells.forEach(function(th){
+        columnHeaders.push(th.textContent.trim().toUpperCase());
+      });
+    }
 
-    var cellCount = firstRow.querySelectorAll('td').length;
+    var cellCount = columnHeaders.length > 0 ? columnHeaders.length : 11;
 
     // Clear and rebuild
     tbody.innerHTML = '';
@@ -13765,32 +13771,43 @@ console.log('[PI Import 2026] Done:',D.length,'rows upserted');
       return;
     }
 
+    // Map field names from JIP data to display columns
+    function getFieldValue(item, columnName){
+      var col = columnName.toLowerCase().replace(/\s+/g, ' ');
+
+      // Direct mappings
+      if(col.includes('imputation')) return item.Imputation || '-';
+      if(col.includes('n° oa') || col.includes('numero oa')) return item.NumeroOA || '-';
+      if(col.includes('client')) return item.Client || '-';
+      if(col.includes('unité') || col.includes('unite')) return item.Unite || '-';
+      if(col.includes('type')) return item.Type || '-';
+      if(col.includes('début') || col.includes('debut')) return item['Date \nde debut'] || item.Date || '-';
+      if(col.includes('fin')) return item['Date \nde fin'] || item['Fin Reelle'] || '-';
+      if(col.includes('budget')) return item.Budget || '-';
+      if(col.includes('avancement')) return (item.Avancement ? item.Avancement + '%' : '-');
+      if(col.includes('statut') || col.includes('status')) return item.Status || item.Etat || '-';
+      if(col.includes('description')) return item.Description || '-';
+      if(col.includes('retard')) return item.Retard || '-';
+
+      return '-';
+    }
+
     // Add rows for each chantier
     jipData.forEach(function(item, idx){
-      var date = new Date(item.Date || '');
-      var year = isNaN(date) ? 'N/A' : date.getFullYear();
-      var dateStr = isNaN(date) ? (item.Date || '-') : date.toLocaleDateString('fr-FR');
-
       var row = document.createElement('tr');
-      row.style.background = (year < 2025) ? '#fff3e0' : 'white';
 
-      // Build cells matching the expected structure
-      var cells = [
-        '<td style="padding:8px;">' + (item.Imputation || '-') + '</td>',
-        '<td style="padding:8px;">' + dateStr + '</td>',
-        '<td style="padding:8px;"><strong>' + year + '</strong></td>',
-        '<td style="padding:8px;">' + (item.Unite || '-') + '</td>',
-        '<td style="padding:8px;">' + (item.Type || '-') + '</td>',
-        '<td style="padding:8px;">' + (item.Statut || '-') + '</td>'
-      ];
+      // Alternate row colors
+      if(idx % 2 === 0) row.style.background = '#f5f5f5';
 
-      // Pad or trim cells to match table structure
-      while(cells.length < cellCount){
-        cells.push('<td style="padding:8px;">-</td>');
+      // Build cells for each column header
+      var cellsHtml = [];
+      for(var i = 0; i < cellCount; i++){
+        var columnName = columnHeaders[i] || ('Col' + (i+1));
+        var value = getFieldValue(item, columnName);
+        cellsHtml.push('<td style="padding:8px;text-align:left;">' + (value || '-') + '</td>');
       }
-      cells = cells.slice(0, cellCount);
 
-      row.innerHTML = cells.join('');
+      row.innerHTML = cellsHtml.join('');
       tbody.appendChild(row);
     });
 
