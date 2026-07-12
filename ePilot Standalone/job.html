@@ -458,21 +458,70 @@ let currentFilter = 'all';
 let currentDetailId = null;
 
 // Initialisation
-window.addEventListener('load', () => {
-  loadData();
+window.addEventListener('load', async () => {
+  await loadData();
   renderTable();
   updateStats();
 });
 
 // Charger les données
-function loadData() {
+async function loadData() {
   try {
-    // Try new format first (from job-data-loader)
+    // Try to load from TSV file first
+    try {
+      const response = await fetch('devis-data.tsv');
+      if (response.ok) {
+        const tsvContent = await response.text();
+        const lines = tsvContent.trim().split('\n');
+        if (lines.length > 1) {
+          const headers = lines[0].split('\t').map(h => h.trim());
+          allData = {
+            CHANTIERS_DATA: {},
+            SOURCING_DATA: [],
+            FACTURES_DATA: []
+          };
+
+          for (let i = 1; i < lines.length; i++) {
+            const values = lines[i].split('\t').map(v => v.trim());
+            if (values.length === 0 || (values.length === 1 && values[0] === '')) continue;
+
+            const row = {};
+            for (let j = 0; j < headers.length && j < values.length; j++) {
+              row[headers[j]] = values[j];
+            }
+
+            if (row.Devis_ID) {
+              const id = row.Devis_ID;
+              allData.CHANTIERS_DATA[id] = {
+                _id: id,
+                _type: row.Statut === 'Devis' ? 'DEVIS' : 'CHANTIER',
+                Client: row.Client || '-',
+                Status: row.Statut || 'Unknown',
+                Budget: row.Montant_HT || '0',
+                NumeroOA: row.Numéro_OA || '-',
+                Type: row.Type_Travail || '-',
+                Unite: row.Unité || '-',
+                Date: row.Date_RFQ || '-',
+                Description: row.Description || '-',
+                Acheteur: row.Acheteur || '-'
+              };
+            }
+          }
+
+          console.log('✓ Données chargées (TSV):', Object.keys(allData.CHANTIERS_DATA).length, 'projets');
+          applyFilters();
+          return;
+        }
+      }
+    } catch (e) {
+      console.log('ℹ️ TSV file not found, trying localStorage:', e.message);
+    }
+
+    // Try new format from localStorage
     let jobData = localStorage.getItem('epilot_job_data');
     if (jobData) {
       const parsed = JSON.parse(jobData);
       if (parsed.projects && Array.isArray(parsed.projects)) {
-        // Convert from new format to V21 format
         allData = {
           CHANTIERS_DATA: {},
           SOURCING_DATA: [],
@@ -496,23 +545,23 @@ function loadData() {
         });
 
         console.log('✓ Données chargées (format job):', Object.keys(allData.CHANTIERS_DATA).length, 'projets');
+        applyFilters();
+        return;
       }
     }
 
     // Try old format if new format not found
-    if (!jobData) {
-      const stored = localStorage.getItem('epilot_v21_complete_db');
-      if (stored) {
-        allData = JSON.parse(stored);
-        console.log('✓ Données chargées (format V21):', Object.keys(allData.CHANTIERS_DATA || {}).length, 'projets');
-      } else {
-        console.log('⚠️ Aucune donnée stockée');
-        allData = {
-          CHANTIERS_DATA: {},
-          SOURCING_DATA: [],
-          FACTURES_DATA: []
-        };
-      }
+    const stored = localStorage.getItem('epilot_v21_complete_db');
+    if (stored) {
+      allData = JSON.parse(stored);
+      console.log('✓ Données chargées (format V21):', Object.keys(allData.CHANTIERS_DATA || {}).length, 'projets');
+    } else {
+      console.log('⚠️ Aucune donnée disponible');
+      allData = {
+        CHANTIERS_DATA: {},
+        SOURCING_DATA: [],
+        FACTURES_DATA: []
+      };
     }
   } catch (e) {
     console.error('❌ Erreur chargement:', e);
