@@ -14209,11 +14209,30 @@ console.log('[PI Import 2026] Done:',D.length,'rows upserted');
     var chantiers = [];
     try {
       var projects = JSON.parse(localStorage.getItem('ePilot_PROJECTS_DATA') || '[]');
+      console.log('[RFQ-SUIVI] Total projects:', projects.length);
+
+      // Déboguer les noms de champs
+      if (projects.length > 0) {
+        console.log('[RFQ-SUIVI] Sample project keys:', Object.keys(projects[0]));
+        console.log('[RFQ-SUIVI] Sample project:', JSON.stringify(projects[0]).substring(0, 200));
+      }
+
+      // Filter avec plusieurs champs possibles pour N° OA
       chantiers = projects.filter(function(p) {
-        var oa = p['Numéro_OA'] || p.Numero_OA;
-        return oa && String(oa).trim().length > 0 && String(oa).toLowerCase() !== '-';
+        var oa = p['Numéro_OA'] || p.Numero_OA || p.NumeroOA || p.N_OA || p.OA ||
+                 p['N° OA'] || p['numero_oa'] || p.numeroOA || p.oaNumber;
+        var hasOA = oa && String(oa).trim().length > 0 && String(oa).toLowerCase() !== '-';
+        if (hasOA) {
+          console.log('[RFQ-SUIVI] Found chantier with OA:', oa);
+        }
+        return hasOA;
       });
       console.log('[RFQ-SUIVI] Chantiers avec OA:', chantiers.length);
+
+      if (chantiers.length === 0) {
+        console.log('[RFQ-SUIVI] ⚠️ Aucun chantier trouvé - affichage TOUS les projets');
+        chantiers = projects.slice(0, 100);
+      }
     } catch(e) {
       console.error('[RFQ-SUIVI] Erreur:', e);
     }
@@ -14302,11 +14321,17 @@ console.log('[PI Import 2026] Done:',D.length,'rows upserted');
       container.innerHTML = html;
       console.log('[RFQ-SUIVI] ✓ Contenu Suivi affiché');
     } else {
-      console.log('[RFQ-SUIVI] ⚠️ Conteneur non trouvé - tentative via body');
+      console.log('[RFQ-SUIVI] ⚠️ Conteneur non trouvé - création overlay');
       // Last resort: create a container if nothing found
+      var existingWrapper = document.getElementById('_suivi_overlay_wrapper');
+      if (existingWrapper) existingWrapper.remove();
+
       var wrapper = document.createElement('div');
-      wrapper.style.cssText = 'position:fixed;top:100px;left:300px;right:20px;bottom:20px;background:white;border:2px solid #B5000A;border-radius:8px;overflow-y:auto;z-index:10000';
-      wrapper.innerHTML = html;
+      wrapper.id = '_suivi_overlay_wrapper';
+      wrapper.style.cssText = 'position:fixed;top:80px;left:200px;right:20px;bottom:20px;background:white;border:2px solid #B5000A;border-radius:8px;overflow-y:auto;z-index:10000;box-shadow:0 4px 12px rgba(0,0,0,0.15)';
+
+      var closeBtn = '<button onclick="var w=document.getElementById(\'_suivi_overlay_wrapper\'); if(w) w.remove();" style="position:absolute;top:10px;right:10px;background:#B5000A;color:white;border:none;width:32px;height:32px;border-radius:50%;cursor:pointer;font-size:16px;font-weight:bold;z-index:10001">×</button>';
+      wrapper.innerHTML = closeBtn + html;
       document.body.appendChild(wrapper);
     }
   };
