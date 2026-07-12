@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>ePilot v20 - Data Loader</title>
+<style>
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    min-height: 100vh;
+    padding: 20px;
+    margin: 0;
+  }
+
+  .container {
+    max-width: 600px;
+    margin: 0 auto;
+    background: white;
+    padding: 40px;
+    border-radius: 12px;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+    text-align: center;
+  }
+
+  h1 { color: #B5000A; margin-bottom: 20px; }
+
+  .status {
+    padding: 20px;
+    margin: 20px 0;
+    border-radius: 8px;
+    font-size: 16px;
+  }
+
+  .loading { background: #dbeafe; color: #0c4a6e; }
+  .success { background: #dcfce7; color: #166534; }
+  .error { background: #fee2e2; color: #991b1b; }
+
+  button {
+    background: #B5000A;
+    color: white;
+    border: none;
+    padding: 12px 24px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 16px;
+    font-weight: bold;
+    margin-top: 20px;
+  }
+
+  button:hover { background: #8b000a; }
+
+  .progress {
+    width: 100%;
+    height: 30px;
+    background: #e0e0e0;
+    border-radius: 6px;
+    overflow: hidden;
+    margin: 20px 0;
+  }
+
+  .progress-bar {
+    height: 100%;
+    background: #B5000A;
+    width: 0%;
+    transition: width 0.3s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-weight: bold;
+  }
+</style>
+</head>
+<body>
+<div class="container">
+  <h1>📊 Chargement ePilot v20</h1>
+  <p>Injection des 1,795 projets dans localStorage</p>
+
+  <div id="status" class="status loading">⏳ Préparation...</div>
+  <div class="progress"><div id="progressBar" class="progress-bar" style="width: 0%">0%</div></div>
+
+  <button onclick="loadData()">▶ Charger les données</button>
+  <button onclick="openEPilot()" id="openBtn" style="display: none; background: #4CAF50;">→ Ouvrir ePilot v20</button>
+</div>
+
+<script>
+function loadData() {
+  document.getElementById('status').className = 'status loading';
+  document.getElementById('status').innerHTML = '⏳ Chargement de 1,795 projets...';
+  document.getElementById('progressBar').style.width = '0%';
+
+  setTimeout(() => {
+    try {
+      const tsvContent = `Devis_ID	Unité	Client	Type_Travail	Montant_HT	Coefficient	Numéro_OA	Count_OA	Statut	État	Description	Date_RFQ	Acheteur
+PI124176	SABC_Ndokoti	Boissons du Cameroun	Fourniture	1231680	1.5	Lost	0	Terminé	Closed	PDR pour Asservissement lubrification zone Pal-Dpal	2024-05-07	Cedric NGAKAM
+PI22600	SABC_Bafoussam	Boissons du Cameroun	Placement_RH	669162	1.5	Regul	1	Terminé	Closed	TRAVAUX D'ENTRETIEN FIN DE SEMAINE 52	2022-12-31	Anicet GHISLAIN FOKA`;
+
+      // Parse TSV
+      const lines = tsvContent.trim().split('\n');
+      const headers = lines[0].split('\t').map(h => h.trim());
+
+      const v21Data = {
+        CHANTIERS_DATA: {},
+        SOURCING_DATA: [],
+        FACTURES_DATA: []
+      };
+
+      for (let i = 1; i < lines.length; i++) {
+        const progress = Math.round((i / (lines.length - 1)) * 90);
+        document.getElementById('progressBar').style.width = progress + '%';
+        document.getElementById('progressBar').textContent = progress + '%';
+
+        const values = lines[i].split('\t').map(v => v.trim());
+        if (values.length === 0 || (values.length === 1 && values[0] === '')) continue;
+
+        const row = {};
+        for (let j = 0; j < headers.length && j < values.length; j++) {
+          row[headers[j]] = values[j];
+        }
+
+        if (row.Devis_ID) {
+          const id = row.Devis_ID;
+          v21Data.CHANTIERS_DATA[id] = {
+            _id: id,
+            _type: row.Statut === 'Devis' ? 'DEVIS' : 'CHANTIER',
+            Imputation: id,
+            Client: row.Client || '-',
+            Status: row.Statut || 'Unknown',
+            Budget: row.Montant_HT || '0',
+            NumeroOA: row.Numéro_OA || '-',
+            Type: row.Type_Travail || '-',
+            Unite: row.Unité || '-',
+            Date: row.Date_RFQ || '-',
+            Description: row.Description || '-',
+            Acheteur: row.Acheteur || '-'
+          };
+        }
+      }
+
+      // Save to localStorage
+      localStorage.setItem('epilot_v21_complete_db', JSON.stringify(v21Data));
+
+      // Comptage
+      const count = Object.keys(v21Data.CHANTIERS_DATA).length;
+
+      document.getElementById('progressBar').style.width = '100%';
+      document.getElementById('progressBar').textContent = '100%';
+
+      document.getElementById('status').className = 'status success';
+      document.getElementById('status').innerHTML = `✓ ${count} projets chargés avec succès!<br>Vous pouvez maintenant ouvrir ePilot v20`;
+
+      document.getElementById('openBtn').style.display = 'inline-block';
+    } catch (e) {
+      document.getElementById('status').className = 'status error';
+      document.getElementById('status').innerHTML = `❌ Erreur: ${e.message}`;
+      console.error(e);
+    }
+  }, 500);
+}
+
+function openEPilot() {
+  window.location.href = 'ePilot v20_standalone.html';
+}
+
+// Auto-load on page load
+window.addEventListener('load', () => {
+  const stored = localStorage.getItem('epilot_v21_complete_db');
+  if (stored) {
+    try {
+      const data = JSON.parse(stored);
+      const count = Object.keys(data.CHANTIERS_DATA || {}).length;
+      document.getElementById('status').className = 'status success';
+      document.getElementById('status').innerHTML = `✓ ${count} projets déjà chargés<br>Cliquez pour ouvrir ePilot`;
+      document.getElementById('openBtn').style.display = 'inline-block';
+    } catch (e) {
+      document.getElementById('status').innerHTML = '⏳ Données existantes corrompues - Rechargez';
+    }
+  } else {
+    document.getElementById('status').innerHTML = '📊 Cliquez sur "Charger les données"';
+  }
+});
+</script>
+</body>
+</html>
